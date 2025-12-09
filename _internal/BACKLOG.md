@@ -149,13 +149,29 @@ Extract from digital-samba-skill-demo:
 
 ## Infrastructure
 
-### Shared Component Library
+### Shared Component Library ⭐ HIGH PRIORITY
 Extract common components to `components/` at workspace level:
-- AnimatedBackground
-- SlideTransition
-- Label
-- NarratorPiP
-- CodeHighlight
+- AnimatedBackground (floating shapes, grid lines, gradient overlays)
+- SlideTransition (fade, slide, zoom transitions)
+- Label (floating label badges with JIRA refs)
+- NarratorPiP (picture-in-picture presenter overlay)
+- SplitScreen (side-by-side video comparison)
+- Vignette (cinematic edge darkening)
+- LogoWatermark (corner logo branding)
+- CodeHighlight (syntax-highlighted code blocks)
+
+**Why this matters:** These "power tools" enable users to create professional videos quickly. Currently duplicated across templates - should be a single import.
+
+### Narrator Video Creation Guide ⭐ NEEDS REVIEW
+Document best practices for creating narrator PiP videos:
+- Recording setup (camera, lighting, framing)
+- Green screen vs natural background
+- Video specifications (resolution, format, duration)
+- Syncing with voiceover timing
+- Post-processing (cropping, compression)
+- Example workflow from raw recording to final asset
+
+**Why this matters:** The narrator PiP is a powerful feature but users need guidance on creating the source video.
 
 ### Asset Validation Script
 Pre-render check:

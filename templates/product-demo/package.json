@@ -1,0 +1,20 @@
+{
+  "name": "product-demo",
+  "version": "1.0.0",
+  "description": "Product demo video template for claude-code-video-toolkit",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render ProductDemo out/product-demo.mp4",
+    "render:preview": "remotion render ProductDemo out/preview.mp4 --scale=0.5"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}

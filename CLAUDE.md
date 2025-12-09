@@ -21,7 +21,8 @@ claude-code-video-toolkit/
 │   └── commands/        # Guided workflows
 ├── tools/               # Python CLI automation
 ├── templates/           # Video templates
-│   └── sprint-review/   # Sprint review video template
+│   ├── sprint-review/   # Sprint review video template
+│   └── product-demo/    # Marketing/product demo template
 ├── brands/              # Brand profiles (colors, fonts, voice)
 │   └── default/
 ├── projects/            # Your video projects go here
@@ -65,6 +66,7 @@ Claude Code has deep knowledge in these domains via `.claude/skills/`:
 | Command | Description |
 |---------|-------------|
 | `/new-sprint-video` | Interactive wizard for sprint review videos |
+| `/new-brand` | Create a new brand profile (colors, fonts, voice) |
 | `/record-demo` | Guided Playwright browser recording |
 | `/generate-voiceover` | Generate AI voiceover from script |
 
@@ -79,6 +81,15 @@ Config-driven sprint review videos with:
 - Pre-built slides: Title, Overview, Summary, Credits
 - Demo components: Single video, Split-screen
 - Audio integration (voiceover, music, SFX)
+
+### product-demo
+Marketing/product demo videos with dark tech aesthetic:
+- Scene-based composition (title, problem, solution, demo, stats, CTA)
+- Config-driven content (`demo-config.ts`)
+- Animated background with floating shapes
+- Narrator PiP (picture-in-picture presenter)
+- Browser/terminal chrome for demo videos
+- Stats cards with spring animations
 
 ## Brand Profiles
 

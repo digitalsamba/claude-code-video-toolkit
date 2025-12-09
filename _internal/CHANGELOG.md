@@ -41,6 +41,18 @@ All notable changes to claude-code-video-toolkit.
 ## [Unreleased]
 
 ### Added
+- **Product demo template** (`templates/product-demo/`)
+  - Scene-based composition (title, problem, solution, demo, stats, CTA)
+  - Config-driven content via `demo-config.ts`
+  - Dark tech aesthetic with animated background
+  - Narrator PiP (picture-in-picture presenter)
+  - Browser/terminal chrome for demo videos
+  - Stats cards with spring animations
+- **`/new-brand` command** - guided brand profile creation
+  - Extract colors from website URL
+  - Manual color entry with palette generation
+  - Logo and voice configuration guidance
+- **Digital Samba brand profile** (`brands/digital-samba/`)
 - `/generate-voiceover` command - guided ElevenLabs TTS generation
 - `/record-demo` command - guided Playwright browser recording
 - Interactive recording stop controls (Escape key, Stop button)
@@ -53,11 +65,16 @@ All notable changes to claude-code-video-toolkit.
 
 ### Changed
 - Playwright recordings output at 30fps (matches Remotion)
+- Updated CLAUDE.md with new templates and commands
 
 ### Fixed
 - FFmpeg trim command syntax (use `-to` not `-t` for end time)
 - Playwright double navigation issue
 - Recording frame rate mismatch (was 25fps, now 30fps)
+
+### Planned (see BACKLOG.md)
+- Shared component library (AnimatedBackground, SplitScreen, NarratorPiP, etc.)
+- Narrator video creation guide
 
 ---
 

@@ -2,6 +2,8 @@
 
 This document tracks the development of claude-code-video-toolkit.
 
+> **Note:** When committing progress, update `_internal/CHANGELOG.md` with changes before pushing.
+
 ## Vision
 
 An open-source, AI-native video production workspace for Claude Code, featuring:
@@ -79,20 +81,20 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 
 **Brand Profiles:**
 - [x] Default brand profile
-- [ ] Digital Samba brand profile (public example)
-  - [ ] Extract colors from digitalsamba.com
-  - [ ] Add DS logos to `brands/digital-samba/assets/`
-  - [ ] Configure voice settings
-- [ ] `/new-brand` command - guided brand creation
-  - [ ] Mine colors/fonts from URL
-  - [ ] Interactive color picker
-  - [ ] Logo upload guidance
-  - [ ] Voice selection
+- [x] Digital Samba brand profile (public example)
+  - [x] Extract colors from digitalsamba.com
+  - [x] Add DS logos to `brands/digital-samba/assets/`
+  - [x] Configure voice settings
+- [x] `/new-brand` command - guided brand creation
+  - [x] Mine colors/fonts from URL
+  - [x] Interactive color picker
+  - [x] Logo upload guidance
+  - [x] Voice selection
 
 **Templates:**
-- [ ] Product demo template (extract from digital-samba-skill-demo)
+- [x] Product demo template (extract from digital-samba-skill-demo)
 - [ ] `/new-marketing-video` command
-- [ ] Shared component library (workspace-level)
+- [ ] Shared component library (workspace-level) - see BACKLOG.md ⭐
 - [ ] Tutorial template
 - [ ] Changelog/release notes template
 
@@ -157,18 +159,18 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 
 ## Metrics
 
-**Templates:** 1 (sprint-review)
-**Brands:** 1 (default) + 1 planned (digital-samba)
+**Templates:** 2 (sprint-review, product-demo)
+**Brands:** 2 (default, digital-samba)
 **Skills:** 4 (2 stable, 2 beta)
 **Tools:** 3 (voiceover, music, sfx)
-**Commands:** 3 (new-sprint-video, record-demo, generate-voiceover)
+**Commands:** 4 (new-sprint-video, new-brand, record-demo, generate-voiceover)
 **Example Projects:** 2 (sprint-review-cho-oyu, digital-samba-skill-demo)
 
 ---
 
 ## Next Actions
 
-1. Create Digital Samba brand profile
-2. Design `/new-brand` command
-3. Extract product demo template from digital-samba-skill-demo
-4. Review sprint-review template for brand integration
+1. Implement template-brand integration (templates load brand from config)
+2. Create `/new-marketing-video` command
+3. Document narrator video creation workflow (see BACKLOG.md)
+4. Plan shared component library extraction (see BACKLOG.md ⭐)
