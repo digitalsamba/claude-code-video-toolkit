@@ -1,48 +1,19 @@
-// Theme configuration types
-export interface ThemeColors {
-  // Primary palette
-  primary: string;        // Accent color (e.g., orange)
-  primaryLight: string;   // Lighter variant
+/**
+ * Type definitions for sprint-review template
+ *
+ * Theme types are imported from the shared library.
+ * Sprint-specific types are defined here.
+ */
 
-  // Text colors
-  textDark: string;       // Headings, primary text
-  textMedium: string;     // Body text
-  textLight: string;      // Secondary text, labels
-
-  // Backgrounds
-  bgLight: string;        // Main background
-  bgDark: string;         // Credits/dark sections
-  bgOverlay: string;      // Semi-transparent overlays
-
-  // UI elements
-  divider: string;        // Borders, dividers
-  shadow: string;         // Box shadows (rgba)
-}
-
-export interface ThemeFonts {
-  primary: string;        // Main font stack
-  mono: string;           // Code/technical text
-}
-
-export interface ThemeSpacing {
-  xs: number;
-  sm: number;
-  md: number;
-  lg: number;
-  xl: number;
-  xxl: number;
-}
-
-export interface Theme {
-  colors: ThemeColors;
-  fonts: ThemeFonts;
-  spacing: ThemeSpacing;
-  borderRadius: {
-    sm: number;
-    md: number;
-    lg: number;
-  };
-}
+// Re-export theme types from lib
+export type {
+  Theme,
+  ThemeColors,
+  ThemeFonts,
+  ThemeSpacing,
+  ThemeBorderRadius,
+  ThemeTypography,
+} from '../../../../lib/theme';
 
 // Sprint configuration types
 export interface SprintInfo {

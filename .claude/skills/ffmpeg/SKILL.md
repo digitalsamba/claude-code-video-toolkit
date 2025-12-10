@@ -242,3 +242,17 @@ Increase CRF (23→28) or reduce resolution
 | Production | 20-22 | medium | Good balance |
 | Web/Preview | 23-25 | fast | Smaller files |
 | Draft/Quick | 28+ | veryfast | Fast encoding |
+
+---
+
+## Feedback & Contributions
+
+If this skill is missing information or could be improved:
+
+- **Missing a command?** Describe what you needed
+- **Found an error?** Let me know what's wrong
+- **Want to contribute?** I can help you:
+  1. Update this skill with improvements
+  2. Create a PR to github.com/digitalsamba/claude-code-video-toolkit
+
+Just say "improve this skill" and I'll guide you through updating `.claude/skills/ffmpeg/SKILL.md`.

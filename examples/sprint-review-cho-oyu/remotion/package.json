@@ -1,0 +1,20 @@
+{
+  "name": "sprint-review-cho-oyu",
+  "version": "1.0.0",
+  "description": "Digital Samba Mobile iOS v4.0.2 Sprint Review Video",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render src/index.ts SprintReview out/sprint-review.mp4",
+    "render:preview": "remotion render src/index.ts SprintReview out/preview.mp4 --frames=0-300"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.3.0"
+  }
+}

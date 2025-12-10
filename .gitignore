@@ -70,10 +70,21 @@ assets/voices/*.mp3
 assets/voices/*.wav
 assets/voices/*.m4a
 
-# Project-specific outputs (keep structure, ignore large files)
-projects/*/remotion/out/
-projects/*/remotion/node_modules/
-projects/*/.venv/
+# Projects directory (user's local video work - not part of toolkit)
+projects/
+
+# Keep directory structure
+!projects/.gitkeep
+
+# Examples directory IS tracked (curated showcase projects)
+!examples/
+
+# But ignore large media files in examples
+examples/*/public/demos/*.mp4
+examples/*/public/audio/*.mp3
+examples/*/node_modules/
+examples/*/.remotion/
+examples/*/out/
 
 # Playwright recordings (can be large)
 playwright/output/*.mp4

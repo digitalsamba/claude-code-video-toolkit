@@ -25,7 +25,8 @@ claude-code-video-toolkit/
 │   └── product-demo/    # Marketing/product demo template
 ├── brands/              # Brand profiles (colors, fonts, voice)
 │   └── default/
-├── projects/            # Your video projects go here
+├── projects/            # Your video projects go here (gitignored)
+├── examples/            # Curated showcase projects (shared)
 ├── assets/              # Shared assets
 │   ├── voices/          # Voice samples for cloning
 │   └── images/          # Shared images
@@ -36,10 +37,19 @@ claude-code-video-toolkit/
 
 ## Quick Start
 
-**Create a new video:**
+**Work on a video project:**
 ```
-/new-sprint-video
+/video
 ```
+
+This command will:
+1. Scan for existing projects (resume or create new)
+2. Choose template (sprint-review, product-demo)
+3. Choose brand (or create one with `/brand`)
+4. Plan scenes interactively
+5. Create project with VOICEOVER-SCRIPT.md
+
+**Multi-session support:** Projects span multiple sessions. Run `/video` to resume where you left off. Each project tracks its phase, scenes, assets, and session history in `project.json`.
 
 **Or manually:**
 ```bash
@@ -65,10 +75,15 @@ Claude Code has deep knowledge in these domains via `.claude/skills/`:
 
 | Command | Description |
 |---------|-------------|
-| `/new-sprint-video` | Interactive wizard for sprint review videos |
-| `/new-brand` | Create a new brand profile (colors, fonts, voice) |
+| `/video` | Video projects - list, resume, or create new |
+| `/brand` | Brand profiles - list, edit, or create new |
+| `/template` | List available templates and their features |
+| `/skills` | List installed skills or create new ones |
+| `/contribute` | Share improvements - issues, PRs, skills, templates |
 | `/record-demo` | Guided Playwright browser recording |
 | `/generate-voiceover` | Generate AI voiceover from script |
+
+> **Note:** After creating or modifying commands/skills, restart Claude Code to load changes.
 
 ## Templates
 
@@ -127,13 +142,71 @@ python tools/sfx.py --prompt "Thunder crack" --output thunder.mp3
 
 ## Video Production Workflow
 
-1. **Plan** - Define video content and structure
-2. **Create project** - Use `/new-sprint-video` or copy template
-3. **Record assets** - Use `/record-demo` or screen recording
-4. **Generate audio** - Voiceover, music, SFX with Python tools
-5. **Preview** - `npm run studio` in project directory
-6. **Iterate** - Adjust timing, content, styling
-7. **Render** - `npm run render` for final MP4
+1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing)
+2. **Review script** - Edit `VOICEOVER-SCRIPT.md` to plan content
+3. **Gather assets** - Record demos with `/record-demo` or add external videos
+4. **Generate audio** - Use `/generate-voiceover` for AI narration
+5. **Configure** - Update config file with asset paths and timing
+6. **Preview** - `npm run studio` in project directory
+7. **Iterate** - Adjust timing, content, styling with Claude Code
+8. **Render** - `npm run render` for final MP4
+
+## Project Lifecycle
+
+Projects move through phases tracked in `project.json`:
+
+```
+planning → assets → audio → editing → rendering → complete
+```
+
+| Phase | Description |
+|-------|-------------|
+| `planning` | Defining scenes, writing script |
+| `assets` | Recording demos, gathering materials |
+| `audio` | Generating voiceover, music |
+| `editing` | Adjusting timing, previewing |
+| `rendering` | Final render in progress |
+| `complete` | Done |
+
+See `lib/project/README.md` for details on the project system.
+
+## Video Timing
+
+Timing is critical. Keep these guidelines in mind:
+
+### Pacing Rules
+- **Voiceover drives timing** - Narration length determines scene duration
+- **Reading pace** - ~150 words/minute for comfortable narration
+- **Demo pacing** - Real-time demos often need 1.5-2x speedup (`playbackRate`)
+- **Transitions** - Add 1-2s padding between scenes
+- **FPS** - All videos use 30fps (frames = seconds × 30)
+
+### Scene Duration Guidelines
+| Scene Type | Duration | Notes |
+|------------|----------|-------|
+| Title | 3-5s | Logo + headline |
+| Overview | 10-20s | 3-5 bullet points |
+| Demo | 10-30s | Adjust playbackRate to fit |
+| Stats | 8-12s | 3-4 stat cards |
+| Credits | 5-10s | Quick fade |
+
+### Timing Calculations
+```
+Script words ÷ 150 = voiceover minutes
+Raw demo length ÷ playbackRate = demo duration
+Sum of scenes + transitions = total video
+```
+
+### When to Check Timing
+- After generating VOICEOVER-SCRIPT.md (estimate per scene)
+- When voiceover audio is created (compare actual vs estimated)
+- Before rendering (ensure everything fits)
+
+### Fixing Mismatches
+- **Voiceover too long**: Speed up demos, trim pauses, cut content
+- **Voiceover too short**: Slow demos, add scenes, expand narration
+- **Demo too long**: Increase `playbackRate` (1.5x-2x typical)
+- **Demo too short**: Decrease `playbackRate`, or loop/extend
 
 ## Key Patterns
 
@@ -166,7 +239,7 @@ const opacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' 
 
 **Project work** (creates videos):
 - Lives in `projects/`
-- Each project has its own `PROJECT-STATUS.md`
+- Each project has `project.json` (machine-readable state) and auto-generated `CLAUDE.md`
 
 Keep these separate. Don't mix toolkit improvements with video production.
 

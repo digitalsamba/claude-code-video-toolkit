@@ -2,40 +2,50 @@
 
 Ideas and enhancements for claude-code-video-toolkit. Items here are not yet scheduled - they're captured for future consideration.
 
+## Workflow: Marking Items Complete
+
+When implementing a backlog item:
+
+1. **During implementation** - Add note to CHANGELOG.md
+2. **After completion** - Mark item in this file with `✅ IMPLEMENTED`
+3. **If merged/removed** - Mark with `✅ MERGED INTO /command` or `❌ REMOVED` with reason
+4. **Update ROADMAP.md** - If the item was on the roadmap, mark it there too
+
+**Quick check command:**
+```bash
+# Find implemented items that might be unmarked
+grep -r "IMPLEMENTED" _internal/BACKLOG.md | head -5
+```
+
 ---
 
 ## Commands
 
-### `/new-brand`
-Guided brand profile creation:
-- Ask for brand name
-- Option to mine colors/fonts from a URL (Playwright screenshot + color extraction)
-- Interactive color picker for manual entry
-- Logo upload guidance (where to place files)
-- Voice selection (list available ElevenLabs voices or use existing clone)
-- Generate `brand.json`, `voice.json`, create `assets/` folder
+### `/brand` ✅ IMPLEMENTED (was `/new-brand`)
+Unified brand command - lists existing brands or creates new ones.
 
-### `/convert-asset`
-FFmpeg helper command:
-- GIF → MP4
-- Resize video
-- Compress for web
-- Extract audio
-- Trim video
+### `/video` ✅ IMPLEMENTED (was `/new-video`)
+Unified video command with multi-session support:
+- Scans for existing projects
+- Resume or create new
+- Scene-centric workflow with asset markers
+- project.json tracking with phases
+- Auto-generated CLAUDE.md per project
 
-### `/sync-timing`
-Timing calculator:
-- Analyze voiceover duration
-- Calculate demo segment timings
-- Suggest playbackRate adjustments
-- Update sprint-config.ts automatically
+### `/template` ✅ IMPLEMENTED
+Lists available templates with details.
 
-### `/video-status`
-Project dashboard:
-- List required vs existing assets
-- Show total duration calculation
-- Timeline visualization
-- Missing asset warnings
+### `/skill` ✅ IMPLEMENTED (was `/new-skill`)
+Lists installed skills or creates new ones.
+
+### `/video-status` ✅ MERGED INTO `/video`
+Now built into `/video` command - scans projects on invocation.
+
+### `/convert-asset` ❌ REMOVED
+Not needed - FFmpeg skill handles this conversationally.
+
+### `/sync-timing` ❌ REMOVED
+Not needed as a command - timing knowledge in CLAUDE.md.
 
 ### `/toolkit-status`
 Meta command for toolkit development:
@@ -53,28 +63,12 @@ Automated web app exploration for demo planning:
 - Screenshot each discovered page
 - Output site map, suggested recording scripts, and asset manifest
 
-### `/new-skill`
-Guided skill creation for extending the toolkit:
-- Ask for skill name and description
-- Ask for trigger phrases (when should Claude use this skill?)
-- Create `SKILL.md` template with proper frontmatter
-- Optionally create `reference.md` for detailed docs
-- Register in `_internal/skills-registry.json`
-- Provide guidance on skill structure and best practices
-
-**Considerations:**
-- Skills live in `.claude/skills/` which is a Claude Code convention
-- Users may want video-related skills (new tools, services, techniques)
-- Or non-video skills that complement their workflow
-- Need clear documentation on SKILL.md format and frontmatter
-
-### `/new-template`
-Guided template creation:
-- Ask for template name and video type
-- Choose starting point (blank, copy existing, from project)
-- Set up directory structure with config files
-- Create placeholder components
-- Register in `_internal/skills-registry.json`
+### `/new-template` ✅ MERGED INTO `/template`
+Now part of `/template` command:
+- List existing templates or create new
+- Choose starting point (copy existing, minimal, from project)
+- Define scene types
+- Set up directory structure
 
 ---
 
@@ -121,8 +115,8 @@ Playwright-based web app exploration and analysis:
 
 ## Templates
 
-### Product Demo Template
-Extract from digital-samba-skill-demo:
+### Product Demo Template ✅ IMPLEMENTED
+Extracted to `templates/product-demo/`:
 - Dark theme
 - Problem → Solution → Demo → CTA flow
 - Code snippet components
@@ -149,18 +143,30 @@ Extract from digital-samba-skill-demo:
 
 ## Infrastructure
 
-### Shared Component Library ⭐ HIGH PRIORITY
-Extract common components to `components/` at workspace level:
+### Shared Component Library ✅ IMPLEMENTED
+Extracted to `lib/components/`:
 - AnimatedBackground (floating shapes, grid lines, gradient overlays)
 - SlideTransition (fade, slide, zoom transitions)
 - Label (floating label badges with JIRA refs)
-- NarratorPiP (picture-in-picture presenter overlay)
+- NarratorPiP (picture-in-picture presenter overlay) - **needs API refinement**
 - SplitScreen (side-by-side video comparison)
 - Vignette (cinematic edge darkening)
 - LogoWatermark (corner logo branding)
+
+**Still needed:**
 - CodeHighlight (syntax-highlighted code blocks)
 
-**Why this matters:** These "power tools" enable users to create professional videos quickly. Currently duplicated across templates - should be a single import.
+### NarratorPiP API Refinement ⭐ NEEDS WORK
+The NarratorPiP component has two different APIs:
+- **sprint-review**: Props-based (`videoFile`, `position`, `size` as direct props)
+- **product-demo**: Config-based (`config` object containing all settings)
+
+Need to unify into a single API. Consider:
+- Simpler props-based API for most use cases
+- Optional config object for complex scenarios
+- Better timing control (startFrame, endFrame)
+- Green screen / background removal support
+- Multiple narrator support
 
 ### Narrator Video Creation Guide ⭐ NEEDS REVIEW
 Document best practices for creating narrator PiP videos:
@@ -194,11 +200,12 @@ ElevenLabs usage monitoring:
 - Track music minutes
 - Monthly usage summary
 
-### Brand Loader Utility
-TypeScript utility for templates to load brands:
+### Brand Loader Utility ✅ IMPLEMENTED
+Implemented in `lib/brand.ts` and `lib/generate-brand-ts.ts`:
 - `loadBrand('digital-samba')` returns typed brand config
 - Merge with template defaults
 - Type-safe theme integration
+- `/video` generates `brand.ts` from selected brand at project creation
 
 ---
 

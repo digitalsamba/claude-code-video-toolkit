@@ -5,7 +5,7 @@ export const demoConfig: ProductDemoConfig = {
   product: {
     name: 'Your Product',
     tagline: 'Build amazing things faster',
-    logo: 'images/logo.png',
+    // logo: 'images/logo.png',  // Uncomment and add your logo
     website: 'yourproduct.com',
     github: 'github.com/yourorg/yourproduct',
   },
@@ -18,9 +18,9 @@ export const demoConfig: ProductDemoConfig = {
       content: {
         headline: 'Build Video Features in Minutes',
         subheadline: 'From zero to production with AI',
-        logos: [
-          { src: 'images/logo.png', label: 'Your Product' },
-        ],
+        // logos: [
+        //   { src: 'images/logo.png', label: 'Your Product' },
+        // ],
       },
     },
 
@@ -61,17 +61,17 @@ export const demoConfig: ProductDemoConfig = {
       },
     },
 
-    // Demo Scene(s)
-    {
-      type: 'demo',
-      durationSeconds: 30,
-      content: {
-        type: 'video',
-        videoFile: 'demos/main-demo.mp4',
-        label: 'Installation & Setup',
-        caption: 'Watch how easy it is to get started',
-      },
-    },
+    // Demo Scene(s) - uncomment when you have a demo video
+    // {
+    //   type: 'demo',
+    //   durationSeconds: 30,
+    //   content: {
+    //     type: 'video',
+    //     videoFile: 'demos/main-demo.mp4',
+    //     label: 'Installation & Setup',
+    //     caption: 'Watch how easy it is to get started',
+    //   },
+    // },
 
     // Stats Scene
     {

@@ -1,6 +1,45 @@
+---
+description: Generate AI voiceover from script
+---
+
 # Generate Voiceover
 
 Help me generate a voiceover for a Remotion video project using ElevenLabs TTS.
+
+## Project Integration
+
+Before gathering configuration, check if we're in a project context:
+
+1. **Check for active project:**
+   - Look for `project.json` in current directory or parent `projects/*/`
+   - If found, read it to understand project state
+
+2. **If project context found:**
+   ```
+   I see you're working on: {project.name}
+
+   Script: VOICEOVER-SCRIPT.md (ready)
+   Audio status: ⬜ Not yet generated
+
+   Scenes requiring audio:
+     - Overview (15s estimated)
+     - Dark mode demo (20s estimated)
+     - Login flow (10s estimated)
+     - Summary (12s estimated)
+
+   Total estimated: ~57 seconds of narration
+
+   Ready to generate voiceover?
+   ```
+
+3. **After generation completes:**
+   - Update `project.json`:
+     - Set `audio.voiceover.status: "present"`
+     - Transition `phase` if appropriate (assets → audio → editing)
+   - Add session entry
+   - Regenerate project CLAUDE.md
+
+---
 
 ## Your Tasks
 
@@ -97,3 +136,18 @@ Characters: 892
 For your config:
   durationSeconds: 46
 ```
+
+---
+
+## Evolution
+
+This command evolves through use. If something's awkward or missing:
+
+**Local improvements:**
+1. Say "improve this" → Claude captures in `_internal/FEEDBACK.md`
+2. Edit `.claude/commands/generate-voiceover.md` → Update `_internal/CHANGELOG.md`
+3. Share upstream → `gh pr create`
+
+**Remote contributions:**
+- Issues: `github.com/digitalsamba/claude-code-video-toolkit/issues`
+- PRs welcome for voice features, script formats, documentation

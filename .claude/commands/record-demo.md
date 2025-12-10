@@ -1,6 +1,41 @@
+---
+description: Guided Playwright browser recording
+---
+
 # Record Browser Demo
 
 Help me record a browser demo for a Remotion video project.
+
+## Project Integration
+
+Before gathering configuration, check if we're in a project context:
+
+1. **Check for active project:**
+   - Look for `project.json` in current directory or parent `projects/*/`
+   - If found, read it to understand:
+     - Which scenes need demo recordings
+     - Expected asset paths
+     - Scene instructions
+
+2. **If project context found:**
+   ```
+   I see you're working on: {project.name}
+
+   Scenes needing recordings:
+     ⬜ Scene 3: Dark mode demo → demos/dark-mode.mp4
+        Instructions: Navigate to Settings → Toggle dark mode
+     ⬜ Scene 5: Login flow → demos/login.mp4
+        Instructions: Show login → enter credentials → redirect
+
+   Which scene would you like to record? (or enter a new recording)
+   ```
+
+3. **After recording completes:**
+   - Update `project.json` scene status to `"asset-present"`
+   - Add session entry
+   - Regenerate project CLAUDE.md
+
+---
 
 ## Your Tasks
 
@@ -92,3 +127,18 @@ Help me record a browser demo for a Remotion video project.
 - **Debugging**: If the recording doesn't look right, re-run with `DEBUG=true` prefix to see the browser in script mode.
 - **Cursor**: The orange cursor dot and click ripples are automatically added.
 - **Scale**: Default 75% scale fits laptop screens while still recording at full 1080p resolution.
+
+---
+
+## Evolution
+
+This command evolves through use. If something's awkward or missing:
+
+**Local improvements:**
+1. Say "improve this" → Claude captures in `_internal/FEEDBACK.md`
+2. Edit `.claude/commands/record-demo.md` → Update `_internal/CHANGELOG.md`
+3. Share upstream → `gh pr create`
+
+**Remote contributions:**
+- Issues: `github.com/digitalsamba/claude-code-video-toolkit/issues`
+- PRs welcome for recording features, browser support, documentation

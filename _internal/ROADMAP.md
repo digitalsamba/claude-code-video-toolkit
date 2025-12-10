@@ -20,7 +20,7 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 ## Current Status
 
 **Phase:** 3 - Templates & Brands
-**Focus:** Extracting reusable templates, building brand system
+**Focus:** Multi-session project system, unified commands
 
 ---
 
@@ -30,7 +30,7 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 
 - [x] Sprint review template with theme system
 - [x] Config-driven video content
-- [x] `/new-sprint-video` slash command
+- [x] `/video` slash command (unified project creation, replaced `/new-video`)
 - [x] Narrator PiP component
 - [x] Remotion skill (stable)
 - [x] ElevenLabs skill (stable)
@@ -52,7 +52,7 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 **Commands:**
 - [x] `/generate-voiceover` - streamlined audio generation
 - [x] `/record-demo` - guided Playwright recording
-- [ ] `/video-status` - project dashboard (deferred to Phase 4)
+- [x] `/video-status` - replaced by `/video` with built-in project scanning
 
 **Infrastructure:**
 - [x] Playwright recording setup (`playwright/`)
@@ -85,7 +85,7 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
   - [x] Extract colors from digitalsamba.com
   - [x] Add DS logos to `brands/digital-samba/assets/`
   - [x] Configure voice settings
-- [x] `/new-brand` command - guided brand creation
+- [x] `/brand` command (replaced `/new-brand`) - list, edit, or create brands
   - [x] Mine colors/fonts from URL
   - [x] Interactive color picker
   - [x] Logo upload guidance
@@ -93,21 +93,44 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 
 **Templates:**
 - [x] Product demo template (extract from digital-samba-skill-demo)
-- [ ] `/new-marketing-video` command
-- [ ] Shared component library (workspace-level) - see BACKLOG.md ⭐
+- [x] `/video` command (replaced `/new-video`) - unified project management
+- [x] `/template` command - list available templates
+- [x] Shared component library (`lib/`) ⭐
+  - [x] Theme system (`lib/theme/`) - ThemeProvider, useTheme, types
+  - [x] Core components (`lib/components/`) - AnimatedBackground, SlideTransition, Label, Vignette, LogoWatermark, SplitScreen
+  - [x] NarratorPiP (needs refinement - different APIs in templates)
+  - [x] Templates updated to import from lib
 - [ ] Tutorial template
 - [ ] Changelog/release notes template
 
 **Template-Brand Integration:**
-- [ ] Templates load brand from config
-- [ ] Brand override per-project
+- [x] Brand loader utility (`lib/brand.ts`)
+- [x] Templates use `brand.ts` for theming (generated at project creation)
+- [x] `/video` generates brand.ts from selected brand
+- [x] project.json tracks brand selection
+
+**Multi-Session Project System:**
+- [x] Project schema (`lib/project/types.ts`) - phases, scenes, assets, session history
+- [x] Filesystem reconciliation (compare project.json intent vs actual files)
+- [x] Auto-generated CLAUDE.md per project
+- [x] `/skills` command - list installed skills or create new ones (renamed from `/skill` due to Claude Code conflict)
+- [x] Contribution/feedback prompts in all commands and skills
+
+**Contribution & Examples:**
+- [x] `/contribute` command - guided contribution workflow
+- [x] `examples/` directory for shareable showcase projects
+- [x] Contributor recognition with backlinks (CONTRIBUTORS.md)
+- [x] Evolution narrative across all commands
+- [x] FEEDBACK.md for capturing improvement ideas
+- [x] Example: digital-samba-skill-demo (with finished video link)
+- [x] Example: sprint-review-cho-oyu (with finished video link)
 
 ### Phase 4: Polish & Advanced
 
 **Commands:**
-- [ ] `/video-status` - project dashboard
-- [ ] `/convert-asset` - FFmpeg helper
-- [ ] `/sync-timing` - voiceover/demo timing calculator
+- [x] ~~`/video-status`~~ - replaced by `/video` with built-in scanning
+- [x] ~~`/convert-asset`~~ - removed, FFmpeg skill handles conversationally
+- [x] ~~`/sync-timing`~~ - removed, timing knowledge in CLAUDE.md
 
 **Output & Accessibility:**
 - [ ] Multi-format output (MP4, WebM, GIF, social formats)
@@ -163,14 +186,20 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 **Brands:** 2 (default, digital-samba)
 **Skills:** 4 (2 stable, 2 beta)
 **Tools:** 3 (voiceover, music, sfx)
-**Commands:** 4 (new-sprint-video, new-brand, record-demo, generate-voiceover)
-**Example Projects:** 2 (sprint-review-cho-oyu, digital-samba-skill-demo)
+**Commands:** 7 (video, brand, template, skill, contribute, record-demo, generate-voiceover)
+**Shared Components:** 7 (AnimatedBackground, SlideTransition, Label, Vignette, LogoWatermark, SplitScreen, NarratorPiP)
+**Examples:** 2 with finished video links (digital-samba-skill-demo, sprint-review-cho-oyu)
 
 ---
 
 ## Next Actions
 
-1. Implement template-brand integration (templates load brand from config)
-2. Create `/new-marketing-video` command
+1. **Upload example videos to YouTube** (optional, for discoverability)
+2. **Test `/video` workflow end-to-end**
+   - Test new project creation with scene-centric flow
+   - Test project resumption (multi-session)
+   - Verify filesystem reconciliation
+   - Verify CLAUDE.md auto-generation
 3. Document narrator video creation workflow (see BACKLOG.md)
-4. Plan shared component library extraction (see BACKLOG.md ⭐)
+4. Create tutorial template
+5. Promote ffmpeg and playwright-recording skills to stable after testing

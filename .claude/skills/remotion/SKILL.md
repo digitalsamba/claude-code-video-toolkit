@@ -346,3 +346,17 @@ For detailed API documentation on all hooks, components, renderer, Lambda, and P
 ## License Note
 
 Remotion has a special license. Companies may need to obtain a license for commercial use. Check https://remotion.dev/license
+
+---
+
+## Feedback & Contributions
+
+If this skill is missing information or could be improved:
+
+- **Missing a pattern?** Describe what you needed
+- **Found an error?** Let me know what's wrong
+- **Want to contribute?** I can help you:
+  1. Update this skill with improvements
+  2. Create a PR to github.com/digitalsamba/claude-code-video-toolkit
+
+Just say "improve this skill" and I'll guide you through updating `.claude/skills/remotion/SKILL.md`.

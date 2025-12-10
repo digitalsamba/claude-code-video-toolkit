@@ -370,3 +370,17 @@ ffmpeg -i recording.webm -c:v libx264 -crf 20 -preset medium -movflags faststart
 6. **Clear browser state** - Use fresh context for clean demos
 7. **Hide cookie banners** - Dismiss or inject CSS to hide
 8. **Use consistent data** - Pre-fill forms with realistic placeholder data
+
+---
+
+## Feedback & Contributions
+
+If this skill is missing information or could be improved:
+
+- **Missing a pattern?** Describe what you needed
+- **Found an error?** Let me know what's wrong
+- **Want to contribute?** I can help you:
+  1. Update this skill with improvements
+  2. Create a PR to github.com/digitalsamba/claude-code-video-toolkit
+
+Just say "improve this skill" and I'll guide you through updating `.claude/skills/playwright-recording/SKILL.md`.

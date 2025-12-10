@@ -1,47 +1,19 @@
-// Theme configuration (matches brand.json structure)
-export interface ThemeColors {
-  primary: string;
-  primaryLight: string;
-  accent?: string;
-  textDark: string;
-  textMedium: string;
-  textLight: string;
-  bgLight: string;
-  bgDark: string;
-  bgOverlay: string;
-  divider: string;
-  shadow: string;
-}
+/**
+ * Type definitions for product-demo template
+ *
+ * Theme types are imported from the shared library.
+ * Product demo specific types are defined here.
+ */
 
-export interface ThemeFonts {
-  primary: string;
-  mono: string;
-}
-
-export interface ThemeSpacing {
-  xs: number;
-  sm: number;
-  md: number;
-  lg: number;
-  xl: number;
-  xxl: number;
-}
-
-export interface ThemeTypography {
-  h1: { size: number; weight: number };
-  h2: { size: number; weight: number };
-  h3: { size: number; weight: number };
-  body: { size: number; weight: number };
-  label: { size: number; weight: number; letterSpacing?: number };
-}
-
-export interface Theme {
-  colors: ThemeColors;
-  fonts: ThemeFonts;
-  spacing: ThemeSpacing;
-  borderRadius: { sm: number; md: number; lg: number };
-  typography: ThemeTypography;
-}
+// Re-export theme types from lib
+export type {
+  Theme,
+  ThemeColors,
+  ThemeFonts,
+  ThemeSpacing,
+  ThemeBorderRadius,
+  ThemeTypography,
+} from '../../../../lib/theme';
 
 // Product Demo Configuration
 export interface ProductInfo {

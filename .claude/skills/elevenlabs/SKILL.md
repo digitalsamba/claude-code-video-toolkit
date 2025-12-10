@@ -155,3 +155,17 @@ import { Audio, staticFile } from 'remotion';
 ## Advanced API
 
 For detailed API documentation including all models, voice settings, output formats, rate limits, and Professional Voice Cloning workflow, see [reference.md](reference.md).
+
+---
+
+## Feedback & Contributions
+
+If this skill is missing information or could be improved:
+
+- **Missing a pattern?** Describe what you needed
+- **Found an error?** Let me know what's wrong
+- **Want to contribute?** I can help you:
+  1. Update this skill with improvements
+  2. Create a PR to github.com/digitalsamba/claude-code-video-toolkit
+
+Just say "improve this skill" and I'll guide you through updating `.claude/skills/elevenlabs/SKILL.md`.

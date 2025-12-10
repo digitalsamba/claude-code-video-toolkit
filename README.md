@@ -7,8 +7,9 @@ An AI-native video production workspace for [Claude Code](https://claude.ai/code
 This toolkit gives Claude Code the knowledge and tools to help you create videos:
 
 - **Skills** — Domain expertise in Remotion, ElevenLabs, FFmpeg, Playwright
-- **Commands** — Guided workflows like `/new-sprint-video`
+- **Commands** — Guided workflows like `/video`, `/record-demo`, `/contribute`
 - **Templates** — Ready-to-customize video structures
+- **Brands** — Visual identity profiles (colors, fonts, voice settings)
 - **Tools** — Python CLI for audio generation
 
 Clone this repo, open it in Claude Code, and start creating videos.
@@ -48,10 +49,19 @@ claude
 In Claude Code, run:
 
 ```
-/new-sprint-video
+/video
 ```
 
-This interactive wizard will guide you through creating a sprint review video.
+This will:
+1. Scan for existing projects (resume or create new)
+2. Choose template (sprint-review, product-demo)
+3. Choose brand (or create one with `/brand`)
+4. Plan scenes interactively
+5. Create project with VOICEOVER-SCRIPT.md
+
+**Multi-session support:** Projects span multiple sessions. Run `/video` to resume where you left off.
+
+Then iterate with Claude Code to record demos, refine content, and render.
 
 ## Features
 
@@ -70,19 +80,30 @@ Claude Code has deep knowledge in:
 
 | Command | Description |
 |---------|-------------|
-| `/new-sprint-video` | Create a sprint review video project |
+| `/video` | Video projects — list, resume, or create new |
+| `/brand` | Brand profiles — list, edit, or create new |
+| `/template` | List available templates and their features |
+| `/skill` | List installed skills or create new ones |
+| `/contribute` | Share improvements — issues, PRs, examples |
 | `/record-demo` | Record browser interactions with Playwright |
 | `/generate-voiceover` | Generate AI voiceover from a script |
+
+> **Note:** After creating or modifying commands/skills, restart Claude Code to load changes.
 
 ### Templates
 
 Pre-built video structures in `templates/`:
 
 - **sprint-review** — Sprint review videos with demos, stats, and voiceover
+- **product-demo** — Marketing videos with dark tech aesthetic, stats, CTA
+
+See `examples/` for finished projects you can learn from:
+- [digital-samba-skill-demo](https://demos.digitalsamba.com/video/digital-samba-skill-demo.mp4) — Product demo showcasing Claude Code skill
+- [sprint-review-cho-oyu](https://demos.digitalsamba.com/video/sprint-review.mp4) — iOS sprint review with demos
 
 ### Brand Profiles
 
-Define visual identity in `brands/`:
+Define visual identity in `brands/`. When you create a project with `/video`, the brand's colors, fonts, and styling are automatically applied.
 
 ```
 brands/my-brand/
@@ -90,6 +111,10 @@ brands/my-brand/
 ├── voice.json    # ElevenLabs voice settings
 └── assets/       # Logo, backgrounds
 ```
+
+Included brands: `default`, `digital-samba`
+
+Create your own with `/brand`.
 
 ### Python Tools
 
@@ -111,16 +136,18 @@ python tools/sfx.py --preset whoosh --output sfx.mp3
 ```
 claude-code-video-toolkit/
 ├── .claude/
-│   ├── skills/          # Domain knowledge
-│   └── commands/        # Slash commands
+│   ├── skills/          # Domain knowledge for Claude
+│   └── commands/        # Slash commands (/video, /brand, etc.)
+├── lib/                 # Shared utilities and project system
 ├── tools/               # Python CLI tools
 ├── templates/           # Video templates
 ├── brands/              # Brand profiles
-├── projects/            # Your video projects
+├── projects/            # Your video projects (gitignored)
+├── examples/            # Curated showcase projects with finished videos
 ├── assets/              # Shared assets
 ├── playwright/          # Recording infrastructure
 ├── docs/                # Documentation
-└── _internal/           # Toolkit metadata
+└── _internal/           # Toolkit metadata & roadmap
 ```
 
 ## Documentation
@@ -142,16 +169,17 @@ claude-code-video-toolkit/
 ## Video Workflow
 
 ```
-Concept → /new-sprint-video → Record demos → Generate audio → Preview → Render
+/video → Review script → Gather assets → Generate audio → Preview → Iterate → Render
 ```
 
-1. **Plan** — Define content and structure
-2. **Create project** — Use a command or copy a template
-3. **Record assets** — Demos, screenshots, screen recordings
-4. **Generate audio** — AI voiceover, background music, SFX
-5. **Preview** — `npm run studio` for live preview
-6. **Iterate** — Adjust timing, styling, content
-7. **Render** — `npm run render` for final MP4
+1. **Create project** — Run `/video`, choose template and brand
+2. **Review script** — Edit `VOICEOVER-SCRIPT.md` to plan content and assets
+3. **Gather assets** — Record demos with `/record-demo` or add external videos
+4. **Generate audio** — AI voiceover with `/generate-voiceover`
+5. **Configure** — Update config file with asset paths and timing
+6. **Preview** — `npm run studio` for live preview
+7. **Iterate** — Work with Claude Code to adjust timing, styling, content
+8. **Render** — `npm run render` for final MP4
 
 ## Requirements
 
