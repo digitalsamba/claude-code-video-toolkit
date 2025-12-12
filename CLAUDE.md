@@ -77,6 +77,7 @@ Claude Code has deep knowledge in these domains via `.claude/skills/`:
 | Command | Description |
 |---------|-------------|
 | `/video` | Video projects - list, resume, or create new |
+| `/scene-review` | Scene-by-scene review in Remotion Studio (before voiceover) |
 | `/brand` | Brand profiles - list, edit, or create new |
 | `/template` | List available templates and their features |
 | `/skills` | List installed skills or create new ones |
@@ -177,13 +178,14 @@ python tools/sfx.py --prompt "Thunder crack" --output thunder.mp3
 Projects move through phases tracked in `project.json`:
 
 ```
-planning → assets → audio → editing → rendering → complete
+planning → assets → review → audio → editing → rendering → complete
 ```
 
 | Phase | Description |
 |-------|-------------|
 | `planning` | Defining scenes, writing script |
 | `assets` | Recording demos, gathering materials |
+| `review` | Scene-by-scene review in Remotion Studio (`/scene-review`) |
 | `audio` | Generating voiceover, music |
 | `editing` | Adjusting timing, previewing |
 | `rendering` | Final render in progress |

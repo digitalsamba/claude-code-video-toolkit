@@ -8,6 +8,15 @@ All notable changes to claude-code-video-toolkit.
 
 ## 2025-12-10
 
+### Added
+- **`/scene-review` command** - Dedicated scene-by-scene review with Remotion Studio
+  - Starts Remotion Studio for visual verification
+  - Walks through scenes one by one (not summary tables)
+  - Generic - works with any template's config
+  - `/video` now delegates to `/scene-review` when phase is `review`
+  - `/generate-voiceover` warns if review not complete
+  - Fixes: Review kept getting skipped because `/video` command was too long
+
 ### Changed
 - **Consolidated tracking files** - Simplified from 4 files to 3:
   - `ROADMAP.md` - What we're building (removed duplicate "Next Actions" and "In Progress" sections)
@@ -20,7 +29,7 @@ All notable changes to claude-code-video-toolkit.
 - **Slash commands not loading** - Renamed `/skill` to `/skills` to avoid conflict with built-in `Skill` tool. The naming collision was silently preventing ALL custom commands from loading. Bug reported to Anthropic.
 
 ### Removed
-- **`/review` command** - Clashed with Claude Code's built-in PR review command. Scene-by-scene review will be integrated into `/video` resume flow instead.
+- **`/review` command** - Clashed with Claude Code's built-in PR review command. Replaced by `/scene-review`.
 
 ### Added
 - **Animation components** (`lib/components/`)

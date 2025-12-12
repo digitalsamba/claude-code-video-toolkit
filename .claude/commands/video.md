@@ -367,14 +367,50 @@ Update `phase` automatically based on state:
 | Condition | New Phase |
 |-----------|-----------|
 | Scenes defined, script written | `planning` → `assets` |
-| All scene assets present | `assets` → `audio` |
+| All scene assets present | `assets` → `review` |
+| Review approved | `review` → `audio` |
 | Voiceover generated | `audio` → `editing` |
 | User initiates render | `editing` → `rendering` |
 | Render complete | `rendering` → `complete` |
 
 ---
 
+## Review Phase
+
+**CRITICAL:** When all assets are present and phase is `review`, delegate to `/scene-review`.
+
+### When Review is Triggered
+
+When resuming a project where `phase: "review"` or transitioning from `assets` → `review`:
+
+```
+All demo assets are recorded! Time to review before generating voiceover.
+
+Run `/scene-review` to walk through each scene in Remotion Studio.
+```
+
+**Do NOT** attempt to do review inline in `/video`. The `/scene-review` command:
+- Starts Remotion Studio for visual verification
+- Walks through scenes one by one
+- Lets user see exactly what will render
+- Tracks review status per scene
+
+### After Review Complete
+
+When `/scene-review` marks review as complete:
+1. Phase transitions to `audio`
+2. `/video` will show: "Review complete. Run `/generate-voiceover`"
+
+---
+
 ## Integration with Other Commands
+
+### /scene-review
+
+When phase is `review`:
+- `/video` prompts user to run `/scene-review`
+- `/scene-review` handles the actual review flow
+- After completion, `/scene-review` updates phase to `audio`
 
 ### /record-demo
 

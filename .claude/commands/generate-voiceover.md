@@ -14,12 +14,32 @@ Before gathering configuration, check if we're in a project context:
    - Look for `project.json` in current directory or parent `projects/*/`
    - If found, read it to understand project state
 
-2. **If project context found:**
+2. **Check review status:**
+   If project has `phase: "review"` or no `reviewStatus` on scenes:
+   ```
+   ⚠️  Scene review not complete.
+
+   Generating voiceover before review risks:
+   - Narration that doesn't match visuals
+   - Timing mismatches
+   - Wasted API credits if script needs changes
+
+   Run `/scene-review` first to verify each scene in Remotion Studio.
+
+   Options:
+   1. Run /scene-review first (recommended)
+   2. Generate voiceover anyway (not recommended)
+   ```
+
+   Only proceed if user explicitly chooses option 2.
+
+3. **If project context found and review complete:**
    ```
    I see you're working on: {project.name}
 
    Script: VOICEOVER-SCRIPT.md (ready)
    Audio status: ⬜ Not yet generated
+   Review status: ✅ Complete
 
    Scenes requiring audio:
      - Overview (15s estimated)
@@ -32,10 +52,10 @@ Before gathering configuration, check if we're in a project context:
    Ready to generate voiceover?
    ```
 
-3. **After generation completes:**
+4. **After generation completes:**
    - Update `project.json`:
      - Set `audio.voiceover.status: "present"`
-     - Transition `phase` if appropriate (assets → audio → editing)
+     - Transition `phase` if appropriate (review → audio → editing)
    - Add session entry
    - Regenerate project CLAUDE.md
 

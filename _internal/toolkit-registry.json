@@ -84,6 +84,13 @@
       "status": "stable",
       "created": "2025-12-10",
       "updated": "2025-12-10"
+    },
+    "scene-review": {
+      "path": ".claude/commands/scene-review.md",
+      "description": "Scene-by-scene review in Remotion Studio before voiceover",
+      "status": "stable",
+      "created": "2025-12-10",
+      "updated": "2025-12-10"
     }
   },
 

@@ -89,13 +89,17 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 - [x] Auto-generated CLAUDE.md per project
 - [x] `/skills` command
 
-**Review & Validation (integrated into `/video`):**
-- [ ] Scene-by-scene review flow within `/video` resume
-  - Pre-voiceover review (story, assets, script)
-  - Pre-render review (timing, sync, polish)
-  - Asset validation (ffprobe checks)
-  - Enhancement suggestions
-  - Note: Standalone `/review` command removed - clashed with Claude Code built-in PR review
+**Review & Validation:**
+- [x] `/scene-review` command - dedicated scene-by-scene review with Remotion Studio
+  - [x] Starts Remotion Studio for visual verification
+  - [x] Walks through scenes one by one (not summary tables)
+  - [x] Generic - works with any template's config
+  - [x] `/video` delegates to `/scene-review` when phase is `review`
+  - [x] `/generate-voiceover` warns if review incomplete
+- [ ] Pre-render review (timing, sync, polish)
+- [ ] Asset validation (ffprobe checks)
+- [ ] Enhancement suggestions
+- Note: `/review` name clashes with Claude Code built-in PR review - using `/scene-review`
 
 **Contribution & Examples:**
 - [x] `/contribute` command
@@ -165,7 +169,7 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 | Brands | 2 | default, digital-samba |
 | Skills | 4 | 2 stable, 2 beta |
 | Tools | 3 | voiceover, music, sfx |
-| Commands | 7 | video, brand, template, skills, contribute, record-demo, generate-voiceover |
+| Commands | 8 | video, brand, template, skills, contribute, record-demo, generate-voiceover, scene-review |
 | Components | 9 | AnimatedBackground, SlideTransition, Label, Vignette, LogoWatermark, SplitScreen, NarratorPiP, Envelope, PointingHand |
 | Examples | 2 | digital-samba-skill-demo, sprint-review-cho-oyu |
 
