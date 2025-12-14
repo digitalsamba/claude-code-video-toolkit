@@ -75,12 +75,15 @@ Claude Code has deep knowledge in:
 | **elevenlabs** | AI audio — text-to-speech, voice cloning, music, sound effects |
 | **ffmpeg** | Media processing — format conversion, compression, resizing |
 | **playwright-recording** | Browser automation — record demos as video |
+| **frontend-design** | Visual design refinement for distinctive, production-grade aesthetics |
 
 ### Commands
 
 | Command | Description |
 |---------|-------------|
 | `/video` | Video projects — list, resume, or create new |
+| `/scene-review` | Scene-by-scene review in Remotion Studio |
+| `/design` | Focused design refinement session for a scene |
 | `/brand` | Brand profiles — list, edit, or create new |
 | `/template` | List available templates and their features |
 | `/skills` | List installed skills or create new ones |
@@ -172,17 +175,19 @@ claude-code-video-toolkit/
 ## Video Workflow
 
 ```
-/video → Review script → Gather assets → Generate audio → Preview → Iterate → Render
+/video → Script → Assets → Scene Review → Design → Audio → Preview → Render
 ```
 
 1. **Create project** — Run `/video`, choose template and brand
 2. **Review script** — Edit `VOICEOVER-SCRIPT.md` to plan content and assets
 3. **Gather assets** — Record demos with `/record-demo` or add external videos
-4. **Generate audio** — AI voiceover with `/generate-voiceover`
-5. **Configure** — Update config file with asset paths and timing
-6. **Preview** — `npm run studio` for live preview
-7. **Iterate** — Work with Claude Code to adjust timing, styling, content
-8. **Render** — `npm run render` for final MP4
+4. **Scene review** — Run `/scene-review` to verify visuals in Remotion Studio
+5. **Design refinement** — Use `/design` to improve slide visuals with the frontend-design skill
+6. **Generate audio** — AI voiceover with `/generate-voiceover`
+7. **Configure** — Update config file with asset paths and timing
+8. **Preview** — `npm run studio` for live preview
+9. **Iterate** — Work with Claude Code to adjust timing, styling, content
+10. **Render** — `npm run render` for final MP4
 
 ## Requirements
 

@@ -84,6 +84,8 @@ If you prefer manual setup:
 | Command | Description |
 |---------|-------------|
 | `/video` | Video projects - list, resume, or create new |
+| `/scene-review` | Scene-by-scene review in Remotion Studio |
+| `/design` | Focused design refinement session for a scene |
 | `/brand` | Brand profiles - list, edit, or create new |
 | `/template` | List available templates and their features |
 | `/record-demo` | Record browser interactions with Playwright |
@@ -143,6 +145,7 @@ Which project? (or 'new' for a new project)
 |-------|-------------|
 | `planning` | Defining scenes, writing script |
 | `assets` | Recording demos, gathering materials |
+| `review` | Scene-by-scene review in Remotion Studio (`/scene-review`) |
 | `audio` | Generating voiceover, music |
 | `editing` | Adjusting timing, previewing |
 | `rendering` | Final render in progress |
