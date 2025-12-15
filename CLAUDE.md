@@ -258,6 +258,85 @@ const opacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' 
 <Audio src={staticFile('music.mp3')} volume={0.15} />
 ```
 
+## Scene Transitions
+
+The toolkit includes a transitions library at `lib/transitions/` with both official Remotion transitions and custom presentations.
+
+### Using TransitionSeries
+
+For scene-to-scene transitions (scenes overlap during transition):
+
+```tsx
+import { TransitionSeries, linearTiming } from '@remotion/transitions';
+import { glitch, lightLeak, zoomBlur } from '../../../lib/transitions';
+
+<TransitionSeries>
+  <TransitionSeries.Sequence durationInFrames={90}>
+    <TitleSlide />
+  </TransitionSeries.Sequence>
+  <TransitionSeries.Transition
+    presentation={glitch({ intensity: 0.8 })}
+    timing={linearTiming({ durationInFrames: 20 })}
+  />
+  <TransitionSeries.Sequence durationInFrames={120}>
+    <ContentSlide />
+  </TransitionSeries.Sequence>
+</TransitionSeries>
+```
+
+### Available Transitions
+
+| Transition | Description | Best For |
+|------------|-------------|----------|
+| `glitch()` | Digital distortion, RGB separation, scan lines | Tech demos, edgy reveals |
+| `rgbSplit()` | Chromatic aberration effect | Modern tech, energetic |
+| `zoomBlur()` | Radial motion blur with scale | CTAs, high-energy moments |
+| `lightLeak()` | Cinematic lens flare, overexposure | Celebrations, film aesthetic |
+| `clockWipe()` | Radial wipe like clock hands | Playful reveals |
+| `pixelate()` | Digital mosaic dissolution | Retro/gaming themes |
+| `slide()` | Push scene from direction | Standard transitions |
+| `fade()` | Simple crossfade | Professional, subtle |
+| `wipe()` | Edge reveal | Clean transitions |
+| `flip()` | 3D card flip | Playful, dynamic |
+
+### Transition Options Examples
+
+```tsx
+// Tech/cyberpunk feel
+glitch({ intensity: 0.8, slices: 8, rgbShift: true })
+
+// Warm celebration
+lightLeak({ temperature: 'warm', direction: 'right' })
+
+// High energy zoom
+zoomBlur({ direction: 'in', blurAmount: 20 })
+
+// Chromatic aberration
+rgbSplit({ direction: 'diagonal', displacement: 30 })
+```
+
+### Timing Functions
+
+```tsx
+// Linear: constant speed
+linearTiming({ durationInFrames: 30 })
+
+// Spring: physics-based with bounce
+springTiming({ config: { damping: 200 }, durationInFrames: 45 })
+```
+
+### Transition Duration Guidelines
+
+| Type | Frames | Notes |
+|------|--------|-------|
+| Quick cut | 10-15 | Fast, punchy |
+| Standard | 20-30 | Most common |
+| Dramatic | 40-60 | Slow reveals |
+| Glitch effects | 15-25 | Should feel sudden |
+| Light leak | 30-45 | Needs time to sweep |
+
+See `lib/transitions/README.md` for full documentation.
+
 ## Design Refinement with frontend-design Skill
 
 The `frontend-design` skill elevates slide visuals from generic to distinctive. It's integrated at multiple levels:

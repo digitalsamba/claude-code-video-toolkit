@@ -178,9 +178,26 @@ ElevenLabs usage monitoring:
 - Scroll smoothing
 
 ### Template Improvements
-- More transition styles
 - Additional color themes
 - Progress bar component
+
+### Transitions Library (In Progress - experiment/transitions branch)
+**Status:** Built but needs testing before merge
+
+New `lib/transitions/` with 6 custom transitions + official Remotion transitions:
+- `glitch()` - Digital distortion, slice displacement, RGB separation
+- `rgbSplit()` - Chromatic aberration
+- `zoomBlur()` - Radial motion blur with scale
+- `lightLeak()` - Cinematic lens flare
+- `clockWipe()` - Radial sweep
+- `pixelate()` - Digital mosaic
+
+**TODO before merge:**
+- [ ] Test all transitions in gallery (`showcase/transitions/`)
+- [ ] Fix any broken transitions (glitch was fixed but needs verification)
+- [ ] Copy fixed presentations back to `lib/transitions/presentations/`
+- [ ] Test integration with templates
+- [ ] Update lib/transitions/TransitionGallery.tsx to match showcase version
 
 ### Brand System Enhancements
 - Brand inheritance (extend another brand)

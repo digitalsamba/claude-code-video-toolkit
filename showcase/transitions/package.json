@@ -1,11 +1,11 @@
 {
-  "name": "product-demo",
+  "name": "transitions-showcase",
   "version": "1.0.0",
-  "description": "Product demo video template for claude-code-video-toolkit",
+  "description": "Visual gallery of all available transitions",
   "scripts": {
     "studio": "remotion studio",
-    "render": "remotion render ProductDemo out/product-demo.mp4",
-    "render:preview": "remotion render ProductDemo out/preview.mp4 --scale=0.5"
+    "render": "remotion render TransitionGallery out/transitions-gallery.mp4",
+    "render:gif": "remotion render TransitionGallery out/transitions-gallery.gif --image-format=png"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
