@@ -335,6 +335,16 @@ springTiming({ config: { damping: 200 }, durationInFrames: 45 })
 | Glitch effects | 15-25 | Should feel sudden |
 | Light leak | 30-45 | Needs time to sweep |
 
+### Preview Transitions Gallery
+
+To see all transitions in action with Scene A → Scene B demos:
+
+```bash
+cd showcase/transitions
+npm install
+npm run studio
+```
+
 See `lib/transitions/README.md` for full documentation.
 
 ## Design Refinement with frontend-design Skill

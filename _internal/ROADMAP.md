@@ -20,7 +20,7 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 ## Current Status
 
 **Phase:** 3 - Templates & Brands
-**Focus:** Multi-session project system, unified commands
+**Focus:** Transitions library, shared components
 
 ---
 
@@ -77,6 +77,13 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 - [x] Shared component library (`lib/`)
 - [ ] Tutorial template
 - [ ] Changelog/release notes template
+
+**Transitions Library:**
+- [x] Transitions library (`lib/transitions/`)
+- [x] Custom presentations: glitch, rgbSplit, zoomBlur, lightLeak, clockWipe, pixelate, checkerboard
+- [x] Re-exports official transitions: slide, fade, wipe, flip
+- [x] Transitions gallery showcase (`showcase/transitions/`)
+- [x] Documentation in Remotion skill and CLAUDE.md
 
 **Template-Brand Integration:**
 - [x] Brand loader utility (`lib/brand.ts`)
@@ -167,10 +174,11 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 |----------|-------|-------|
 | Templates | 2 | sprint-review, product-demo |
 | Brands | 2 | default, digital-samba |
-| Skills | 4 | 2 stable, 2 beta |
+| Skills | 5 | 3 stable, 2 beta |
 | Tools | 3 | voiceover, music, sfx |
-| Commands | 8 | video, brand, template, skills, contribute, record-demo, generate-voiceover, scene-review |
+| Commands | 9 | video, brand, template, skills, contribute, record-demo, generate-voiceover, scene-review, design |
 | Components | 9 | AnimatedBackground, SlideTransition, Label, Vignette, LogoWatermark, SplitScreen, NarratorPiP, Envelope, PointingHand |
+| Transitions | 7 | glitch, rgbSplit, zoomBlur, lightLeak, clockWipe, pixelate, checkerboard |
 | Examples | 2 | digital-samba-skill-demo, sprint-review-cho-oyu |
 
 ---

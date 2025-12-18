@@ -104,6 +104,29 @@ See `examples/` for finished projects you can learn from:
 - [digital-samba-skill-demo](https://demos.digitalsamba.com/video/digital-samba-skill-demo.mp4) — Product demo showcasing Claude Code skill
 - [sprint-review-cho-oyu](https://demos.digitalsamba.com/video/sprint-review.mp4) — iOS sprint review with demos
 
+### Scene Transitions
+
+The toolkit includes a transitions library for scene-to-scene effects:
+
+| Transition | Description |
+|------------|-------------|
+| `glitch()` | Digital distortion with RGB shift |
+| `rgbSplit()` | Chromatic aberration effect |
+| `zoomBlur()` | Radial motion blur |
+| `lightLeak()` | Cinematic lens flare |
+| `clockWipe()` | Radial sweep reveal |
+| `pixelate()` | Digital mosaic dissolution |
+| `checkerboard()` | Grid-based reveal (9 patterns) |
+
+Plus official Remotion transitions: `slide()`, `fade()`, `wipe()`, `flip()`
+
+Preview all transitions:
+```bash
+cd showcase/transitions && npm install && npm run studio
+```
+
+See [lib/transitions/README.md](lib/transitions/README.md) for full documentation.
+
 ### Brand Profiles
 
 Define visual identity in `brands/`. When you create a project with `/video`, the brand's colors, fonts, and styling are automatically applied.
@@ -143,6 +166,7 @@ claude-code-video-toolkit/
 │   └── commands/        # Slash commands (/video, /brand, etc.)
 ├── lib/                 # Shared components, theme system, utilities
 │   ├── components/      # Reusable video components (9 components)
+│   ├── transitions/     # Scene transition effects (7 custom + 4 official)
 │   ├── theme/           # ThemeProvider, useTheme
 │   └── project/         # Multi-session project system
 ├── tools/               # Python CLI tools

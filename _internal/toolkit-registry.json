@@ -152,6 +152,59 @@
     }
   },
 
+  "transitions": {
+    "glitch": {
+      "path": "lib/transitions/presentations/glitch.tsx",
+      "description": "Digital distortion with RGB shift and scan lines",
+      "options": ["intensity", "slices", "rgbShift"],
+      "bestFor": "Tech demos, edgy reveals, cyberpunk aesthetic",
+      "status": "stable"
+    },
+    "rgbSplit": {
+      "path": "lib/transitions/presentations/rgb-split.tsx",
+      "description": "Chromatic aberration / color separation effect",
+      "options": ["direction", "displacement"],
+      "bestFor": "Modern tech, energetic transitions",
+      "status": "stable"
+    },
+    "zoomBlur": {
+      "path": "lib/transitions/presentations/zoom-blur.tsx",
+      "description": "Radial motion blur with scale",
+      "options": ["direction", "blurAmount"],
+      "bestFor": "CTAs, high-energy moments, impact",
+      "status": "stable"
+    },
+    "lightLeak": {
+      "path": "lib/transitions/presentations/light-leak.tsx",
+      "description": "Cinematic lens flare and overexposure",
+      "options": ["temperature", "direction"],
+      "bestFor": "Celebrations, film aesthetic, warm moments",
+      "status": "stable"
+    },
+    "clockWipe": {
+      "path": "lib/transitions/presentations/clock-wipe.tsx",
+      "description": "Radial sweep reveal like clock hands",
+      "options": ["startAngle", "direction", "segments"],
+      "bestFor": "Time-related content, playful reveals",
+      "status": "stable"
+    },
+    "pixelate": {
+      "path": "lib/transitions/presentations/pixelate.tsx",
+      "description": "Digital mosaic dissolution with glitch artifacts",
+      "options": ["maxBlockSize", "gridSize", "scanlines", "glitchArtifacts", "randomness"],
+      "bestFor": "Retro/gaming themes, digital transformations",
+      "status": "stable"
+    },
+    "checkerboard": {
+      "path": "lib/transitions/presentations/checkerboard.tsx",
+      "description": "Grid-based reveal with multiple patterns",
+      "options": ["gridSize", "pattern", "stagger", "squareAnimation"],
+      "patterns": ["sequential", "random", "diagonal", "alternating", "spiral", "rows", "columns", "center-out", "corners-in"],
+      "bestFor": "Playful reveals, structured transitions",
+      "status": "stable"
+    }
+  },
+
   "components": {
     "AnimatedBackground": {
       "path": "lib/components/AnimatedBackground.tsx",

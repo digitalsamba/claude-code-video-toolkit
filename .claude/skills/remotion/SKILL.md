@@ -330,6 +330,115 @@ import { Player } from '@remotion/player';
 />
 ```
 
+## Scene Transitions
+
+The toolkit includes a transitions library at `lib/transitions/` for scene-to-scene effects.
+
+### Using TransitionSeries
+
+```tsx
+import { TransitionSeries, linearTiming } from '@remotion/transitions';
+// Import custom transitions from lib (adjust path based on your project location)
+import { glitch, lightLeak, clockWipe, checkerboard } from '../../../../lib/transitions';
+// Or import from @remotion/transitions for official ones
+import { slide, fade } from '@remotion/transitions/slide';
+
+<TransitionSeries>
+  <TransitionSeries.Sequence durationInFrames={90}>
+    <TitleSlide />
+  </TransitionSeries.Sequence>
+  <TransitionSeries.Transition
+    presentation={glitch({ intensity: 0.8 })}
+    timing={linearTiming({ durationInFrames: 30 })}
+  />
+  <TransitionSeries.Sequence durationInFrames={120}>
+    <ContentSlide />
+  </TransitionSeries.Sequence>
+</TransitionSeries>
+```
+
+### Available Transitions
+
+**Custom (lib/transitions/):**
+
+| Transition | Options | Best For |
+|------------|---------|----------|
+| `glitch()` | `intensity`, `slices`, `rgbShift` | Tech demos, edgy reveals, cyberpunk |
+| `rgbSplit()` | `direction`, `displacement` | Modern tech, energetic transitions |
+| `zoomBlur()` | `direction`, `blurAmount` | CTAs, high-energy moments, impact |
+| `lightLeak()` | `temperature`, `direction` | Celebrations, film aesthetic, warm moments |
+| `clockWipe()` | `startAngle`, `direction`, `segments` | Time-related content, playful reveals |
+| `pixelate()` | `maxBlockSize`, `gridSize`, `scanlines`, `glitchArtifacts`, `randomness` | Retro/gaming, digital transformations |
+| `checkerboard()` | `gridSize`, `pattern`, `stagger`, `squareAnimation` | Playful reveals, structured transitions |
+
+**Checkerboard patterns:** `sequential`, `random`, `diagonal`, `alternating`, `spiral`, `rows`, `columns`, `center-out`, `corners-in`
+
+**Official Remotion (@remotion/transitions/):**
+
+| Transition | Description |
+|------------|-------------|
+| `slide()` | Push scene from direction |
+| `fade()` | Simple crossfade |
+| `wipe()` | Edge reveal |
+| `flip()` | 3D card flip |
+
+### Transition Examples
+
+```tsx
+// Tech/cyberpunk feel
+glitch({ intensity: 0.8, slices: 8, rgbShift: true })
+
+// Warm celebration
+lightLeak({ temperature: 'warm', direction: 'right' })
+
+// High energy zoom
+zoomBlur({ direction: 'in', blurAmount: 20 })
+
+// Chromatic aberration
+rgbSplit({ direction: 'diagonal', displacement: 30 })
+
+// Clock sweep reveal
+clockWipe({ direction: 'clockwise', startAngle: 0 })
+
+// Retro pixelation
+pixelate({ maxBlockSize: 50, glitchArtifacts: true })
+
+// Checkerboard patterns
+checkerboard({ pattern: 'diagonal', gridSize: 8 })
+checkerboard({ pattern: 'spiral', gridSize: 10 })
+checkerboard({ pattern: 'center-out', squareAnimation: 'scale' })
+```
+
+### Timing Functions
+
+```tsx
+import { linearTiming, springTiming } from '@remotion/transitions';
+
+// Linear: constant speed
+linearTiming({ durationInFrames: 30 })
+
+// Spring: physics-based with bounce
+springTiming({ config: { damping: 200 }, durationInFrames: 45 })
+```
+
+### Duration Guidelines
+
+| Type | Frames | Notes |
+|------|--------|-------|
+| Quick cut | 15-20 | Fast, punchy |
+| Standard | 30-45 | Most common |
+| Dramatic | 50-60 | Slow reveals |
+| Glitch effects | 20-30 | Should feel sudden |
+| Light leak | 45-60 | Needs time to sweep |
+
+### Preview Transitions
+
+Run the showcase gallery to see all transitions:
+
+```bash
+cd showcase/transitions && npm run studio
+```
+
 ## Best Practices
 
 1. **Frame-based animations only** - Avoid CSS transitions/animations; they cause flickering

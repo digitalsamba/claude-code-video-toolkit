@@ -124,6 +124,32 @@ const demoSection = sprintConfig.demos.map((demo, i) => (
 ));
 ```
 
+### Scene Transitions
+
+Use the transitions library for scene-to-scene effects:
+
+```tsx
+import { TransitionSeries, linearTiming } from '@remotion/transitions';
+import { glitch, lightLeak, checkerboard } from '../../../../lib/transitions';
+
+<TransitionSeries>
+  <TransitionSeries.Sequence durationInFrames={90}>
+    <TitleSlide />
+  </TransitionSeries.Sequence>
+  <TransitionSeries.Transition
+    presentation={glitch({ intensity: 0.8 })}
+    timing={linearTiming({ durationInFrames: 30 })}
+  />
+  <TransitionSeries.Sequence durationInFrames={120}>
+    <ContentSlide />
+  </TransitionSeries.Sequence>
+</TransitionSeries>
+```
+
+Available transitions: `glitch`, `rgbSplit`, `zoomBlur`, `lightLeak`, `clockWipe`, `pixelate`, `checkerboard`, plus official Remotion transitions (`slide`, `fade`, `wipe`, `flip`).
+
+See [lib/transitions/README.md](../lib/transitions/README.md) for full options.
+
 ### Asset References
 
 Use `staticFile()` for assets:

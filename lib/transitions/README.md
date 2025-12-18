@@ -56,9 +56,10 @@ export const MyVideo = () => {
 | `glitch()` | Digital distortion with slice displacement and RGB separation | Tech demos, cyberpunk, edgy reveals | ✅ Validated |
 | `rgbSplit()` | Chromatic aberration with color fringing | Modern tech, energetic transitions | ✅ Validated |
 | `zoomBlur()` | Radial motion blur with scale | CTAs, reveals, high-energy moments | ✅ Validated |
-| `lightLeak()` | Cinematic lens flare and overexposure | Emotional moments, celebrations, film aesthetic | 🔄 Pending |
-| `clockWipe()` | Radial wipe like clock hands | Time-related content, playful reveals | 🔄 Pending |
-| `pixelate()` | Digital mosaic dissolution | Retro/gaming, digital transformations | 🔄 Pending |
+| `lightLeak()` | Cinematic lens flare and overexposure | Emotional moments, celebrations, film aesthetic | ✅ Validated |
+| `clockWipe()` | Radial wipe like clock hands | Time-related content, playful reveals | ✅ Validated |
+| `pixelate()` | Digital mosaic dissolution | Retro/gaming, digital transformations | ✅ Validated |
+| `checkerboard()` | Grid-based reveal with multiple patterns | Playful reveals, structured transitions | ✅ Validated |
 
 ### Official Transitions (re-exported)
 
@@ -129,11 +130,35 @@ clockWipe({
 
 ```tsx
 pixelate({
-  maxBlockSize: 40,    // Max pixel block size. Default: 40
-  posterize: true,     // Reduce color depth. Default: true
-  pattern: 'uniform',  // 'uniform' | 'random'. Default: 'uniform'
+  maxBlockSize: 60,       // Max pixel block size. Default: 60
+  gridSize: 12,           // Grid dimensions. Default: 12
+  scanlines: true,        // CRT scanline overlay. Default: true
+  glitchArtifacts: true,  // RGB split and glitch slices. Default: true
+  randomness: 0.8,        // Block reveal randomness (0-1). Default: 0.8
 })
 ```
+
+### checkerboard(options?)
+
+```tsx
+checkerboard({
+  gridSize: 8,                // Grid dimensions (8 = 8x8). Default: 8
+  pattern: 'diagonal',        // Reveal pattern. Default: 'diagonal'
+  stagger: 0.15,              // Delay between squares (0-1). Default: 0.15
+  squareAnimation: 'fade',    // 'fade' | 'scale' | 'flip'. Default: 'fade'
+})
+```
+
+**Available patterns:**
+- `sequential` - Left-to-right, top-to-bottom
+- `random` - Random order
+- `diagonal` - Diagonal wave from top-left
+- `alternating` - True checkerboard pattern
+- `spiral` - Spiral from center outward
+- `rows` - Row by row
+- `columns` - Column by column
+- `center-out` - Radial from center
+- `corners-in` - From corners toward center
 
 ## Timing Functions
 
@@ -169,8 +194,9 @@ springTiming({
 | **Celebration/Launch** | `lightLeak`, `zoomBlur` |
 | **Retro/Gaming** | `pixelate`, `glitch` |
 | **Cinematic** | `lightLeak`, `fade`, `wipe` |
-| **Playful/Creative** | `clockWipe`, `flip` |
+| **Playful/Creative** | `clockWipe`, `checkerboard`, `flip` |
 | **High Energy** | `zoomBlur`, `rgbSplit`, `glitch` |
+| **Structured/Grid** | `checkerboard`, `pixelate` |
 
 ## Transition Duration Guidelines
 
@@ -197,7 +223,21 @@ import { Audio, Sequence } from 'remotion';
 
 ## Transition Gallery
 
-A visual showcase component is included for previewing all transitions:
+### Standalone Showcase
+
+Preview all transitions with the dedicated showcase project:
+
+```bash
+cd showcase/transitions
+npm install
+npm run studio
+```
+
+Opens Remotion Studio with a visual gallery showing each transition as Scene A → Scene B with labels and descriptions.
+
+### Embedding in Projects
+
+Add the gallery to your own project's Root.tsx:
 
 ```tsx
 import { TransitionGallery, transitionGalleryConfig } from '../../../lib/transitions';

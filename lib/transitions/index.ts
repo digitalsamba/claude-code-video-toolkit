@@ -43,6 +43,9 @@ export type { ClockWipeProps } from './presentations/clock-wipe';
 export { pixelate } from './presentations/pixelate';
 export type { PixelateProps } from './presentations/pixelate';
 
+export { checkerboard } from './presentations/checkerboard';
+export type { CheckerboardProps, CheckerboardPattern } from './presentations/checkerboard';
+
 // Re-export official transitions for convenience
 export { slide } from '@remotion/transitions/slide';
 export { fade } from '@remotion/transitions/fade';
