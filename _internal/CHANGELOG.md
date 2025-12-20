@@ -2,13 +2,19 @@
 
 All notable changes to claude-code-video-toolkit.
 
-> **Status:** Work in progress - no official releases yet.
+> Releases are automated via GitHub Actions. See `.github/workflows/release.yml`.
 
 ---
 
 ## 2025-12-20
 
 ### Added
+- **GitHub Actions release automation** (`.github/workflows/release.yml`)
+  - Tag-triggered releases (`v*` tags)
+  - Manual dispatch option with version input
+  - Auto-generates changelog from commits since last tag
+  - Reads version from `toolkit-registry.json`
+
 - **`/versions` command** - Check dependency versions and toolkit updates
   - Detects Remotion package version mismatches in projects
   - Compares local toolkit version against GitHub releases
