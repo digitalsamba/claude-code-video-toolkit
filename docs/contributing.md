@@ -60,6 +60,8 @@ Every session teaches the toolkit something:
 | **Workflow** | Update commands or CLAUDE.md |
 | **Templates** | Add to BACKLOG.md → Templates section |
 
+**Important:** When adding commands, skills, or templates, follow the [Documentation Checklist](../CONTRIBUTING.md#documentation-checklist) to ensure all docs stay in sync.
+
 ---
 
 ## Quick Contribution (from your working copy)

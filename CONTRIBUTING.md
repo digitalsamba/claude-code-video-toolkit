@@ -43,7 +43,8 @@ Thank you for your interest in contributing! This toolkit is designed to help pe
 2. Include a working Remotion project
 3. Add a `README.md` explaining the template
 4. Register it in `_internal/toolkit-registry.json`
-5. Test with `npm run studio` and `npm run render`
+5. **Update documentation** (see checklist below)
+6. Test with `npm run studio` and `npm run render`
 
 ## Adding a New Skill
 
@@ -51,14 +52,33 @@ Thank you for your interest in contributing! This toolkit is designed to help pe
 2. Add `SKILL.md` with the skill definition
 3. Optionally add `reference.md` for detailed docs
 4. Register it in `_internal/toolkit-registry.json`
-5. Test by asking Claude Code questions about the domain
+5. **Update documentation** (see checklist below)
+6. Test by asking Claude Code questions about the domain
 
 ## Adding a New Command
 
 1. Create a markdown file in `.claude/commands/`
 2. Follow the existing command format
 3. Register it in `_internal/toolkit-registry.json`
-4. Test by running the command in Claude Code
+4. **Update documentation** (see checklist below)
+5. Test by running the command in Claude Code
+
+## Documentation Checklist
+
+When adding or modifying commands, skills, or templates, update these files:
+
+| What Changed | Update These Files |
+|--------------|-------------------|
+| New command | `README.md` (Commands table), `CLAUDE.md` (Commands section) |
+| New skill | `README.md` (Skills table), `CLAUDE.md` (Skills Reference) |
+| New template | `README.md` (Templates section), `CLAUDE.md` (Templates section) |
+| New component | `CLAUDE.md` (Shared Components table) |
+| New transition | `README.md` (Scene Transitions), `lib/transitions/README.md` |
+
+**Quick verification:** After adding a command, grep for it across docs:
+```bash
+grep -r "/your-command" README.md CLAUDE.md
+```
 
 ## Code Style
 

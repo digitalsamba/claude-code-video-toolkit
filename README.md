@@ -90,6 +90,7 @@ Claude Code has deep knowledge in:
 | `/contribute` | Share improvements — issues, PRs, examples |
 | `/record-demo` | Record browser interactions with Playwright |
 | `/generate-voiceover` | Generate AI voiceover from a script |
+| `/versions` | Check dependency versions and toolkit updates |
 
 > **Note:** After creating or modifying commands/skills, restart Claude Code to load changes.
 
