@@ -109,8 +109,8 @@ Examples:
         "-m",
         type=str,
         default="eleven_multilingual_v2",
-        choices=["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5"],
-        help="ElevenLabs TTS model (default: eleven_multilingual_v2)",
+        choices=["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5", "eleven_v3"],
+        help="ElevenLabs TTS model (default: eleven_multilingual_v2). eleven_v3 is alpha.",
     )
     parser.add_argument(
         "--stt-model",
