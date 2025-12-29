@@ -181,7 +181,7 @@ python tools/addmusic.py --input video.mp4 --music bg.mp3 --music-volume 0.2 --f
 | Type | Tools | When to Use |
 |------|-------|-------------|
 | **Project tools** | voiceover, music, sfx | During video creation workflow |
-| **Utility tools** | redub, addmusic | Quick transformations on existing videos |
+| **Utility tools** | redub, addmusic, notebooklm_brand | Quick transformations on existing videos |
 
 Utility tools work on any video file without requiring a project structure.
 
@@ -211,6 +211,59 @@ The `--sync` flag enables word-level time remapping for redubbing. This is essen
 - Redubbing to a voice with significantly different pacing
 - When simple audio replacement produces noticeable drift
 - For professional results where sync matters
+
+### NotebookLM Branding
+
+The `notebooklm_brand.py` tool handles post-processing of NotebookLM videos with custom branding. This solves a specific challenge: when redubbing NotebookLM videos, the TTS audio may be longer than the safe visual trim point.
+
+**The problem:**
+- NotebookLM videos have a ~2s visual outro (logo + URL card)
+- When you redub with a slower TTS voice, the audio extends beyond the original
+- Simple trimming cuts off the final narration
+- Video and audio tracks need separate handling
+
+**The solution:**
+1. Trim video to remove NotebookLM visuals
+2. Keep full audio (uncut)
+3. Bridge the gap with a freeze frame
+4. Add custom branded outro
+
+```bash
+# Basic usage
+python tools/notebooklm_brand.py \
+    --input video_synced.mp4 \
+    --logo assets/logo.png \
+    --url "mysite.com" \
+    --output video_final.mp4
+
+# Specify exact trim point (if auto-detection is wrong)
+python tools/notebooklm_brand.py \
+    --input video_synced.mp4 \
+    --logo assets/logo.png \
+    --url "mysite.com" \
+    --trim-at 174.7 \
+    --output video_final.mp4
+
+# Use existing outro card image
+python tools/notebooklm_brand.py \
+    --input video_synced.mp4 \
+    --outro-card assets/outro_card.png \
+    --output video_final.mp4
+
+# Use separate TTS audio file (full narration)
+python tools/notebooklm_brand.py \
+    --input video_synced.mp4 \
+    --audio-file tts_audio.mp3 \
+    --outro-card assets/outro_card.png \
+    --output video_final.mp4
+```
+
+**Options:**
+- `--trim-at`: Seconds where NotebookLM outro begins (auto-detects if not specified)
+- `--audio-file`: Use separate audio file instead of video's audio track
+- `--outro-duration`: Length of branded outro (default: 4s)
+- `--logo-scale`: Logo width in pixels (default: 220)
+- `--text-color`: URL text color as hex (default: 6B8E6B sage green)
 
 ## Video Production Workflow
 
