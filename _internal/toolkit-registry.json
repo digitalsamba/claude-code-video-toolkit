@@ -1,6 +1,6 @@
 {
   "name": "claude-code-video-toolkit",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "AI-native video production workspace for Claude Code",
   "repository": "https://github.com/digitalsamba/claude-code-video-toolkit",
 
@@ -166,12 +166,31 @@
     "dewatermark": {
       "path": "tools/dewatermark.py",
       "description": "Remove watermarks using AI inpainting (ProPainter) - supports local and RunPod cloud",
-      "usage": "python tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output clean.mp4 --runpod",
+      "usage": "python tools/dewatermark.py --input video.mp4 --preset sora --output clean.mp4 --runpod",
       "status": "beta",
       "optional": true,
       "requires": "RunPod account OR local NVIDIA GPU + ProPainter (~2GB)",
+      "presets": ["notebooklm", "tiktok", "sora", "stock-br", "stock-bl", "stock-center"],
       "created": "2025-12-29",
       "updated": "2025-12-30"
+    },
+    "locate_watermark": {
+      "path": "tools/locate_watermark.py",
+      "description": "Helper tool to identify watermark coordinates using grid overlay and verification",
+      "usage": "python tools/locate_watermark.py --input video.mp4 --grid --output-dir ./review/",
+      "status": "beta",
+      "requires": "ImageMagick (brew install imagemagick)",
+      "presets": ["notebooklm", "tiktok", "sora", "stock-br", "stock-bl", "stock-center"],
+      "created": "2025-12-29",
+      "updated": "2025-12-30"
+    },
+    "notebooklm_brand": {
+      "path": "tools/notebooklm_brand.py",
+      "description": "Post-process NotebookLM videos with custom branding (trim outro, add logo/URL)",
+      "usage": "python tools/notebooklm_brand.py --input video.mp4 --logo logo.png --url 'mysite.com' --output branded.mp4",
+      "status": "beta",
+      "created": "2025-12-29",
+      "updated": "2025-12-29"
     }
   },
 
