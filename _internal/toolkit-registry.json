@@ -162,6 +162,47 @@
       "status": "beta",
       "created": "2025-12-28",
       "updated": "2025-12-28"
+    },
+    "dewatermark": {
+      "path": "tools/dewatermark.py",
+      "description": "Remove watermarks using AI inpainting (ProPainter) - supports local and RunPod cloud",
+      "usage": "python tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output clean.mp4 --runpod",
+      "status": "beta",
+      "optional": true,
+      "requires": "RunPod account OR local NVIDIA GPU + ProPainter (~2GB)",
+      "created": "2025-12-29",
+      "updated": "2025-12-30"
+    }
+  },
+
+  "optionalComponents": {
+    "propainter": {
+      "name": "ProPainter",
+      "description": "AI video inpainting for watermark removal (local mode)",
+      "installPath": "~/.video-toolkit/propainter/",
+      "repository": "https://github.com/sczhou/ProPainter.git",
+      "diskSpace": "~2GB",
+      "hardware": {
+        "recommended": "NVIDIA GPU (8GB+ VRAM)",
+        "notSupported": "Apple Silicon, CPU (use --runpod instead)",
+        "memory": "8-10GB VRAM for 720p with fp16"
+      },
+      "installCommand": "python tools/dewatermark.py --install",
+      "statusCommand": "python tools/dewatermark.py --status",
+      "documentation": "docs/optional-components.md"
+    }
+  },
+
+  "cloudProviders": {
+    "runpod": {
+      "name": "RunPod",
+      "description": "Serverless GPU cloud for video processing",
+      "dockerImage": "docker/runpod-propainter/",
+      "documentation": "docs/runpod-setup.md",
+      "operations": ["dewatermark"],
+      "envVars": ["RUNPOD_API_KEY", "RUNPOD_ENDPOINT_ID"],
+      "estimatedCost": "$0.05-0.30 per video",
+      "created": "2025-12-30"
     }
   },
 

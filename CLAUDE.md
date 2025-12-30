@@ -181,9 +181,92 @@ python tools/addmusic.py --input video.mp4 --music bg.mp3 --music-volume 0.2 --f
 | Type | Tools | When to Use |
 |------|-------|-------------|
 | **Project tools** | voiceover, music, sfx | During video creation workflow |
-| **Utility tools** | redub, addmusic, notebooklm_brand | Quick transformations on existing videos |
+| **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
+| **Optional tools** | dewatermark | Requires additional installation (see below) |
 
 Utility tools work on any video file without requiring a project structure.
+
+### Watermark Removal (Optional Component)
+
+The `dewatermark.py` tool uses AI inpainting (ProPainter) to remove watermarks.
+
+**Two processing modes:**
+- **RunPod (cloud)** - Works from any machine, ~$0.05-0.30/video
+- **Local** - Requires NVIDIA GPU with 8GB+ VRAM
+
+```bash
+# Cloud processing via RunPod (recommended for Mac users)
+# Default outputs at 50% resolution for memory safety
+python tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output clean.mp4 --runpod
+
+# Full resolution (may fail on some GPUs due to memory limits)
+python tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output clean.mp4 --runpod --resize-ratio 1.0
+
+# Local processing (requires NVIDIA GPU + ProPainter installation)
+python tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output clean.mp4
+
+# Check local installation status
+python tools/dewatermark.py --status
+
+# Install ProPainter for local processing (~2GB download)
+python tools/dewatermark.py --install
+```
+
+**RunPod setup (for cloud processing):**
+```bash
+# 1. Add API key to .env
+echo "RUNPOD_API_KEY=your_key_here" >> .env
+
+# 2. Run automated setup
+python tools/dewatermark.py --setup
+
+# Done! The endpoint ID is automatically saved to .env
+```
+
+For manual setup or advanced options, see `docs/runpod-setup.md`.
+
+**Hardware requirements (local mode):**
+- **Required:** NVIDIA GPU (8GB+ VRAM)
+- **Not supported:** Apple Silicon, CPU-only (use `--runpod` instead)
+- **Disk:** ~2GB for model weights
+
+**Installation location:** `~/.video-toolkit/propainter/`
+
+### Locating Watermarks
+
+Before removing a watermark, you need to identify its exact coordinates. The `locate_watermark.py` tool helps with this.
+
+**Requires:** ImageMagick (`brew install imagemagick`)
+
+```bash
+# Explore with coordinate grid overlay
+python tools/locate_watermark.py --input video.mp4 --grid --output-dir ./review/
+
+# Use a preset for common watermarks
+python tools/locate_watermark.py --input video.mp4 --preset notebooklm --verify
+
+# Verify custom region across multiple frames
+python tools/locate_watermark.py --input video.mp4 --region 1100,650,150,50 --verify
+
+# List available presets
+python tools/locate_watermark.py --list-presets
+```
+
+**Workflow:**
+1. Extract frames with `--grid` to identify watermark position
+2. Note coordinates from the grid overlay
+3. Verify with `--region x,y,w,h --verify` across multiple frames
+4. Use confirmed region with `dewatermark.py`
+
+**Presets:** notebooklm, tiktok, stock-br, stock-bl, stock-center
+
+**Options:**
+- `--samples N` - Number of frames to extract (default: 5)
+- `--grid` - Overlay coordinate grid
+- `--mark` - Draw rectangle on frames
+- `--verify` - Mark region across multiple frames for verification
+- `--crop` - Also output cropped watermark regions
+- `--open` - Open output directory in Finder (macOS)
 
 ### Redub Sync Mode
 
@@ -501,3 +584,4 @@ Keep these separate. Don't mix toolkit improvements with video production.
 - `docs/getting-started.md` - First video walkthrough
 - `docs/creating-templates.md` - Build new templates
 - `docs/creating-brands.md` - Create brand profiles
+- `docs/optional-components.md` - Setup for optional ML-based tools (ProPainter, etc.)

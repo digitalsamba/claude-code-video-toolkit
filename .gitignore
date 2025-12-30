@@ -89,3 +89,4 @@ examples/*/out/
 # Playwright recordings (can be large)
 playwright/output/*.mp4
 playwright/recordings/*.mp4
+.ai_dev/
