@@ -53,8 +53,8 @@ import runpod
 import torch
 from PIL import Image
 
-# Model path (baked into Docker image)
-MODEL_PATH = Path(os.environ.get("MODEL_PATH", "/models/wan-i2v"))
+# Model path - set after runtime download
+MODEL_PATH = None
 
 # Lazy-loaded pipeline
 _pipeline = None
@@ -64,6 +64,22 @@ _pipeline_config = {}
 def log(message: str) -> None:
     """Log message to stderr (visible in RunPod logs)."""
     print(message, file=sys.stderr, flush=True)
+
+
+def ensure_models() -> None:
+    """Ensure models are downloaded before first use."""
+    global MODEL_PATH
+
+    if MODEL_PATH is not None and MODEL_PATH.exists():
+        return  # Already initialized
+
+    log("Checking/downloading models...")
+    from download_models import ensure_models_downloaded
+
+    paths = ensure_models_downloaded()
+    MODEL_PATH = paths["model_path"]
+
+    log(f"Models ready: {MODEL_PATH}")
 
 
 def get_gpu_vram_gb() -> int:
@@ -142,6 +158,9 @@ def extract_last_frame(video_path: str) -> Optional[Image.Image]:
 def get_pipeline(vram_gb: int):
     """Get or initialize LightX2V pipeline (lazy loading)."""
     global _pipeline, _pipeline_config
+
+    # Ensure models are downloaded first
+    ensure_models()
 
     current_config = {"vram_gb": vram_gb}
     if _pipeline is not None and _pipeline_config == current_config:
@@ -411,13 +430,18 @@ def handler(job: dict) -> dict:
 # RunPod serverless entry point
 if __name__ == "__main__":
     log("Starting RunPod Wan2.2 I2V handler...")
-    log(f"Model path: {MODEL_PATH}, exists: {MODEL_PATH.exists()}")
 
-    # Check CUDA
+    # Check CUDA first
     if torch.cuda.is_available():
         log(f"CUDA available: {torch.cuda.get_device_name(0)}")
         vram_gb = get_gpu_vram_gb()
     else:
         log("WARNING: CUDA not available!")
+
+    # Download models at startup (before serverless loop)
+    # This happens during container initialization, not during job execution
+    log("Downloading models at startup (this may take 10-15 min on first run)...")
+    ensure_models()
+    log(f"Model path: {MODEL_PATH}")
 
     runpod.serverless.start({"handler": handler})

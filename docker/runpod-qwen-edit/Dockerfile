@@ -1,10 +1,13 @@
 # RunPod Serverless handler for Qwen-Image-Edit with LightX2V acceleration
 #
-# Build: docker buildx build --platform linux/amd64 -t ghcr.io/conalmullan/video-toolkit-qwen-edit:latest --push .
+# Build: docker buildx build --platform linux/amd64 -t ghcr.io/digitalsamba/video-toolkit-qwen-edit:latest --push .
 #
-# Image size: ~25GB (includes pre-baked model weights for fast cold starts)
+# Image size: ~8GB (models downloaded at runtime, cached to network volume)
 #
-# Version: 1.0.0 - CUDA 12.4, PyTorch 2.5, LightX2V + Qwen-Image-Edit-2511-Lightning
+# Version: 1.1.0 - CUDA 12.4, PyTorch 2.5, LightX2V + runtime model download
+#
+# Model Download: ~30GB downloaded on first run, cached to /runpod-volume/models/
+# Cold start: ~5-10 min (first run), ~30s (cached)
 #
 # GPU Requirements:
 #   - Minimum: 24GB VRAM (L4, RTX 4090) with FP8 quantization
@@ -76,53 +79,26 @@ RUN pip3 install --no-cache-dir \
 
 WORKDIR /app
 
-# Create models directory
-RUN mkdir -p /models/qwen-edit /models/qwen-edit-fp8
-
-# Download Qwen-Image-Edit-2511 base model (~20GB)
-# Uses HF hub to cache in standard location
-RUN python3 -c "\
-from huggingface_hub import snapshot_download; \
-print('Downloading Qwen-Image-Edit-2511 base model...'); \
-snapshot_download( \
-    repo_id='Qwen/Qwen-Image-Edit-2511', \
-    local_dir='/models/qwen-edit', \
-    ignore_patterns=['*.md', '*.txt', '.gitattributes'] \
-); \
-print('Base model downloaded successfully'); \
-"
-
-# Download FP8 quantized Lightning weights (~10GB)
-RUN python3 -c "\
-from huggingface_hub import snapshot_download; \
-print('Downloading FP8 Lightning weights...'); \
-snapshot_download( \
-    repo_id='lightx2v/Qwen-Image-Edit-2511-Lightning', \
-    local_dir='/models/qwen-edit-fp8', \
-    ignore_patterns=['*.md', '*.txt', '.gitattributes'] \
-); \
-print('FP8 weights downloaded successfully'); \
-"
-
-# Copy handler
+# Copy handler and download script
 COPY handler.py /app/handler.py
+COPY download_models.py /app/download_models.py
 
-# Environment
+# Environment - models will be downloaded to network volume at runtime
 ENV PYTHONUNBUFFERED=1
-ENV HF_HOME=/root/.cache/huggingface
+ENV HF_HOME=/runpod-volume/.cache/huggingface
 ENV LIGHTX2V_PATH=/app/lightx2v
-ENV MODEL_PATH=/models/qwen-edit
-ENV FP8_WEIGHTS_PATH=/models/qwen-edit-fp8
+# These paths will be set by handler based on network volume availability
+ENV MODEL_BASE_PATH=/runpod-volume/models
+ENV MODEL_PATH=/runpod-volume/models/qwen-edit
+ENV FP8_WEIGHTS_PATH=/runpod-volume/models/qwen-edit-fp8
 
-# Health check - verify imports and model paths
+# Health check - verify imports only (models downloaded at runtime)
 RUN python3 -c "\
 import torch; \
 print(f'PyTorch {torch.__version__}, CUDA available: {torch.cuda.is_available()}'); \
 from lightx2v import LightX2VPipeline; \
 print('LightX2V import OK'); \
-from pathlib import Path; \
-print(f'Model path exists: {Path(\"/models/qwen-edit\").exists()}'); \
-print(f'FP8 weights exist: {Path(\"/models/qwen-edit-fp8\").exists()}'); \
+print('Models will be downloaded at runtime to /runpod-volume/models/'); \
 "
 
 # Run handler
