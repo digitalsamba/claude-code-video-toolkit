@@ -82,6 +82,9 @@ RUN pip3 install --no-cache-dir \
     tqdm>=4.66.0 \
     tokenizers>=0.19.0
 
+# Install sage-attention for optimized attention (required by LightX2V)
+RUN pip3 install --no-cache-dir sageattention>=1.0.0 || echo "sage-attention not available"
+
 # Install RunPod SDK and utilities
 RUN pip3 install --no-cache-dir \
     runpod>=1.7.0 \

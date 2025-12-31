@@ -269,19 +269,20 @@ def handle_edit(job_input: dict, job_id: str, work_dir: Path) -> dict:
     pipe = get_pipeline(use_fp8=use_fp8)
 
     # Select attention mode based on available libraries
-    # LightX2V supports: flash_attn3, flash_attn2, sage_attn, torch
+    # LightX2V supports: flash_attn3, flash_attn2, sage_attn2
     try:
         import flash_attn
         attn_mode = "flash_attn3"
         log("Using flash_attn3 for attention")
     except ImportError:
         try:
-            import sage_attn
-            attn_mode = "sage_attn"
-            log("Using sage_attn for attention")
+            import sageattention
+            attn_mode = "sage_attn2"
+            log("Using sage_attn2 for attention")
         except ImportError:
-            attn_mode = "torch"
-            log("Using torch native attention (slower)")
+            # Last resort - try sage_attn2 anyway, it might be bundled
+            attn_mode = "sage_attn2"
+            log("Warning: sageattention not found, trying sage_attn2 anyway")
     log(f"Attention mode: {attn_mode}")
 
     # Configure generator
