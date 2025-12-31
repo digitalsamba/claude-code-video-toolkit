@@ -77,7 +77,12 @@ RUN pip3 install --no-cache-dir \
     requests>=2.31.0 \
     boto3>=1.34.0 \
     loguru>=0.7.0 \
-    huggingface_hub>=0.25.0
+    huggingface_hub>=0.25.0 \
+    prometheus_client>=0.20.0 \
+    pyyaml>=6.0 \
+    sentencepiece>=0.2.0 \
+    tiktoken>=0.7.0 \
+    qwen-vl-utils>=0.0.8
 
 WORKDIR /app
 
