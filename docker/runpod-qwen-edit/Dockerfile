@@ -98,7 +98,8 @@ RUN pip3 install --no-cache-dir \
     tiktoken>=0.7.0 \
     qwen-vl-utils>=0.0.8 \
     gguf>=0.10.0 \
-    triton>=3.0.0
+    triton>=3.0.0 \
+    protobuf>=4.25.0
 
 WORKDIR /app
 
