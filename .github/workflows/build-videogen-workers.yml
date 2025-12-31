@@ -20,8 +20,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  QWEN_IMAGE: ghcr.io/${{ github.repository_owner }}/video-toolkit-qwen-edit
-  WAN_IMAGE: ghcr.io/${{ github.repository_owner }}/video-toolkit-wan-i2v
+  # Push to personal GHCR (conalmullan) for easier visibility control
+  QWEN_IMAGE: ghcr.io/conalmullan/video-toolkit-qwen-edit
+  WAN_IMAGE: ghcr.io/conalmullan/video-toolkit-wan-i2v
 
 jobs:
   build-qwen-edit:
