@@ -236,8 +236,9 @@ def handle_edit(job_input: dict, job_id: str, work_dir: Path) -> dict:
     image_base64 = job_input.get("image_base64")
     prompt = job_input.get("prompt")
     negative_prompt = job_input.get("negative_prompt", "")
-    use_fp8 = job_input.get("use_fp8", True)
-    num_inference_steps = job_input.get("num_inference_steps", 8 if use_fp8 else 4)
+    # Default to BF16 (full quality) - requires 48GB+ GPU
+    use_fp8 = job_input.get("use_fp8", False)
+    num_inference_steps = job_input.get("num_inference_steps", 4)  # Lightning LoRA default
     guidance_scale = job_input.get("guidance_scale", 1.0)
     seed = job_input.get("seed")
     auto_resize = job_input.get("auto_resize", True)
