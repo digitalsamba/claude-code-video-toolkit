@@ -148,13 +148,22 @@ def get_pipeline(use_fp8: bool = True):
         task="i2i",
     )
 
-    # Explicitly set component paths (LightX2V may not derive them correctly)
-    _pipeline.text_encoder_path = str(MODEL_PATH / "text_encoder")
-    _pipeline.tokenizer_path = str(MODEL_PATH / "tokenizer")
-    _pipeline.vae_path = str(MODEL_PATH / "vae")
-    _pipeline.transformer_path = str(MODEL_PATH / "transformer")
-    _pipeline.processor_path = str(MODEL_PATH / "processor")
-    log(f"Set explicit paths: text_encoder={_pipeline.text_encoder_path}")
+    # Explicitly set all component paths that LightX2V needs
+    model_path_str = str(MODEL_PATH)
+    _pipeline.text_encoder_path = f"{model_path_str}/text_encoder"
+    _pipeline.tokenizer_path = f"{model_path_str}/tokenizer"
+    _pipeline.vae_path = f"{model_path_str}/vae"
+    _pipeline.transformer_path = f"{model_path_str}/transformer"
+    _pipeline.processor_path = f"{model_path_str}/processor"
+
+    # Also set on config if it exists
+    if hasattr(_pipeline, 'config') and _pipeline.config:
+        _pipeline.config.text_encoder_path = _pipeline.text_encoder_path
+        _pipeline.config.tokenizer_path = _pipeline.tokenizer_path
+        _pipeline.config.vae_path = _pipeline.vae_path
+        _pipeline.config.model_path = model_path_str
+
+    log(f"Set paths: model={model_path_str}, text_encoder={_pipeline.text_encoder_path}")
 
     if use_fp8:
         # Enable FP8 quantization for lower VRAM usage
@@ -302,9 +311,35 @@ def handle_edit(job_input: dict, job_id: str, work_dir: Path) -> dict:
 
     log(f"Attention mode: {attn_mode}")
 
-    # Configure generator
+    # Create runtime config with explicit paths
+    import json
+    config_path = work_dir / "lightx2v_config.json"
+    runtime_config = {
+        "model_path": str(MODEL_PATH),
+        "text_encoder_path": str(MODEL_PATH / "text_encoder"),
+        "tokenizer_path": str(MODEL_PATH / "tokenizer"),
+        "vae_path": str(MODEL_PATH / "vae"),
+        "transformer_path": str(MODEL_PATH / "transformer"),
+        "processor_path": str(MODEL_PATH / "processor"),
+        "vae_scale_factor": 8,
+        "infer_steps": num_inference_steps,
+        "transformer_in_channels": 64,
+        "num_layers": 60,
+        "attention_out_dim": 3072,
+        "attention_dim_head": 128,
+        "attn_type": attn_mode,
+        "enable_cfg": True,
+        "sample_guide_scale": guidance_scale,
+        "_auto_resize": auto_resize,
+    }
+    with open(config_path, "w") as f:
+        json.dump(runtime_config, f)
+    log(f"Created runtime config: {config_path}")
+
+    # Configure generator with explicit config
     log(f"Configuring generator: steps={num_inference_steps}, guidance={guidance_scale}")
     pipe.create_generator(
+        config_json=str(config_path),
         attn_mode=attn_mode,
         auto_resize=auto_resize,
         infer_steps=num_inference_steps,
