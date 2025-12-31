@@ -233,7 +233,7 @@ def run_health_check():
 
 
 def run_edit_test(image_path: str, prompt: str, seed: int = None,
-                  num_steps: int = 8, verbose: bool = False):
+                  num_steps: int = 8, use_fp8: bool = False, verbose: bool = False):
     """Run a single edit test and display results."""
 
     if not Path(image_path).exists():
@@ -259,9 +259,10 @@ def run_edit_test(image_path: str, prompt: str, seed: int = None,
             "image_base64": encode_image(image_path),
             "prompt": prompt,
             "num_inference_steps": num_steps,
-            # use_fp8 defaults to False (BF16) for quality on 48GB GPU
+            "use_fp8": use_fp8,
         }
     }
+    log(f"Mode: {'FP8 quantized' if use_fp8 else 'BF16 full precision'}", "dim")
     if seed:
         payload["input"]["seed"] = seed
 
@@ -339,6 +340,7 @@ Examples:
     parser.add_argument("--prompt", "-p", help="Edit prompt")
     parser.add_argument("--seed", "-s", type=int, help="Random seed for reproducibility")
     parser.add_argument("--steps", type=int, default=8, help="Inference steps (default: 8)")
+    parser.add_argument("--fp8", action="store_true", help="Use FP8 quantization (lower VRAM)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show full response")
     parser.add_argument("--generate-test-image", action="store_true",
                         help="Generate a test image and exit")
@@ -371,6 +373,7 @@ Examples:
         prompt=args.prompt,
         seed=args.seed,
         num_steps=args.steps,
+        use_fp8=args.fp8,
         verbose=args.verbose
     )
 

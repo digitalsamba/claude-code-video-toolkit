@@ -311,6 +311,15 @@ def handle_edit(job_input: dict, job_id: str, work_dir: Path) -> dict:
     log(f"Output path: {output_path}")
     log(f"Work dir: {work_dir} (exists: {work_dir.exists()})")
 
+    # Log all parameters being passed to generate()
+    log(f"=== GENERATE PARAMETERS ===")
+    log(f"  seed={seed} (type={type(seed).__name__})")
+    log(f"  image_path={input_path} (type={type(input_path).__name__})")
+    log(f"  prompt={prompt[:50]}... (type={type(prompt).__name__})")
+    log(f"  negative_prompt='{negative_prompt}' (type={type(negative_prompt).__name__})")
+    log(f"  save_result_path={output_path} (type={type(output_path).__name__})")
+    log(f"===========================")
+
     log(f"Running edit: '{prompt[:50]}...' (steps={num_inference_steps})")
     gen_start = time.time()
 
