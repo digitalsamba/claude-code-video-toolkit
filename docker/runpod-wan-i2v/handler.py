@@ -48,6 +48,9 @@ import time
 from pathlib import Path
 from typing import Optional
 
+# Add LightX2V to path (pip install doesn't work correctly)
+sys.path.insert(0, "/app/lightx2v")
+
 import numpy as np
 import runpod
 import torch

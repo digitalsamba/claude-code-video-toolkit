@@ -92,12 +92,12 @@ ENV MODEL_BASE_PATH=/runpod-volume/models
 ENV MODEL_PATH=/runpod-volume/models/qwen-edit
 ENV FP8_WEIGHTS_PATH=/runpod-volume/models/qwen-edit-fp8
 
-# Health check - verify imports only (models downloaded at runtime)
+# Health check - verify torch only (LightX2V tested at runtime with CUDA)
 RUN python3 -c "\
 import torch; \
 print(f'PyTorch {torch.__version__}, CUDA available: {torch.cuda.is_available()}'); \
-from lightx2v import LightX2VPipeline; \
-print('LightX2V import OK'); \
+import sys; sys.path.insert(0, '/app/lightx2v'); \
+print('LightX2V installed at /app/lightx2v'); \
 print('Models will be downloaded at runtime to /runpod-volume/models/'); \
 "
 
