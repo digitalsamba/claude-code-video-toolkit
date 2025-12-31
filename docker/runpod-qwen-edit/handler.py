@@ -148,6 +148,14 @@ def get_pipeline(use_fp8: bool = True):
         task="i2i",
     )
 
+    # Explicitly set component paths (LightX2V may not derive them correctly)
+    _pipeline.text_encoder_path = str(MODEL_PATH / "text_encoder")
+    _pipeline.tokenizer_path = str(MODEL_PATH / "tokenizer")
+    _pipeline.vae_path = str(MODEL_PATH / "vae")
+    _pipeline.transformer_path = str(MODEL_PATH / "transformer")
+    _pipeline.processor_path = str(MODEL_PATH / "processor")
+    log(f"Set explicit paths: text_encoder={_pipeline.text_encoder_path}")
+
     if use_fp8:
         # Enable FP8 quantization for lower VRAM usage
         fp8_ckpt = FP8_WEIGHTS_PATH / "Qwen-quant" / "qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning.safetensors"
