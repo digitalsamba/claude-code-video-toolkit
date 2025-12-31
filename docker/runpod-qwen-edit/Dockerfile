@@ -71,7 +71,18 @@ RUN pip3 install --no-cache-dir \
     Pillow>=10.0.0 \
     numpy>=1.26.0
 
-# Install RunPod SDK and utilities + LightX2V dependencies
+# Install LightX2V dependencies (from their requirements.txt)
+RUN pip3 install --no-cache-dir \
+    opencv-python-headless>=4.9.0 \
+    imageio>=2.34.0 \
+    imageio-ffmpeg>=0.4.9 \
+    ftfy>=6.1.0 \
+    decord>=0.6.0 \
+    scipy>=1.12.0 \
+    tqdm>=4.66.0 \
+    tokenizers>=0.19.0
+
+# Install RunPod SDK and utilities
 RUN pip3 install --no-cache-dir \
     runpod>=1.7.0 \
     requests>=2.31.0 \
