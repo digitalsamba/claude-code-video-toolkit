@@ -306,16 +306,27 @@ def handle_edit(job_input: dict, job_id: str, work_dir: Path) -> dict:
     # Generate edited image
     output_path = str(work_dir / "output.png")
 
+    # Validate paths before generation
+    log(f"Input path: {input_path} (exists: {Path(input_path).exists()})")
+    log(f"Output path: {output_path}")
+    log(f"Work dir: {work_dir} (exists: {work_dir.exists()})")
+
     log(f"Running edit: '{prompt[:50]}...' (steps={num_inference_steps})")
     gen_start = time.time()
 
-    pipe.generate(
-        seed=seed,
-        image_path=input_path,
-        prompt=prompt,
-        negative_prompt=negative_prompt,
-        save_result_path=output_path,
-    )
+    try:
+        pipe.generate(
+            seed=seed,
+            image_path=input_path,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            save_result_path=output_path,
+        )
+    except Exception as e:
+        import traceback
+        log(f"Generation error: {e}")
+        log(f"Traceback:\n{traceback.format_exc()}")
+        raise
 
     gen_time = time.time() - gen_start
     log(f"Generation completed in {gen_time:.1f}s")
