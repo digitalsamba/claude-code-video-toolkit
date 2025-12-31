@@ -51,6 +51,8 @@ def download_base_model(model_path: Path) -> bool:
     """Download Qwen-Image-Edit-2511 base model."""
     if check_model_exists(model_path, min_files=10):
         print(f"Base model already exists at {model_path}")
+        # Still create/update the config
+        create_lightx2v_config(model_path)
         return True
 
     print("Downloading Qwen-Image-Edit-2511 base model (~20GB)...")
@@ -63,10 +65,37 @@ def download_base_model(model_path: Path) -> bool:
             ignore_patterns=["*.md", "*.txt", ".gitattributes"],
         )
         print("Base model downloaded successfully")
+        # Create LightX2V-compatible config
+        create_lightx2v_config(model_path)
         return True
     except Exception as e:
         print(f"ERROR downloading base model: {e}")
         return False
+
+
+def create_lightx2v_config(model_path: Path) -> None:
+    """Create a top-level config.json for LightX2V compatibility."""
+    import json
+
+    config = {
+        "model_path": str(model_path),
+        "text_encoder_path": str(model_path / "text_encoder"),
+        "tokenizer_path": str(model_path / "tokenizer"),
+        "vae_path": str(model_path / "vae"),
+        "transformer_path": str(model_path / "transformer"),
+        "processor_path": str(model_path / "processor"),
+        # LightX2V expected settings
+        "vae_scale_factor": 8,
+        "transformer_in_channels": 64,
+        "num_layers": 60,
+        "attention_out_dim": 3072,
+        "attention_dim_head": 128,
+    }
+
+    config_path = model_path / "config.json"
+    with open(config_path, "w") as f:
+        json.dump(config, f, indent=2)
+    print(f"Created LightX2V config: {config_path}")
 
 
 def download_fp8_weights(fp8_path: Path) -> bool:
