@@ -20,10 +20,18 @@ Skip to **Step 2: Deploy on RunPod** below.
 cd docker/runpod-propainter
 
 # Build for linux/amd64 (required for RunPod)
-docker buildx build --platform linux/amd64 -t yourusername/video-toolkit-propainter:latest --push .
+docker buildx build --platform linux/amd64 -t ghcr.io/yourusername/video-toolkit-propainter:latest --push .
 ```
 
 Build takes ~15-20 minutes (downloads ~2GB of model weights).
+
+**Important: Make the image public**
+
+GHCR images are private by default. RunPod cannot pull private images.
+
+1. Go to https://github.com/users/yourusername/packages/container/video-toolkit-propainter/settings
+2. Scroll to "Danger Zone"
+3. Click "Change visibility" → Select "Public" → Confirm
 
 ### Deploy on RunPod
 
