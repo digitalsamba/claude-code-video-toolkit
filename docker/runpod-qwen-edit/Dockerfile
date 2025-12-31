@@ -75,7 +75,9 @@ RUN pip3 install --no-cache-dir \
 RUN pip3 install --no-cache-dir \
     runpod>=1.7.0 \
     requests>=2.31.0 \
-    boto3>=1.34.0
+    boto3>=1.34.0 \
+    loguru>=0.7.0 \
+    huggingface_hub>=0.25.0
 
 WORKDIR /app
 
