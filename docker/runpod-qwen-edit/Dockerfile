@@ -71,7 +71,7 @@ RUN pip3 install --no-cache-dir \
     Pillow>=10.0.0 \
     numpy>=1.26.0
 
-# Install RunPod SDK and utilities
+# Install RunPod SDK and utilities + LightX2V dependencies
 RUN pip3 install --no-cache-dir \
     runpod>=1.7.0 \
     requests>=2.31.0 \
@@ -82,7 +82,9 @@ RUN pip3 install --no-cache-dir \
     pyyaml>=6.0 \
     sentencepiece>=0.2.0 \
     tiktoken>=0.7.0 \
-    qwen-vl-utils>=0.0.8
+    qwen-vl-utils>=0.0.8 \
+    gguf>=0.10.0 \
+    triton>=3.0.0
 
 WORKDIR /app
 
