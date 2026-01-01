@@ -176,15 +176,50 @@ python tools/addmusic.py --input video.mp4 --music bg.mp3 --music-volume 0.2 --f
 
 **SFX Presets:** whoosh, click, chime, error, pop, slide
 
+### AI Image Editing
+
+AI-powered image editing using Qwen-Image-Edit-2511. Supports background replacement, style transfer, viewpoint changes, and custom prompts.
+
+```bash
+# Background replacement (use preset or custom description)
+python tools/image_edit.py --input photo.jpg --background pyramids
+python tools/image_edit.py --input photo.jpg --background "modern office with city view"
+
+# Style transfer
+python tools/image_edit.py --input photo.jpg --style cyberpunk
+python tools/image_edit.py --input photo.jpg --style "oil painting renaissance"
+
+# Custom prompt (full control)
+python tools/image_edit.py --input photo.jpg --prompt "Add sunglasses and a warm smile"
+
+# Viewpoint change
+python tools/image_edit.py --input photo.jpg --viewpoint front
+
+# Combine multiple edits
+python tools/image_edit.py --input photo.jpg --background office --style cinematic
+
+# Batch processing
+python tools/image_edit.py --input-dir ./photos --background studio --output-dir ./edited
+
+# List available presets
+python tools/image_edit.py --list-presets
+```
+
+**Background Presets:** office, studio, outdoors, pyramids, beach, city, mountains, space, forest, cafe
+
+**Style Presets:** cyberpunk, anime, oil-painting, watercolor, pixel-art, noir, pop-art, sketch, vintage, cinematic
+
+**Viewpoint Presets:** front, profile, three-quarter, looking-up, looking-down
+
 ### Utility Tools vs Project Tools
 
 | Type | Tools | When to Use |
 |------|-------|-------------|
 | **Project tools** | voiceover, music, sfx | During video creation workflow |
-| **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
+| **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark, image_edit | Quick transformations on existing media |
 | **Optional tools** | dewatermark | Requires additional installation (see below) |
 
-Utility tools work on any video file without requiring a project structure.
+Utility tools work on any media file without requiring a project structure.
 
 ### Watermark Removal (Optional Component)
 
