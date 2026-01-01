@@ -112,15 +112,22 @@ WORKDIR /app
 # Set HF cache location for baked models
 ENV HF_HOME=/root/.cache/huggingface
 
+# HuggingFace token for faster authenticated downloads
+ARG HF_TOKEN
+ENV HF_TOKEN=${HF_TOKEN}
+
 # === BAKE MODELS INTO IMAGE ===
 # Download models during build (this is the slow step, ~44GB)
 # Models are cached in HF_HOME and included in the final image
+# Uses HF_TOKEN if provided for faster downloads (10x vs anonymous)
 RUN python3 -c "\
 from huggingface_hub import snapshot_download; \
 import os; \
+token = os.environ.get('HF_TOKEN'); \
 os.makedirs('/root/.cache/huggingface', exist_ok=True); \
 print('Downloading Qwen-Image-Edit-2511 model...'); \
-snapshot_download('Qwen/Qwen-Image-Edit-2511', cache_dir='/root/.cache/huggingface'); \
+print(f'Using HF token: {\"yes\" if token else \"no (anonymous)\"}'); \
+snapshot_download('Qwen/Qwen-Image-Edit-2511', cache_dir='/root/.cache/huggingface', token=token); \
 print('Model downloaded successfully'); \
 "
 
