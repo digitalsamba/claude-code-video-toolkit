@@ -43,17 +43,13 @@ import time
 from pathlib import Path
 from typing import Optional
 
-# Add LightX2V to path (pip install doesn't work correctly)
-sys.path.insert(0, "/app/lightx2v")
-
-import numpy as np
 import runpod
 import torch
 from PIL import Image
 
-# Model paths - set after runtime download
-MODEL_PATH = None
-FP8_WEIGHTS_PATH = None
+# HuggingFace model IDs
+MODEL_ID = "Qwen/Qwen-Image-Edit-2511"
+FP8_MODEL_ID = "lightx2v/Qwen-Image-Edit-2511-Lightning"
 
 # Lazy-loaded pipeline
 _pipeline = None
@@ -65,21 +61,15 @@ def log(message: str) -> None:
     print(message, file=sys.stderr, flush=True)
 
 
-def ensure_models() -> None:
-    """Ensure models are downloaded before first use."""
-    global MODEL_PATH, FP8_WEIGHTS_PATH
-
-    if MODEL_PATH is not None and MODEL_PATH.exists():
-        return  # Already initialized
-
-    log("Checking/downloading models...")
-    from download_models import ensure_models_downloaded
-
-    paths = ensure_models_downloaded()
-    MODEL_PATH = paths["model_path"]
-    FP8_WEIGHTS_PATH = paths["fp8_path"]
-
-    log(f"Models ready: {MODEL_PATH}")
+def setup_hf_cache() -> None:
+    """Set up HuggingFace cache to use network volume if available."""
+    if Path("/runpod-volume").exists() and os.access("/runpod-volume", os.W_OK):
+        cache_path = Path("/runpod-volume/.cache/huggingface")
+        cache_path.mkdir(parents=True, exist_ok=True)
+        os.environ["HF_HOME"] = str(cache_path)
+        log(f"Using RunPod network volume cache: {cache_path}")
+    else:
+        log("WARNING: No network volume, using ephemeral cache")
 
 
 def get_gpu_vram_gb() -> int:
@@ -122,9 +112,6 @@ def get_pipeline(use_fp8: bool = True):
     """Get or initialize diffusers pipeline (lazy loading)."""
     global _pipeline, _pipeline_config
 
-    # Ensure models are downloaded first
-    ensure_models()
-
     # Check if we need to reinitialize (different config)
     current_config = {"use_fp8": use_fp8}
     if _pipeline is not None and _pipeline_config == current_config:
@@ -136,17 +123,15 @@ def get_pipeline(use_fp8: bool = True):
         del _pipeline
         torch.cuda.empty_cache()
 
-    log(f"Loading diffusers pipeline from {MODEL_PATH}...")
-    log(f"Model path exists: {MODEL_PATH.exists()}")
-    log(f"Model path contents: {list(MODEL_PATH.iterdir()) if MODEL_PATH.exists() else 'N/A'}")
+    log(f"Loading diffusers pipeline from {MODEL_ID}...")
     start = time.time()
 
     try:
-        # Use standard diffusers pipeline (more reliable than LightX2V)
+        # Use standard diffusers pipeline - let it handle caching
         from diffusers import QwenImageEditPlusPipeline
 
         _pipeline = QwenImageEditPlusPipeline.from_pretrained(
-            str(MODEL_PATH),
+            MODEL_ID,
             torch_dtype=torch.bfloat16,
         )
         _pipeline.to("cuda")
@@ -357,11 +342,16 @@ if __name__ == "__main__":
     else:
         log("WARNING: CUDA not available!")
 
-    # Download models at startup (before serverless loop)
-    # This happens during container initialization, not during job execution
-    log("Downloading models at startup (this may take 5-10 min on first run)...")
-    ensure_models()
-    log(f"Model path: {MODEL_PATH}")
-    log(f"FP8 weights path: {FP8_WEIGHTS_PATH}")
+    # Set up HF cache for model downloads
+    setup_hf_cache()
+
+    # Pre-load the pipeline at startup to cache models
+    log("Pre-loading pipeline at startup (this may take 5-10 min on first run)...")
+    try:
+        get_pipeline(use_fp8=False)
+        log("Pipeline pre-loaded successfully")
+    except Exception as e:
+        log(f"Warning: Pipeline pre-load failed: {e}")
+        log("Will retry on first request")
 
     runpod.serverless.start({"handler": handler})
