@@ -137,16 +137,24 @@ def get_pipeline(use_fp8: bool = True):
         torch.cuda.empty_cache()
 
     log(f"Loading diffusers pipeline from {MODEL_PATH}...")
+    log(f"Model path exists: {MODEL_PATH.exists()}")
+    log(f"Model path contents: {list(MODEL_PATH.iterdir()) if MODEL_PATH.exists() else 'N/A'}")
     start = time.time()
 
-    # Use standard diffusers pipeline (more reliable than LightX2V)
-    from diffusers import QwenImageEditPlusPipeline
+    try:
+        # Use standard diffusers pipeline (more reliable than LightX2V)
+        from diffusers import QwenImageEditPlusPipeline
 
-    _pipeline = QwenImageEditPlusPipeline.from_pretrained(
-        str(MODEL_PATH),
-        torch_dtype=torch.bfloat16,
-    )
-    _pipeline.to("cuda")
+        _pipeline = QwenImageEditPlusPipeline.from_pretrained(
+            str(MODEL_PATH),
+            torch_dtype=torch.bfloat16,
+        )
+        _pipeline.to("cuda")
+    except Exception as e:
+        import traceback
+        log(f"Pipeline loading error: {e}")
+        log(f"Full traceback:\n{traceback.format_exc()}")
+        raise
 
     _pipeline_config = current_config
     log(f"Pipeline loaded in {time.time() - start:.1f}s")
