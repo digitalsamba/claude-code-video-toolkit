@@ -131,13 +131,22 @@ def get_pipeline(use_fp8: bool = True):
     log(f"Loading diffusers pipeline from {MODEL_ID}...")
     start = time.time()
 
+    # Check if models are baked into image (no HF download needed)
+    baked_cache = Path("/root/.cache/huggingface")
+    local_files_only = baked_cache.exists() and any(baked_cache.iterdir())
+    if local_files_only:
+        log("Using baked-in models (local_files_only=True)")
+    else:
+        log("Models not baked, will download from HuggingFace")
+
     try:
-        # Use standard diffusers pipeline - let it handle caching
+        # Use standard diffusers pipeline
         from diffusers import QwenImageEditPlusPipeline
 
         _pipeline = QwenImageEditPlusPipeline.from_pretrained(
             MODEL_ID,
             torch_dtype=torch.bfloat16,
+            local_files_only=local_files_only,
         )
         _pipeline.to("cuda")
     except Exception as e:

@@ -56,7 +56,7 @@ import runpod
 import torch
 from PIL import Image
 
-# Model path - set after runtime download
+# Model path - set after detection/download
 MODEL_PATH = None
 
 # Lazy-loaded pipeline
@@ -69,13 +69,40 @@ def log(message: str) -> None:
     print(message, file=sys.stderr, flush=True)
 
 
+def setup_hf_cache() -> None:
+    """Set up HuggingFace cache - use baked-in cache from image if available."""
+    baked_cache = Path("/root/.cache/huggingface")
+    if baked_cache.exists():
+        os.environ["HF_HOME"] = str(baked_cache)
+        log(f"Using baked-in model cache: {baked_cache}")
+    elif Path("/runpod-volume").exists() and os.access("/runpod-volume", os.W_OK):
+        cache_path = Path("/runpod-volume/.cache/huggingface")
+        cache_path.mkdir(parents=True, exist_ok=True)
+        os.environ["HF_HOME"] = str(cache_path)
+        log(f"Using RunPod network volume cache: {cache_path}")
+    else:
+        log("WARNING: No cache found, will download models")
+
+
 def ensure_models() -> None:
-    """Ensure models are downloaded before first use."""
+    """Ensure models are available - either baked in or downloaded at runtime."""
     global MODEL_PATH
 
     if MODEL_PATH is not None and MODEL_PATH.exists():
         return  # Already initialized
 
+    setup_hf_cache()
+
+    # Check if models are baked into image (MODEL_BAKED env var)
+    if os.environ.get("MODEL_BAKED") == "1":
+        log("Using baked-in model from HuggingFace cache (local_files_only=True)...")
+        from huggingface_hub import snapshot_download
+        # Use local_files_only=True to prevent HF network calls
+        MODEL_PATH = Path(snapshot_download("Wan-AI/Wan2.2-I2V-A14B", local_files_only=True))
+        log(f"Model path: {MODEL_PATH}")
+        return
+
+    # Runtime download fallback
     log("Checking/downloading models...")
     from download_models import ensure_models_downloaded
 

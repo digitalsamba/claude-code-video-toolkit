@@ -1,0 +1,121 @@
+# RunPod Serverless handler for Wan2.2 Image-to-Video with models BAKED IN
+#
+# Build locally (requires ~35GB disk):
+#   docker build -f Dockerfile.baked --platform linux/amd64 -t ghcr.io/conalmullan/video-toolkit-wan-i2v:baked .
+#
+# Push:
+#   docker push ghcr.io/conalmullan/video-toolkit-wan-i2v:baked
+#
+# Image size: ~25-30GB (models included)
+#
+# Version: 2.0.0 - Baked models for fast cold starts
+#
+# Cold start: ~30-60s (no model download needed)
+#
+# GPU Requirements:
+#   - Minimum: 24GB VRAM (L4, RTX 4090) with aggressive offloading
+#   - Recommended: 48GB VRAM (A6000, A40)
+#   - Native: 80GB VRAM (A100, H100)
+
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Python and system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.11 \
+    python3-pip \
+    python3.11-venv \
+    python3.11-dev \
+    git \
+    git-lfs \
+    ffmpeg \
+    curl \
+    build-essential \
+    ninja-build \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python
+
+# Initialize git-lfs
+RUN git lfs install
+
+WORKDIR /app
+
+# Set CUDA environment
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH="${CUDA_HOME}/bin:${PATH}"
+ENV LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}"
+
+# Install PyTorch with CUDA 12.4 support
+RUN pip3 install --no-cache-dir \
+    torch==2.5.1 \
+    torchvision==0.20.1 \
+    torchaudio==2.5.1 \
+    --index-url https://download.pytorch.org/whl/cu124
+
+# Try to install flash-attn for optimized attention (optional - falls back to SDPA)
+RUN pip3 install --no-cache-dir flash-attn --no-build-isolation || \
+    echo "flash-attn installation failed, will use SDPA fallback"
+
+# Install LightX2V from source
+RUN git clone --depth 1 https://github.com/ModelTC/LightX2V.git /app/lightx2v
+WORKDIR /app/lightx2v
+RUN pip3 install --no-cache-dir -v .
+
+# Install additional dependencies for video generation
+RUN pip3 install --no-cache-dir \
+    diffusers>=0.30.0 \
+    transformers>=4.45.0 \
+    accelerate>=0.30.0 \
+    safetensors>=0.4.0 \
+    einops>=0.7.0 \
+    Pillow>=10.0.0 \
+    numpy>=1.26.0 \
+    imageio>=2.31.0 \
+    imageio-ffmpeg>=0.4.8
+
+# Install RunPod SDK and utilities
+RUN pip3 install --no-cache-dir \
+    runpod>=1.7.0 \
+    requests>=2.31.0 \
+    boto3>=1.34.0 \
+    huggingface_hub>=0.25.0
+
+WORKDIR /app
+
+# Set HF cache location for baked models
+ENV HF_HOME=/root/.cache/huggingface
+
+# === BAKE MODELS INTO IMAGE ===
+# HuggingFace token for faster downloads (avoids rate limiting)
+ARG HF_TOKEN=""
+ENV HF_TOKEN=${HF_TOKEN}
+
+# Copy and run model download script
+COPY download_model.py /tmp/download_model.py
+RUN python3 /tmp/download_model.py && rm /tmp/download_model.py
+
+# Copy handler (download_models.py not needed for baked version)
+COPY handler.py /app/handler.py
+
+# Environment
+ENV PYTHONUNBUFFERED=1
+ENV LIGHTX2V_PATH=/app/lightx2v
+
+# For baked models, set MODEL_PATH to HF cache location
+# Handler will find model via huggingface_hub cache
+ENV MODEL_BAKED=1
+
+# Health check - verify torch only (LightX2V tested at runtime with CUDA)
+RUN python3 -c "\
+import torch; \
+print(f'PyTorch {torch.__version__}, CUDA available: {torch.cuda.is_available()}'); \
+import sys; sys.path.insert(0, '/app/lightx2v'); \
+print('LightX2V installed at /app/lightx2v'); \
+print('Wan2.2-I2V-A14B model baked into image'); \
+"
+
+# Run handler
+CMD ["python3", "-u", "/app/handler.py"]
