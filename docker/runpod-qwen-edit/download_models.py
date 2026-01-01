@@ -49,10 +49,22 @@ def check_model_exists(path: Path, min_files: int = 5) -> bool:
 
 def download_base_model(model_path: Path) -> bool:
     """Download Qwen-Image-Edit-2511 base model."""
+    # Remove any stale custom config.json we created previously
+    stale_config = model_path / "config.json"
+    if stale_config.exists():
+        try:
+            import json
+            with open(stale_config) as f:
+                data = json.load(f)
+            # Our custom config had 'model_path' key, HF config doesn't
+            if "model_path" in data:
+                stale_config.unlink()
+                print(f"Removed stale custom config.json")
+        except Exception:
+            pass
+
     if check_model_exists(model_path, min_files=10):
         print(f"Base model already exists at {model_path}")
-        # Still create/update the config
-        create_lightx2v_config(model_path)
         return True
 
     print("Downloading Qwen-Image-Edit-2511 base model (~20GB)...")
@@ -65,49 +77,10 @@ def download_base_model(model_path: Path) -> bool:
             ignore_patterns=["*.md", "*.txt", ".gitattributes"],
         )
         print("Base model downloaded successfully")
-        # Create LightX2V-compatible config
-        create_lightx2v_config(model_path)
         return True
     except Exception as e:
         print(f"ERROR downloading base model: {e}")
         return False
-
-
-def create_lightx2v_config(model_path: Path) -> None:
-    """Create a top-level config.json for LightX2V compatibility."""
-    import json
-
-    config = {
-        # Paths
-        "model_path": str(model_path),
-        "text_encoder_path": str(model_path / "text_encoder"),
-        "tokenizer_path": str(model_path / "tokenizer"),
-        "vae_path": str(model_path / "vae"),
-        "transformer_path": str(model_path / "transformer"),
-        "processor_path": str(model_path / "processor"),
-        # Model architecture (from Qwen-Image-Edit-2511)
-        "in_channels": 64,
-        "out_channels": 16,
-        "transformer_in_channels": 64,
-        "num_layers": 60,
-        "num_attention_heads": 24,
-        "attention_head_dim": 128,
-        "attention_out_dim": 3072,
-        "joint_attention_dim": 3584,
-        # VAE settings
-        "vae_scale_factor": 8,
-        # Inference defaults
-        "infer_steps": 40,
-        "guidance_scale": 1.0,
-        "sample_guide_scale": 4.0,
-        "enable_cfg": True,
-        "_auto_resize": True,
-    }
-
-    config_path = model_path / "config.json"
-    with open(config_path, "w") as f:
-        json.dump(config, f, indent=2)
-    print(f"Created LightX2V config: {config_path}")
 
 
 def download_fp8_weights(fp8_path: Path) -> bool:
