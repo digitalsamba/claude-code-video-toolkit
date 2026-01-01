@@ -78,18 +78,30 @@ def create_lightx2v_config(model_path: Path) -> None:
     import json
 
     config = {
+        # Paths
         "model_path": str(model_path),
         "text_encoder_path": str(model_path / "text_encoder"),
         "tokenizer_path": str(model_path / "tokenizer"),
         "vae_path": str(model_path / "vae"),
         "transformer_path": str(model_path / "transformer"),
         "processor_path": str(model_path / "processor"),
-        # LightX2V expected settings
-        "vae_scale_factor": 8,
+        # Model architecture (from Qwen-Image-Edit-2511)
+        "in_channels": 64,
+        "out_channels": 16,
         "transformer_in_channels": 64,
         "num_layers": 60,
+        "num_attention_heads": 24,
+        "attention_head_dim": 128,
         "attention_out_dim": 3072,
-        "attention_dim_head": 128,
+        "joint_attention_dim": 3584,
+        # VAE settings
+        "vae_scale_factor": 8,
+        # Inference defaults
+        "infer_steps": 40,
+        "guidance_scale": 1.0,
+        "sample_guide_scale": 4.0,
+        "enable_cfg": True,
+        "_auto_resize": True,
     }
 
     config_path = model_path / "config.json"
