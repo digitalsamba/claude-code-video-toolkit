@@ -1,16 +1,17 @@
-# RunPod Serverless handler for Qwen-Image-Edit with LightX2V acceleration
+# RunPod Serverless handler for Qwen-Image-Edit with diffusers
 #
 # Build: docker buildx build --platform linux/amd64 -t ghcr.io/conalmullan/video-toolkit-qwen-edit:latest --push .
 #
-# Image size: ~65GB (models baked in for fast cold starts)
+# Image size: ~8GB (models downloaded at runtime to network volume)
 #
-# Version: 1.2.0 - CUDA 12.4, PyTorch 2.5, Models baked into image
+# Version: 1.3.0 - Runtime model download (Buildjet-free)
 #
-# Cold start: ~30s (models pre-downloaded)
+# Cold start: First run ~5-10 min (downloads ~57GB model)
+#             Subsequent runs ~30s (cached on network volume)
 #
 # GPU Requirements:
-#   - Minimum: 80GB VRAM (A100) for full BF16
-#   - Future: 24GB VRAM (L4) with FP8 quantization
+#   - Minimum: 48GB VRAM (A6000) for BF16
+#   - Optimal: 80GB VRAM (A100) for best performance
 
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
@@ -104,21 +105,9 @@ RUN pip3 install --no-cache-dir \
 
 WORKDIR /app
 
-# Set HF cache location for model download
+# Set HF cache location - models downloaded at runtime
+# On RunPod, models cache to /runpod-volume/.cache/huggingface
 ENV HF_HOME=/root/.cache/huggingface
-
-# Download and cache Qwen-Image-Edit model during build (~57GB)
-# This bakes the model into the image for fast cold starts
-RUN python3 -c "\
-from diffusers import QwenImageEditPlusPipeline; \
-import torch; \
-print('Downloading Qwen-Image-Edit-2511 model...'); \
-pipe = QwenImageEditPlusPipeline.from_pretrained( \
-    'Qwen/Qwen-Image-Edit-2511', \
-    torch_dtype=torch.bfloat16, \
-); \
-print('Model downloaded successfully!'); \
-"
 
 # Copy handler
 COPY handler.py /app/handler.py
@@ -127,15 +116,13 @@ COPY handler.py /app/handler.py
 ENV PYTHONUNBUFFERED=1
 ENV LIGHTX2V_PATH=/app/lightx2v
 
-# Health check - verify torch and model cache
+# Health check - verify torch and diffusers
 RUN python3 -c "\
 import torch; \
+from diffusers import QwenImageEditPlusPipeline; \
 print(f'PyTorch {torch.__version__}, CUDA available: {torch.cuda.is_available()}'); \
-import os; \
-cache_size = sum(os.path.getsize(os.path.join(dp, f)) for dp, dn, fn in os.walk('/root/.cache/huggingface') for f in fn) / (1024**3); \
-print(f'HuggingFace cache size: {cache_size:.1f}GB'); \
+print('diffusers QwenImageEditPlusPipeline: available'); \
 "
 
 # Run handler
 CMD ["python3", "-u", "/app/handler.py"]
-# Trigger build Thu  1 Jan 2026 11:49:50 GMT
