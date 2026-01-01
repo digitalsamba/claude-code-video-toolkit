@@ -61,9 +61,11 @@ RUN git clone --depth 1 https://github.com/ModelTC/LightX2V.git /app/lightx2v
 WORKDIR /app/lightx2v
 RUN pip3 install --no-cache-dir -v .
 
+# Install diffusers from git (required for QwenImageEditPlusPipeline)
+RUN pip3 install --no-cache-dir git+https://github.com/huggingface/diffusers
+
 # Install additional dependencies for inference
 RUN pip3 install --no-cache-dir \
-    diffusers>=0.30.0 \
     transformers>=4.45.0 \
     accelerate>=0.30.0 \
     safetensors>=0.4.0 \
