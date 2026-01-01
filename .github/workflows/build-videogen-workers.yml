@@ -27,24 +27,14 @@ env:
 jobs:
   build-qwen-edit:
     if: ${{ github.event_name == 'push' || github.event.inputs.build_qwen_edit == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: buildjet-8vcpu-ubuntu-2204  # Buildjet runner with 100GB+ disk
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: Free disk space
-        run: |
-          echo "Before cleanup:"
-          df -h
-          # Remove unnecessary tools to free ~30GB
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker image prune -af
-          echo "After cleanup:"
-          df -h
+      - name: Check disk space
+        run: df -h
 
       - name: Checkout
         uses: actions/checkout@v4

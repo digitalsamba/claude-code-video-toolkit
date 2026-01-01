@@ -1,17 +1,16 @@
 # RunPod Serverless handler for Qwen-Image-Edit with LightX2V acceleration
 #
-# Build: docker buildx build --platform linux/amd64 -t ghcr.io/digitalsamba/video-toolkit-qwen-edit:latest --push .
+# Build: docker buildx build --platform linux/amd64 -t ghcr.io/conalmullan/video-toolkit-qwen-edit:latest --push .
 #
-# Image size: ~8GB (models downloaded at runtime, cached to network volume)
+# Image size: ~65GB (models baked in for fast cold starts)
 #
-# Version: 1.1.0 - CUDA 12.4, PyTorch 2.5, LightX2V + runtime model download
+# Version: 1.2.0 - CUDA 12.4, PyTorch 2.5, Models baked into image
 #
-# Model Download: ~30GB downloaded on first run, cached to /runpod-volume/models/
-# Cold start: ~5-10 min (first run), ~30s (cached)
+# Cold start: ~30s (models pre-downloaded)
 #
 # GPU Requirements:
-#   - Minimum: 24GB VRAM (L4, RTX 4090) with FP8 quantization
-#   - Recommended: 48GB VRAM (A6000, A40) for full BF16
+#   - Minimum: 80GB VRAM (A100) for full BF16
+#   - Future: 24GB VRAM (L4) with FP8 quantization
 
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
@@ -105,26 +104,36 @@ RUN pip3 install --no-cache-dir \
 
 WORKDIR /app
 
-# Copy handler and download script
+# Set HF cache location for model download
+ENV HF_HOME=/root/.cache/huggingface
+
+# Download and cache Qwen-Image-Edit model during build (~57GB)
+# This bakes the model into the image for fast cold starts
+RUN python3 -c "\
+from diffusers import QwenImageEditPlusPipeline; \
+import torch; \
+print('Downloading Qwen-Image-Edit-2511 model...'); \
+pipe = QwenImageEditPlusPipeline.from_pretrained( \
+    'Qwen/Qwen-Image-Edit-2511', \
+    torch_dtype=torch.bfloat16, \
+); \
+print('Model downloaded successfully!'); \
+"
+
+# Copy handler
 COPY handler.py /app/handler.py
-COPY download_models.py /app/download_models.py
 
-# Environment - models will be downloaded to network volume at runtime
+# Environment
 ENV PYTHONUNBUFFERED=1
-ENV HF_HOME=/runpod-volume/.cache/huggingface
 ENV LIGHTX2V_PATH=/app/lightx2v
-# These paths will be set by handler based on network volume availability
-ENV MODEL_BASE_PATH=/runpod-volume/models
-ENV MODEL_PATH=/runpod-volume/models/qwen-edit
-ENV FP8_WEIGHTS_PATH=/runpod-volume/models/qwen-edit-fp8
 
-# Health check - verify torch only (LightX2V tested at runtime with CUDA)
+# Health check - verify torch and model cache
 RUN python3 -c "\
 import torch; \
 print(f'PyTorch {torch.__version__}, CUDA available: {torch.cuda.is_available()}'); \
-import sys; sys.path.insert(0, '/app/lightx2v'); \
-print('LightX2V installed at /app/lightx2v'); \
-print('Models will be downloaded at runtime to /runpod-volume/models/'); \
+import os; \
+cache_size = sum(os.path.getsize(os.path.join(dp, f)) for dp, dn, fn in os.walk('/root/.cache/huggingface') for f in fn) / (1024**3); \
+print(f'HuggingFace cache size: {cache_size:.1f}GB'); \
 "
 
 # Run handler

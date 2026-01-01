@@ -62,14 +62,19 @@ def log(message: str) -> None:
 
 
 def setup_hf_cache() -> None:
-    """Set up HuggingFace cache to use network volume if available."""
-    if Path("/runpod-volume").exists() and os.access("/runpod-volume", os.W_OK):
+    """Set up HuggingFace cache - use baked-in cache from image."""
+    # Models are baked into image at /root/.cache/huggingface
+    baked_cache = Path("/root/.cache/huggingface")
+    if baked_cache.exists():
+        os.environ["HF_HOME"] = str(baked_cache)
+        log(f"Using baked-in model cache: {baked_cache}")
+    elif Path("/runpod-volume").exists() and os.access("/runpod-volume", os.W_OK):
         cache_path = Path("/runpod-volume/.cache/huggingface")
         cache_path.mkdir(parents=True, exist_ok=True)
         os.environ["HF_HOME"] = str(cache_path)
         log(f"Using RunPod network volume cache: {cache_path}")
     else:
-        log("WARNING: No network volume, using ephemeral cache")
+        log("WARNING: No cache found, will download models")
 
 
 def get_gpu_vram_gb() -> int:
