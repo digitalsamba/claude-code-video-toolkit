@@ -138,3 +138,4 @@ print(f'HuggingFace cache size: {cache_size:.1f}GB'); \
 
 # Run handler
 CMD ["python3", "-u", "/app/handler.py"]
+# Trigger build Thu  1 Jan 2026 11:49:50 GMT
