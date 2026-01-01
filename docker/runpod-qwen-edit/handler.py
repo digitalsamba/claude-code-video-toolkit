@@ -119,7 +119,7 @@ def encode_image_base64(image: Image.Image, format: str = "PNG") -> str:
 
 
 def get_pipeline(use_fp8: bool = True):
-    """Get or initialize LightX2V pipeline (lazy loading)."""
+    """Get or initialize diffusers pipeline (lazy loading)."""
     global _pipeline, _pipeline_config
 
     # Ensure models are downloaded first
@@ -136,53 +136,17 @@ def get_pipeline(use_fp8: bool = True):
         del _pipeline
         torch.cuda.empty_cache()
 
-    log(f"Loading LightX2V pipeline (use_fp8={use_fp8})...")
+    log(f"Loading diffusers pipeline from {MODEL_PATH}...")
     start = time.time()
 
-    from lightx2v import LightX2VPipeline
+    # Use standard diffusers pipeline (more reliable than LightX2V)
+    from diffusers import QwenImageEditPlusPipeline
 
-    # Initialize pipeline
-    _pipeline = LightX2VPipeline(
-        model_path=str(MODEL_PATH),
-        model_cls="qwen-image-edit-2511",
-        task="i2i",
+    _pipeline = QwenImageEditPlusPipeline.from_pretrained(
+        str(MODEL_PATH),
+        torch_dtype=torch.bfloat16,
     )
-
-    # Explicitly set all component paths that LightX2V needs
-    model_path_str = str(MODEL_PATH)
-    _pipeline.text_encoder_path = f"{model_path_str}/text_encoder"
-    _pipeline.tokenizer_path = f"{model_path_str}/tokenizer"
-    _pipeline.vae_path = f"{model_path_str}/vae"
-    _pipeline.transformer_path = f"{model_path_str}/transformer"
-    _pipeline.processor_path = f"{model_path_str}/processor"
-
-    # Also set on config if it exists
-    if hasattr(_pipeline, 'config') and _pipeline.config:
-        _pipeline.config.text_encoder_path = _pipeline.text_encoder_path
-        _pipeline.config.tokenizer_path = _pipeline.tokenizer_path
-        _pipeline.config.vae_path = _pipeline.vae_path
-        _pipeline.config.model_path = model_path_str
-
-    log(f"Set paths: model={model_path_str}, text_encoder={_pipeline.text_encoder_path}")
-
-    if use_fp8:
-        # Enable FP8 quantization for lower VRAM usage
-        fp8_ckpt = FP8_WEIGHTS_PATH / "Qwen-quant" / "qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning.safetensors"
-        if not fp8_ckpt.exists():
-            # Try alternate path structures
-            for pattern in FP8_WEIGHTS_PATH.rglob("*fp8*.safetensors"):
-                fp8_ckpt = pattern
-                break
-
-        if fp8_ckpt.exists():
-            log(f"Enabling FP8 quantization from {fp8_ckpt}")
-            _pipeline.enable_quantize(
-                dit_quantized=True,
-                dit_quantized_ckpt=str(fp8_ckpt),
-                quant_scheme="fp8-sgl"
-            )
-        else:
-            log(f"Warning: FP8 weights not found, falling back to BF16")
+    _pipeline.to("cuda")
 
     _pipeline_config = current_config
     log(f"Pipeline loaded in {time.time() - start:.1f}s")
@@ -286,94 +250,24 @@ def handle_edit(job_input: dict, job_id: str, work_dir: Path) -> dict:
     # Get pipeline
     pipe = get_pipeline(use_fp8=use_fp8)
 
-    # Select attention mode based on available libraries
-    # LightX2V supports: flash_attn3, flash_attn2, sage_attn2, torch_sdpa
-    attn_mode = None
-    try:
-        import flash_attn
-        attn_mode = "flash_attn3"
-        log("Using flash_attn3 for attention")
-    except ImportError:
-        pass
-
-    if attn_mode is None:
-        try:
-            import sageattention
-            attn_mode = "sage_attn2"
-            log("Using sage_attn2 for attention")
-        except ImportError:
-            pass
-
-    if attn_mode is None:
-        # Fallback to PyTorch native SDPA
-        attn_mode = "torch_sdpa"
-        log("Using torch_sdpa (PyTorch native) for attention")
-
-    log(f"Attention mode: {attn_mode}")
-
-    # Create runtime config with explicit paths
-    import json
-    config_path = work_dir / "lightx2v_config.json"
-    runtime_config = {
-        "model_path": str(MODEL_PATH),
-        "text_encoder_path": str(MODEL_PATH / "text_encoder"),
-        "tokenizer_path": str(MODEL_PATH / "tokenizer"),
-        "vae_path": str(MODEL_PATH / "vae"),
-        "transformer_path": str(MODEL_PATH / "transformer"),
-        "processor_path": str(MODEL_PATH / "processor"),
-        "vae_scale_factor": 8,
-        "infer_steps": num_inference_steps,
-        "transformer_in_channels": 64,
-        "num_layers": 60,
-        "attention_out_dim": 3072,
-        "attention_dim_head": 128,
-        "attn_type": attn_mode,
-        "enable_cfg": True,
-        "sample_guide_scale": guidance_scale,
-        "_auto_resize": auto_resize,
-    }
-    with open(config_path, "w") as f:
-        json.dump(runtime_config, f)
-    log(f"Created runtime config: {config_path}")
-
-    # Configure generator with explicit config
-    log(f"Configuring generator: steps={num_inference_steps}, guidance={guidance_scale}")
-    pipe.create_generator(
-        config_json=str(config_path),
-        attn_mode=attn_mode,
-        auto_resize=auto_resize,
-        infer_steps=num_inference_steps,
-        guidance_scale=guidance_scale,
-    )
-
-    # Generate edited image
-    output_path = str(work_dir / "output.png")
-
-    # Validate paths before generation
-    log(f"Input path: {input_path} (exists: {Path(input_path).exists()})")
-    log(f"Output path: {output_path}")
-    log(f"Work dir: {work_dir} (exists: {work_dir.exists()})")
-
-    # Log all parameters being passed to generate()
-    log(f"=== GENERATE PARAMETERS ===")
-    log(f"  seed={seed} (type={type(seed).__name__})")
-    log(f"  image_path={input_path} (type={type(input_path).__name__})")
-    log(f"  prompt={prompt[:50]}... (type={type(prompt).__name__})")
-    log(f"  negative_prompt='{negative_prompt}' (type={type(negative_prompt).__name__})")
-    log(f"  save_result_path={output_path} (type={type(output_path).__name__})")
-    log(f"===========================")
-
-    log(f"Running edit: '{prompt[:50]}...' (steps={num_inference_steps})")
+    log(f"Running edit with diffusers: steps={num_inference_steps}, guidance={guidance_scale}")
     gen_start = time.time()
 
+    # Use diffusers API
     try:
-        pipe.generate(
-            seed=seed,
-            image_path=input_path,
+        generator = torch.Generator(device="cuda").manual_seed(seed)
+
+        output = pipe(
+            image=[input_image],
             prompt=prompt,
-            negative_prompt=negative_prompt,
-            save_result_path=output_path,
+            negative_prompt=negative_prompt if negative_prompt else " ",
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            true_cfg_scale=4.0,
+            generator=generator,
+            num_images_per_prompt=1,
         )
+        output_image = output.images[0]
     except Exception as e:
         import traceback
         log(f"Generation error: {e}")
@@ -382,12 +276,6 @@ def handle_edit(job_input: dict, job_id: str, work_dir: Path) -> dict:
 
     gen_time = time.time() - gen_start
     log(f"Generation completed in {gen_time:.1f}s")
-
-    # Load and encode result
-    if not Path(output_path).exists():
-        return {"error": "Generation failed - no output file produced"}
-
-    output_image = Image.open(output_path)
     output_base64 = encode_image_base64(output_image)
 
     elapsed_ms = int((time.time() - start_time) * 1000)
