@@ -264,12 +264,7 @@ def edit_image(
 
     log(f"Prompt: {prompt}", "info")
 
-    # Build payload
-    # For single image, use image_base64
-    # For multiple images, the handler would need to support it (future enhancement)
-    if len(input_paths) > 1:
-        log("Multi-image merge not yet supported in endpoint. Using first image.", "warn")
-
+    # Build payload with primary image + optional reference images
     payload = {
         "input": {
             "image_base64": encode_image(input_paths[0]),
@@ -277,6 +272,12 @@ def edit_image(
             "num_inference_steps": steps,
         }
     }
+
+    # Add additional reference images (up to 2 more for 3 total)
+    if len(input_paths) > 1:
+        log(f"Multi-image mode: {len(input_paths)} images", "info")
+        payload["input"]["images_base64"] = [encode_image(p) for p in input_paths[1:3]]
+
     if seed is not None:
         payload["input"]["seed"] = seed
 

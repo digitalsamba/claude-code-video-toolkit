@@ -11,7 +11,8 @@ This is Worker 1 in the video generation pipeline:
 Input format:
 {
     "input": {
-        "image_base64": str,           # Required - input image (base64 encoded)
+        "image_base64": str,           # Required - primary input image (base64 encoded)
+        "images_base64": [str],        # Optional - additional reference images (up to 2 more)
         "prompt": str,                  # Required - edit instruction
         "negative_prompt": str,         # Optional (default: "")
         "num_inference_steps": int,     # Optional (default: 4 for Lightning, 8 for FP8)
@@ -21,6 +22,11 @@ Input format:
         "auto_resize": bool,           # Optional (default: true)
     }
 }
+
+Multi-image editing:
+- Pass up to 3 images total (1 primary + 2 in images_base64)
+- Reference images in prompt: "the cat from the first image" + "the people from the second image"
+- Example: "Place the cat from the first image on the table with the people from the second image"
 
 Output format:
 {
@@ -210,6 +216,7 @@ def handle_edit(job_input: dict, job_id: str, work_dir: Path) -> dict:
         prompt: Edit instruction (e.g., "Change the background to an office")
 
     Optional inputs:
+        images_base64: Additional reference images (list, up to 2 more for 3 total)
         negative_prompt: Things to avoid (default: "")
         num_inference_steps: Number of diffusion steps (default: 4 for LoRA, 8 for FP8)
         guidance_scale: CFG scale (default: 1.0)
@@ -222,6 +229,7 @@ def handle_edit(job_input: dict, job_id: str, work_dir: Path) -> dict:
 
     # Extract inputs
     image_base64 = job_input.get("image_base64")
+    images_base64 = job_input.get("images_base64", [])  # Additional reference images
     prompt = job_input.get("prompt")
     negative_prompt = job_input.get("negative_prompt", "")
     # Default to BF16 (full quality) - requires 48GB+ GPU
@@ -238,12 +246,23 @@ def handle_edit(job_input: dict, job_id: str, work_dir: Path) -> dict:
     if not prompt:
         return {"error": "Missing required 'prompt' in input"}
 
-    # Decode input image
+    # Decode primary input image
     input_image = decode_base64_image(image_base64)
     if input_image is None:
         return {"error": "Failed to decode input image from base64"}
 
-    log(f"Input image size: {input_image.size}")
+    log(f"Primary image size: {input_image.size}")
+
+    # Build list of all images (primary + references)
+    all_images = [input_image]
+    for i, ref_b64 in enumerate(images_base64[:2]):  # Max 2 additional images
+        ref_image = decode_base64_image(ref_b64)
+        if ref_image is None:
+            return {"error": f"Failed to decode reference image {i+2} from base64"}
+        all_images.append(ref_image)
+        log(f"Reference image {i+2} size: {ref_image.size}")
+
+    log(f"Total images for edit: {len(all_images)}")
 
     # Save input image to temp file (LightX2V expects file path)
     input_path = str(work_dir / "input.png")
@@ -265,7 +284,7 @@ def handle_edit(job_input: dict, job_id: str, work_dir: Path) -> dict:
         generator = torch.Generator(device="cuda").manual_seed(seed)
 
         output = pipe(
-            image=[input_image],
+            image=all_images,  # Pass all images (1-3) for multi-image editing
             prompt=prompt,
             negative_prompt=negative_prompt if negative_prompt else " ",
             num_inference_steps=num_inference_steps,
