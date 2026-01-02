@@ -178,7 +178,7 @@ python tools/addmusic.py --input video.mp4 --music bg.mp3 --music-volume 0.2 --f
 
 ### AI Image Editing
 
-AI-powered image editing using Qwen-Image-Edit-2511. Supports background replacement, style transfer, viewpoint changes, and custom prompts.
+AI-powered image editing using Qwen-Image-Edit-2511. Supports background replacement, style transfer, viewpoint changes, custom prompts, and **multi-image merging**.
 
 ```bash
 # Background replacement (use preset or custom description)
@@ -198,12 +198,20 @@ python tools/image_edit.py --input photo.jpg --viewpoint front
 # Combine multiple edits
 python tools/image_edit.py --input photo.jpg --background office --style cinematic
 
+# Multi-image merge (combine 2-3 images)
+python tools/image_edit.py --input person1.jpg person2.jpg \
+  --prompt "Both people standing together in a park, first person on left, second on right"
+python tools/image_edit.py --input cat.jpg cafe_scene.jpg \
+  --prompt "Place the cat from the first image on the table in the cafe from the second image"
+
 # Batch processing
 python tools/image_edit.py --input-dir ./photos --background studio --output-dir ./edited
 
 # List available presets
 python tools/image_edit.py --list-presets
 ```
+
+**Multi-Image Editing:** Pass up to 3 images total. Reference them in your prompt as "first image", "second image", etc. Great for combining people, placing subjects in new scenes, or merging elements.
 
 **Background Presets:** office, studio, outdoors, pyramids, beach, city, mountains, space, forest, cafe
 
