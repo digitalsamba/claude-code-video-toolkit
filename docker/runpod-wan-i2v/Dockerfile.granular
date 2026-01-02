@@ -1,0 +1,262 @@
+# RunPod Serverless handler for Wan2.2 Image-to-Video with GRANULAR model layers
+#
+# This version downloads each model shard individually to create layers <10GB each,
+# which registries can handle reliably. Docker has a 10GB layer limit.
+#
+# The T5 encoder (11.36GB) exceeds this limit, so it's downloaded at first startup
+# and cached on RunPod network volume. All diffusion shards are baked in.
+#
+# Build:
+#   docker build -f Dockerfile.granular --build-arg HF_TOKEN=hf_xxx -t registry/wan-i2v:granular .
+#
+# Image size: ~130GB (15 model layers + base)
+# Layer sizes: ~5-9.3GB each (all under 10GB limit)
+#
+# Version: 4.0.0 - Granular layers for reliable registry push
+
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Python and system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.11 \
+    python3-pip \
+    python3.11-venv \
+    python3.11-dev \
+    git \
+    git-lfs \
+    ffmpeg \
+    curl \
+    build-essential \
+    ninja-build \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python
+
+RUN git lfs install
+
+WORKDIR /app
+
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH="${CUDA_HOME}/bin:${PATH}"
+ENV LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}"
+
+# Install PyTorch with CUDA 12.4 support
+RUN pip3 install --no-cache-dir \
+    torch==2.5.1 \
+    torchvision==0.20.1 \
+    torchaudio==2.5.1 \
+    --index-url https://download.pytorch.org/whl/cu124
+
+# Try flash-attn (optional)
+RUN pip3 install --no-cache-dir flash-attn --no-build-isolation || \
+    echo "flash-attn installation failed, will use SDPA fallback"
+
+# Install LightX2V from source
+RUN git clone --depth 1 https://github.com/ModelTC/LightX2V.git /app/lightx2v
+WORKDIR /app/lightx2v
+RUN pip3 install --no-cache-dir -v .
+
+# Install additional dependencies
+RUN pip3 install --no-cache-dir \
+    diffusers>=0.30.0 \
+    transformers>=4.45.0 \
+    accelerate>=0.30.0 \
+    safetensors>=0.4.0 \
+    einops>=0.7.0 \
+    Pillow>=10.0.0 \
+    numpy>=1.26.0 \
+    imageio>=2.31.0 \
+    imageio-ffmpeg>=0.4.8
+
+RUN pip3 install --no-cache-dir \
+    runpod>=1.7.0 \
+    requests>=2.31.0 \
+    boto3>=1.34.0 \
+    huggingface_hub>=0.25.0
+
+WORKDIR /app
+
+ENV HF_HOME=/root/.cache/huggingface
+ARG HF_TOKEN=""
+ENV HF_TOKEN=${HF_TOKEN}
+
+# === GRANULAR MODEL DOWNLOAD ===
+# Each model file gets its own layer for reliable registry push
+# Total: 15 model layers, each <10GB (Docker layer limit)
+#
+# T5 encoder (11.36GB) is split into 2 parts using HTTP range requests
+
+# Layer 1: T5 encoder part 1 (first 5GB)
+RUN echo "Downloading T5 encoder part 1/2 (5GB)..." && \
+    mkdir -p /root/.cache/huggingface/t5_split && \
+    curl -L -H "Range: bytes=0-5368709119" \
+    "https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B/resolve/main/models_t5_umt5-xxl-enc-bf16.pth?download=true" \
+    -o /root/.cache/huggingface/t5_split/t5_part_aa && \
+    echo "T5 part 1 done: $(ls -lh /root/.cache/huggingface/t5_split/t5_part_aa)"
+
+# Layer 2: T5 encoder part 2 (remaining 6.36GB)
+RUN echo "Downloading T5 encoder part 2/2 (6.36GB)..." && \
+    curl -L -H "Range: bytes=5368709120-" \
+    "https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B/resolve/main/models_t5_umt5-xxl-enc-bf16.pth?download=true" \
+    -o /root/.cache/huggingface/t5_split/t5_part_ab && \
+    echo "T5 part 2 done: $(ls -lh /root/.cache/huggingface/t5_split/t5_part_ab)"
+
+# Layer 3: High noise shard 1 (~9.3GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading high_noise shard 1/6...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'high_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors', token=token); \
+print('High noise shard 1 done'); \
+"
+
+# Layer 4: High noise shard 2 (~9.3GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading high_noise shard 2/6...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'high_noise_model/diffusion_pytorch_model-00002-of-00006.safetensors', token=token); \
+print('High noise shard 2 done'); \
+"
+
+# Layer 5: High noise shard 3 (~9.3GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading high_noise shard 3/6...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'high_noise_model/diffusion_pytorch_model-00003-of-00006.safetensors', token=token); \
+print('High noise shard 3 done'); \
+"
+
+# Layer 6: High noise shard 4 (~9.2GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading high_noise shard 4/6...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'high_noise_model/diffusion_pytorch_model-00004-of-00006.safetensors', token=token); \
+print('High noise shard 4 done'); \
+"
+
+# Layer 7: High noise shard 5 (~9.2GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading high_noise shard 5/6...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'high_noise_model/diffusion_pytorch_model-00005-of-00006.safetensors', token=token); \
+print('High noise shard 5 done'); \
+"
+
+# Layer 8: High noise shard 6 + config (~7.1GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading high_noise shard 6/6 + config...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'high_noise_model/diffusion_pytorch_model-00006-of-00006.safetensors', token=token); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'high_noise_model/config.json', token=token); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'high_noise_model/diffusion_pytorch_model.safetensors.index.json', token=token); \
+print('High noise shard 6 done'); \
+"
+
+# Layer 9: Low noise shard 1 (~9.3GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading low_noise shard 1/6...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'low_noise_model/diffusion_pytorch_model-00001-of-00006.safetensors', token=token); \
+print('Low noise shard 1 done'); \
+"
+
+# Layer 10: Low noise shard 2 (~9.3GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading low_noise shard 2/6...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'low_noise_model/diffusion_pytorch_model-00002-of-00006.safetensors', token=token); \
+print('Low noise shard 2 done'); \
+"
+
+# Layer 11: Low noise shard 3 (~9.3GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading low_noise shard 3/6...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'low_noise_model/diffusion_pytorch_model-00003-of-00006.safetensors', token=token); \
+print('Low noise shard 3 done'); \
+"
+
+# Layer 12: Low noise shard 4 (~9.2GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading low_noise shard 4/6...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'low_noise_model/diffusion_pytorch_model-00004-of-00006.safetensors', token=token); \
+print('Low noise shard 4 done'); \
+"
+
+# Layer 13: Low noise shard 5 (~9.2GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading low_noise shard 5/6...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'low_noise_model/diffusion_pytorch_model-00005-of-00006.safetensors', token=token); \
+print('Low noise shard 5 done'); \
+"
+
+# Layer 14: Low noise shard 6 + config (~7.1GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading low_noise shard 6/6 + config...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'low_noise_model/diffusion_pytorch_model-00006-of-00006.safetensors', token=token); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'low_noise_model/config.json', token=token); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'low_noise_model/diffusion_pytorch_model.safetensors.index.json', token=token); \
+print('Low noise shard 6 done'); \
+"
+
+# Layer 15: VAE + tokenizer + main config (~0.5GB)
+RUN python3 -c "\
+from huggingface_hub import hf_hub_download; \
+import os; \
+token = os.environ.get('HF_TOKEN') or None; \
+print('Downloading VAE + tokenizer + config...'); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'Wan2.1_VAE.pth', token=token); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'configuration.json', token=token); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'google/umt5-xxl/tokenizer.json', token=token); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'google/umt5-xxl/spiece.model', token=token); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'google/umt5-xxl/tokenizer_config.json', token=token); \
+hf_hub_download('Wan-AI/Wan2.2-I2V-A14B', 'google/umt5-xxl/special_tokens_map.json', token=token); \
+print('VAE + tokenizer done'); \
+"
+
+# Copy handler
+COPY handler.py /app/handler.py
+
+ENV PYTHONUNBUFFERED=1
+ENV LIGHTX2V_PATH=/app/lightx2v
+ENV MODEL_BAKED=1
+
+# Health check
+RUN python3 -c "\
+import torch; \
+print(f'PyTorch {torch.__version__}, CUDA available: {torch.cuda.is_available()}'); \
+import sys; sys.path.insert(0, '/app/lightx2v'); \
+print('LightX2V installed at /app/lightx2v'); \
+print('Wan2.2-I2V-A14B fully baked (15 layers, all <10GB)'); \
+print('T5 encoder split into 2 parts (5GB + 6.36GB)'); \
+"
+
+CMD ["python3", "-u", "/app/handler.py"]

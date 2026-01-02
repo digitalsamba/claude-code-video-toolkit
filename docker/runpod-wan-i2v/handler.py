@@ -84,6 +84,46 @@ def setup_hf_cache() -> None:
         log("WARNING: No cache found, will download models")
 
 
+def reassemble_t5_if_needed() -> None:
+    """Reassemble T5 encoder from split parts if needed (for granular Docker builds)."""
+    t5_split_dir = Path("/root/.cache/huggingface/t5_split")
+    if not t5_split_dir.exists():
+        return  # No split parts, T5 was downloaded normally
+
+    t5_parts = sorted(t5_split_dir.glob("t5_part_*"))
+    if not t5_parts:
+        return  # No parts found
+
+    # Find the HF cache snapshot directory
+    from huggingface_hub import snapshot_download
+    try:
+        # Get the model path (this will use cached files)
+        model_path = Path(snapshot_download("Wan-AI/Wan2.2-I2V-A14B", local_files_only=True))
+        t5_target = model_path / "models_t5_umt5-xxl-enc-bf16.pth"
+    except Exception:
+        # Fallback: create in a known location
+        model_path = Path("/root/.cache/huggingface/hub/models--Wan-AI--Wan2.2-I2V-A14B/snapshots/main")
+        model_path.mkdir(parents=True, exist_ok=True)
+        t5_target = model_path / "models_t5_umt5-xxl-enc-bf16.pth"
+
+    if t5_target.exists():
+        log(f"T5 encoder already assembled: {t5_target}")
+        return
+
+    log(f"Reassembling T5 encoder from {len(t5_parts)} parts...")
+    start = time.time()
+
+    with open(t5_target, "wb") as out_file:
+        for part in t5_parts:
+            log(f"  Adding {part.name} ({part.stat().st_size // (1024**3):.1f}GB)...")
+            with open(part, "rb") as in_file:
+                # Read and write in chunks to avoid memory issues
+                while chunk := in_file.read(64 * 1024 * 1024):  # 64MB chunks
+                    out_file.write(chunk)
+
+    log(f"T5 encoder reassembled in {time.time() - start:.1f}s: {t5_target.stat().st_size // (1024**3):.1f}GB")
+
+
 def ensure_models() -> None:
     """Ensure models are available - either baked in or downloaded at runtime."""
     global MODEL_PATH
@@ -95,7 +135,11 @@ def ensure_models() -> None:
 
     # Check if models are baked into image (MODEL_BAKED env var)
     if os.environ.get("MODEL_BAKED") == "1":
-        log("Using baked-in model from HuggingFace cache (local_files_only=True)...")
+        log("Using baked-in model from HuggingFace cache...")
+
+        # Reassemble T5 from split parts if needed (granular Docker build)
+        reassemble_t5_if_needed()
+
         from huggingface_hub import snapshot_download
         # Use local_files_only=True to prevent HF network calls
         MODEL_PATH = Path(snapshot_download("Wan-AI/Wan2.2-I2V-A14B", local_files_only=True))
