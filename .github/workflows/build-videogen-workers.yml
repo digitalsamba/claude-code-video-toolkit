@@ -1,12 +1,13 @@
 name: Build Video Generation Workers
 
 on:
-  push:
-    branches: [experiment/video-generation]
-    paths:
-      - 'docker/runpod-qwen-edit/**'
-      - 'docker/runpod-wan-i2v/**'
-      - '.github/workflows/build-videogen-workers.yml'
+  # Auto-build disabled - use local builds with Dockerfile.baked for large model images
+  # push:
+  #   branches: [experiment/video-generation]
+  #   paths:
+  #     - 'docker/runpod-qwen-edit/**'
+  #     - 'docker/runpod-wan-i2v/**'
+  #     - '.github/workflows/build-videogen-workers.yml'
   workflow_dispatch:
     inputs:
       build_qwen_edit:
