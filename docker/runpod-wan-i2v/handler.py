@@ -374,9 +374,9 @@ def handle_i2v(job_input: dict, job_id: str, work_dir: Path) -> dict:
     vram_gb = get_gpu_vram_gb()
     pipe = get_pipeline(vram_gb)
 
-    # Select attention mode - LightX2V supports: flash_attn2, flash_attn3, sage_attn2, sage_attn3, sdpa
-    # Priority: sage_attn2 > flash_attn2 > sdpa (PyTorch built-in, always works)
-    attn_mode = "sdpa"  # Safe fallback - always works with PyTorch 2.0+
+    # Select attention mode - LightX2V supports: flash_attn2, flash_attn3, sage_attn2, sage_attn3, torch_sdpa
+    # Priority: sage_attn2 > flash_attn2 > torch_sdpa (PyTorch built-in, always works)
+    attn_mode = "torch_sdpa"  # Safe fallback - always works with PyTorch 2.0+
     try:
         import sageattention
         attn_mode = "sage_attn2"
@@ -387,7 +387,7 @@ def handle_i2v(job_input: dict, job_id: str, work_dir: Path) -> dict:
             attn_mode = "flash_attn2"
             log("Using flash_attn2 (FlashAttention available)")
         except ImportError:
-            log("Using sdpa (PyTorch built-in attention, no acceleration libraries found)")
+            log("Using torch_sdpa (PyTorch built-in attention, no acceleration libraries found)")
 
     log(f"Using attention mode: {attn_mode}")
 
