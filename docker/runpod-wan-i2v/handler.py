@@ -375,19 +375,9 @@ def handle_i2v(job_input: dict, job_id: str, work_dir: Path) -> dict:
     pipe = get_pipeline(vram_gb)
 
     # Select attention mode - LightX2V supports: flash_attn2, flash_attn3, sage_attn2, sage_attn3, torch_sdpa
-    # Priority: sage_attn2 > flash_attn2 > torch_sdpa (PyTorch built-in, always works)
-    attn_mode = "torch_sdpa"  # Safe fallback - always works with PyTorch 2.0+
-    try:
-        import sageattention
-        attn_mode = "sage_attn2"
-        log("Using sage_attn2 (SageAttention available)")
-    except ImportError:
-        try:
-            import flash_attn
-            attn_mode = "flash_attn2"
-            log("Using flash_attn2 (FlashAttention available)")
-        except ImportError:
-            log("Using torch_sdpa (PyTorch built-in attention, no acceleration libraries found)")
+    # NOTE: sage_attn2 crashes during inference with Wan2.2 MoE, so we use torch_sdpa
+    attn_mode = "torch_sdpa"  # Stable fallback - works with PyTorch 2.0+, slower but reliable
+    log("Using torch_sdpa (PyTorch built-in attention, forced for stability)")
 
     log(f"Using attention mode: {attn_mode}")
 
