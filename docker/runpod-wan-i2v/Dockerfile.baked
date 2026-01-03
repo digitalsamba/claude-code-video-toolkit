@@ -84,7 +84,15 @@ RUN pip3 install --no-cache-dir \
     qtorch \
     ftfy \
     decord \
-    av
+    av \
+    opencv-python
+
+# Install SageAttention for optimized video attention (alternative to flash-attn)
+RUN pip3 install --no-cache-dir sageattention || echo "sageattention install failed, will try flash-attn"
+
+# Try flash-attn (may need compilation, optional)
+RUN pip3 install --no-cache-dir flash-attn --no-build-isolation || \
+    echo "flash-attn installation failed, using sageattention fallback"
 
 # Install RunPod SDK and utilities
 RUN pip3 install --no-cache-dir \
