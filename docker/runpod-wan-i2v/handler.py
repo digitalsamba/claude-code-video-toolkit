@@ -374,12 +374,18 @@ def handle_i2v(job_input: dict, job_id: str, work_dir: Path) -> dict:
     vram_gb = get_gpu_vram_gb()
     pipe = get_pipeline(vram_gb)
 
-    # Select attention mode
+    # Select attention mode - LightX2V supports: flash_attn2, flash_attn3, sage_attn2, sage_attn3
+    attn_mode = "sage_attn2"  # Default to sage_attn2 (works on most GPUs)
     try:
-        import flash_attn
-        attn_mode = "sage_attn2"  # Optimized for video
+        import sageattention
+        log("SageAttention available")
     except ImportError:
-        attn_mode = "sdpa"
+        try:
+            import flash_attn
+            attn_mode = "flash_attn2"
+            log("Using flash_attn2")
+        except ImportError:
+            log("WARNING: Neither sageattention nor flash_attn available, sage_attn2 may fail")
 
     log(f"Using attention mode: {attn_mode}")
 
