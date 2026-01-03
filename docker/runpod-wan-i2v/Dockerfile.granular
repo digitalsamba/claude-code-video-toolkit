@@ -70,6 +70,20 @@ RUN pip3 install --no-cache-dir \
     imageio>=2.31.0 \
     imageio-ffmpeg>=0.4.8
 
+# LightX2V transitive dependencies (not auto-installed correctly)
+RUN pip3 install --no-cache-dir \
+    loguru \
+    prometheus_client \
+    gguf \
+    qtorch \
+    ftfy \
+    decord \
+    av \
+    opencv-python
+
+# Install SageAttention for optimized video attention (alternative to flash-attn)
+RUN pip3 install --no-cache-dir sageattention || echo "sageattention install failed, will try flash-attn"
+
 RUN pip3 install --no-cache-dir \
     runpod>=1.7.0 \
     requests>=2.31.0 \
