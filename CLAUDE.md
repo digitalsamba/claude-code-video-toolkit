@@ -177,9 +177,9 @@ python tools/addmusic.py --input video.mp4 --music bg.mp3 --music-volume 0.2 --f
 
 **SFX Presets:** whoosh, click, chime, error, pop, slide
 
-### AI Image Editing
+### AI Image Editing (Cloud GPU)
 
-AI-powered image editing tools using cloud GPU processing via RunPod.
+AI-powered image editing tools using cloud GPU processing via RunPod. These tools require a RunPod account but use pre-built Docker images - no local GPU or building required.
 
 ```bash
 # General AI editing (Qwen-Image-Edit)
@@ -220,6 +220,10 @@ python tools/image_edit.py --setup   # For image editing
 python tools/upscale.py --setup      # For upscaling
 ```
 
+The `--setup` command creates a RunPod serverless endpoint using pre-built images:
+- `ghcr.io/conalmullan/video-toolkit-qwen-edit:latest`
+- `ghcr.io/conalmullan/video-toolkit-realesrgan:latest`
+
 See `docs/qwen-edit-patterns.md` and `.claude/skills/qwen-edit/` for prompting guidance.
 
 ### Utility Tools vs Project Tools
@@ -228,18 +232,17 @@ See `docs/qwen-edit-patterns.md` and `.claude/skills/qwen-edit/` for prompting g
 |------|-------|-------------|
 | **Project tools** | voiceover, music, sfx | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
-| **Image editing** | image_edit, upscale | AI image editing and upscaling (RunPod) |
-| **Optional tools** | dewatermark | Requires additional installation (see below) |
+| **Cloud GPU** | image_edit, upscale, dewatermark | AI processing via RunPod (see sections below) |
 
 Utility tools work on any video file without requiring a project structure.
 
-### Watermark Removal (Optional Component)
+### Watermark Removal (Cloud GPU)
 
 The `dewatermark.py` tool uses AI inpainting (ProPainter) to remove watermarks.
 
 **Two processing modes:**
-- **RunPod (cloud)** - Works from any machine, ~$0.05-0.30/video
-- **Local** - Requires NVIDIA GPU with 8GB+ VRAM
+- **RunPod (cloud)** - Works from any machine, ~$0.05-0.30/video (recommended)
+- **Local** - Requires NVIDIA GPU with 8GB+ VRAM (optional)
 
 ```bash
 # Cloud processing via RunPod (recommended for Mac users)
@@ -269,6 +272,8 @@ python tools/dewatermark.py --setup
 
 # Done! The endpoint ID is automatically saved to .env
 ```
+
+Uses pre-built image: `ghcr.io/conalmullan/video-toolkit-propainter:latest`
 
 For manual setup or advanced options, see `docs/runpod-setup.md`.
 

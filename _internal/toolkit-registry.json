@@ -266,19 +266,22 @@
       "envVars": ["RUNPOD_API_KEY"],
       "endpoints": {
         "propainter": {
-          "dockerImage": "docker/runpod-propainter/",
+          "image": "ghcr.io/conalmullan/video-toolkit-propainter:latest",
+          "dockerfile": "docker/runpod-propainter/",
           "envVar": "RUNPOD_ENDPOINT_ID",
           "operations": ["dewatermark"],
           "estimatedCost": "$0.05-0.30 per video"
         },
         "qwen-edit": {
-          "dockerImage": "docker/runpod-qwen-edit/",
+          "image": "ghcr.io/conalmullan/video-toolkit-qwen-edit:latest",
+          "dockerfile": "docker/runpod-qwen-edit/",
           "envVar": "RUNPOD_QWEN_EDIT_ENDPOINT_ID",
           "operations": ["image_edit"],
           "estimatedCost": "$0.01-0.02 per image"
         },
         "realesrgan": {
-          "dockerImage": "docker/runpod-realesrgan/",
+          "image": "ghcr.io/conalmullan/video-toolkit-realesrgan:latest",
+          "dockerfile": "docker/runpod-realesrgan/",
           "envVar": "RUNPOD_UPSCALE_ENDPOINT_ID",
           "operations": ["upscale"],
           "estimatedCost": "$0.01-0.05 per image"
