@@ -72,6 +72,7 @@ Claude Code has deep knowledge in these domains via `.claude/skills/`:
 | ffmpeg | beta | Asset conversion, compression |
 | playwright-recording | beta | Browser demo capture |
 | frontend-design | stable | Visual design refinement for slides |
+| qwen-edit | stable | AI image editing prompting patterns |
 
 ## Commands
 
@@ -176,23 +177,72 @@ python tools/addmusic.py --input video.mp4 --music bg.mp3 --music-volume 0.2 --f
 
 **SFX Presets:** whoosh, click, chime, error, pop, slide
 
+### AI Image Editing (Cloud GPU)
+
+AI-powered image editing tools using cloud GPU processing via RunPod. These tools require a RunPod account but use pre-built Docker images - no local GPU or building required.
+
+```bash
+# General AI editing (Qwen-Image-Edit)
+python tools/image_edit.py --input photo.jpg --prompt "Add sunglasses"
+python tools/image_edit.py --input photo.jpg --style cyberpunk
+python tools/image_edit.py --input photo.jpg --background office
+
+# With quality settings
+python tools/image_edit.py --input photo.jpg --prompt "..." --steps 16 --guidance 3.0
+
+# Multi-image compositing
+python tools/image_edit.py --input person.jpg scene.jpg --prompt "Place person in scene"
+
+# AI upscaling (RealESRGAN)
+python tools/upscale.py --input photo.jpg --output photo_4x.png --runpod
+python tools/upscale.py --input photo.jpg --scale 2 --model anime --runpod
+python tools/upscale.py --input photo.jpg --face-enhance --runpod
+
+# List presets
+python tools/image_edit.py --list-presets
+```
+
+**image_edit presets:**
+- **Background:** office, studio, outdoors, pyramids, beach, city, mountains, space, forest, cafe
+- **Style:** cyberpunk, anime, oil-painting, watercolor, pixel-art, noir, pop-art, sketch, vintage, cinematic
+- **Viewpoint:** front, profile, three-quarter, looking-up, looking-down
+
+**upscale options:**
+- `--scale 2|4` - Upscale factor (default: 4)
+- `--model general|anime|photo` - Model to use
+- `--face-enhance` - Use GFPGAN for face enhancement
+- `--format png|jpg|webp` - Output format
+
+**RunPod setup:**
+```bash
+echo "RUNPOD_API_KEY=your_key_here" >> .env
+python tools/image_edit.py --setup   # For image editing
+python tools/upscale.py --setup      # For upscaling
+```
+
+The `--setup` command creates a RunPod serverless endpoint using pre-built images:
+- `ghcr.io/conalmullan/video-toolkit-qwen-edit:latest`
+- `ghcr.io/conalmullan/video-toolkit-realesrgan:latest`
+
+See `docs/qwen-edit-patterns.md` and `.claude/skills/qwen-edit/` for prompting guidance.
+
 ### Utility Tools vs Project Tools
 
 | Type | Tools | When to Use |
 |------|-------|-------------|
 | **Project tools** | voiceover, music, sfx | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
-| **Optional tools** | dewatermark | Requires additional installation (see below) |
+| **Cloud GPU** | image_edit, upscale, dewatermark | AI processing via RunPod (see sections below) |
 
 Utility tools work on any video file without requiring a project structure.
 
-### Watermark Removal (Optional Component)
+### Watermark Removal (Cloud GPU)
 
 The `dewatermark.py` tool uses AI inpainting (ProPainter) to remove watermarks.
 
 **Two processing modes:**
-- **RunPod (cloud)** - Works from any machine, ~$0.05-0.30/video
-- **Local** - Requires NVIDIA GPU with 8GB+ VRAM
+- **RunPod (cloud)** - Works from any machine, ~$0.05-0.30/video (recommended)
+- **Local** - Requires NVIDIA GPU with 8GB+ VRAM (optional)
 
 ```bash
 # Cloud processing via RunPod (recommended for Mac users)
@@ -222,6 +272,8 @@ python tools/dewatermark.py --setup
 
 # Done! The endpoint ID is automatically saved to .env
 ```
+
+Uses pre-built image: `ghcr.io/conalmullan/video-toolkit-propainter:latest`
 
 For manual setup or advanced options, see `docs/runpod-setup.md`.
 

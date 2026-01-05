@@ -1,18 +1,26 @@
 # RunPod Cloud GPU Setup
 
-This guide covers setting up RunPod serverless GPUs for watermark removal (and future GPU-intensive video tools).
+This guide covers setting up RunPod serverless GPUs for the toolkit's Cloud GPU tools.
+
+## Cloud GPU Tools
+
+| Tool | Backend | Use Case | Cost/Job |
+|------|---------|----------|----------|
+| `image_edit` | Qwen-Image-Edit | AI image editing, style transfer | ~$0.01-0.02 |
+| `upscale` | RealESRGAN | AI image upscaling (2x/4x) | ~$0.01-0.05 |
+| `dewatermark` | ProPainter | AI video inpainting | ~$0.05-0.30 |
 
 ## Why RunPod?
 
-The dewatermark tool uses ProPainter, an AI inpainting model that requires significant GPU power:
+These tools use AI models that require significant GPU power:
 
-| Hardware | Processing Time (30s video) | Viable? |
-|----------|----------------------------|---------|
-| NVIDIA RTX 3090 | 2-5 minutes | Yes |
-| Apple Silicon M1/M2/M3 | 4+ hours | No |
-| CPU only | 10+ hours | No |
+| Hardware | Image Edit | Upscale | Dewatermark (30s) | Viable? |
+|----------|------------|---------|-------------------|---------|
+| NVIDIA RTX 3090+ | ~20s | ~10s | 2-5 min | Yes |
+| Apple Silicon | N/A | N/A | 4+ hours | No |
+| CPU only | N/A | N/A | 10+ hours | No |
 
-RunPod provides on-demand NVIDIA GPUs at ~$0.34/hour, making it cost-effective for occasional use (~$0.05-0.30 per video).
+RunPod provides on-demand NVIDIA GPUs at ~$0.34/hour, making it cost-effective for occasional use.
 
 ## Quick Start (Automated)
 
@@ -22,17 +30,31 @@ The fastest way to set up RunPod:
 # 1. Add your RunPod API key to .env
 echo "RUNPOD_API_KEY=your_key_here" >> .env
 
-# 2. Run automated setup (creates template + endpoint)
-python tools/dewatermark.py --setup
+# 2. Run automated setup for each tool you need
+python tools/image_edit.py --setup    # AI image editing
+python tools/upscale.py --setup       # AI upscaling
+python tools/dewatermark.py --setup   # AI watermark removal
 
-# 3. Done! Now use it:
+# 3. Done! Now use them:
+python tools/image_edit.py --input photo.jpg --style cyberpunk
+python tools/upscale.py --input photo.jpg --output photo_4x.png --runpod
 python tools/dewatermark.py --input video.mp4 --region x,y,w,h --output out.mp4 --runpod
 ```
 
-The `--setup` command will:
-- Create a serverless template using the public Docker image
-- Create an endpoint with RTX 3090 GPU (AMPERE_24)
+Each `--setup` command will:
+- Create a serverless template using a pre-built Docker image
+- Create an endpoint with appropriate GPU
 - Save the endpoint ID to your `.env` file
+
+## Pre-built Docker Images
+
+All tools use pre-built public images (no building required):
+
+| Tool | Image |
+|------|-------|
+| image_edit | `ghcr.io/conalmullan/video-toolkit-qwen-edit:latest` |
+| upscale | `ghcr.io/conalmullan/video-toolkit-realesrgan:latest` |
+| dewatermark | `ghcr.io/conalmullan/video-toolkit-propainter:latest` |
 
 Use `--setup-gpu AMPERE_16` for RTX 3080 or `--setup-gpu ADA_24` for RTX 4090.
 
@@ -45,19 +67,20 @@ If you prefer to set up manually via the web console:
 ### 1. Create RunPod Account
 
 1. Go to [runpod.io](https://runpod.io) and sign up
-2. Add credits to your account ($10 minimum, lasts for many videos)
+2. Add credits to your account ($10 minimum, lasts for many jobs)
 3. Go to Settings > API Keys and create an API key
 
-### 2. Create Serverless Endpoint
+### 2. Create Serverless Endpoint(s)
 
-A pre-built public image is available:
-```
-ghcr.io/conalmullan/video-toolkit-propainter:v2.0.0
-```
+Create one endpoint per tool you want to use:
 
-> **Note:** Use versioned tags (not `:latest`) to ensure workers pull the correct image.
+| Tool | Docker Image | GPU | Timeout |
+|------|--------------|-----|---------|
+| image_edit | `ghcr.io/conalmullan/video-toolkit-qwen-edit:latest` | 48GB+ (A6000, L40S, A100) | 300s |
+| upscale | `ghcr.io/conalmullan/video-toolkit-realesrgan:latest` | 24GB (RTX 3090/4090) | 300s |
+| dewatermark | `ghcr.io/conalmullan/video-toolkit-propainter:latest` | 24GB (RTX 3090/4090) | 3600s |
 
-Alternatively, build your own (see `docker/runpod-propainter/README.md`).
+Steps for each:
 
 1. Go to [RunPod Serverless Console](https://www.runpod.io/console/serverless)
 2. Click **New Endpoint**
@@ -65,42 +88,45 @@ Alternatively, build your own (see `docker/runpod-propainter/README.md`).
 
 | Setting | Value | Notes |
 |---------|-------|-------|
-| Docker Image | `ghcr.io/conalmullan/video-toolkit-propainter:latest` | Public image |
-| GPU | RTX 3090 or RTX 4090 | 24GB VRAM recommended |
-| Max Workers | 1 | Scale up if processing many videos |
+| Docker Image | (see table above) | Pre-built public image |
+| GPU | (see table above) | VRAM requirements vary |
+| Max Workers | 1 | Scale up for batch processing |
 | Idle Timeout | 5 seconds | Fast scale-down to save costs |
-| Execution Timeout | 3600 seconds | 1 hour max per job |
+| Execution Timeout | (see table above) | Video processing needs longer |
 
 4. Click **Create Endpoint**
 5. Copy the **Endpoint ID** (looks like: `abc123xyz`)
 
 ### 3. Configure Local Environment
 
-Add to your `.env` file:
+Add to your `.env` file (only the endpoints you created):
 
 ```bash
 # RunPod Configuration
 RUNPOD_API_KEY=your_api_key_here
-RUNPOD_ENDPOINT_ID=your_endpoint_id_here
+
+# Endpoint IDs (one per tool)
+RUNPOD_QWEN_EDIT_ENDPOINT_ID=abc123    # For image_edit
+RUNPOD_UPSCALE_ENDPOINT_ID=def456      # For upscale
+RUNPOD_ENDPOINT_ID=ghi789              # For dewatermark
 ```
 
 ### 4. Test It
 
 ```bash
-# Dry run (doesn't actually process)
+# Image editing
+python tools/image_edit.py --input photo.jpg --prompt "Add sunglasses"
+
+# Upscaling
+python tools/upscale.py --input photo.jpg --output photo_4x.png --runpod
+
+# Dewatermark (with dry run)
 python tools/dewatermark.py \
     --input video.mp4 \
     --region 1080,660,195,40 \
     --output clean.mp4 \
     --runpod \
     --dry-run
-
-# Real processing
-python tools/dewatermark.py \
-    --input video.mp4 \
-    --region 1080,660,195,40 \
-    --output clean.mp4 \
-    --runpod
 ```
 
 ## How It Works
@@ -270,36 +296,30 @@ RUNPOD_ENDPOINT_ID_FAST=def456uvw   # Fast (RTX 4090)
 
 ## Future GPU Tools
 
-The RunPod handler is designed for extensibility. Future operations may include:
+The toolkit is designed for extensibility. Future tools may include:
 
-- **upscale** - Video upscaling with Real-ESRGAN
+- **video_gen** - AI video generation (Wan I2V, in development)
+- **animate** - Character animation
 - **denoise** - Audio/video denoising
 - **stabilize** - Video stabilization
-- **style-transfer** - AI style transfer
-
-These would use the same endpoint and Docker image, just with different `operation` values.
 
 ## Current Status & Known Limitations
 
-**Working (as of v2.0.0):**
-- ✅ End-to-end watermark removal via RunPod
+**Working:**
+- ✅ AI image editing (Qwen-Image-Edit) - style transfer, backgrounds, custom prompts
+- ✅ AI upscaling (RealESRGAN) - 2x/4x with face enhancement
+- ✅ AI watermark removal (ProPainter) - video inpainting
 - ✅ Cloudflare R2 file transfer (reliable, fast)
-- ✅ Automatic GPU detection (respects RunPod's CUDA_VISIBLE_DEVICES)
-- ✅ Smart auto resize_ratio based on VRAM + video size
-- ✅ 30-second video processing confirmed working
+- ✅ Automatic GPU detection
 
 **Current Limitations:**
 
-| Issue | Description | Workaround |
-|-------|-------------|------------|
-| Untested with long videos | Only 30-second clips tested | Try longer chunks in next session |
-| Full resolution OOM | `resize_ratio=1.0` may fail on GPUs with <48GB VRAM | Use `auto` (default) or upscale result post-processing |
-
-**Next Steps (planned):**
-- [ ] Test longer video chunks (1-3 minutes)
-- [ ] Add post-processing upscale option to restore full resolution
-- [ ] Profile memory usage at different resolutions
-- [ ] Consider chunking very long videos client-side
+| Tool | Issue | Workaround |
+|------|-------|------------|
+| image_edit | Requires 48GB+ VRAM | Use A6000, L40S, or A100 GPUs |
+| image_edit | Background replacement inconsistent | Use style/prompt instead |
+| dewatermark | Long videos untested | Chunk videos client-side |
+| dewatermark | Full resolution OOM on 24GB | Use `auto` resize_ratio |
 
 ## Version History
 

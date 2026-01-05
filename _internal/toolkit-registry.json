@@ -1,6 +1,6 @@
 {
   "name": "claude-code-video-toolkit",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "AI-native video production workspace for Claude Code",
   "repository": "https://github.com/digitalsamba/claude-code-video-toolkit",
 
@@ -39,6 +39,15 @@
       "status": "stable",
       "created": "2025-12-10",
       "updated": "2025-12-13"
+    },
+    "qwen-edit": {
+      "path": ".claude/skills/qwen-edit/",
+      "description": "AI image editing prompting patterns and best practices for Qwen-Image-Edit",
+      "status": "stable",
+      "category": "image-editing",
+      "backend": "qwen-image-edit-2511",
+      "created": "2026-01-03",
+      "updated": "2026-01-05"
     }
   },
 
@@ -191,6 +200,43 @@
       "status": "beta",
       "created": "2025-12-29",
       "updated": "2025-12-29"
+    },
+    "image_edit": {
+      "path": "tools/image_edit.py",
+      "description": "AI image editing using Qwen-Image-Edit - style transfer, backgrounds, prompts",
+      "usage": "python tools/image_edit.py --input photo.jpg --prompt 'Add sunglasses' --output edited.png",
+      "status": "stable",
+      "category": "image-editing",
+      "backend": "qwen-image-edit-2511",
+      "requires": "RunPod account",
+      "presets": {
+        "background": ["office", "studio", "outdoors", "pyramids", "beach", "city", "mountains", "space", "forest", "cafe"],
+        "style": ["cyberpunk", "anime", "oil-painting", "watercolor", "pixel-art", "noir", "pop-art", "sketch", "vintage", "cinematic"],
+        "viewpoint": ["front", "profile", "three-quarter", "looking-up", "looking-down"]
+      },
+      "envVars": ["RUNPOD_API_KEY", "RUNPOD_QWEN_EDIT_ENDPOINT_ID"],
+      "estimatedCost": "$0.01-0.02 per image",
+      "created": "2026-01-01",
+      "updated": "2026-01-05"
+    },
+    "upscale": {
+      "path": "tools/upscale.py",
+      "description": "AI image upscaling using RealESRGAN - 2x/4x with optional face enhancement",
+      "usage": "python tools/upscale.py --input photo.jpg --output photo_4x.png --runpod",
+      "status": "stable",
+      "category": "image-editing",
+      "backend": "realesrgan",
+      "requires": "RunPod account",
+      "options": {
+        "scale": [2, 4],
+        "model": ["general", "anime", "photo"],
+        "faceEnhance": true,
+        "format": ["png", "jpg", "webp"]
+      },
+      "envVars": ["RUNPOD_API_KEY", "RUNPOD_UPSCALE_ENDPOINT_ID"],
+      "estimatedCost": "$0.01-0.05 per image",
+      "created": "2026-01-04",
+      "updated": "2026-01-05"
     }
   },
 
@@ -215,13 +261,34 @@
   "cloudProviders": {
     "runpod": {
       "name": "RunPod",
-      "description": "Serverless GPU cloud for video processing",
-      "dockerImage": "docker/runpod-propainter/",
+      "description": "Serverless GPU cloud for video and image processing",
       "documentation": "docs/runpod-setup.md",
-      "operations": ["dewatermark"],
-      "envVars": ["RUNPOD_API_KEY", "RUNPOD_ENDPOINT_ID"],
-      "estimatedCost": "$0.05-0.30 per video",
-      "created": "2025-12-30"
+      "envVars": ["RUNPOD_API_KEY"],
+      "endpoints": {
+        "propainter": {
+          "image": "ghcr.io/conalmullan/video-toolkit-propainter:latest",
+          "dockerfile": "docker/runpod-propainter/",
+          "envVar": "RUNPOD_ENDPOINT_ID",
+          "operations": ["dewatermark"],
+          "estimatedCost": "$0.05-0.30 per video"
+        },
+        "qwen-edit": {
+          "image": "ghcr.io/conalmullan/video-toolkit-qwen-edit:latest",
+          "dockerfile": "docker/runpod-qwen-edit/",
+          "envVar": "RUNPOD_QWEN_EDIT_ENDPOINT_ID",
+          "operations": ["image_edit"],
+          "estimatedCost": "$0.01-0.02 per image"
+        },
+        "realesrgan": {
+          "image": "ghcr.io/conalmullan/video-toolkit-realesrgan:latest",
+          "dockerfile": "docker/runpod-realesrgan/",
+          "envVar": "RUNPOD_UPSCALE_ENDPOINT_ID",
+          "operations": ["upscale"],
+          "estimatedCost": "$0.01-0.05 per image"
+        }
+      },
+      "created": "2025-12-30",
+      "updated": "2026-01-05"
     }
   },
 
