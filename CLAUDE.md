@@ -72,6 +72,7 @@ Claude Code has deep knowledge in these domains via `.claude/skills/`:
 | ffmpeg | beta | Asset conversion, compression |
 | playwright-recording | beta | Browser demo capture |
 | frontend-design | stable | Visual design refinement for slides |
+| qwen-edit | stable | AI image editing prompting patterns |
 
 ## Commands
 
@@ -176,12 +177,58 @@ python tools/addmusic.py --input video.mp4 --music bg.mp3 --music-volume 0.2 --f
 
 **SFX Presets:** whoosh, click, chime, error, pop, slide
 
+### AI Image Editing
+
+AI-powered image editing tools using cloud GPU processing via RunPod.
+
+```bash
+# General AI editing (Qwen-Image-Edit)
+python tools/image_edit.py --input photo.jpg --prompt "Add sunglasses"
+python tools/image_edit.py --input photo.jpg --style cyberpunk
+python tools/image_edit.py --input photo.jpg --background office
+
+# With quality settings
+python tools/image_edit.py --input photo.jpg --prompt "..." --steps 16 --guidance 3.0
+
+# Multi-image compositing
+python tools/image_edit.py --input person.jpg scene.jpg --prompt "Place person in scene"
+
+# AI upscaling (RealESRGAN)
+python tools/upscale.py --input photo.jpg --output photo_4x.png --runpod
+python tools/upscale.py --input photo.jpg --scale 2 --model anime --runpod
+python tools/upscale.py --input photo.jpg --face-enhance --runpod
+
+# List presets
+python tools/image_edit.py --list-presets
+```
+
+**image_edit presets:**
+- **Background:** office, studio, outdoors, pyramids, beach, city, mountains, space, forest, cafe
+- **Style:** cyberpunk, anime, oil-painting, watercolor, pixel-art, noir, pop-art, sketch, vintage, cinematic
+- **Viewpoint:** front, profile, three-quarter, looking-up, looking-down
+
+**upscale options:**
+- `--scale 2|4` - Upscale factor (default: 4)
+- `--model general|anime|photo` - Model to use
+- `--face-enhance` - Use GFPGAN for face enhancement
+- `--format png|jpg|webp` - Output format
+
+**RunPod setup:**
+```bash
+echo "RUNPOD_API_KEY=your_key_here" >> .env
+python tools/image_edit.py --setup   # For image editing
+python tools/upscale.py --setup      # For upscaling
+```
+
+See `docs/qwen-edit-patterns.md` and `.claude/skills/qwen-edit/` for prompting guidance.
+
 ### Utility Tools vs Project Tools
 
 | Type | Tools | When to Use |
 |------|-------|-------------|
 | **Project tools** | voiceover, music, sfx | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
+| **Image editing** | image_edit, upscale | AI image editing and upscaling (RunPod) |
 | **Optional tools** | dewatermark | Requires additional installation (see below) |
 
 Utility tools work on any video file without requiring a project structure.
