@@ -232,7 +232,7 @@ See `docs/qwen-edit-patterns.md` and `.claude/skills/qwen-edit/` for prompting g
 |------|-------|-------------|
 | **Project tools** | voiceover, music, sfx | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
-| **Cloud GPU** | image_edit, upscale, dewatermark | AI processing via RunPod (see sections below) |
+| **Cloud GPU** | image_edit, upscale, dewatermark, ltx2 | AI processing via RunPod (see sections below) |
 
 Utility tools work on any video file without requiring a project structure.
 
@@ -329,6 +329,52 @@ For manual setup or advanced options, see `docs/runpod-setup.md`.
 - **Disk:** ~2GB for model weights
 
 **Installation location:** `~/.video-toolkit/propainter/`
+
+### AI Video Generation (Cloud GPU)
+
+The `ltx2.py` tool generates AI video from text prompts or images using the LTX-2 19B model.
+
+```bash
+# Text-to-video
+python tools/ltx2.py --prompt "A cat playing with yarn" --output cat.mp4
+
+# Image-to-video
+python tools/ltx2.py --image photo.jpg --prompt "Make them wave" --output animated.mp4
+
+# With preset (HD resolution)
+python tools/ltx2.py --prompt "Mountain landscape" --preset hd --output landscape.mp4
+
+# Fast mode (2x faster, slightly lower quality)
+python tools/ltx2.py --prompt "Ocean waves" --flow fast --output waves.mp4
+```
+
+**RunPod setup:**
+```bash
+# 1. Add API key to .env (if not already done)
+echo "RUNPOD_API_KEY=your_key_here" >> .env
+
+# 2. Run automated setup
+python tools/ltx2.py --setup
+
+# Done! The endpoint ID is saved to .env as RUNPOD_LTX2_ENDPOINT_ID
+```
+
+**Important:** Attach a 100GB+ network volume at `/runpod-volume` in RunPod for model caching. Without it, models (~55GB) download on every cold start.
+
+**Presets:**
+- `default` - 768x512, pro flow (general use)
+- `fast` - 512x384, fast flow (quick iteration)
+- `hd` - 1280x720, pro flow (high quality)
+- `portrait` - 512x768, pro flow (vertical video)
+- `square` - 512x512, pro flow (social media)
+
+**Options:**
+- `--width/--height` - Video dimensions (must be divisible by 32)
+- `--duration` - Video length in seconds (default: 5)
+- `--flow pro|fast` - Quality vs speed tradeoff
+- `--seed` - Random seed for reproducibility
+
+See `docs/ltx2.md` for detailed usage and prompting tips.
 
 ### Locating Watermarks
 
