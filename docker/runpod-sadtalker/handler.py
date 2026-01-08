@@ -177,6 +177,10 @@ def split_audio_chunks(audio_path: Path, work_dir: Path, chunk_duration: int = C
     return chunks
 
 
+# Global to store last error for better reporting
+_last_sadtalker_error = None
+
+
 def run_sadtalker(
     image_path: Path,
     audio_path: Path,
@@ -189,6 +193,21 @@ def run_sadtalker(
     pose_style: int = 0,
 ) -> Optional[Path]:
     """Run SadTalker inference on a single image/audio pair."""
+    global _last_sadtalker_error
+    _last_sadtalker_error = None
+
+    # Verify checkpoints exist
+    if not CHECKPOINT_DIR.exists():
+        _last_sadtalker_error = f"Checkpoint dir not found: {CHECKPOINT_DIR}"
+        log(_last_sadtalker_error)
+        return None
+
+    bfm_dir = CHECKPOINT_DIR / "BFM_Fitting"
+    if not bfm_dir.exists():
+        _last_sadtalker_error = f"BFM_Fitting dir not found: {bfm_dir}"
+        log(_last_sadtalker_error)
+        return None
+
     cmd = [
         "python", str(SADTALKER_DIR / "inference.py"),
         "--driven_audio", str(audio_path),
@@ -208,6 +227,9 @@ def run_sadtalker(
         cmd.extend(["--enhancer", enhancer])
 
     log(f"Running SadTalker: {' '.join(cmd[-6:])}")
+    log(f"  Image: {image_path} exists={image_path.exists()}")
+    log(f"  Audio: {audio_path} exists={audio_path.exists()}")
+    log(f"  Checkpoints: {CHECKPOINT_DIR} contents={list(CHECKPOINT_DIR.iterdir())[:5]}")
 
     try:
         result = subprocess.run(
@@ -218,23 +240,50 @@ def run_sadtalker(
             timeout=600,  # 10 min timeout per chunk
         )
 
+        # Log stdout/stderr regardless of return code
+        if result.stdout:
+            log(f"SadTalker stdout: {result.stdout[-500:]}")
+        if result.stderr:
+            log(f"SadTalker stderr: {result.stderr[-1000:]}")
+
         if result.returncode != 0:
-            log(f"SadTalker error: {result.stderr[-1000:]}")
+            _last_sadtalker_error = f"Exit code {result.returncode}: {result.stderr[-500:]}"
+            log(f"SadTalker failed: {_last_sadtalker_error}")
             return None
 
-        # Find output video (SadTalker creates timestamped directory)
+        # Debug: List all files in output directory
+        log(f"Output dir contents: {list(output_dir.iterdir())}")
+        for item in output_dir.iterdir():
+            log(f"  Item: {item.name} (is_dir={item.is_dir()}, is_file={item.is_file()})")
+            if item.is_dir():
+                log(f"    Subdir contents: {list(item.iterdir())}")
+
+        # Find output video - check both direct files and subdirectories
+        # SadTalker outputs like: output_000/2026_01_07_00.17.22.mp4 (direct)
+        # or: output_000/2026_01_07_00.17.22/input_image##input_audio_enhanced.mp4 (subdir)
+
+        # First check for mp4 directly in output_dir
+        for f in output_dir.glob("*.mp4"):
+            log(f"Found video (direct): {f}")
+            return f
+
+        # Then check subdirectories
         for subdir in output_dir.iterdir():
             if subdir.is_dir():
                 for f in subdir.glob("*.mp4"):
+                    log(f"Found video (subdir): {f}")
                     return f
 
-        log("No output video found")
+        _last_sadtalker_error = f"No output video found. All files: {list(output_dir.rglob('*'))}"
+        log(_last_sadtalker_error)
         return None
 
     except subprocess.TimeoutExpired:
-        log("SadTalker timed out")
+        _last_sadtalker_error = "SadTalker timed out after 600s"
+        log(_last_sadtalker_error)
         return None
     except Exception as e:
+        _last_sadtalker_error = f"Exception: {e}"
         log(f"SadTalker exception: {e}")
         return None
 
@@ -380,7 +429,8 @@ def handler(job: dict) -> dict:
                 video_chunks.append(video_path)
                 log(f"  Chunk {i + 1} complete: {video_path.name}")
             else:
-                return {"error": f"Failed to process chunk {i + 1}"}
+                error_detail = _last_sadtalker_error or "Unknown error"
+                return {"error": f"Failed to process chunk {i + 1}: {error_detail}"}
 
         # Concatenate chunks
         final_video = work_dir / "final_output.mp4"

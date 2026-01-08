@@ -888,7 +888,15 @@ Examples:
         "--pose-style",
         type=int,
         default=0,
-        help="Pose variation 0-45 (default: 0)",
+        help="Pose variation 0-45 (default: 0, try 45 for natural movement)",
+    )
+
+    # Presets for common use cases
+    parser.add_argument(
+        "--preset",
+        type=str,
+        choices=["default", "natural", "expressive", "professional", "fullbody"],
+        help="Use a preset configuration (overrides other settings)",
     )
 
     # RunPod options
@@ -953,6 +961,37 @@ def main():
         print(f"Error: Audio file not found: {args.audio}", file=sys.stderr)
         sys.exit(1)
 
+    # Apply presets
+    presets = {
+        "default": {},  # Use CLI defaults
+        "natural": {"pose_style": 45, "expression_scale": 1.0},
+        "expressive": {"pose_style": 45, "expression_scale": 1.3},
+        "professional": {"still": True, "expression_scale": 0.8},
+        "fullbody": {"still": True, "preprocess": "full"},
+    }
+
+    # Start with CLI args
+    still_mode = args.still
+    enhancer = "none" if args.no_enhance else "gfpgan"
+    preprocess = args.preprocess
+    size = args.size
+    expression_scale = args.expression_scale
+    pose_style = args.pose_style
+
+    # Override with preset if specified
+    if args.preset and args.preset in presets:
+        preset = presets[args.preset]
+        if "still" in preset:
+            still_mode = preset["still"]
+        if "expression_scale" in preset:
+            expression_scale = preset["expression_scale"]
+        if "pose_style" in preset:
+            pose_style = preset["pose_style"]
+        if "preprocess" in preset:
+            preprocess = preset["preprocess"]
+        if verbose:
+            print(f"Using preset '{args.preset}': {preset}")
+
     if verbose:
         print("Generating talking head video with SadTalker...")
 
@@ -960,12 +999,12 @@ def main():
         image_path=args.image,
         audio_path=args.audio,
         output_path=args.output,
-        still_mode=args.still,
-        enhancer="none" if args.no_enhance else "gfpgan",
-        preprocess=args.preprocess,
-        size=args.size,
-        expression_scale=args.expression_scale,
-        pose_style=args.pose_style,
+        still_mode=still_mode,
+        enhancer=enhancer,
+        preprocess=preprocess,
+        size=size,
+        expression_scale=expression_scale,
+        pose_style=pose_style,
         timeout=args.timeout,
         verbose=verbose,
     )
