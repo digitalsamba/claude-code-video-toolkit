@@ -106,9 +106,13 @@ Pre-built video structures in `templates/`:
 - **sprint-review** — Sprint review videos with demos, stats, and voiceover
 - **product-demo** — Marketing videos with dark tech aesthetic, stats, CTA
 
-See `examples/` for finished projects you can learn from:
-- [digital-samba-skill-demo](https://demos.digitalsamba.com/video/digital-samba-skill-demo.mp4) — Product demo showcasing Claude Code skill
-- [sprint-review-cho-oyu](https://demos.digitalsamba.com/video/sprint-review.mp4) — iOS sprint review with demos
+See `examples/` for finished projects you can learn from (oldest first, showing toolkit evolution):
+
+| Date | Demo | Description |
+|------|------|-------------|
+| 2025-12-05 | [sprint-review-cho-oyu](https://demos.digitalsamba.com/video/sprint-review.mp4) | iOS sprint review with demos |
+| 2025-12-10 | [digital-samba-skill-demo](https://demos.digitalsamba.com/video/digital-samba-skill-demo.mp4) | Product demo showcasing Claude Code skill |
+| 2026-01-22 | [ds-remote-mcp](https://demos.digitalsamba.com/video/ds-remote-mcp.mp4) | Remote MCP server demo *(the jazz background music is a joke)* |
 
 ### Scene Transitions
 
