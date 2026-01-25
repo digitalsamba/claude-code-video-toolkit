@@ -89,7 +89,7 @@ Claude Code has deep knowledge in:
 | `/scene-review` | Scene-by-scene review in Remotion Studio |
 | `/design` | Focused design refinement session for a scene |
 | `/brand` | Brand profiles — list, edit, or create new |
-| `/template` | List available templates and their features |
+| `/template` | List available templates or create new ones |
 | `/skills` | List installed skills or create new ones |
 | `/contribute` | Share improvements — issues, PRs, examples |
 | `/record-demo` | Record browser interactions with Playwright |

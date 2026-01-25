@@ -87,7 +87,7 @@ If you prefer manual setup:
 | `/scene-review` | Scene-by-scene review in Remotion Studio |
 | `/design` | Focused design refinement session for a scene |
 | `/brand` | Brand profiles - list, edit, or create new |
-| `/template` | List available templates and their features |
+| `/template` | List available templates or create new ones |
 | `/record-demo` | Record browser interactions with Playwright |
 | `/generate-voiceover` | Generate AI voiceover from script |
 | `/redub` | Redub existing video with a different voice |
