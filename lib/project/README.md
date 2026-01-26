@@ -11,10 +11,96 @@ Video projects span multiple Claude Code sessions. The project system provides:
 3. **Session continuity** - instant context on resume
 4. **Auto-generated CLAUDE.md** - human+Claude readable status
 
+## Resuming a Project
+
+Projects persist across Claude Code sessions. To resume:
+
+### Quick Resume
+
+```
+/video
+```
+
+This scans `projects/*/project.json`, shows your projects, and lets you pick one to resume.
+
+### Example Resume Session
+
+```
+$ /video
+
+Found 2 video projects:
+
+  1. **product-launch** (product-demo)
+     Phase: assets - 2/3 demos recorded
+     Last worked: 2 days ago
+
+  2. **q4-review** (sprint-review)
+     ✅ Complete
+
+Which project? > 1
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Resuming: product-launch (product-demo)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## Scenes
+
+| # | Scene | Type | Status |
+|---|-------|------|--------|
+| 1 | Title | title | ✅ Ready |
+| 2 | Problem | problem | ✅ Ready |
+| 3 | Demo: Onboarding | demo | ✅ Recorded |
+| 4 | Demo: Dashboard | demo | ✅ Recorded |
+| 5 | Demo: Export | demo | ⬜ Needs recording |
+| 6 | CTA | cta | ✅ Ready |
+
+## Audio
+
+- Voiceover: ⬜ Not yet generated
+
+## Next Actions
+
+1. **Record export demo** (Scene 5)
+   Run `/record-demo` or provide external video
+
+Ready to record the export demo?
+```
+
+### What Happens on Resume
+
+1. **Read state**: `project.json` loaded, `VOICEOVER-SCRIPT.md` read for context
+2. **Reconcile filesystem**: Compare expected assets vs actual files in `public/demos/`, `public/audio/`
+3. **Update status**: Mark newly-found assets as `asset-present`, flag missing assets
+4. **Add session entry**: `{ date: "2024-12-11", summary: "Resumed project" }`
+5. **Regenerate CLAUDE.md**: Update the project's status document
+6. **Present next actions**: Guide user to what needs doing
+
+### Project Files Used for Context
+
+| File | Purpose |
+|------|---------|
+| `project.json` | Machine-readable state (phase, scenes, assets, sessions) |
+| `CLAUDE.md` | Auto-generated human-readable status |
+| `VOICEOVER-SCRIPT.md` | Scene-by-scene narration script |
+| `public/demos/*.mp4` | Recorded demo assets |
+| `public/audio/*.mp3` | Voiceover and music files |
+
+### Manual Resume (Without /video)
+
+If you just need to preview or render without the guided workflow:
+
+```bash
+cd projects/my-project
+npm run studio    # Open Remotion Studio
+npm run render    # Render final video
+```
+
+Claude Code will still have context via the project's `CLAUDE.md`.
+
 ## Project Lifecycle
 
 ```
-planning → assets → audio → editing → rendering → complete
+planning → assets → review → audio → editing → rendering → complete
 ```
 
 | Phase | Description | Exit Criteria |

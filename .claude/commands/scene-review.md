@@ -1,6 +1,86 @@
+---
+description: Scene-by-scene review in Remotion Studio (before voiceover)
+---
+
 # Scene Review
 
 Interactive scene-by-scene review using Remotion Studio. Critical quality gate before voiceover generation.
+
+## Quick Start
+
+```
+/scene-review           # Review all scenes from beginning
+/scene-review title     # Jump to specific scene by type
+/scene-review 3         # Jump to scene 3
+```
+
+## Example Session
+
+```
+$ /scene-review
+
+Remotion Studio running at http://localhost:3000
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Scene 1 of 6: title (4s, frame 0)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Navigate to frame 0 in Studio and watch the scene.
+
+[1] Approve  [2] Adjust  [3] Refine  [4] Flag  [5] Skip
+
+> 3 (Refine)
+
+Invoking frontend-design skill...
+Reading TitleSlide.tsx and adjacent scenes for context...
+
+What aspect needs refinement?
+- Color palette feels too flat
+- Text animation needs more impact
+- Background too static
+
+> Background too static
+
+[Makes changes to TitleSlide.tsx]
+
+Check Remotion Studio - it hot-reloads automatically.
+Better? [y/n/more changes]
+
+> y
+
+Scene 1 approved. Moving to Scene 2...
+```
+
+## Iterative Feedback Loop
+
+The review follows this cycle for each scene:
+
+```
+┌─────────────┐
+│ View scene  │◄──────────────────────┐
+│ in Studio   │                       │
+└──────┬──────┘                       │
+       │                              │
+       ▼                              │
+┌─────────────┐    ┌─────────────┐    │
+│  Evaluate   │───►│   Adjust    │────┤
+│             │    │ (config)    │    │
+└──────┬──────┘    └─────────────┘    │
+       │                              │
+       │           ┌─────────────┐    │
+       │──────────►│   Refine    │────┘
+       │           │ (component) │
+       │           └─────────────┘
+       ▼
+┌─────────────┐
+│   Approve   │───► Next scene
+└─────────────┘
+```
+
+- **Adjust**: Change config values (text, duration, asset paths) → hot-reload → verify
+- **Refine**: Invoke frontend-design skill for visual improvements → edit component → hot-reload → verify
+
+Repeat until the scene looks right, then approve and move on.
 
 ## Purpose
 

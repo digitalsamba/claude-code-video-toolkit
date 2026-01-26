@@ -139,9 +139,230 @@ with open("music.mp3", "wb") as f:
 
 ## Remotion Integration
 
-Save to `public/` folder, then:
+### Complete Workflow: Script to Synchronized Scene
+
+```
+VOICEOVER-SCRIPT.md → voiceover.py → public/audio/ → Remotion composition
+        ↓                  ↓               ↓                 ↓
+  Scene narration    Generate MP3    Audio files     <Audio> component
+  with durations     per scene       with timing     synced to scenes
+```
+
+### Step 1: Generate Per-Scene Audio
+
+Use the toolkit's voiceover tool to generate audio for each scene:
+
+```bash
+# Generate voiceover files for each scene
+python tools/voiceover.py --scene-dir public/audio/scenes --json
+
+# Output:
+# public/audio/scenes/
+#   ├── scene-01-title.mp3
+#   ├── scene-02-problem.mp3
+#   ├── scene-03-solution.mp3
+#   └── manifest.json  (durations for each file)
+```
+
+The `manifest.json` contains timing info:
+```json
+{
+  "scenes": [
+    { "file": "scene-01-title.mp3", "duration": 4.2 },
+    { "file": "scene-02-problem.mp3", "duration": 12.8 },
+    { "file": "scene-03-solution.mp3", "duration": 15.3 }
+  ],
+  "totalDuration": 32.3
+}
+```
+
+### Step 2: Use Audio in Remotion Composition
+
 ```tsx
-<Audio src={staticFile('audio/voiceover.mp3')} />
+// src/Composition.tsx
+import { Audio, staticFile, Series, useVideoConfig } from 'remotion';
+
+// Import scene components
+import { TitleSlide } from './scenes/TitleSlide';
+import { ProblemSlide } from './scenes/ProblemSlide';
+import { SolutionSlide } from './scenes/SolutionSlide';
+
+// Scene durations (from manifest.json, converted to frames at 30fps)
+const SCENE_DURATIONS = {
+  title: Math.ceil(4.2 * 30),      // 126 frames
+  problem: Math.ceil(12.8 * 30),   // 384 frames
+  solution: Math.ceil(15.3 * 30),  // 459 frames
+};
+
+export const MainComposition: React.FC = () => {
+  return (
+    <>
+      {/* Scene sequence */}
+      <Series>
+        <Series.Sequence durationInFrames={SCENE_DURATIONS.title}>
+          <TitleSlide />
+        </Series.Sequence>
+        <Series.Sequence durationInFrames={SCENE_DURATIONS.problem}>
+          <ProblemSlide />
+        </Series.Sequence>
+        <Series.Sequence durationInFrames={SCENE_DURATIONS.solution}>
+          <SolutionSlide />
+        </Series.Sequence>
+      </Series>
+
+      {/* Audio track - plays continuously across all scenes */}
+      <Audio src={staticFile('audio/voiceover.mp3')} volume={1} />
+
+      {/* Optional: Background music at lower volume */}
+      <Audio src={staticFile('audio/music.mp3')} volume={0.15} />
+    </>
+  );
+};
+```
+
+### Step 3: Per-Scene Audio (Alternative)
+
+For more control, add audio to each scene individually:
+
+```tsx
+// src/scenes/ProblemSlide.tsx
+import { Audio, staticFile, useCurrentFrame } from 'remotion';
+
+export const ProblemSlide: React.FC = () => {
+  const frame = useCurrentFrame();
+
+  return (
+    <div style={{ /* slide styles */ }}>
+      <h1>The Problem</h1>
+      {/* Scene content */}
+
+      {/* Audio starts when this scene starts (frame 0 of this sequence) */}
+      <Audio src={staticFile('audio/scenes/scene-02-problem.mp3')} />
+    </div>
+  );
+};
+```
+
+### Syncing Visuals to Voiceover
+
+Calculate scene duration from audio, not the other way around:
+
+```tsx
+// src/config/timing.ts
+import manifest from '../../public/audio/scenes/manifest.json';
+
+const FPS = 30;
+
+// Convert audio durations to frame counts
+export const sceneDurations = manifest.scenes.reduce((acc, scene) => {
+  const name = scene.file.replace(/^scene-\d+-/, '').replace('.mp3', '');
+  acc[name] = Math.ceil(scene.duration * FPS);
+  return acc;
+}, {} as Record<string, number>);
+
+// Usage in composition:
+// <Series.Sequence durationInFrames={sceneDurations.title}>
+```
+
+### Audio Timing Patterns
+
+```tsx
+import { Audio, Sequence, interpolate, useCurrentFrame } from 'remotion';
+
+// Fade in audio
+export const FadeInAudio: React.FC<{ src: string; fadeFrames?: number }> = ({
+  src,
+  fadeFrames = 30
+}) => {
+  const frame = useCurrentFrame();
+  const volume = interpolate(frame, [0, fadeFrames], [0, 1], {
+    extrapolateRight: 'clamp',
+  });
+  return <Audio src={src} volume={volume} />;
+};
+
+// Delayed audio start
+export const DelayedAudio: React.FC<{ src: string; delayFrames: number }> = ({
+  src,
+  delayFrames
+}) => (
+  <Sequence from={delayFrames}>
+    <Audio src={src} />
+  </Sequence>
+);
+
+// Usage:
+// <FadeInAudio src={staticFile('audio/music.mp3')} fadeFrames={60} />
+// <DelayedAudio src={staticFile('audio/sfx/whoosh.mp3')} delayFrames={45} />
+```
+
+### Voiceover + Demo Video Sync
+
+When a scene has both voiceover and demo video:
+
+```tsx
+import { Audio, OffthreadVideo, staticFile, useVideoConfig } from 'remotion';
+
+export const DemoScene: React.FC = () => {
+  const { durationInFrames, fps } = useVideoConfig();
+
+  // Calculate playback rate to fit demo into voiceover duration
+  const demoDuration = 45; // seconds (original demo length)
+  const sceneDuration = durationInFrames / fps; // seconds (from voiceover)
+  const playbackRate = demoDuration / sceneDuration;
+
+  return (
+    <>
+      <OffthreadVideo
+        src={staticFile('demos/feature-demo.mp4')}
+        playbackRate={playbackRate}
+      />
+      <Audio src={staticFile('audio/scenes/scene-04-demo.mp3')} />
+    </>
+  );
+};
+```
+
+### Error Handling
+
+```tsx
+import { Audio, staticFile, delayRender, continueRender } from 'remotion';
+import { useEffect, useState } from 'react';
+
+export const SafeAudio: React.FC<{ src: string }> = ({ src }) => {
+  const [handle] = useState(() => delayRender());
+  const [audioReady, setAudioReady] = useState(false);
+
+  useEffect(() => {
+    const audio = new window.Audio(src);
+    audio.oncanplaythrough = () => {
+      setAudioReady(true);
+      continueRender(handle);
+    };
+    audio.onerror = () => {
+      console.error(`Failed to load audio: ${src}`);
+      continueRender(handle); // Continue without audio rather than hang
+    };
+  }, [src, handle]);
+
+  if (!audioReady) return null;
+  return <Audio src={src} />;
+};
+```
+
+### Toolkit Command: /generate-voiceover
+
+The `/generate-voiceover` command handles the full workflow:
+
+```
+/generate-voiceover
+
+1. Reads VOICEOVER-SCRIPT.md
+2. Extracts narration for each scene
+3. Generates audio via ElevenLabs API
+4. Saves to public/audio/scenes/
+5. Creates manifest.json with durations
+6. Updates project.json with timing info
 ```
 
 ## Popular Voices

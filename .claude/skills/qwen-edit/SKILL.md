@@ -1,3 +1,8 @@
+---
+name: qwen-edit
+description: AI image editing prompting patterns for Qwen-Image-Edit. Use when editing photos while preserving identity, reframing cropped images, changing clothing or accessories, adjusting poses, applying style transfers, or character transformations. Provides prompt patterns, parameter tuning, and examples.
+---
+
 # Qwen-Image-Edit Skill
 
 AI-powered image editing using Qwen-Image-Edit-2511 via RunPod serverless.
