@@ -173,6 +173,10 @@ python tools/voiceover.py --script script.md --output voiceover.mp3
 python tools/voiceover.py --provider qwen3 --speaker Ryan --scene-dir public/audio/scenes --json
 python tools/qwen3_tts.py --text "Hello world" --tone warm --output hello.mp3
 
+# Generate voiceover (MiniMax Cloud TTS — no GPU required)
+python tools/voiceover.py --provider minimax --minimax-voice English_Persuasive_Man --scene-dir public/audio/scenes --json
+python tools/minimax_tts.py --text "Hello world" --voice English_Graceful_Lady --output hello.mp3
+
 # Generate background music (ElevenLabs)
 python tools/music.py --prompt "Upbeat corporate" --duration 120 --output music.mp3
 

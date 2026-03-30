@@ -57,6 +57,13 @@ def get_default_output_dir(project_path: str | None = None) -> Path:
     return find_workspace_root() / "public" / "audio"
 
 
+def get_minimax_api_key() -> str | None:
+    """Get MiniMax API key from environment."""
+    from dotenv import load_dotenv
+    load_dotenv()
+    return os.getenv("MINIMAX_API_KEY")
+
+
 def get_runpod_api_key() -> str | None:
     """Get RunPod API key from environment."""
     from dotenv import load_dotenv

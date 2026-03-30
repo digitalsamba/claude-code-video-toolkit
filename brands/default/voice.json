@@ -14,5 +14,9 @@
     "tone": "",
     "instruct": "",
     "clone": null
+  },
+  "minimax": {
+    "voice": "English_Graceful_Lady",
+    "model": "hd"
   }
 }

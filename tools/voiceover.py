@@ -37,7 +37,7 @@ from dotenv import load_dotenv
 
 # Add parent to path for local imports
 sys.path.insert(0, str(Path(__file__).parent))
-from config import get_brand_dir, get_elevenlabs_api_key, get_voice_id, load_brand_voice_config
+from config import get_brand_dir, get_elevenlabs_api_key, get_minimax_api_key, get_voice_id, load_brand_voice_config
 
 
 def _get_elevenlabs_imports():
@@ -110,7 +110,7 @@ Examples:
         "--provider",
         type=str,
         default="elevenlabs",
-        choices=["elevenlabs", "qwen3"],
+        choices=["elevenlabs", "qwen3", "minimax"],
         help="TTS provider (default: elevenlabs)",
     )
 
@@ -197,6 +197,33 @@ Examples:
         "--top-p",
         type=float,
         help="Qwen3-TTS nucleus sampling (default: model default ~0.8, range: 0.1-1.0)",
+    )
+
+    # MiniMax-specific options
+    parser.add_argument(
+        "--minimax-voice",
+        type=str,
+        default="English_Graceful_Lady",
+        help="MiniMax voice ID (default: English_Graceful_Lady). Use 'python tools/minimax_tts.py --list-voices' to see options.",
+    )
+    parser.add_argument(
+        "--minimax-model",
+        type=str,
+        default="hd",
+        choices=["hd", "turbo"],
+        help="MiniMax model — hd (high quality) or turbo (faster). Default: hd.",
+    )
+    parser.add_argument(
+        "--volume",
+        type=float,
+        default=1.0,
+        help="MiniMax volume level (0.1-10.0, default: 1.0)",
+    )
+    parser.add_argument(
+        "--pitch",
+        type=int,
+        default=0,
+        help="MiniMax pitch shift in semitones (-12 to 12, default: 0)",
     )
 
     # Cloud GPU provider (for Qwen3-TTS)
@@ -342,6 +369,32 @@ def generate_single_audio_qwen3(
     )
 
 
+def generate_single_audio_minimax(
+    script: str,
+    output_path: Path,
+    voice: str = "English_Graceful_Lady",
+    model: str = "hd",
+    speed: float = 1.0,
+    volume: float = 1.0,
+    pitch: int = 0,
+) -> dict:
+    """Generate a single audio file from script text using MiniMax TTS. Returns result dict."""
+    from minimax_tts import generate_audio
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    return generate_audio(
+        text=script,
+        output_path=str(output_path),
+        voice=voice,
+        model=model,
+        speed=speed,
+        volume=volume,
+        pitch=pitch,
+        verbose=False,
+    )
+
+
 def process_scene_directory(
     scene_dir: Path,
     dry_run: bool = False,
@@ -365,6 +418,11 @@ def process_scene_directory(
     temperature: float | None = None,
     top_p: float | None = None,
     cloud: str = "runpod",
+    # MiniMax params
+    minimax_voice: str = "English_Graceful_Lady",
+    minimax_model: str = "hd",
+    volume: float = 1.0,
+    pitch: int = 0,
 ) -> list[dict]:
     """Process all .txt files in directory, generate .mp3 for each."""
     txt_files = sorted(scene_dir.glob("*.txt"))
@@ -432,6 +490,16 @@ def process_scene_directory(
                     temperature=temperature,
                     top_p=top_p,
                     cloud=cloud,
+                )
+            elif provider == "minimax":
+                result = generate_single_audio_minimax(
+                    script=script,
+                    output_path=mp3_file,
+                    voice=minimax_voice,
+                    model=minimax_model,
+                    speed=speed,
+                    volume=volume,
+                    pitch=pitch,
                 )
             else:
                 result = generate_single_audio(
@@ -558,6 +626,12 @@ def main():
             # Apply voice ID from brand if not explicitly provided
             if not args.voice_id and voice_config.get("voiceId") and voice_config["voiceId"] != "YOUR_VOICE_ID_HERE":
                 args.voice_id = voice_config["voiceId"]
+        elif provider == "minimax":
+            minimax_cfg = voice_config.get("minimax", {})
+            if minimax_cfg.get("voice") and args.minimax_voice == "English_Graceful_Lady":
+                args.minimax_voice = minimax_cfg["voice"]
+            if minimax_cfg.get("model") and args.minimax_model == "hd":
+                args.minimax_model = minimax_cfg["model"]
 
     # Resolve tone preset → instruct text for Qwen3
     if provider == "qwen3" and (args.tone or args.instruct):
@@ -610,6 +684,27 @@ def main():
         ElevenLabs, _, _ = _get_elevenlabs_imports()
         client = ElevenLabs(api_key=api_key)
 
+    elif provider == "minimax":
+        api_key = get_minimax_api_key()
+        if not api_key:
+            print(
+                "Error: No MiniMax API key found.\n"
+                "\n"
+                "You have 3 options:\n"
+                "\n"
+                "  1. Add a MiniMax key:\n"
+                "     echo \"MINIMAX_API_KEY=your_key\" >> .env\n"
+                "     (Get one at https://www.minimaxi.com/)\n"
+                "\n"
+                "  2. Use Qwen3-TTS instead (free, self-hosted):\n"
+                "     python3 tools/voiceover.py --provider qwen3 --speaker Ryan --scene-dir public/audio/scenes --json\n"
+                "\n"
+                "  3. Skip voiceover entirely:\n"
+                "     Videos render fine without audio. Add voiceover later when ready.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
     # Per-scene mode
     if args.scene_dir:
         scene_dir = Path(args.scene_dir)
@@ -619,7 +714,8 @@ def main():
 
         if not args.json:
             txt_count = len(list(scene_dir.glob("*.txt")))
-            provider_label = "Qwen3-TTS" if provider == "qwen3" else "ElevenLabs"
+            provider_labels = {"qwen3": "Qwen3-TTS", "minimax": "MiniMax TTS", "elevenlabs": "ElevenLabs"}
+            provider_label = provider_labels.get(provider, provider)
             print(f"Processing {txt_count} scene scripts in {scene_dir} ({provider_label})...", file=sys.stderr)
 
         if args.dry_run:
@@ -645,6 +741,10 @@ def main():
                 temperature=args.temperature,
                 top_p=args.top_p,
                 cloud=args.cloud,
+                minimax_voice=args.minimax_voice,
+                minimax_model=args.minimax_model,
+                volume=args.volume,
+                pitch=args.pitch,
             )
             result = {
                 "dry_run": True,
@@ -662,6 +762,14 @@ def main():
                     "similarity": args.similarity,
                     "style": args.style,
                     "speed": args.speed,
+                }
+            elif provider == "minimax":
+                result["voice"] = args.minimax_voice
+                result["model"] = args.minimax_model
+                result["settings"] = {
+                    "speed": args.speed,
+                    "volume": args.volume,
+                    "pitch": args.pitch,
                 }
             else:
                 result["speaker"] = args.speaker
@@ -699,6 +807,10 @@ def main():
             temperature=args.temperature,
             top_p=args.top_p,
             cloud=args.cloud,
+            minimax_voice=args.minimax_voice,
+            minimax_model=args.minimax_model,
+            volume=args.volume,
+            pitch=args.pitch,
         )
 
         # Build final result
@@ -761,6 +873,14 @@ def main():
                 "style": args.style,
                 "speed": args.speed,
             }
+        elif provider == "minimax":
+            result["voice"] = args.minimax_voice
+            result["model"] = args.minimax_model
+            result["settings"] = {
+                "speed": args.speed,
+                "volume": args.volume,
+                "pitch": args.pitch,
+            }
         else:
             result["speaker"] = args.speaker
             result["language"] = args.language
@@ -777,6 +897,9 @@ def main():
             if provider == "elevenlabs":
                 print(f"  Voice ID: {voice_id}")
                 print(f"  Model: {args.model}")
+            elif provider == "minimax":
+                print(f"  Voice: {args.minimax_voice}")
+                print(f"  Model: {args.minimax_model}")
             else:
                 print(f"  Speaker: {args.speaker}")
                 print(f"  Language: {args.language}")
@@ -786,7 +909,8 @@ def main():
 
     # Generate voiceover
     if not args.json:
-        provider_label = "Qwen3-TTS" if provider == "qwen3" else "ElevenLabs"
+        provider_labels = {"qwen3": "Qwen3-TTS", "minimax": "MiniMax TTS", "elevenlabs": "ElevenLabs"}
+        provider_label = provider_labels.get(provider, provider)
         print(f"Generating voiceover ({len(script)} chars, {provider_label})...", file=sys.stderr)
 
     if provider == "qwen3":
@@ -801,6 +925,16 @@ def main():
             temperature=args.temperature,
             top_p=args.top_p,
             cloud=args.cloud,
+        )
+    elif provider == "minimax":
+        result = generate_single_audio_minimax(
+            script=script,
+            output_path=output_path,
+            voice=args.minimax_voice,
+            model=args.minimax_model,
+            speed=args.speed,
+            volume=args.volume,
+            pitch=args.pitch,
         )
     else:
         result = generate_single_audio(

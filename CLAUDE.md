@@ -136,6 +136,9 @@ python tools/voiceover.py --scene-dir public/audio/scenes --json
 # Using Qwen3-TTS (self-hosted, free alternative to ElevenLabs)
 python tools/voiceover.py --provider qwen3 --tone warm --scene-dir public/audio/scenes --json
 
+# Using MiniMax Cloud TTS (no GPU required, cloud API)
+python tools/voiceover.py --provider minimax --minimax-voice English_Graceful_Lady --scene-dir public/audio/scenes --json
+
 # Single file (legacy)
 python tools/voiceover.py --script SCRIPT.md --output out.mp3
 ```
@@ -162,6 +165,17 @@ python tools/qwen3_tts.py --list-tones    # neutral, warm, professional, excited
 ```
 
 Temperature controls expressiveness: `--temperature 1.2` (more expressive) or `--temperature 0.4` (more consistent).
+
+### MiniMax Cloud TTS (Standalone)
+
+```bash
+python tools/minimax_tts.py --text "Hello world" --output hello.mp3
+python tools/minimax_tts.py --text "Hello world" --voice English_Persuasive_Man --output hello.mp3
+python tools/minimax_tts.py --text "Hello world" --model turbo --output fast.mp3
+python tools/minimax_tts.py --list-voices   # 12 voices: English + Chinese
+```
+
+Two models: `hd` (speech-2.8-hd, high quality) and `turbo` (speech-2.8-turbo, faster). No GPU required — runs entirely in the cloud via MiniMax API.
 
 ### Cloud GPU Providers
 
