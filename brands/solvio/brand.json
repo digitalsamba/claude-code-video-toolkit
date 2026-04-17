@@ -1,0 +1,55 @@
+{
+  "name": "Solvio",
+  "description": "Solvio — enterprise complaint management SaaS. Bright neon-green primary on dark tech aesthetic.",
+  "version": "1.0.0",
+  "website": "https://solvioplatform.com",
+
+  "colors": {
+    "primary": "#9FE600",
+    "primaryLight": "#B8F23D",
+    "primaryDark": "#6BB000",
+    "accent": "#00D4AA",
+    "textDark": "#ffffff",
+    "textMedium": "#a1a1aa",
+    "textLight": "#71717a",
+    "bgLight": "#0a0a0f",
+    "bgAlt": "#111118",
+    "bgDark": "#000000",
+    "bgOverlay": "rgba(159, 230, 0, 0.08)",
+    "divider": "#1f1f28",
+    "shadow": "rgba(159, 230, 0, 0.15)"
+  },
+
+  "fonts": {
+    "primary": "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    "mono": "JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace"
+  },
+
+  "spacing": {
+    "xs": 8,
+    "sm": 16,
+    "md": 24,
+    "lg": 48,
+    "xl": 80,
+    "xxl": 120
+  },
+
+  "borderRadius": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20
+  },
+
+  "typography": {
+    "h1": { "size": 88, "weight": 700 },
+    "h2": { "size": 64, "weight": 700 },
+    "h3": { "size": 44, "weight": 600 },
+    "body": { "size": 32, "weight": 400 },
+    "label": { "size": 22, "weight": 600, "letterSpacing": 2 }
+  },
+
+  "assets": {
+    "logo": "assets/solvio-logo.png",
+    "logoLight": "assets/solvio-logo-light.png"
+  }
+}

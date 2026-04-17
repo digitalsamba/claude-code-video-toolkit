@@ -1,0 +1,18 @@
+{
+  "voiceId": "YOUR_VOICE_ID_HERE",
+  "description": "Polski profesjonalny narrator dla Solvio — ciepły, kompetentny ton",
+  "settings": {
+    "stability": 0.7,
+    "similarityBoost": 0.85,
+    "style": 0.2,
+    "useSpeakerBoost": true
+  },
+  "model": "eleven_multilingual_v2",
+  "qwen3": {
+    "speaker": "Ryan",
+    "tone": "professional",
+    "temperature": 0.9
+  },
+  "languages": ["pl", "en", "uk"],
+  "notes": "Domyślnie polski. Dla EN/UA użyj tego samego speaker_id przy klonowaniu głosu. Tone: profesjonalny, ale ciepły — Solvio to enterprise SaaS B2B."
+}
