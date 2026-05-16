@@ -9,6 +9,7 @@ Usage:
     # JSON output for machine parsing
     python tools/music.py --prompt "Calm ambient" --duration 60 --output bg.mp3 --json
 """
+from __future__ import annotations
 
 import argparse
 import json

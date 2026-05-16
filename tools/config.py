@@ -1,4 +1,5 @@
 """Shared configuration for video toolkit tools."""
+from __future__ import annotations
 
 import json
 import os

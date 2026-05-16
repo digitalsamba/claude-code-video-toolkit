@@ -25,6 +25,7 @@ Models:
     - anime: RealESRGAN_x4plus_anime_6B (optimized for anime/illustration)
     - photo: realesr-general-x4v3 (alternative general model)
 """
+from __future__ import annotations
 
 import argparse
 import json

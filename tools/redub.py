@@ -37,6 +37,7 @@ Sync Mode:
     This ensures each word in the video aligns with its corresponding TTS audio,
     even when the overall pacing differs significantly.
 """
+from __future__ import annotations
 
 import argparse
 import base64

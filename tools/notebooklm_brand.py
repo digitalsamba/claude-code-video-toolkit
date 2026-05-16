@@ -46,6 +46,7 @@ Usage:
         --outro-duration 5 \\
         --output video_final.mp4
 """
+from __future__ import annotations
 
 import argparse
 import json

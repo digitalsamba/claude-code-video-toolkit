@@ -21,6 +21,7 @@ Usage:
     # Dry run to preview
     python tools/addmusic.py -i video.mp4 -p "Upbeat tech" --dry-run
 """
+from __future__ import annotations
 
 import argparse
 import json

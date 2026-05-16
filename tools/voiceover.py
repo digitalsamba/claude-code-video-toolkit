@@ -26,6 +26,7 @@ Usage:
     python tools/voiceover.py --provider qwen3 --tone warm --scene-dir public/audio/scenes --json
     python tools/voiceover.py --provider qwen3 --instruct "Speak warmly" --script script.txt --output out.mp3
 """
+from __future__ import annotations
 
 import argparse
 import json
