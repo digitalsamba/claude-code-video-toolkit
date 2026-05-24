@@ -44,6 +44,7 @@ Setup:
         2. Run: python tools/qwen3_tts.py --setup --cloud modal
         3. Or manually: modal deploy docker/modal-qwen3-tts/app.py
 """
+from __future__ import annotations
 
 import argparse
 import base64
@@ -137,13 +138,14 @@ def get_audio_duration(file_path: str) -> float | None:
 
 
 def generate_audio(
-    text: str,
-    output_path: str,
+    text,                       # str OR list[str] for batch
+    output_path,                # str OR list[str] (same shape as text)
     speaker: str = "Ryan",
-    language: str = "Auto",
+    language="Auto",            # str OR list[str] (broadcasts if scalar)
     instruct: str = "",
     ref_audio: str | None = None,
     ref_text: str | None = None,
+    design_instruct: str | None = None,   # if set → mode=voice_design
     output_format: str = "mp3",
     timeout: int = 300,
     verbose: bool = True,
@@ -154,20 +156,43 @@ def generate_audio(
 ) -> dict:
     """Generate audio using Qwen3-TTS via cloud GPU.
 
-    This is the main entry point, importable by voiceover.py.
-    Returns dict with: success, output, duration_seconds, duration_frames_30fps
+    Supports three modes:
+      - custom_voice (default): built-in speaker + instruct
+      - clone: set ref_audio + ref_text
+      - voice_design: set design_instruct (brief) + text (seed sentence)
 
-    Args:
-        cloud: Cloud provider — "modal" (default) or "runpod".
+    Batch mode: pass `text` as a list of strings and `output_path` as a
+    matching list. The handler reuses a single voice_clone_prompt across
+    all utterances for consistent voice (proper Qwen3-TTS pattern).
+
+    Returns dict with:
+      single call: {success, output, duration_seconds, duration_frames_30fps}
+      batch call:  {success, outputs: [{output, duration_seconds, ...}, ...]}
     """
     start_time = time.time()
     r2_keys_to_cleanup = []
+
+    # Normalize inputs
+    is_batch = isinstance(text, list)
+    texts = text if is_batch else [text]
+    out_paths = output_path if is_batch else [output_path]
+    if len(out_paths) != len(texts):
+        return {"success": False, "error": "text and output_path must have matching lengths"}
+    if any(not t for t in texts):
+        return {"success": False, "error": "all texts must be non-empty strings"}
 
     # Get R2 config (used for file transfer regardless of cloud provider)
     r2_payload = get_r2_payload_config()
 
     # Determine mode
-    mode = "clone" if ref_audio else "custom_voice"
+    if design_instruct is not None:
+        if is_batch:
+            return {"success": False, "error": "voice_design mode expects a single seed text, not a batch"}
+        mode = "voice_design"
+    elif ref_audio:
+        mode = "clone"
+    else:
+        mode = "custom_voice"
 
     # Upload reference audio for clone mode
     ref_audio_url = None
@@ -186,14 +211,16 @@ def generate_audio(
     if verbose:
         print(f"Cloud provider: {cloud}", file=sys.stderr)
         if mode == "clone":
-            print(f"Mode: voice clone", file=sys.stderr)
+            print(f"Mode: voice clone ({len(texts)} utterance{'s' if len(texts) > 1 else ''}, shared prompt)", file=sys.stderr)
+        elif mode == "voice_design":
+            print(f"Mode: voice design (instruct={design_instruct[:60]!r}...)", file=sys.stderr)
         else:
-            print(f"Speaker: {speaker}, Language: {language}", file=sys.stderr)
+            print(f"Speaker: {speaker}, Language: {language}, mode: custom_voice", file=sys.stderr)
 
     # Build payload (same format for both providers)
     payload = {
         "input": {
-            "text": text,
+            "text": texts if is_batch else texts[0],
             "mode": mode,
             "language": language,
             "output_format": output_format,
@@ -203,6 +230,8 @@ def generate_audio(
     if mode == "clone":
         payload["input"]["ref_audio_url"] = ref_audio_url
         payload["input"]["ref_text"] = ref_text
+    elif mode == "voice_design":
+        payload["input"]["instruct"] = design_instruct
     else:
         payload["input"]["speaker"] = speaker
         if instruct:
@@ -223,13 +252,20 @@ def generate_audio(
         sys.path.insert(0, str(Path(__file__).parent))
         from cloud_gpu import call_cloud_endpoint
 
+    progress_label = (
+        f"Designing voice" if mode == "voice_design"
+        else (f"Generating {len(texts)} utterances" if is_batch else "Generating speech")
+    )
+    # Batch calls can be longer-running; scale timeout by count
+    effective_timeout = timeout * max(1, len(texts) // 3 + 1)
+
     output, elapsed = call_cloud_endpoint(
         provider=cloud,
         payload=payload,
         tool_name="qwen3_tts",
-        timeout=timeout,
+        timeout=effective_timeout,
         poll_interval=3,
-        progress_label="Generating speech",
+        progress_label=progress_label,
         verbose=verbose,
         progress=progress,
     )
@@ -237,54 +273,93 @@ def generate_audio(
     if isinstance(output, dict) and output.get("error"):
         return {"success": False, "error": output["error"]}
 
-    # Download result
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    downloaded = False
+    # Parse response — handler returns `outputs: [...]` always; legacy top-level
+    # keys also present when input was single-text. Use `outputs` uniformly.
+    outputs_list = None
+    if isinstance(output, dict):
+        if isinstance(output.get("outputs"), list):
+            outputs_list = output["outputs"]
+        else:
+            # Pre-v0.2 handler or single-shot legacy response — synthesize a
+            # one-item list from top-level keys.
+            legacy_item = {
+                k: output[k] for k in ("audio_url", "r2_key", "audio_base64", "duration_seconds")
+                if k in output
+            }
+            if legacy_item:
+                outputs_list = [legacy_item]
 
-    output_r2_key = output.get("r2_key") if isinstance(output, dict) else None
-    output_url = output.get("audio_url") if isinstance(output, dict) else None
+    if not outputs_list or len(outputs_list) != len(texts):
+        return {
+            "success": False,
+            "error": f"Expected {len(texts)} output(s), got {len(outputs_list) if outputs_list else 0}: "
+                     f"{list(output.keys()) if isinstance(output, dict) else output}",
+        }
 
-    if output_r2_key:
-        if verbose:
-            print(f"Downloading result from R2...", file=sys.stderr)
-        downloaded = download_from_r2(output_r2_key, output_path)
-        if downloaded:
-            r2_keys_to_cleanup.append(output_r2_key)
+    # Download all outputs
+    downloaded_items = []
+    for i, (item, dest_path) in enumerate(zip(outputs_list, out_paths)):
+        Path(dest_path).parent.mkdir(parents=True, exist_ok=True)
+        downloaded = False
+
+        r2_key = item.get("r2_key")
+        url = item.get("audio_url")
+
+        if r2_key:
             if verbose:
-                size_kb = Path(output_path).stat().st_size // 1024
-                print(f"  Downloaded: {output_path} ({size_kb}KB)", file=sys.stderr)
+                print(f"Downloading output {i+1}/{len(outputs_list)} from R2...", file=sys.stderr)
+            downloaded = download_from_r2(r2_key, dest_path)
+            if downloaded:
+                r2_keys_to_cleanup.append(r2_key)
+                if verbose:
+                    size_kb = Path(dest_path).stat().st_size // 1024
+                    print(f"  Downloaded: {dest_path} ({size_kb}KB)", file=sys.stderr)
 
-    if not downloaded and output_url:
-        downloaded = download_from_url(output_url, output_path, verbose=verbose)
+        if not downloaded and url:
+            downloaded = download_from_url(url, dest_path, verbose=verbose)
 
-    if not downloaded:
-        audio_base64 = output.get("audio_base64")
-        if audio_base64:
-            Path(output_path).write_bytes(base64.b64decode(audio_base64))
-            downloaded = True
-            if verbose:
-                size_kb = Path(output_path).stat().st_size // 1024
-                print(f"  Decoded from base64: {output_path} ({size_kb}KB)", file=sys.stderr)
+        if not downloaded:
+            audio_base64 = item.get("audio_base64")
+            if audio_base64:
+                Path(dest_path).write_bytes(base64.b64decode(audio_base64))
+                downloaded = True
+                if verbose:
+                    size_kb = Path(dest_path).stat().st_size // 1024
+                    print(f"  Decoded from base64: {dest_path} ({size_kb}KB)", file=sys.stderr)
 
-    if not downloaded:
-        return {"success": False, "error": f"No audio in result: {list(output.keys()) if isinstance(output, dict) else output}"}
+        if not downloaded:
+            # Cleanup before returning
+            for key in r2_keys_to_cleanup:
+                delete_from_r2(key)
+            return {"success": False, "error": f"No audio in output[{i}]: {list(item.keys())}"}
+
+        duration = get_audio_duration(dest_path)
+        downloaded_items.append({
+            "output": dest_path,
+            "duration_seconds": round(duration, 2) if duration else None,
+            "duration_frames_30fps": int(duration * 30) if duration else None,
+            "script_chars": len(texts[i]),
+        })
 
     # Cleanup R2 objects
     for key in r2_keys_to_cleanup:
         delete_from_r2(key)
 
-    duration = get_audio_duration(output_path)
-
-    result_dict = {
-        "success": True,
-        "output": output_path,
-        "script_chars": len(text),
-    }
-    if duration:
-        result_dict["duration_seconds"] = round(duration, 2)
-        result_dict["duration_frames_30fps"] = int(duration * 30)
-
-    return result_dict
+    if is_batch:
+        return {
+            "success": True,
+            "outputs": downloaded_items,
+            "mode": mode,
+        }
+    else:
+        return {
+            "success": True,
+            "output": downloaded_items[0]["output"],
+            "duration_seconds": downloaded_items[0]["duration_seconds"],
+            "duration_frames_30fps": downloaded_items[0]["duration_frames_30fps"],
+            "script_chars": downloaded_items[0]["script_chars"],
+            "mode": mode,
+        }
 
 
 # =============================================================================
@@ -829,6 +904,16 @@ Examples:
         help="Transcript of reference audio (required with --ref-audio)",
     )
 
+    # Voice design — generate a new character voice from a natural-language brief.
+    # Produces a designed .wav that can be re-used as a clone reference.
+    parser.add_argument(
+        "--design-instruct",
+        type=str,
+        help="Character brief for voice design mode (e.g. 'Unhurried Irish "
+             "craftsman, late 50s, baritone'). With --text as seed sentence, "
+             "writes a designed-voice WAV to --output.",
+    )
+
     # Output format
     parser.add_argument(
         "--format",
@@ -971,6 +1056,11 @@ def main():
         print(f"Error: Reference audio not found: {args.ref_audio}", file=sys.stderr)
         sys.exit(1)
 
+    # Mode conflict checks
+    if args.design_instruct and args.ref_audio:
+        print("Error: --design-instruct and --ref-audio are mutually exclusive", file=sys.stderr)
+        sys.exit(1)
+
     # Capitalize language for API
     language = args.language.capitalize()
 
@@ -982,15 +1072,18 @@ def main():
         print(
             "Note: --tone/--instruct is ignored when using a cloned voice.\n"
             "  The clone's tone comes from your reference recording.\n"
-            "  Tip: Record a new reference with the tone you want.",
+            "  Tip: Use --design-instruct to create a designed reference instead.",
             file=sys.stderr,
         )
         instruct = ""
 
     if verbose:
-        print("Generating speech with Qwen3-TTS...")
-        if instruct:
-            print(f"  Tone: {instruct}")
+        if args.design_instruct:
+            print("Designing voice with Qwen3-TTS VoiceDesign...")
+        else:
+            print("Generating speech with Qwen3-TTS...")
+            if instruct:
+                print(f"  Tone: {instruct}")
 
     result = generate_audio(
         text=args.text,
@@ -1000,6 +1093,7 @@ def main():
         instruct=instruct,
         ref_audio=args.ref_audio,
         ref_text=args.ref_text,
+        design_instruct=args.design_instruct,
         output_format=args.format,
         timeout=args.timeout,
         verbose=verbose,

@@ -1,0 +1,1 @@
+Consularia — among our heaviest users — had German systemcheck pages using informal Du. Hotfix swapped every string to formal Sie. Other locales untouched.

@@ -434,6 +434,42 @@ TTS engines do NOT consistently produce 150 WPM output. In practice:
 - **Demo too long**: Increase `playbackRate` (1.5x-2x typical)
 - **Demo too short**: Decrease `playbackRate`, or loop/extend
 
+### Audio-Anchored Timelines (the prevention approach)
+
+`sync_timing.py` is reactive — it fixes drift after the fact. You can prevent drift entirely by **generating the audio first, then anchoring visuals to known timestamps** instead of estimating durations upfront.
+
+**The pattern:**
+
+1. Write the script and split into per-scene segments
+2. Generate per-scene VO files: `voiceover.py --scene-dir public/audio/scenes --json`
+3. Read the actual durations from the JSON output
+4. Anchor every visual element to absolute timestamps in the timeline
+
+This is especially clean for Python/moviepy builds where each clip carries its own `start=` parameter:
+
+```python
+# Audio-anchored scene timeline (25s total):
+#   Scene 1 tired      0.3 → 3.74  (audio 3.44s)
+#   Scene 2 worries    4.0 → 8.88  (audio 4.88s)
+#   Scene 3 introduce  9.1 → 11.90 (audio 2.80s)
+
+text_clip("TIRED OF",     start=0.5,  duration=1.2)
+text_clip("THIRD-PARTY",  start=1.0,  duration=1.8)
+vo_clip("01_tired.mp3",   start=0.3)
+vo_clip("02_worries.mp3", start=4.0)
+```
+
+The comment block at the top is the source of truth. Every `start=` references it. Drift is impossible because durations aren't being estimated — they're being read from the rendered audio.
+
+**Trade-off vs. `<Series>`-style auto-chaining:**
+
+| Approach | Best for | Downside |
+|----------|----------|----------|
+| Audio-anchored absolute starts | Tight ad-style edits, sub-30s spots, anything with exact timing | Manual bookkeeping when re-timing a scene |
+| `<Series>` / auto-chained durations | Long-form sprint reviews where adjacent scenes flex | Drift compounds across the timeline; needs `sync_timing.py` to recover |
+
+For Remotion projects you can mix the two: use `<Sequence from={...}>` with absolute frames for tight sections and let `<Series>` handle the rest. For pure-Python builds (`build.py` + moviepy), audio-anchored is the natural default.
+
 ## Key Patterns
 
 ### Animations (Remotion)
@@ -452,7 +488,9 @@ const opacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' 
 
 ### Media
 
-**Always use `<OffthreadVideo>`, never `<video>`** — Remotion requires its own video component for frame-accurate rendering. Using a raw `<video>` tag will not render correctly.
+**Never use a raw HTML `<video>` tag** — Remotion requires its own component for frame-accurate rendering.
+
+The toolkit's templates use `<OffthreadVideo>` and `<Audio>` from the `remotion` package. Stick with these for consistency with existing templates. Upstream Remotion now also documents `<Video>` and `<Audio>` from the newer `@remotion/media` package (see `.claude/skills/remotion-official/`) — those add trim props, pitch shifting via `toneFrequency`, and richer loop behavior. Migrate per-template only if you need those features; both APIs render correctly.
 
 ```tsx
 <OffthreadVideo src={staticFile('demo.mp4')} />

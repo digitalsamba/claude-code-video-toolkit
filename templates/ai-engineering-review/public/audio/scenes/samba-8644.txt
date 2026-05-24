@@ -1,0 +1,1 @@
+Invitation time limits used to be API-only — Netucate had built a workaround. Now it's a native toggle in Account Center. Workaround retired.

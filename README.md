@@ -1,16 +1,20 @@
 # claude-code-video-toolkit
 
+<p align="center">
+  <img src="assets/banner/toolkit-banner.gif" alt="claude-code-video-toolkit — NARRATE ▸ SCORE ▸ GENERATE ▸ COMPOSE ▸ RENDER" width="960" />
+</p>
+
 [![GitHub release](https://img.shields.io/github/v/release/digitalsamba/claude-code-video-toolkit)](https://github.com/digitalsamba/claude-code-video-toolkit/releases)
 
-An AI-native video production workspace for [Claude Code](https://claude.ai/code). Skills, commands, templates, and tools that give Claude Code everything it needs to help you create professional videos — from concept to final render.
+An AI-native video production workspace for [Claude Code](https://claude.ai/code), with experimental bridges to other agent runtimes like [Codex](#using-with-codex). Skills, commands, templates, and tools that give your AI agent everything it needs to help you create professional videos — from concept to final render.
 
 ## Quick Start
 
 ```bash
 git clone https://github.com/digitalsamba/claude-code-video-toolkit.git
 cd claude-code-video-toolkit
-pip install -r tools/requirements.txt   # Optional: for AI voiceover, image gen, music
-claude                                   # Open Claude Code in the toolkit
+python3 -m pip install -r tools/requirements.txt   # Optional: AI voiceover, image gen, music, moviepy examples
+claude                                              # Open Claude Code in the toolkit
 ```
 
 Then in Claude Code:
@@ -21,6 +25,62 @@ Then in Claude Code:
 ```
 
 **That's it.** `/setup` walks you through everything interactively — cloud GPU provider, file transfer, voice config. `/video` creates a project from a template and guides you through the whole workflow.
+
+## Using with Codex
+
+This toolkit is built around Claude Code assets in `.claude/` and `CLAUDE.md`, but it also ships an experimental migration script for Codex — contributed by [@kimhoontae-gogo](https://github.com/kimhoontae-gogo) in [#16](https://github.com/digitalsamba/claude-code-video-toolkit/pull/16).
+
+```bash
+python3 scripts/migrate_to_codex.py --force
+```
+
+This does two things:
+
+1. Installs Codex skills into `~/.codex/skills`
+2. Appends or updates a generated Codex block in the repository root `AGENTS.md` from `CLAUDE.md`
+
+Resources created or updated by `python3 scripts/migrate_to_codex.py --force`:
+
+1. `~/.codex/skills/acestep/`
+2. `~/.codex/skills/elevenlabs/`
+3. `~/.codex/skills/ffmpeg/`
+4. `~/.codex/skills/frontend-design/`
+5. `~/.codex/skills/ltx2/`
+6. `~/.codex/skills/moviepy/`
+7. `~/.codex/skills/playwright-recording/`
+8. `~/.codex/skills/qwen-edit/`
+9. `~/.codex/skills/remotion/`
+10. `~/.codex/skills/remotion-best-practices/`
+11. `~/.codex/skills/runpod/`
+12. `~/.codex/skills/brand/`
+13. `~/.codex/skills/contribute/`
+14. `~/.codex/skills/design/`
+15. `~/.codex/skills/generate-voiceover/`
+16. `~/.codex/skills/record-demo/`
+17. `~/.codex/skills/redub/`
+18. `~/.codex/skills/scene-review/`
+19. `~/.codex/skills/setup/`
+20. `~/.codex/skills/skills/`
+21. `~/.codex/skills/template/`
+22. `~/.codex/skills/versions/`
+23. `~/.codex/skills/video/`
+24. `~/.codex/skills/video-toolkit/`
+25. `~/.codex/skills/voice-clone/`
+26. A generated Codex block inside `AGENTS.md` in the repository root
+
+Important:
+
+1. The migration script manages only a generated block inside the repository root `AGENTS.md`.
+2. Manual `AGENTS.md` content outside that block is preserved.
+3. The generated block is derived from `CLAUDE.md`, so changes to `CLAUDE.md` should be followed by `python3 scripts/migrate_to_codex.py --force`.
+
+To remove the installed Codex skills later:
+
+```bash
+python3 scripts/migrate_to_codex.py --reset
+```
+
+`--reset` removes the toolkit skills previously installed under `~/.codex/skills` and removes the generated Codex block from `AGENTS.md`. It does not delete other user skills and it does not remove the rest of `AGENTS.md`.
 
 **What's free:** The toolkit leans heavily on open-source AI models — voiceovers (Qwen3-TTS), image generation (FLUX.2), music (ACE-Step), and more. You deploy them to your own cloud GPU account and run them at cost. Cloudflare R2 has a generous free tier (10GB, zero egress), and Modal gives $30/month free compute on the Starter plan — more than enough for a few 5-minute videos a month.
 
@@ -64,6 +124,7 @@ Claude Code has deep knowledge in:
 | **qwen-edit** | AI image editing — prompting patterns and best practices |
 | **acestep** | AI music generation — prompts, lyrics, scene presets, video integration |
 | **ltx2** | AI video generation — text-to-video, image-to-video clips, prompting guide |
+| **moviepy** | Python video composition — overlay text on LTX-2/SadTalker output, build.py-style projects |
 | **runpod** | Cloud GPU — setup, Docker images, endpoint management, costs |
 
 ### Commands
@@ -104,6 +165,8 @@ See `examples/` for finished projects you can learn from (oldest first, showing 
 | 2026-01-25 | [schlumbergera](https://demos.digitalsamba.com/video/schlumbergera.mp4) | Android sprint review video |
 | 2026-02-23 | [cortina](https://demos.digitalsamba.com/video/sprint-review.mp4) | Mobile platforms sprint review |
 | 2026-03-15 | [the-space-between](https://demos.digitalsamba.com/video/the-space-between.mp4) | AI-generated video essay — flux2 avatar, Qwen3-TTS voice, SadTalker animation |
+| 2026-04-08 | [q2-townhall-longarm-ad](https://demos.digitalsamba.com/video/q2-townhall-longarm-ad.mp4) | Super Bowl-style launch ad with dramatic Qwen3-TTS announcer and LTX-2 animated Lugh cameo |
+| 2026-04-08 | [q2-townhall-stars](https://demos.digitalsamba.com/video/q2-townhall-stars.mp4) | GitHub star history time-lapse with animated chart and deadpan-to-excited commentary |
 
 ### Scene Transitions
 

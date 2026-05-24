@@ -25,15 +25,24 @@ GFPGAN_URL = "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPG
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("libgl1", "libglib2.0-0")
+    # Pre-install torch + pinned setuptools to avoid basicsr setup_requires CUDA conflict
     .pip_install(
+        "setuptools<70",
+        "wheel",
+        "numpy>=1.24.0,<2.0",
         "torch==2.1.2",
         "torchvision==0.16.2",
-        "realesrgan>=0.3.0",
+    )
+    # basicsr with --no-build-isolation so its setup.py sees the already-installed torch
+    .pip_install(
         "basicsr>=1.4.2",
+        extra_options="--no-build-isolation",
+    )
+    .pip_install(
+        "realesrgan>=0.3.0",
         "facexlib>=0.3.0",
         "gfpgan>=1.3.8",
         "opencv-python-headless>=4.8.0",
-        "numpy>=1.24.0,<2.0",
         "Pillow>=10.0.0",
         "boto3",
         "requests",

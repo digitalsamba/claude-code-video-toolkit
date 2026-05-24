@@ -61,6 +61,37 @@ No API keys needed. Edit `src/config/sprint-config.ts` to customize content.
 
    Or configure manually: `cp .env.example .env` and edit with your API keys.
 
+## Optional: Codex Setup
+
+If you use Codex instead of Claude Code, install the toolkit's Codex-compatible wrappers and regenerate `AGENTS.md` from `CLAUDE.md`:
+
+```bash
+python3 scripts/migrate_to_codex.py --force
+```
+
+This installs toolkit skills into `~/.codex/skills` and appends or updates a generated Codex block in the repository root `AGENTS.md`.
+
+Resources created or updated by the migration script:
+
+1. Toolkit skills under `~/.codex/skills/`
+2. Command-wrapper skills under `~/.codex/skills/`
+3. A generated Codex block inside repository root `AGENTS.md`
+
+Important:
+
+1. The script manages only a generated block inside the repository root `AGENTS.md`.
+2. Manual `AGENTS.md` content outside that block is preserved.
+3. The generated block is derived from `CLAUDE.md`.
+4. Re-run `python3 scripts/migrate_to_codex.py --force` after updating `CLAUDE.md`.
+
+To remove the installed toolkit skills later:
+
+```bash
+python3 scripts/migrate_to_codex.py --reset
+```
+
+`--reset` removes the generated Codex block from `AGENTS.md`, but does not remove the rest of the file.
+
 ## Your First Video
 
 The easiest way to create a video is using the `/video` command:

@@ -8,11 +8,11 @@
     "build": "remotion bundle"
   },
   "dependencies": {
-    "@remotion/cli": "^4.0.0",
-    "@remotion/player": "^4.0.0",
+    "@remotion/cli": "4.0.382",
+    "@remotion/player": "4.0.382",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "remotion": "^4.0.0"
+    "remotion": "4.0.382"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

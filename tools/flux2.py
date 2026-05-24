@@ -30,6 +30,7 @@ Examples:
   # Setup RunPod endpoint (first-time)
   python tools/flux2.py --setup
 """
+from __future__ import annotations
 
 import argparse
 import base64

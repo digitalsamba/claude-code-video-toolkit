@@ -4,7 +4,7 @@
 # Build (from repo root):
 #   docker buildx build --platform linux/amd64 -t ghcr.io/conalmullan/video-toolkit-qwen3-tts:latest --push docker/runpod-qwen3-tts/
 #
-# Image size: ~15GB (includes ~7GB model weights)
+# Image size: ~19GB (includes ~11GB model weights: CustomVoice + Base + VoiceDesign)
 # Cold start: ~30s (no model download needed)
 #
 # Test locally:
@@ -33,7 +33,7 @@ ENV HF_HOME=/root/.cache/huggingface
 ENV PYTHONUNBUFFERED=1
 
 # === BAKE MODELS INTO IMAGE ===
-# Download both Qwen3-TTS models during build (~7GB total)
+# Download all three Qwen3-TTS models during build (~11GB total)
 RUN python -c "\
 from huggingface_hub import snapshot_download; \
 import os; \
@@ -42,7 +42,9 @@ print('Downloading Qwen3-TTS CustomVoice model...'); \
 snapshot_download('Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice', cache_dir='/root/.cache/huggingface'); \
 print('Downloading Qwen3-TTS Base model...'); \
 snapshot_download('Qwen/Qwen3-TTS-12Hz-1.7B-Base', cache_dir='/root/.cache/huggingface'); \
-print('Both models downloaded successfully'); \
+print('Downloading Qwen3-TTS VoiceDesign model...'); \
+snapshot_download('Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign', cache_dir='/root/.cache/huggingface'); \
+print('All three models downloaded successfully'); \
 "
 
 # Copy handler

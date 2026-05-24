@@ -1,0 +1,7 @@
+node_modules/
+out/
+dist/
+.DS_Store
+*.mp4
+*.mp3
+!public/audio/*.mp3

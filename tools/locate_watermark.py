@@ -25,6 +25,7 @@ Presets:
     stock-bl    - Bottom-left stock footage watermark
     stock-center - Center watermark (common in stock footage)
 """
+from __future__ import annotations
 
 import argparse
 import json

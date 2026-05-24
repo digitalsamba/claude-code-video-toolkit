@@ -20,6 +20,7 @@ Input format (POST JSON to web endpoint):
     "num_inference_steps": int,        # Default: 30
     "seed": int,                       # Optional: random if not set
     "quality": "standard" | "fast",    # Default: "standard"
+    "lora": str,                       # Optional: style LoRA key (e.g. "crt-terminal")
     "r2": dict                         # Optional: R2 upload config
 }
 
@@ -51,6 +52,16 @@ MODEL_DIR = "/models/ltx2"
 # Gemma 3 text encoder (quantized variant — smaller, faster)
 GEMMA_REPO = "google/gemma-3-12b-it-qat-q4_0-unquantized"
 GEMMA_DIR = "/models/gemma3"
+# Style LoRAs baked into the image. Map of CLI key → {repo, filename, strength}.
+# Add new LoRAs here to ship them in the container.
+LORA_DIR = "/models/loras"
+AVAILABLE_LORAS = {
+    "crt-terminal": {
+        "repo": "lovis93/crt-animation-terminal-ltx-2.3-lora",
+        "filename": "crtanim_10000.safetensors",
+        "strength": 1.0,
+    },
+}
 
 # Build the container image with all dependencies + baked weights
 image = (
@@ -112,6 +123,19 @@ image = (
         "\"",
         secrets=[modal.Secret.from_name("huggingface-token")],
     )
+    # Bake style LoRAs (~500MB each). One hf_hub_download per entry so each
+    # LoRA lives at /models/loras/<key>/<filename> and swaps are cheap.
+    .run_commands(
+        *[
+            "python -c \""
+            "from huggingface_hub import hf_hub_download; "
+            f"hf_hub_download(repo_id='{meta['repo']}', "
+            f"filename='{meta['filename']}', "
+            f"local_dir='{LORA_DIR}/{key}')"
+            "\""
+            for key, meta in AVAILABLE_LORAS.items()
+        ],
+    )
 )
 
 
@@ -128,8 +152,9 @@ class LTX2:
 
     @modal.enter()
     def load_pipeline(self):
-        """Load the LTX-2 pipeline when the container starts."""
-        import time
+        """Load the base LTX-2 pipeline when the container starts."""
+        import glob
+        import os
 
         import torch
 
@@ -138,49 +163,84 @@ class LTX2:
             props = torch.cuda.get_device_properties(0)
             print(f"GPU: {props.name}, VRAM: {props.total_memory // (1024**3)}GB")
 
-        print("Loading LTX-2.3 pipeline...")
-        start = time.time()
-
-        from ltx_pipelines.ti2vid_two_stages import TI2VidTwoStagesPipeline
-        from ltx_core.loader import LTXV_LORA_COMFY_RENAMING_MAP, LoraPathStrengthAndSDOps
-
-        # Resolve checkpoint paths
-        import glob
-        import os
-
         def find_file(pattern):
             matches = glob.glob(os.path.join(MODEL_DIR, pattern))
             return matches[0] if matches else None
 
-        checkpoint = find_file("ltx-2.3-22b-dev.safetensors")
-        distilled_lora = find_file("ltx-2.3-22b-distilled-lora-*.safetensors")
-        spatial_upsampler = find_file("ltx-2.3-spatial-upscaler-x2-1.1.safetensors")
+        self._checkpoint = find_file("ltx-2.3-22b-dev.safetensors")
+        self._distilled_lora_path = find_file("ltx-2.3-22b-distilled-lora-*.safetensors")
+        self._spatial_upsampler = find_file("ltx-2.3-spatial-upscaler-x2-1.1.safetensors")
 
-        if not checkpoint:
+        if not self._checkpoint:
             raise RuntimeError(
                 f"LTX-2.3 checkpoint not found in {MODEL_DIR}. "
                 f"Files: {os.listdir(MODEL_DIR)}"
             )
 
-        print(f"  Checkpoint: {checkpoint}")
-        print(f"  Distilled LoRA: {distilled_lora}")
-        print(f"  Spatial upsampler: {spatial_upsampler}")
+        print(f"  Checkpoint: {self._checkpoint}")
+        print(f"  Distilled LoRA: {self._distilled_lora_path}")
+        print(f"  Spatial upsampler: {self._spatial_upsampler}")
         print(f"  Gemma: {GEMMA_DIR}")
 
-        lora_list = []
-        if distilled_lora:
-            lora_list = [
-                LoraPathStrengthAndSDOps(distilled_lora, 0.8, LTXV_LORA_COMFY_RENAMING_MAP)
+        self.pipeline = None
+        self._current_style_lora = None
+        self._build_pipeline(style_lora=None)
+
+    def _build_pipeline(self, style_lora):
+        """Construct the pipeline with an optional style LoRA key.
+
+        Called at cold start (no style LoRA) and on per-request style swaps.
+        Rebuilding costs ~30–60s of weight loading; frees the previous
+        pipeline's VRAM first to avoid OOM on A100-80GB.
+        """
+        import gc
+        import os
+        import time
+
+        import torch
+
+        from ltx_core.loader import LTXV_LORA_COMFY_RENAMING_MAP, LoraPathStrengthAndSDOps
+        from ltx_pipelines.ti2vid_two_stages import TI2VidTwoStagesPipeline
+
+        if self.pipeline is not None:
+            print(f"Releasing current pipeline (style_lora={self._current_style_lora})")
+            del self.pipeline
+            self.pipeline = None
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+        distilled = []
+        if self._distilled_lora_path:
+            distilled = [
+                LoraPathStrengthAndSDOps(
+                    self._distilled_lora_path, 0.8, LTXV_LORA_COMFY_RENAMING_MAP
+                )
             ]
 
-        self.pipeline = TI2VidTwoStagesPipeline(
-            checkpoint_path=checkpoint,
-            distilled_lora=lora_list,
-            spatial_upsampler_path=spatial_upsampler,
-            gemma_root=GEMMA_DIR,
-            loras=[],
-        )
+        style_loras = []
+        if style_lora:
+            meta = AVAILABLE_LORAS[style_lora]
+            lora_path = os.path.join(LORA_DIR, style_lora, meta["filename"])
+            if not os.path.exists(lora_path):
+                raise RuntimeError(f"Style LoRA file missing: {lora_path}")
+            style_loras = [
+                LoraPathStrengthAndSDOps(
+                    lora_path, meta["strength"], LTXV_LORA_COMFY_RENAMING_MAP
+                )
+            ]
+            print(f"  Style LoRA: {style_lora} @ strength {meta['strength']}")
 
+        print(f"Building pipeline (style_lora={style_lora})...")
+        start = time.time()
+        self.pipeline = TI2VidTwoStagesPipeline(
+            checkpoint_path=self._checkpoint,
+            distilled_lora=distilled,
+            spatial_upsampler_path=self._spatial_upsampler,
+            gemma_root=GEMMA_DIR,
+            loras=style_loras,
+        )
+        self._current_style_lora = style_lora
         print(f"Pipeline loaded in {time.time() - start:.1f}s")
 
     @modal.fastapi_endpoint(method="POST")
@@ -216,6 +276,18 @@ class LTX2:
         seed = request.get("seed")
         quality = request.get("quality", "standard")
         r2_config = request.get("r2")
+
+        # Optional style LoRA. Rebuild the pipeline only when the requested
+        # LoRA differs from what's currently loaded — same-LoRA back-to-back
+        # calls skip the ~60s reload.
+        style_lora = request.get("lora")
+        if style_lora and style_lora not in AVAILABLE_LORAS:
+            return {
+                "error": f"Unknown LoRA '{style_lora}'. "
+                f"Available: {list(AVAILABLE_LORAS) or '(none)'}"
+            }
+        if style_lora != self._current_style_lora:
+            self._build_pipeline(style_lora=style_lora)
 
         # Enforce dimension constraints
         width = (width // 64) * 64

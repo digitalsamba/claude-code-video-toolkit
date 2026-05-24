@@ -1,0 +1,1 @@
+Civi reported portrait MP4s stretched to sixteen-by-nine. AI Engineering's HLS serverless function was forcing the wrong aspect ratio. Fixed and deployed across Civi and DS Embedded.

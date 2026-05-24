@@ -44,6 +44,23 @@ load_dotenv()
 sys.path.insert(0, str(Path(__file__).parent))
 from file_transfer import download_from_url, get_r2_payload_config
 
+# Style LoRA presets. Keep keys in sync with AVAILABLE_LORAS in
+# docker/modal-ltx2/app.py — the server only accepts keys it has baked in.
+LORA_PRESETS = {
+    "crt-terminal": {
+        "trigger": "crtanim",
+        "default_width": 1024,
+        "default_height": 1024,
+        "default_num_frames": 121,
+        # Default neg prompt keeps on-screen text in frame; the generic one
+        # excludes "text, logo" which neutralises the whole LoRA.
+        "default_negative_prompt": (
+            "worst quality, inconsistent motion, blurry, jittery, distorted, "
+            "watermark, signature, jpeg artifacts, compression artifacts"
+        ),
+    },
+}
+
 
 def log(msg: str, level: str = "info"):
     """Print formatted log message."""
@@ -96,6 +113,7 @@ def generate_video(
     steps: Optional[int] = None,
     seed: Optional[int] = None,
     quality: str = "standard",
+    lora: Optional[str] = None,
     open_result: bool = True,
     cloud: str = "modal",
     progress=None,
@@ -138,6 +156,8 @@ def generate_video(
         payload["input"]["num_inference_steps"] = steps
     if seed is not None:
         payload["input"]["seed"] = seed
+    if lora:
+        payload["input"]["lora"] = lora
 
     # Encode input image for I2V
     if input_path:
@@ -214,16 +234,22 @@ Examples:
     input_group.add_argument("--input", "-i", help="Input image for image-to-video")
     input_group.add_argument("--negative-prompt", help="What to avoid (has sensible default)")
 
-    # Video parameters
+    # Video parameters (defaults deferred — LoRA presets may override)
     video_group = parser.add_argument_group("Video parameters")
-    video_group.add_argument("--width", "-W", type=int, default=768,
-                             help="Video width, divisible by 64 (default: 768)")
-    video_group.add_argument("--height", "-H", type=int, default=512,
-                             help="Video height, divisible by 64 (default: 512)")
-    video_group.add_argument("--num-frames", "-n", type=int, default=121,
+    video_group.add_argument("--width", "-W", type=int, default=None,
+                             help="Video width, divisible by 64 (default: 768, or 1024 with a LoRA preset)")
+    video_group.add_argument("--height", "-H", type=int, default=None,
+                             help="Video height, divisible by 64 (default: 512, or 1024 with a LoRA preset)")
+    video_group.add_argument("--num-frames", "-n", type=int, default=None,
                              help="Number of frames, (n-1)%%8==0 (default: 121, ~5s)")
     video_group.add_argument("--fps", type=int, default=24,
                              help="Frames per second (default: 24)")
+
+    # Style LoRA
+    lora_group = parser.add_argument_group("Style LoRA")
+    lora_group.add_argument("--lora", choices=list(LORA_PRESETS), default=None,
+                            help="Apply a style LoRA preset. First use after a LoRA change "
+                                 "incurs ~60s of pipeline reload on the server.")
 
     # Quality
     quality_group = parser.add_argument_group("Quality")
@@ -252,22 +278,55 @@ Examples:
     from cloud_gpu import ProgressReporter
     reporter = ProgressReporter(mode=args.progress)
 
+    # Resolve LoRA preset defaults. A preset only fills in values the user
+    # didn't set explicitly, so --lora crt-terminal --width 768 still honours
+    # the user's width.
+    prompt = args.prompt
+    width = args.width
+    height = args.height
+    num_frames = args.num_frames
+    negative_prompt = args.negative_prompt
+
+    if args.lora:
+        preset = LORA_PRESETS[args.lora]
+        trigger = preset["trigger"]
+        if not prompt.lstrip().lower().startswith(trigger.lower()):
+            prompt = f"{trigger}, {prompt}"
+            log(f"Prepended LoRA trigger: '{trigger},'", "dim")
+        if width is None:
+            width = preset["default_width"]
+        if height is None:
+            height = preset["default_height"]
+        if num_frames is None:
+            num_frames = preset["default_num_frames"]
+        if negative_prompt is None:
+            negative_prompt = preset["default_negative_prompt"]
+
+    # Fall back to the original non-LoRA defaults for anything still unset.
+    if width is None:
+        width = 768
+    if height is None:
+        height = 512
+    if num_frames is None:
+        num_frames = 121
+
     print()
     log("LTX-2.3 Video Generation (22B DiT)", "info")
     log("=" * 45, "dim")
 
     result_path = generate_video(
-        prompt=args.prompt,
+        prompt=prompt,
         input_path=args.input,
         output_path=args.output,
-        negative_prompt=args.negative_prompt,
-        width=args.width,
-        height=args.height,
-        num_frames=args.num_frames,
+        negative_prompt=negative_prompt,
+        width=width,
+        height=height,
+        num_frames=num_frames,
         fps=args.fps,
         steps=args.steps,
         seed=args.seed,
         quality=args.quality,
+        lora=args.lora,
         open_result=not args.no_open,
         cloud=args.cloud,
         progress=reporter,

@@ -33,6 +33,14 @@ out/
 *.gif
 *.mov
 
+# But DO track the README banner assets
+!assets/banner/**
+
+# And the two ds-crt-stinger reference assets: the LTX-2 boot clip costs ~$0.30
+# + 4 min to regenerate, and the GIF is the example's README preview.
+!examples/ds-crt-stinger/ds_boot_astro.mp4
+!examples/ds-crt-stinger/ds_stinger_astro.gif
+
 # Remotion
 .remotion/
 
@@ -85,6 +93,10 @@ examples/*/public/audio/*.mp3
 examples/*/node_modules/
 examples/*/.remotion/
 examples/*/out/
+
+# moviepy examples — auto-generated PIL text caches and intermediate renders
+examples/*/.text_cache/
+examples/*/chart_anim.mp4
 
 # Playwright recordings (can be large)
 playwright/output/*.mp4

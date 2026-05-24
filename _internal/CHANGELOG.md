@@ -6,6 +6,33 @@ All notable changes to claude-code-video-toolkit.
 
 ---
 
+## 2026-04-09 (v0.14.2)
+
+### Added
+- **moviepy skill** (`.claude/skills/moviepy/`) — Python video composition for overlaying deterministic text on AI-generated video (LTX-2, SadTalker). Leads with the "trustworthy text" framing: news, trailers, lower thirds, and social captions all need deterministic overlay because AI models can't guarantee readable text. Covers the PIL workaround for moviepy 2.x's TextClip ascender-clipping bug, audio-anchored timelines, common recipes (labels on LTX-2 clips, lower thirds on SadTalker heads, tinted overlays for contrast, split-screen composites, music + VO mixing), 2.x API gotchas, and a genres-where-this-shines table.
+- **`examples/quick-spot`** — runnable 15-second ad-style moviepy example. Audio-anchored timeline, PIL text rendering with cross-platform font loading, optional per-scene VO + ducked music, solid-colour backgrounds. Renders with `python3 build.py` and zero external assets.
+- **`examples/data-viz-chart`** — runnable animated time-series chart (real GitHub star history) demonstrating the "matplotlib for data + moviepy for trustworthy text" split that mirrors real news-graphics pipelines. Cache-aware matplotlib step.
+- **`examples/hello-world`** — minimal Remotion sprint-review example finally committed. The root README's quick-start callout has been pointing at `cd examples/hello-world && npm install && npm run render` since Feb 23, but the example had zero git history on any branch. Fixes the broken link for anyone cloning the repo.
+- **LTX-2 skill: Stylized Character Cameo** — new use case in `.claude/skills/ltx2/SKILL.md` documenting LTX-2 image-to-video as a SadTalker alternative for non-photoreal faces (fantasy characters, heavy beards, masks, helmets) where lip-sync precision matters less than motion + atmosphere.
+- **CLAUDE.md: Audio-Anchored Timelines** — new subsection in the Video Timing guide complementing the existing reactive `sync_timing.py` flow with a prevention-first pattern (generate audio first, anchor visuals to absolute timestamps). Especially useful for single-file moviepy `build.py` projects.
+
+### Changed
+- **`tools/requirements.txt`** adds `Pillow>=10.0`, `moviepy>=2.0`, `matplotlib>=3.7`. One install command (`python3 -m pip install -r tools/requirements.txt`) now covers every Python feature in the toolkit: AI voiceover, image gen, music gen, and the new moviepy examples.
+- **Root README quick-start** switches to `python3 -m pip install` — the [PyPA-recommended invocation](https://pip.pypa.io/en/stable/user_guide/#running-pip) that works identically on macOS, Linux, and Windows and guarantees `pip` and `python3` resolve to the same environment.
+- **`docs/sadtalker.md`** adds a "When NOT to Use SadTalker" section pointing at LTX-2 image-to-video for stylized characters, heavy facial hair, masks, and non-frontal angles.
+- **`examples/README.md`** splits "Using Examples" into Remotion (`npm install` flow) and moviepy (`python3 build.py` flow) sections and adds both new examples to the listing table.
+
+### Fixed
+- **Hardcoded macOS font paths in `examples/quick-spot/build.py` and `examples/data-viz-chart/build.py`** — both examples used `/System/Library/Fonts/Supplemental/Arial Bold.ttf` directly, which would crash with `FileNotFoundError` on Linux and Windows. Replaced with a `platform.system()`-keyed fallback chain that tries OS-appropriate sans-serif fonts (Arial on macOS and Windows, DejaVu Sans on Linux, with multiple candidate paths each) and falls back to `ImageFont.load_default()` if nothing matches, so the examples never crash on unusual setups. Both examples now genuinely run cross-platform as their READMEs promise.
+- **Latent Pillow gap in `tools/flux2.py` and `tools/image_edit.py`** — both tools imported PIL inside a `try/except ImportError` guard with a friendly error message, but Pillow was never actually declared in `tools/requirements.txt`. Users had to install Pillow manually after hitting the runtime error. Free-rider fix via the moviepy declaration.
+- **Guarded imports** added to both moviepy example `build.py` files — matches the existing `flux2.py` / `image_edit.py` friendly-error pattern. Prevents bare `ModuleNotFoundError` tracebacks for users who run the examples before installing dependencies.
+
+### Docs
+- **README examples table** adds `q2-townhall-longarm-ad` (Super Bowl-style launch ad with LTX-2 animated Lugh cameo) and `q2-townhall-stars` (GitHub star history time-lapse) as finished demo entries dated 2026-04-08.
+- **moviepy skill** added to the README's skills table and `_internal/toolkit-registry.json`.
+
+---
+
 ## 2026-04-04 (v0.14.1)
 
 ### Added

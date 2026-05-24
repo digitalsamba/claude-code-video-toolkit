@@ -1,0 +1,22 @@
+{
+  "name": "banner-showcase",
+  "version": "1.0.0",
+  "description": "Animated synthwave banner for the claude-code-video-toolkit",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render ToolkitBanner out/toolkit-banner.mp4",
+    "render:gif": "remotion render ToolkitBanner out/toolkit-banner.gif --codec=gif",
+    "render:poster": "remotion still ToolkitBanner out/toolkit-banner-poster.png --frame=120"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/google-fonts": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}

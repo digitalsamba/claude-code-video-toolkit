@@ -75,6 +75,14 @@ When adding or modifying commands, skills, or templates, update these files:
 | New component | `CLAUDE.md` (Shared Components table) |
 | New transition | `README.md` (Scene Transitions), `lib/transitions/README.md` |
 
+If your change affects Codex compatibility, also update:
+
+| What Changed | Update These Files |
+|--------------|-------------------|
+| Codex migration flow | `README.md` ("Using with Codex"), `docs/getting-started.md`, `scripts/migrate_to_codex.py` |
+| Claude guidance source | `CLAUDE.md` and then re-run `python3 scripts/migrate_to_codex.py --force` to regenerate the Codex block in `AGENTS.md` |
+| Generated resource list or warnings | `README.md` and `docs/getting-started.md` |
+
 **Quick verification:** After adding a command, grep for it across docs:
 ```bash
 grep -r "/your-command" README.md CLAUDE.md

@@ -8,10 +8,10 @@
     "render:preview": "remotion render src/index.ts SprintReview out/preview.mp4 --frames=0-300"
   },
   "dependencies": {
-    "@remotion/cli": "^4.0.0",
+    "@remotion/cli": "4.0.381",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "remotion": "^4.0.0"
+    "remotion": "4.0.381"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

@@ -3,6 +3,7 @@
 Provides R2 upload/download with fallback to free services (litterbox, 0x0.st).
 Used by all cloud GPU tools to avoid duplicating file transfer logic.
 """
+from __future__ import annotations
 
 import os
 import sys

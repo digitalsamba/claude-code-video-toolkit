@@ -1,0 +1,25 @@
+{
+  "name": "ai-engineering-review-template",
+  "version": "1.0.0",
+  "description": "Remotion template for AI Engineering sprint reviews, presented by Lugh",
+  "scripts": {
+    "studio": "npx remotion studio",
+    "render": "npx remotion render src/index.ts AIEngineeringReview out/ai-engineering-review.mp4",
+    "render:preview": "npx remotion render src/index.ts AIEngineeringReview out/preview.mp4 --scale=0.5",
+    "build": "npx remotion bundle src/index.ts",
+    "upgrade": "npx remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.425",
+    "@remotion/paths": "4.0.425",
+    "@remotion/shapes": "4.0.425",
+    "@remotion/transitions": "4.0.425",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "4.0.425"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}

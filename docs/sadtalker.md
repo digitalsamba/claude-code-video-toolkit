@@ -12,6 +12,17 @@ python tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output ta
 python tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --preset natural --output talking.mp4
 ```
 
+## When NOT to Use SadTalker
+
+SadTalker is trained on photoreal human faces. It struggles with:
+
+- **Stylized / illustrated characters** — fantasy art, anime, painted portraits
+- **Heavy facial hair** — mouth-region detection fails on full beards
+- **Masks, helmets, face coverings** — anything occluding the lower face
+- **Non-frontal angles** — anything past ~30° produces artifacts
+
+For these cases, use **LTX-2 image-to-video** instead. It animates the whole image with motion + atmosphere rather than trying to match phonemes — for short cameos where lip sync isn't critical, the result is usually better. See the `ltx2` skill for the "Stylized Character Cameo" pattern.
+
 ## Setup
 
 1. Add your RunPod API key to `.env`:

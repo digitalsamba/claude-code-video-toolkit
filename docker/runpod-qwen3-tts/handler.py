@@ -1,38 +1,52 @@
 #!/usr/bin/env python3
 """
 RunPod serverless handler for Qwen3-TTS.
-Generates speech from text with built-in voices, emotion control, and voice cloning.
+
+Supports three modes:
+  custom_voice  — built-in speaker + natural-language `instruct` direction
+  clone         — ICL voice clone from ref_audio + ref_text
+  voice_design  — generate a new character voice from a natural-language
+                  `instruct` brief (returns a designed .wav usable as a
+                  clone reference)
+
+All three modes accept either a scalar `text` (single generation) or a
+list of strings (batch). Batch clone is the important one: the
+`voice_clone_prompt` is extracted once from the ref_audio and reused
+across every utterance, which gives consistent voice across many
+scenes — the "proper" way to use Qwen3-TTS for long-form narration.
 
 Input format:
 {
     "input": {
-        # Required
-        "text": str,                    # Text to synthesize
+        # Universal
+        "text":        str | list[str],   # required; list → batch
+        "language":    str | list[str],   # default "Auto"; scalar broadcasts
+        "output_format": "mp3" | "wav",   # default "mp3"
+        "temperature": float,             # default 0.7
+        "top_p":       float,             # default 0.8
 
-        # Voice selection (one mode):
-        # Mode 1: CustomVoice (built-in speakers)
-        "mode": "custom_voice",         # Default mode
-        "speaker": str,                 # Speaker name (default: "Ryan")
-        "instruct": str,               # Emotion/style instruction (optional)
+        # Mode selection
+        "mode": "custom_voice" | "clone" | "voice_design",   # default "custom_voice"
 
-        # Mode 2: Clone (reference audio)
-        "mode": "clone",
-        "ref_audio_url": str,           # URL to reference audio
-        "ref_audio_base64": str,        # Or base64 encoded reference audio
-        "ref_text": str,                # Transcript of reference audio (required)
+        # custom_voice
+        "speaker":  str,                  # e.g. "Ryan", "Aiden"
+        "instruct": str,                  # style direction (optional)
 
-        # Options
-        "language": str,                # Language hint (default: "Auto")
-        "output_format": str,           # "mp3" (default) or "wav"
-        "temperature": float,          # Expressiveness (default: 0.7, range: 0.3-1.5)
-        "top_p": float,                # Nucleus sampling (default: 0.8, range: 0.1-1.0)
+        # clone
+        "ref_audio_url":    str,          # OR
+        "ref_audio_base64": str,
+        "ref_text":         str,          # required for ICL clone
 
-        # R2 config for result upload
+        # voice_design
+        "instruct": str,                  # character brief, required
+        # text is reused as the seed sentence to speak for the designed voice
+
+        # R2 (optional; else base64 returned)
         "r2": {
-            "endpoint_url": str,
-            "access_key_id": str,
+            "endpoint_url":      str,
+            "access_key_id":     str,
             "secret_access_key": str,
-            "bucket_name": str
+            "bucket_name":       str
         }
     }
 }
@@ -40,12 +54,23 @@ Input format:
 Output format:
 {
     "success": true,
-    "audio_base64": str,            # Base64 encoded audio (if no R2)
-    "audio_url": str,               # Presigned R2 URL (if R2 config provided)
-    "r2_key": str,                  # R2 object key
-    "duration_seconds": float,
-    "mode": str,                    # "custom_voice" or "clone"
-    "processing_time_seconds": float
+    "mode": str,                         # echoed
+    "processing_time_seconds": float,
+    "outputs": [
+        {
+            "audio_url":          str,   # if R2 configured
+            "r2_key":             str,
+            "audio_base64":       str,   # if no R2
+            "duration_seconds":   float
+        },
+        ...
+    ],
+    # Legacy top-level keys also populated when the request was single-text
+    # (text was a string, not a list). Facilitates backward compat.
+    "audio_url":        str,
+    "r2_key":           str,
+    "audio_base64":     str,
+    "duration_seconds": float
 }
 """
 
@@ -66,12 +91,15 @@ import soundfile as sf
 # Lazy-loaded global models (kept in GPU memory between requests)
 _custom_voice_model = None
 _base_model = None
+_voice_design_model = None
 
 
 def log(message: str) -> None:
     """Log message to stderr (visible in RunPod logs)."""
     print(message, file=sys.stderr, flush=True)
 
+
+# ─── Model loaders ──────────────────────────────────────────
 
 def get_custom_voice_model():
     """Lazy-load CustomVoice model (built-in speakers + instruct)."""
@@ -109,17 +137,34 @@ def get_base_model():
     return _base_model
 
 
+def get_voice_design_model():
+    """Lazy-load VoiceDesign model (generate voice from natural-language brief)."""
+    global _voice_design_model
+    if _voice_design_model is None:
+        import torch
+        from qwen_tts import Qwen3TTSModel
+
+        log("Loading VoiceDesign model...")
+        _voice_design_model = Qwen3TTSModel.from_pretrained(
+            "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+            device_map="cuda:0",
+            dtype=torch.bfloat16,
+            attn_implementation="sdpa",
+        )
+        log("VoiceDesign model loaded")
+    return _voice_design_model
+
+
+# ─── I/O helpers ────────────────────────────────────────────
+
 def download_file(url: str, output_path: Path, timeout: int = 300) -> bool:
-    """Download file from URL to local path."""
     try:
         log(f"Downloading from {url[:80]}...")
         response = requests.get(url, stream=True, timeout=timeout)
         response.raise_for_status()
-
         with open(output_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
-
         log(f"  Downloaded: {output_path.name} ({output_path.stat().st_size // 1024}KB)")
         return True
     except Exception as e:
@@ -128,11 +173,9 @@ def download_file(url: str, output_path: Path, timeout: int = 300) -> bool:
 
 
 def decode_base64_file(data: str, output_path: Path) -> bool:
-    """Decode base64 data and write to file."""
     try:
         if "," in data:
             data = data.split(",", 1)[1]
-
         decoded = base64.b64decode(data)
         output_path.write_bytes(decoded)
         log(f"Decoded base64 to {output_path.name} ({len(decoded) // 1024}KB)")
@@ -143,24 +186,19 @@ def decode_base64_file(data: str, output_path: Path) -> bool:
 
 
 def encode_file_base64(file_path: Path) -> str:
-    """Encode file to base64 string."""
     return base64.b64encode(file_path.read_bytes()).decode("utf-8")
 
 
 def get_audio_duration(audio_path: Path) -> float:
-    """Get audio duration in seconds using ffprobe."""
     try:
         result = subprocess.run(
             [
-                "ffprobe",
-                "-v", "error",
+                "ffprobe", "-v", "error",
                 "-show_entries", "format=duration",
                 "-of", "default=noprint_wrappers=1:nokey=1",
                 str(audio_path),
             ],
-            capture_output=True,
-            text=True,
-            timeout=30,
+            capture_output=True, text=True, timeout=30,
         )
         return float(result.stdout.strip())
     except Exception as e:
@@ -169,7 +207,6 @@ def get_audio_duration(audio_path: Path) -> float:
 
 
 def wav_to_mp3(wav_path: Path, mp3_path: Path) -> bool:
-    """Convert WAV to MP3 using ffmpeg."""
     try:
         subprocess.run(
             [
@@ -179,9 +216,7 @@ def wav_to_mp3(wav_path: Path, mp3_path: Path) -> bool:
                 "-b:a", "192k",
                 str(mp3_path),
             ],
-            capture_output=True,
-            timeout=120,
-            check=True,
+            capture_output=True, timeout=120, check=True,
         )
         return mp3_path.exists()
     except Exception as e:
@@ -189,52 +224,11 @@ def wav_to_mp3(wav_path: Path, mp3_path: Path) -> bool:
         return False
 
 
-def generate_custom_voice(text: str, speaker: str, language: str, instruct: str = "", **kwargs) -> tuple:
-    """Generate audio using CustomVoice model (built-in speakers)."""
-    model = get_custom_voice_model()
-
-    gen_kwargs = {
-        "text": text,
-        "language": language,
-        "speaker": speaker,
-    }
-    if instruct:
-        gen_kwargs["instruct"] = instruct
-    if kwargs:
-        gen_kwargs.update(kwargs)
-
-    wavs, sr = model.generate_custom_voice(**gen_kwargs)
-    return wavs[0], sr
-
-
-def generate_clone_voice(text: str, language: str, ref_audio_path: Path, ref_text: str, **kwargs) -> tuple:
-    """Generate audio using Base model (voice cloning)."""
-    model = get_base_model()
-
-    prompt = model.create_voice_clone_prompt(
-        ref_audio=str(ref_audio_path),
-        ref_text=ref_text,
-    )
-
-    gen_kwargs = {
-        "text": text,
-        "language": language,
-        "voice_clone_prompt": prompt,
-    }
-    if kwargs:
-        gen_kwargs.update(kwargs)
-
-    wavs, sr = model.generate_voice_clone(**gen_kwargs)
-    return wavs[0], sr
-
-
-def upload_to_r2(file_path: Path, job_id: str, r2_config: dict, content_type: str = "audio/mpeg") -> tuple[Optional[str], Optional[str]]:
+def upload_to_r2(file_path: Path, job_id: str, r2_config: dict, content_type: str) -> tuple[Optional[str], Optional[str]]:
     """Upload audio to Cloudflare R2 and return (presigned_url, object_key)."""
     try:
         import boto3
         from botocore.config import Config
-
-        log("Uploading to R2...")
 
         client = boto3.client(
             "s3",
@@ -243,29 +237,122 @@ def upload_to_r2(file_path: Path, job_id: str, r2_config: dict, content_type: st
             aws_secret_access_key=r2_config["secret_access_key"],
             config=Config(signature_version="s3v4"),
         )
-
         ext = file_path.suffix
         object_key = f"qwen3-tts/results/{job_id}_{uuid.uuid4().hex[:8]}{ext}"
-
         client.upload_file(
             str(file_path),
             r2_config["bucket_name"],
             object_key,
             ExtraArgs={"ContentType": content_type},
         )
-
         presigned_url = client.generate_presigned_url(
             "get_object",
             Params={"Bucket": r2_config["bucket_name"], "Key": object_key},
             ExpiresIn=7200,
         )
-
-        log(f"  R2 upload complete: {object_key}")
         return presigned_url, object_key
     except Exception as e:
-        log(f"Error uploading to R2: {e}")
+        log(f"R2 upload error: {e}")
         return None, None
 
+
+# ─── Generation helpers ─────────────────────────────────────
+
+def _as_list(value, length: int):
+    """Return value as a list of `length` — scalar broadcast, or verified same length."""
+    if isinstance(value, list):
+        if len(value) != length:
+            raise ValueError(f"list length mismatch: got {len(value)}, need {length}")
+        return value
+    return [value] * length
+
+
+def generate_custom_voice_batch(texts: list[str], speaker: str, languages: list[str], instruct: str = "", **kwargs):
+    """Generate one or more utterances with built-in speaker. Returns (list_of_wavs, sr)."""
+    model = get_custom_voice_model()
+
+    gen_kwargs = {
+        "text": texts if len(texts) > 1 else texts[0],
+        "language": languages if len(texts) > 1 else languages[0],
+        "speaker": speaker,
+    }
+    if instruct:
+        gen_kwargs["instruct"] = instruct
+    if kwargs:
+        gen_kwargs.update(kwargs)
+
+    wavs, sr = model.generate_custom_voice(**gen_kwargs)
+    # Normalize: wavs is list for batch, single array for scalar
+    if len(texts) == 1 and not isinstance(wavs, list):
+        wavs = [wavs]
+    return list(wavs), sr
+
+
+def generate_clone_voice_batch(texts: list[str], languages: list[str], ref_audio_path: Path, ref_text: str, **kwargs):
+    """Generate one or more utterances with a single shared voice_clone_prompt.
+
+    The prompt is extracted ONCE from the reference and reused across all
+    texts. Note: qwen-tts's `generate_voice_clone(text=[...])` batch path
+    hits a PyTorch tensor-aliasing bug ("written-to tensor refers to a
+    single memory location"), so we serialize the calls while still
+    sharing the pre-computed prompt — which is what gives us consistency.
+    """
+    model = get_base_model()
+
+    log(f"Extracting voice_clone_prompt from reference...")
+    prompt = model.create_voice_clone_prompt(
+        ref_audio=str(ref_audio_path),
+        ref_text=ref_text,
+    )
+
+    log(f"Generating {len(texts)} utterance(s) with shared clone prompt...")
+    wavs = []
+    sr = None
+    for i, (t, lang) in enumerate(zip(texts, languages)):
+        single_gen_kwargs = {
+            "text": t,
+            "language": lang,
+            "voice_clone_prompt": prompt,
+        }
+        if kwargs:
+            single_gen_kwargs.update(kwargs)
+        single_wavs, single_sr = model.generate_voice_clone(**single_gen_kwargs)
+        wav = single_wavs[0] if isinstance(single_wavs, list) else single_wavs
+        wavs.append(wav)
+        sr = single_sr
+        log(f"  [{i + 1}/{len(texts)}] generated")
+
+    return wavs, sr
+
+
+def generate_voice_design(text: str, language: str, instruct: str, **kwargs):
+    """Generate a designed character voice from a natural-language brief.
+
+    Returns a single ([wav], sr). The designed wav is typically used as a
+    reference for subsequent clone calls to produce consistent character
+    voice across many utterances.
+    """
+    model = get_voice_design_model()
+
+    if not instruct:
+        raise ValueError("voice_design mode requires an 'instruct' brief")
+
+    gen_kwargs = {
+        "text": text,
+        "language": language,
+        "instruct": instruct,
+    }
+    if kwargs:
+        gen_kwargs.update(kwargs)
+
+    log(f"Designing voice (instruct={instruct[:60]}...)")
+    wavs, sr = model.generate_voice_design(**gen_kwargs)
+    if not isinstance(wavs, list):
+        wavs = [wavs]
+    return list(wavs), sr
+
+
+# ─── Handler ────────────────────────────────────────────────
 
 def handler(job: dict) -> dict:
     """Main RunPod handler for Qwen3-TTS."""
@@ -275,16 +362,27 @@ def handler(job: dict) -> dict:
 
     log(f"Job {job_id}: Starting Qwen3-TTS")
 
-    # Validate required input
-    text = job_input.get("text")
-    if not text:
+    # Required
+    text_in = job_input.get("text")
+    if not text_in:
         return {"error": "Missing required field: text"}
+
+    # Normalize text to list — remember whether original was scalar
+    is_batch = isinstance(text_in, list)
+    texts = text_in if is_batch else [text_in]
+    if not texts or any(not t for t in texts):
+        return {"error": "text list must contain non-empty strings"}
 
     # Options
     mode = job_input.get("mode", "custom_voice")
     language = job_input.get("language", "Auto")
     output_format = job_input.get("output_format", "mp3")
     r2_config = job_input.get("r2")
+
+    try:
+        languages = _as_list(language, len(texts))
+    except ValueError as e:
+        return {"error": str(e)}
 
     # Generation kwargs (optional)
     gen_kwargs = {}
@@ -297,13 +395,9 @@ def handler(job: dict) -> dict:
     log(f"Working directory: {work_dir}")
 
     try:
-        wav_path = work_dir / "output.wav"
-
         if mode == "clone":
-            # Voice cloning mode - need reference audio
             ref_audio_path = work_dir / "ref_audio.wav"
             ref_text = job_input.get("ref_text")
-
             if not ref_text:
                 return {"error": "ref_text is required for clone mode"}
 
@@ -316,66 +410,85 @@ def handler(job: dict) -> dict:
             else:
                 return {"error": "ref_audio_url or ref_audio_base64 required for clone mode"}
 
-            log(f"Generating clone voice (language={language})...")
-            audio_data, sr = generate_clone_voice(
-                text=text,
-                language=language,
+            wavs, sr = generate_clone_voice_batch(
+                texts=texts,
+                languages=languages,
                 ref_audio_path=ref_audio_path,
                 ref_text=ref_text,
                 **gen_kwargs,
             )
 
-        else:
-            # CustomVoice mode (default)
-            speaker = job_input.get("speaker", "Ryan")
-            instruct = job_input.get("instruct", "")
+        elif mode == "voice_design":
+            if is_batch:
+                return {"error": "voice_design mode expects a single seed text, not a list"}
+            instruct = job_input.get("instruct")
+            if not instruct:
+                return {"error": "voice_design mode requires 'instruct'"}
 
-            log(f"Generating custom voice (speaker={speaker}, language={language})...")
-            audio_data, sr = generate_custom_voice(
-                text=text,
-                speaker=speaker,
-                language=language,
+            wavs, sr = generate_voice_design(
+                text=texts[0],
+                language=languages[0],
                 instruct=instruct,
                 **gen_kwargs,
             )
 
-        # Write WAV
-        sf.write(str(wav_path), audio_data, sr)
-        log(f"WAV generated: {wav_path.stat().st_size // 1024}KB")
-
-        # Convert to output format
-        if output_format == "mp3":
-            output_path = work_dir / "output.mp3"
-            if not wav_to_mp3(wav_path, output_path):
-                return {"error": "Failed to convert WAV to MP3"}
-            content_type = "audio/mpeg"
         else:
-            output_path = wav_path
-            content_type = "audio/wav"
+            # custom_voice (default)
+            speaker = job_input.get("speaker", "Ryan")
+            instruct = job_input.get("instruct", "")
+            wavs, sr = generate_custom_voice_batch(
+                texts=texts,
+                speaker=speaker,
+                languages=languages,
+                instruct=instruct,
+                **gen_kwargs,
+            )
 
-        duration = get_audio_duration(output_path)
+        # Write, convert, (upload|encode) per-utterance
+        outputs = []
+        for i, wav_data in enumerate(wavs):
+            base_name = f"output_{i}" if len(wavs) > 1 else "output"
+            wav_path = work_dir / f"{base_name}.wav"
+            sf.write(str(wav_path), wav_data, sr)
+
+            if output_format == "mp3":
+                out_path = work_dir / f"{base_name}.mp3"
+                if not wav_to_mp3(wav_path, out_path):
+                    return {"error": f"Failed to convert WAV to MP3 (index {i})"}
+                content_type = "audio/mpeg"
+            else:
+                out_path = wav_path
+                content_type = "audio/wav"
+
+            duration = get_audio_duration(out_path)
+            item = {"duration_seconds": round(duration, 2)}
+
+            if r2_config:
+                url, r2_key = upload_to_r2(out_path, f"{job_id}_{i}", r2_config, content_type)
+                if not url:
+                    return {"error": f"Failed to upload to R2 (index {i})"}
+                item["audio_url"] = url
+                item["r2_key"] = r2_key
+            else:
+                item["audio_base64"] = encode_file_base64(out_path)
+
+            outputs.append(item)
+
         elapsed = time.time() - start_time
-
-        log(f"Output: {output_path.name} ({output_path.stat().st_size // 1024}KB, {duration:.1f}s)")
+        log(f"Generated {len(outputs)} output(s) in {elapsed:.1f}s")
 
         result = {
             "success": True,
-            "duration_seconds": round(duration, 2),
             "mode": mode,
             "processing_time_seconds": round(elapsed, 2),
+            "outputs": outputs,
         }
-
-        # Upload to R2 if configured
-        if r2_config:
-            url, r2_key = upload_to_r2(output_path, job_id, r2_config, content_type)
-            if url:
-                result["audio_url"] = url
-                result["r2_key"] = r2_key
-            else:
-                return {"error": "Failed to upload to R2"}
-        else:
-            result["audio_base64"] = encode_file_base64(output_path)
-            log("Warning: Returning audio as base64 (consider using R2)")
+        # Legacy single-output compat: surface first output's fields at top level
+        # for non-batch calls. Batch callers should use `outputs`.
+        if not is_batch and outputs:
+            for k in ("audio_url", "r2_key", "audio_base64", "duration_seconds"):
+                if k in outputs[0]:
+                    result[k] = outputs[0][k]
 
         return result
 
@@ -394,9 +507,8 @@ def handler(job: dict) -> dict:
 
 # RunPod serverless entry point
 if __name__ == "__main__":
-    log("Starting RunPod Qwen3-TTS handler...")
+    log("Starting RunPod Qwen3-TTS handler (v2: voice_design + batch)...")
 
-    # Check CUDA
     try:
         import torch
         if torch.cuda.is_available():

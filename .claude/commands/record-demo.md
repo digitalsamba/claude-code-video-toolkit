@@ -76,7 +76,7 @@ Before gathering configuration, check if we're in a project context:
    **For Interactive Mode:**
    Run the interactive recording script:
    ```bash
-   cd /Users/conalmullan/work/video/playwright
+   cd REPO_ROOT/playwright
    npx tsx scripts/record-interactive.ts \
      --url "USER_URL" \
      --name "USER_NAME" \
@@ -106,9 +106,9 @@ Before gathering configuration, check if we're in a project context:
 
 ## Script Locations
 
-- Interactive script: `/Users/conalmullan/work/video/playwright/scripts/record-interactive.ts`
-- Flow templates: `/Users/conalmullan/work/video/playwright/scripts/flows/`
-- Output (default): `/Users/conalmullan/work/video/playwright/output/`
+- Interactive script: `playwright/scripts/record-interactive.ts`
+- Flow templates: `playwright/scripts/flows/`
+- Output (default): `playwright/output/`
 
 ## Viewport Presets
 

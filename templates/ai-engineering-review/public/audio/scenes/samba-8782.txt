@@ -1,0 +1,1 @@
+Keymeeting reported custom attendee roles missing their Q&A input box. We patched twenty roles — and the same broken pattern on Netucate, before they ran into it.

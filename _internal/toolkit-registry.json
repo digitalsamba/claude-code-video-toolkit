@@ -1,6 +1,6 @@
 {
   "name": "claude-code-video-toolkit",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "description": "AI-native video production workspace for Claude Code",
   "repository": "https://github.com/digitalsamba/claude-code-video-toolkit",
   "skills": {
@@ -75,7 +75,14 @@
       "description": "AI video generation — prompting guide, parameters, video production use cases (b-roll, animated slides, portraits)",
       "status": "beta",
       "created": "2026-03-25",
-      "updated": "2026-03-25"
+      "updated": "2026-04-08"
+    },
+    "moviepy": {
+      "path": ".claude/skills/moviepy/",
+      "description": "Python video composition with moviepy 2.x — overlaying text on LTX-2/SadTalker output, single-file build.py video projects",
+      "status": "beta",
+      "created": "2026-04-08",
+      "updated": "2026-04-08"
     }
   },
   "commands": {
@@ -571,14 +578,17 @@
           "fast"
         ],
         "steps": "15 (fast) to 30+ (standard)",
-        "seed": true
+        "seed": true,
+        "loras": [
+          "crt-terminal"
+        ]
       },
       "envVars": [
         "MODAL_LTX2_ENDPOINT_URL"
       ],
       "estimatedCost": "$0.20-0.25 per 5s clip",
       "created": "2026-03-25",
-      "updated": "2026-03-25"
+      "updated": "2026-04-21"
     },
     "chain_video": {
       "path": "tools/chain_video.py",

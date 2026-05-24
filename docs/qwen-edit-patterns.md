@@ -153,8 +153,8 @@ python tools/test_qwen_edit.py --image photo.jpg --prompt "description" --seed 4
 
 ## Files Created
 
-```
-/Users/conalmullan/work/video/
+```text
+<toolkit-root>/
 ├── conor_bond.png
 ├── conor_neo.png
 ├── conor_wick.png

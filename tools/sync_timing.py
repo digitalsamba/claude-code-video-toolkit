@@ -25,6 +25,7 @@ Usage:
     # JSON output for scripting
     python3 tools/sync_timing.py --json
 """
+from __future__ import annotations
 
 import argparse
 import json

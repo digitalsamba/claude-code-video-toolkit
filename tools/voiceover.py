@@ -26,6 +26,7 @@ Usage:
     python tools/voiceover.py --provider qwen3 --tone warm --scene-dir public/audio/scenes --json
     python tools/voiceover.py --provider qwen3 --instruct "Speak warmly" --script script.txt --output out.mp3
 """
+from __future__ import annotations
 
 import argparse
 import json
@@ -342,6 +343,56 @@ def generate_single_audio_qwen3(
     )
 
 
+def generate_batch_audio_qwen3(
+    scripts: list[str],
+    output_paths: list[Path],
+    speaker: str = "Ryan",
+    language: str = "Auto",
+    ref_audio: str | None = None,
+    ref_text: str | None = None,
+    temperature: float | None = None,
+    top_p: float | None = None,
+    cloud: str = "runpod",
+    timeout_per_scene: int = 120,
+) -> list[dict]:
+    """Generate multiple audio files in a single Qwen3-TTS call.
+
+    For clone mode: the voice_clone_prompt is extracted ONCE from the
+    reference and reused across all scripts — the Qwen-recommended pattern
+    for consistent voice across long-form narration.
+
+    Returns a list of result dicts matching the input order.
+    """
+    from qwen3_tts import generate_audio
+
+    for p in output_paths:
+        p.parent.mkdir(parents=True, exist_ok=True)
+
+    result = generate_audio(
+        text=scripts,
+        output_path=[str(p) for p in output_paths],
+        speaker=speaker,
+        language=language,
+        ref_audio=ref_audio,
+        ref_text=ref_text,
+        verbose=False,
+        temperature=temperature,
+        top_p=top_p,
+        cloud=cloud,
+        timeout=timeout_per_scene,
+    )
+
+    if not result.get("success"):
+        # Propagate error as one failure per scene so the caller can report cleanly
+        err = result.get("error", "batch generation failed")
+        return [{"success": False, "error": err, "output": str(p)} for p in output_paths]
+
+    return [
+        {"success": True, **item}
+        for item in result.get("outputs", [])
+    ]
+
+
 def process_scene_directory(
     scene_dir: Path,
     dry_run: bool = False,
@@ -373,10 +424,8 @@ def process_scene_directory(
         print(f"Error: No .txt files found in {scene_dir}", file=sys.stderr)
         sys.exit(1)
 
-    results = []
-    total_duration = 0.0
-    total_chars = 0
-
+    # First pass: collect scenes + their per-scene instruct overrides
+    scenes = []
     for txt_file in txt_files:
         mp3_file = txt_file.with_suffix(".mp3")
         script = txt_file.read_text().strip()
@@ -385,7 +434,6 @@ def process_scene_directory(
             print(f"Warning: Empty script in {txt_file.name}, skipping", file=sys.stderr)
             continue
 
-        # Parse per-scene instruct frontmatter: [tone: X] or [instruct: X]
         scene_instruct = instruct
         if provider == "qwen3":
             import re
@@ -398,62 +446,117 @@ def process_scene_directory(
                     scene_instruct = resolve_tone(value, "")
                 else:
                     scene_instruct = value
-                # Strip the frontmatter line from the script
                 script = script.split("\n", 1)[1].strip() if "\n" in script else ""
 
-        total_chars += len(script)
+        scenes.append({
+            "txt_file": txt_file,
+            "mp3_file": mp3_file,
+            "script": script,
+            "instruct": scene_instruct,
+        })
 
-        if dry_run:
+    results = []
+    total_duration = 0.0
+    total_chars = sum(len(s["script"]) for s in scenes)
+
+    # Dry run path — no generation
+    if dry_run:
+        for s in scenes:
             scene_result = {
                 "dry_run": True,
-                "script": str(txt_file),
-                "output": str(mp3_file),
-                "script_chars": len(script),
+                "script": str(s["txt_file"]),
+                "output": str(s["mp3_file"]),
+                "script_chars": len(s["script"]),
             }
-            if provider == "qwen3" and scene_instruct:
-                scene_result["instruct"] = scene_instruct
+            if provider == "qwen3" and s["instruct"]:
+                scene_result["instruct"] = s["instruct"]
             results.append(scene_result)
             if not json_output:
-                tone_note = f" [instruct: {scene_instruct}]" if scene_instruct != instruct else ""
-                print(f"  {txt_file.name} → {mp3_file.name} ({len(script)} chars){tone_note}")
+                tone_note = f" [instruct: {s['instruct']}]" if s["instruct"] != instruct else ""
+                print(f"  {s['txt_file'].name} → {s['mp3_file'].name} ({len(s['script'])} chars){tone_note}")
+        return results, total_duration, total_chars
+
+    # Decide batch vs serial for qwen3:
+    #   - Clone mode: batch-safe (instruct is ignored by handler → all scenes share prompt)
+    #   - Custom_voice: only batchable if all scenes share the same instruct
+    can_batch_qwen3 = (
+        provider == "qwen3"
+        and len(scenes) > 1
+        and (
+            ref_audio is not None  # clone — instruct ignored, always batchable
+            or all(s["instruct"] == scenes[0]["instruct"] for s in scenes)
+        )
+    )
+
+    if can_batch_qwen3:
+        if not json_output:
+            mode_label = "clone (shared prompt)" if ref_audio else "custom_voice (shared instruct)"
+            print(f"Batching {len(scenes)} scenes in one Qwen3 call — mode: {mode_label}", file=sys.stderr)
+
+        batch_results = generate_batch_audio_qwen3(
+            scripts=[s["script"] for s in scenes],
+            output_paths=[s["mp3_file"] for s in scenes],
+            speaker=speaker,
+            language=language,
+            ref_audio=ref_audio,
+            ref_text=ref_text,
+            temperature=temperature,
+            top_p=top_p,
+            cloud=cloud,
+        )
+
+        for s, r in zip(scenes, batch_results):
+            r["script"] = str(s["txt_file"])
+            results.append(r)
+            if r.get("duration_seconds"):
+                total_duration += r["duration_seconds"]
+            if not json_output:
+                if r.get("success"):
+                    dur = f" ({r.get('duration_seconds', '?')}s)"
+                    print(f"  {s['mp3_file'].name}{dur}", file=sys.stderr)
+                else:
+                    print(f"  {s['mp3_file'].name}  [FAILED: {r.get('error')}]", file=sys.stderr)
+        return results, total_duration, total_chars
+
+    # Fallback: serial per-scene generation
+    for s in scenes:
+        if not json_output:
+            print(f"Generating {s['mp3_file'].name}...", file=sys.stderr)
+
+        if provider == "qwen3":
+            result = generate_single_audio_qwen3(
+                script=s["script"],
+                output_path=s["mp3_file"],
+                speaker=speaker,
+                language=language,
+                instruct=s["instruct"],
+                ref_audio=ref_audio,
+                ref_text=ref_text,
+                temperature=temperature,
+                top_p=top_p,
+                cloud=cloud,
+            )
         else:
-            if not json_output:
-                print(f"Generating {mp3_file.name}...", file=sys.stderr)
+            result = generate_single_audio(
+                client=client,
+                script=s["script"],
+                output_path=s["mp3_file"],
+                voice_id=voice_id,
+                model=model,
+                stability=stability,
+                similarity=similarity,
+                style=style,
+                speed=speed,
+            )
+        result["script"] = str(s["txt_file"])
+        results.append(result)
 
-            if provider == "qwen3":
-                result = generate_single_audio_qwen3(
-                    script=script,
-                    output_path=mp3_file,
-                    speaker=speaker,
-                    language=language,
-                    instruct=scene_instruct,
-                    ref_audio=ref_audio,
-                    ref_text=ref_text,
-                    temperature=temperature,
-                    top_p=top_p,
-                    cloud=cloud,
-                )
-            else:
-                result = generate_single_audio(
-                    client=client,
-                    script=script,
-                    output_path=mp3_file,
-                    voice_id=voice_id,
-                    model=model,
-                    stability=stability,
-                    similarity=similarity,
-                    style=style,
-                    speed=speed,
-                )
-            result["script"] = str(txt_file)
-            results.append(result)
+        if result.get("duration_seconds"):
+            total_duration += result["duration_seconds"]
 
-            if result.get("duration_seconds"):
-                total_duration += result["duration_seconds"]
-
-            if not json_output:
-                duration_str = f" ({result.get('duration_seconds', '?')}s)"
-                print(f"  {mp3_file.name}{duration_str}", file=sys.stderr)
+        if not json_output:
+            duration_str = f" ({result.get('duration_seconds', '?')}s)"
+            print(f"  {s['mp3_file'].name}{duration_str}", file=sys.stderr)
 
     return results, total_duration, total_chars
 
@@ -535,16 +638,59 @@ def main():
 
         if provider == "qwen3":
             qwen3_cfg = voice_config.get("qwen3", {})
-            # Apply clone config if no explicit --ref-audio
             clone_cfg = qwen3_cfg.get("clone", {})
             if clone_cfg and not args.ref_audio:
                 brand_dir = get_brand_dir(args.brand)
-                ref_audio_path = brand_dir / clone_cfg["refAudio"]
-                if ref_audio_path.exists():
-                    args.ref_audio = str(ref_audio_path)
-                    args.ref_text = clone_cfg.get("refText", "")
-                else:
-                    print(f"Warning: Clone ref audio not found: {ref_audio_path}", file=sys.stderr)
+
+                if "design" in clone_cfg:
+                    # VoiceDesign mode — design a character voice from a brief,
+                    # cache it, and use that cached wav as the clone reference.
+                    design = clone_cfg["design"]
+                    if "seedText" not in design or "instruct" not in design:
+                        print("Error: clone.design requires both 'seedText' and 'instruct'", file=sys.stderr)
+                        sys.exit(1)
+
+                    cached_rel = design.get("cachedRef", "assets/voice-design-ref.wav")
+                    cached_path = brand_dir / cached_rel
+
+                    if not cached_path.exists():
+                        print(
+                            f"Designing brand voice for '{args.brand}' (first use)...\n"
+                            f"  Instruct: {design['instruct'][:80]}...",
+                            file=sys.stderr,
+                        )
+                        cached_path.parent.mkdir(parents=True, exist_ok=True)
+
+                        from qwen3_tts import generate_audio as _qwen3_generate
+                        design_result = _qwen3_generate(
+                            text=design["seedText"],
+                            output_path=str(cached_path),
+                            design_instruct=design["instruct"],
+                            language=(design.get("language") or "English"),
+                            output_format="wav",
+                            verbose=True,
+                            cloud=args.cloud,
+                        )
+                        if not design_result.get("success"):
+                            print(
+                                f"Error: voice design failed: {design_result.get('error')}",
+                                file=sys.stderr,
+                            )
+                            sys.exit(1)
+                        print(f"  Cached designed voice at {cached_path}", file=sys.stderr)
+
+                    args.ref_audio = str(cached_path)
+                    args.ref_text = design["seedText"]
+
+                elif "refAudio" in clone_cfg:
+                    # Legacy: user-recorded reference audio
+                    ref_audio_path = brand_dir / clone_cfg["refAudio"]
+                    if ref_audio_path.exists():
+                        args.ref_audio = str(ref_audio_path)
+                        args.ref_text = clone_cfg.get("refText", "")
+                    else:
+                        print(f"Warning: Clone ref audio not found: {ref_audio_path}", file=sys.stderr)
+
             # Apply speaker/language/instruct defaults from brand
             if qwen3_cfg.get("speaker") and args.speaker == "Ryan":
                 args.speaker = qwen3_cfg["speaker"]

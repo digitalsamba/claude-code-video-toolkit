@@ -28,6 +28,7 @@ Cost:
     - ~$0.27 per 3 minutes of video
     - Uses RTX 4090 ($0.00074/sec) by default
 """
+from __future__ import annotations
 
 import argparse
 import base64
