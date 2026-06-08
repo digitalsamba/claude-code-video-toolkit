@@ -90,7 +90,7 @@
       "status": "beta",
       "category": "image-generation",
       "backend": "ideogram-4 hosted v4 API (json_prompt)",
-      "note": "Skill (prompting) landed; tools/ideogram4.py pending — issue #25. Hosted paid API (commercial license, ~$0.03–0.09/img); not self-hosted. Needs IDEOGRAM_API_KEY.",
+      "note": "Skill teaches the JSON caption format; Claude is the magic-prompt expander. Tool: tools/ideogram4.py. Hosted paid API (commercial license, ~$0.03–0.09/img); not self-hosted. Needs IDEOGRAM_API_KEY.",
       "created": "2026-06-08",
       "updated": "2026-06-08"
     }
@@ -579,7 +579,7 @@
         ],
         "brand": true
       },
-      "note": "Commercial license via paid API. Skill `.claude/skills/ideogram4/` teaches the JSON caption format; Claude is the magic-prompt expander. Issue #25 — pending live test."
+      "note": "Commercial license via paid API. Skill `.claude/skills/ideogram4/` teaches the JSON caption format; Claude is the magic-prompt expander. Live-tested (json_prompt + text_prompt paths)."
     },
     "ltx2": {
       "path": "tools/ltx2.py",
