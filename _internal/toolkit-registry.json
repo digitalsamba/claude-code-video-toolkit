@@ -83,6 +83,16 @@
       "status": "beta",
       "created": "2026-04-08",
       "updated": "2026-04-08"
+    },
+    "ideogram4": {
+      "path": ".claude/skills/ideogram4/",
+      "description": "Prompting patterns for Ideogram 4 text-to-image — structured JSON captions for best-in-class in-image text, color-palette and bounding-box layout control (title cards, thumbnails, CTAs)",
+      "status": "beta",
+      "category": "image-generation",
+      "backend": "ideogram-4 hosted v4 API (json_prompt)",
+      "note": "Skill (prompting) landed; tools/ideogram4.py pending — issue #25. Hosted paid API (commercial license, ~$0.03–0.09/img); not self-hosted. Needs IDEOGRAM_API_KEY.",
+      "created": "2026-06-08",
+      "updated": "2026-06-08"
     }
   },
   "commands": {
@@ -548,6 +558,29 @@
       "created": "2026-03-14",
       "updated": "2026-03-15"
     },
+    "ideogram4": {
+      "path": "tools/ideogram4.py",
+      "description": "Ideogram 4 text-to-image via hosted v4 API — best-in-class in-image text rendering and exact color/layout control through structured JSON captions",
+      "usage": "python3 tools/ideogram4.py --json caption.json --output title.png",
+      "status": "beta",
+      "category": "image-generation",
+      "backend": "ideogram-4 hosted v4 API",
+      "requires": "IDEOGRAM_API_KEY (developer.ideogram.ai)",
+      "options": {
+        "modes": [
+          "json_prompt (--json)",
+          "text_prompt (--prompt)"
+        ],
+        "rendering_speed": [
+          "FLASH",
+          "TURBO",
+          "DEFAULT",
+          "QUALITY"
+        ],
+        "brand": true
+      },
+      "note": "Commercial license via paid API. Skill `.claude/skills/ideogram4/` teaches the JSON caption format; Claude is the magic-prompt expander. Issue #25 — pending live test."
+    },
     "ltx2": {
       "path": "tools/ltx2.py",
       "description": "AI video generation using LTX-2.3 22B - text-to-video, image-to-video clips with synchronized audio",
@@ -605,7 +638,10 @@
         ],
         "perScenePrompts": "--prompts-file scenes.json",
         "resume": "auto-skips existing clips",
-        "progress": ["json", "human"],
+        "progress": [
+          "json",
+          "human"
+        ],
         "prefix": "chain (default)"
       },
       "envVars": [

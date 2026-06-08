@@ -65,6 +65,13 @@ def get_acemusic_api_key() -> str | None:
     return os.getenv("ACEMUSIC_API_KEY")
 
 
+def get_ideogram_api_key() -> str | None:
+    """Get Ideogram (hosted v4 API) key from environment."""
+    from dotenv import load_dotenv
+    load_dotenv()
+    return os.getenv("IDEOGRAM_API_KEY")
+
+
 def get_runpod_api_key() -> str | None:
     """Get RunPod API key from environment."""
     from dotenv import load_dotenv

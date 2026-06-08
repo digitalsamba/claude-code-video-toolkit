@@ -182,6 +182,44 @@ modal deploy docker/modal-image-edit/app.py
 # See docs/modal-setup.md for full guide
 ```
 
+### AI Image Generation (FLUX.2 vs Ideogram 4)
+
+The toolkit has **two** text-to-image generators. They barely overlap — the deciding factor is
+**whether the image needs legible baked-in text**.
+
+```bash
+# FLUX.2 — text-FREE backgrounds + image editing (self-hosted, free, Apache-2.0/commercial-OK)
+python tools/flux2.py --preset title-bg --brand digital-samba   # background for Remotion text overlay
+python tools/flux2.py --prompt "Abstract tech background, no text"
+
+# Ideogram 4 — legible IN-IMAGE text + exact color/layout (hosted API, ~$0.03-0.09/img, commercial-OK)
+python3 tools/ideogram4.py --json caption.json --output title.png   # text baked into the image
+python3 tools/ideogram4.py --prompt "Thumbnail: 'SHIP FASTER' bold" --output thumb.png
+```
+
+**The key distinction — baked-in text vs. background-for-overlay:**
+
+- **FLUX.2 presets deliberately produce text-*free* backgrounds** (`title-bg`, `cta`, `thumbnail`
+  all end with "no text, no words, no letters"). The intended pattern is **FLUX background →
+  Remotion renders the text on top**, so the text stays editable, animatable per-letter, and
+  frame-accurate. This is the right default for sprint-review **title cards / lower-thirds**.
+- **Ideogram 4 bakes legible designed text *into* a flat PNG.** Pixel-perfect typography + exact
+  hex colors in one shot, but static. Reach for it when **the text *is* the design**: YouTube/social
+  thumbnails (static anyway), quote/stat cards, in-scene signage/logos, stylized text effects that
+  Remotion overlays can't easily do. It fills a real gap — FLUX and LTX-2 both garble in-image text.
+
+| Need | Use |
+|------|-----|
+| Animated/editable title text, lower-thirds, sprint-review title cards | **FLUX.2 bg + Remotion text** |
+| Atmospheric/abstract backgrounds, problem/solution illustrations, presenter backdrops | **FLUX.2** presets |
+| Finished graphic where typography is the design — thumbnails, quote cards, in-scene signage | **Ideogram 4** |
+| Edit an existing photo (clothing, reframe, style, background) | **image_edit** (neither generator edits) |
+
+Ideogram 4 chains with the processors like any generator: `ideogram4 → upscale.py` (crisp 4K),
+`ideogram4 → ltx2.py --input` (animate the still), or drop the PNG straight into Remotion `<Img>`.
+Ideogram 4 is generate-only here (no editing). See `.claude/skills/ideogram4/` for the JSON caption
+format — Claude authors the caption as the "magic prompt" expander; needs `IDEOGRAM_API_KEY` in `.env`.
+
 ### AI Image Editing
 
 ```bash
