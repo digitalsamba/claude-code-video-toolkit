@@ -133,16 +133,44 @@ Utility tools work on any video file without requiring a project structure.
 
 ### Voiceover Generation
 
+Three TTS providers share one `voiceover.py` interface (`--provider`):
+**elevenlabs** (default), **qwen3** (self-hosted, free), and **60db** (premium cloud).
+Voice settings (`--stability`, `--similarity`, `--speed`) use a **unified 0-1 scale**
+across all providers — for 60db they are auto-converted to its native 0-100 scale.
+
 ```bash
-# Per-scene generation (recommended)
+# Per-scene generation (recommended, ElevenLabs default)
 python tools/voiceover.py --scene-dir public/audio/scenes --json
 
 # Using Qwen3-TTS (self-hosted, free alternative to ElevenLabs)
 python tools/voiceover.py --provider qwen3 --tone warm --scene-dir public/audio/scenes --json
 
+# Using 60db (premium cloud TTS — needs SIXTYDB_API_KEY)
+python tools/voiceover.py --provider 60db --scene-dir public/audio/scenes --json
+python tools/voiceover.py --provider 60db --voice-id <uuid> --stability 0.6 --script SCRIPT.md --output out.mp3
+
 # Single file (legacy)
 python tools/voiceover.py --script SCRIPT.md --output out.mp3
 ```
+
+#### 60db (standalone)
+
+`tools/sixtydb_tts.py` is the dedicated 60db tool (counterpart to `qwen3_tts.py`).
+It exposes a `generate_audio()` used by `voiceover.py` and `redub.py`, plus a CLI.
+Three transports all produce a finished audio file: `synthesize` (REST, default),
+`stream` (NDJSON), and `websocket` (realtime; needs `pip install websocket-client`).
+
+```bash
+python tools/sixtydb_tts.py --text "Hello world" --output hello.mp3
+python tools/sixtydb_tts.py --text "Hello" --transport stream --output hello.mp3
+python tools/sixtydb_tts.py --list-voices          # GET /myvoices
+```
+
+Config: `SIXTYDB_API_KEY` (required), `SIXTYDB_VOICE_ID` (optional — falls back to
+60db's default voice). Brands carry a `sixtydb` block in `voice.json` (voiceId +
+settings). `redub.py --tts-provider 60db` uses 60db for the new voice while
+transcription stays on ElevenLabs Scribe (60db has no STT); in `--sync` mode the
+60db output is run back through Scribe to recover word timestamps.
 
 ### Timing Sync (after voiceover)
 

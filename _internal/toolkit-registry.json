@@ -198,14 +198,19 @@
   "tools": {
     "voiceover": {
       "path": "tools/voiceover.py",
-      "description": "Generate TTS voiceovers using ElevenLabs or Qwen3-TTS",
+      "description": "Generate TTS voiceovers using ElevenLabs, Qwen3-TTS, or 60db",
       "usage": "python tools/voiceover.py --script SCRIPT.md --output out.mp3",
+      "options": {
+        "provider": "TTS provider: elevenlabs (default), qwen3, 60db",
+        "transport": "60db API transport: synthesize (default), stream, websocket",
+        "no-enhance": "Disable 60db audio enhancement (on by default)",
+        "stability": "Voice stability 0-1 (unified scale; auto-converted to 0-100 for 60db)",
+        "similarity": "Similarity 0-1 (unified scale; auto-converted to 0-100 for 60db)",
+        "pacingQC": "results include wpm + pacing label (fast/slow/ok); --max-wpm clamps fast takes with pitch-preserving atempo (floor 0.85x)"
+      },
       "status": "stable",
       "created": "2025-12-08",
-      "updated": "2026-06-09",
-      "options": {
-        "pacingQC": "results include wpm + pacing label (fast/slow/ok); --max-wpm clamps fast takes with pitch-preserving atempo (floor 0.85x)"
-      }
+      "updated": "2026-08-13"
     },
     "music": {
       "path": "tools/music.py",
@@ -507,6 +512,44 @@
       "estimatedCost": "$0.005-0.10 per generation",
       "created": "2026-02-19",
       "updated": "2026-06-09"
+    },
+    "sixtydb_tts": {
+      "path": "tools/sixtydb_tts.py",
+      "description": "Generate speech using 60db cloud TTS - REST, streaming, and websocket transports",
+      "usage": "python tools/sixtydb_tts.py --text \"Hello\" --output hello.mp3",
+      "status": "beta",
+      "category": "audio-generation",
+      "backend": "60db",
+      "requires": "60db API key",
+      "options": {
+        "voice-id": "60db voice UUID (defaults to SIXTYDB_VOICE_ID or 60db default voice)",
+        "stability": "Voice stability 0-1 (auto-converted to 0-100)",
+        "similarity": "Similarity 0-1 (auto-converted to 0-100)",
+        "speed": "Speech speed 0.5-2.0",
+        "no-enhance": "Disable 60db audio enhancement (on by default)",
+        "output-format": "Audio format: mp3 (default), wav, ogg, flac (synthesize transport)",
+        "transport": "API transport: synthesize (default), stream, websocket",
+        "sample-rate": "Websocket sample rate: 8000, 16000, 24000 (default), 48000",
+        "list-voices": "List your 60db voices via GET /myvoices"
+      },
+      "transports": [
+        "synthesize",
+        "stream",
+        "websocket"
+      ],
+      "endpoints": {
+        "synthesize": "https://api.60db.ai/tts-synthesize",
+        "stream": "https://api.60db.ai/tts-stream",
+        "voices": "https://api.60db.ai/myvoices",
+        "websocket": "wss://api.60db.ai/ws/tts"
+      },
+      "envVars": [
+        "SIXTYDB_API_KEY",
+        "SIXTYDB_VOICE_ID"
+      ],
+      "estimatedCost": "$0.00002 per character ($0.01 minimum per request)",
+      "created": "2026-06-08",
+      "updated": "2026-06-08"
     },
     "sync_timing": {
       "path": "tools/sync_timing.py",
@@ -1114,6 +1157,7 @@
   },
   "config": {
     "voiceId": "YOUR_VOICE_ID_HERE",
+    "sixtydbVoiceId": null,
     "defaultFps": 30,
     "defaultResolution": {
       "width": 1920,

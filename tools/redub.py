@@ -54,7 +54,12 @@ from elevenlabs.client import ElevenLabs
 
 # Add parent to path for local imports
 sys.path.insert(0, str(Path(__file__).parent))
-from config import get_elevenlabs_api_key, get_voice_id
+from config import (
+    get_elevenlabs_api_key,
+    get_sixtydb_api_key,
+    get_sixtydb_voice_id,
+    get_voice_id,
+)
 
 
 def parse_args():
@@ -86,7 +91,15 @@ Examples:
         "--voice-id",
         "-v",
         type=str,
-        help="Target ElevenLabs voice ID for the new voice",
+        help="Target voice ID for the new voice (ElevenLabs or 60db, depending on --tts-provider)",
+    )
+    parser.add_argument(
+        "--tts-provider",
+        type=str,
+        default="elevenlabs",
+        choices=["elevenlabs", "60db"],
+        help="TTS engine for the new voice (default: elevenlabs). "
+             "Transcription (STT) always uses ElevenLabs Scribe.",
     )
     parser.add_argument(
         "--transcript",
@@ -278,6 +291,40 @@ def generate_tts(
     except Exception as e:
         print(f"TTS error: {e}", file=sys.stderr)
         return False
+
+
+def generate_tts_60db(
+    text: str,
+    voice_id: str,
+    output_path: str,
+    api_key: str,
+    stability: float,
+    similarity: float,
+    speed: float,
+    verbose: bool = True,
+) -> bool:
+    """Generate TTS audio using 60db (settings on the unified 0-1 scale)."""
+    if verbose:
+        print(f"Generating TTS with 60db voice {voice_id}...", file=sys.stderr)
+
+    from sixtydb_tts import generate_audio
+
+    result = generate_audio(
+        text=text,
+        output_path=output_path,
+        voice_id=voice_id,
+        stability=stability,
+        similarity=similarity,
+        speed=speed,
+        enhance=True,
+        transport="synthesize",
+        api_key=api_key,
+        verbose=verbose,
+    )
+    if not result.get("success"):
+        print(f"60db TTS error: {result.get('error')}", file=sys.stderr)
+        return False
+    return True
 
 
 def replace_audio(video_path: str, audio_path: str, output_path: str, verbose: bool = True) -> bool:
@@ -539,14 +586,34 @@ def main():
         )
         sys.exit(1)
 
-    # Get voice ID
-    voice_id = args.voice_id or get_voice_id()
-    if not voice_id:
-        print(
-            "Error: No voice ID provided. Use --voice-id or set ELEVENLABS_VOICE_ID",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    # 60db TTS target: resolve its key + voice. STT still uses ElevenLabs Scribe
+    # (the api_key above), so the ElevenLabs key remains required even here.
+    sixtydb_api_key = None
+    if args.tts_provider == "60db":
+        sixtydb_api_key = get_sixtydb_api_key()
+        if not sixtydb_api_key:
+            print(
+                "Error: --tts-provider 60db requires a 60db API key.\n"
+                "  echo \"SIXTYDB_API_KEY=sk_live_your_key\" >> .env\n"
+                "\n"
+                "Note: transcription still uses ElevenLabs Scribe, so an "
+                "ELEVENLABS_API_KEY is also required.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    # Get voice ID (resolution depends on the TTS provider)
+    if args.tts_provider == "60db":
+        from sixtydb_tts import DEFAULT_VOICE_ID as _SIXTYDB_DEFAULT_VOICE
+        voice_id = args.voice_id or get_sixtydb_voice_id() or _SIXTYDB_DEFAULT_VOICE
+    else:
+        voice_id = args.voice_id or get_voice_id()
+        if not voice_id:
+            print(
+                "Error: No voice ID provided. Use --voice-id or set ELEVENLABS_VOICE_ID",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     # Prepare output directory
     output_path = Path(args.output)
@@ -564,6 +631,7 @@ def main():
             "input": args.input,
             "output": str(output_path),
             "voice_id": voice_id,
+            "tts_provider": args.tts_provider,
             "tts_model": args.model,
             "stt_model": args.stt_model,
             "language": args.language,
@@ -639,25 +707,54 @@ def main():
                 if verbose:
                     print(f"Transcript saved to {args.save_transcript}", file=sys.stderr)
 
-            # Step 3a: Generate TTS with timestamps
-            tts_result = generate_tts_with_timestamps(
-                client,
-                transcript_text,
-                voice_id,
-                str(generated_audio),
-                args.model,
-                verbose=verbose,
-            )
-            if not tts_result:
-                print("Error: Failed to generate TTS audio", file=sys.stderr)
-                sys.exit(1)
+            # Step 3a: Generate TTS with word timestamps.
+            #   ElevenLabs: native character-timestamp endpoint.
+            #   60db: no timestamp API, so generate audio then run it back
+            #         through ElevenLabs Scribe to recover word timestamps.
+            if args.tts_provider == "60db":
+                if not generate_tts_60db(
+                    transcript_text,
+                    voice_id,
+                    str(generated_audio),
+                    sixtydb_api_key,
+                    args.stability,
+                    args.similarity,
+                    args.speed,
+                    verbose=verbose,
+                ):
+                    print("Error: Failed to generate TTS audio", file=sys.stderr)
+                    sys.exit(1)
+
+                tts_transcription = transcribe_with_timestamps(
+                    client,
+                    str(generated_audio),
+                    args.stt_model,
+                    args.language,
+                    verbose=verbose,
+                )
+                if not tts_transcription:
+                    print("Error: Failed to transcribe generated 60db audio for sync", file=sys.stderr)
+                    sys.exit(1)
+                tts_result = {"words": tts_transcription["words"]}
+            else:
+                tts_result = generate_tts_with_timestamps(
+                    client,
+                    transcript_text,
+                    voice_id,
+                    str(generated_audio),
+                    args.model,
+                    verbose=verbose,
+                )
+                if not tts_result:
+                    print("Error: Failed to generate TTS audio", file=sys.stderr)
+                    sys.exit(1)
 
             tts_words = tts_result["words"]
 
             # Use actual audio file duration (more accurate than timestamp data)
             tts_duration = get_media_duration(str(generated_audio))
             if not tts_duration:
-                tts_duration = tts_result["duration"]  # Fallback to timestamp data
+                tts_duration = tts_result.get("duration")  # Fallback to timestamp data (ElevenLabs only)
 
             if verbose:
                 print(f"TTS: {len(tts_words)} words, {tts_duration:.1f}s duration", file=sys.stderr)
@@ -726,18 +823,31 @@ def main():
                 print(f"Transcript: {len(transcript_text)} characters", file=sys.stderr)
 
             # Step 3: Generate TTS with new voice
-            if not generate_tts(
-                client,
-                transcript_text,
-                voice_id,
-                str(generated_audio),
-                args.model,
-                args.stability,
-                args.similarity,
-                args.style,
-                args.speed,
-                verbose=verbose,
-            ):
+            if args.tts_provider == "60db":
+                tts_ok = generate_tts_60db(
+                    transcript_text,
+                    voice_id,
+                    str(generated_audio),
+                    sixtydb_api_key,
+                    args.stability,
+                    args.similarity,
+                    args.speed,
+                    verbose=verbose,
+                )
+            else:
+                tts_ok = generate_tts(
+                    client,
+                    transcript_text,
+                    voice_id,
+                    str(generated_audio),
+                    args.model,
+                    args.stability,
+                    args.similarity,
+                    args.style,
+                    args.speed,
+                    verbose=verbose,
+                )
+            if not tts_ok:
                 print("Error: Failed to generate TTS audio", file=sys.stderr)
                 sys.exit(1)
 
@@ -756,6 +866,7 @@ def main():
             "input": args.input,
             "output": str(output_path),
             "voice_id": voice_id,
+            "tts_provider": args.tts_provider,
             "tts_model": args.model,
             "transcript_chars": len(transcript_text),
             "sync_mode": args.sync,

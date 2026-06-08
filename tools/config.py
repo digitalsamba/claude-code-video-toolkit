@@ -51,6 +51,30 @@ def get_elevenlabs_api_key() -> str | None:
     return os.getenv("ELEVENLABS_API_KEY")
 
 
+def get_sixtydb_api_key() -> str | None:
+    """Get 60db API key from environment."""
+    from dotenv import load_dotenv
+    load_dotenv()
+    return os.getenv("SIXTYDB_API_KEY")
+
+
+def get_sixtydb_voice_id() -> str | None:
+    """Get the 60db voice ID from env var, falling back to the registry.
+
+    Returns None if neither is set — callers fall back to the documented
+    60db default voice.
+    """
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    voice_id = os.getenv("SIXTYDB_VOICE_ID")
+    if voice_id and voice_id != "your_voice_id_here":
+        return voice_id
+
+    registry = load_registry()
+    return registry.get("config", {}).get("sixtydbVoiceId")
+
+
 def get_default_output_dir(project_path: str | None = None) -> Path:
     """Get default audio output directory for a project."""
     if project_path:
