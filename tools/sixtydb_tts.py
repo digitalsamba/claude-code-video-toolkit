@@ -7,9 +7,14 @@ This is the 60db counterpart to ElevenLabs (`voiceover.py`) and Qwen3-TTS
 `voiceover.py` (as `--provider 60db`) and `redub.py`, plus a standalone CLI.
 
 Three transports are supported (all produce a finished audio file):
-  - synthesize (default): POST /tts-synthesize  -> JSON {audio_base64}
-  - stream:               POST /tts-stream       -> NDJSON audio chunks
-  - websocket:            wss://api.60db.ai/ws/tts -> context protocol
+  - synthesize (default): POST /tts-synthesize. The live endpoint streams
+        newline-delimited JSON of raw 16-bit mono PCM, despite the docs
+        describing a single {audio_base64} object — both are handled. Audio
+        is wrapped/transcoded to --output-format via ffmpeg.
+  - stream:               POST /tts-stream (NDJSON). NOTE: returns HTTP 500
+        upstream as of testing; prefer the default synthesize transport.
+  - websocket:            wss://api.60db.ai/ws/tts (realtime context protocol;
+        not required for batch voiceover — needs `pip install websocket-client`)
 
 Voice settings use a UNIFIED 0-1 scale (same as ElevenLabs in this toolkit).
 They are converted to 60db's native 0-100 scale internally.
@@ -172,12 +177,97 @@ def _write_pcm_as_audio(pcm_bytes: bytes, sample_rate: int, output_path: str) ->
     return True
 
 
+# Standard PCM sample rates, used to snap a rate derived from byte-count/duration.
+_STANDARD_RATES = (8000, 16000, 22050, 24000, 32000, 44100, 48000)
+
+
+def _looks_like_container(b: bytes) -> str | None:
+    """Return a format name if `b` starts with a known audio-container header.
+
+    Used to tell an encoded container (mp3/wav/ogg/flac) apart from the raw
+    LINEAR16 PCM the live 60db endpoint actually returns.
+    """
+    if not b:
+        return None
+    if b[:3] == b"ID3" or (len(b) > 1 and b[0] == 0xFF and (b[1] & 0xE0) == 0xE0):
+        return "mp3"
+    if b[:4] == b"RIFF" and b[8:12] == b"WAVE":
+        return "wav"
+    if b[:4] == b"OggS":
+        return "ogg"
+    if b[:4] == b"fLaC":
+        return "flac"
+    return None
+
+
+def _derive_pcm_sample_rate(n_bytes: int, audio_sec: float | None) -> int:
+    """Derive the sample rate of 16-bit mono PCM from its size and duration.
+
+    The live endpoint does not state a rate in the audio messages, so we infer
+    it from `audio_sec` (reported in the trailing metadata) and snap to the
+    nearest standard rate. Falls back to 48000 Hz (observed default).
+    """
+    if audio_sec and audio_sec > 0:
+        raw = (n_bytes / 2) / audio_sec
+        return min(_STANDARD_RATES, key=lambda r: abs(r - raw))
+    return 48000
+
+
+def _finalize_audio(
+    data: bytes, output_path: str, output_format: str,
+    declared_rate: int | None = None, audio_sec: float | None = None,
+    verbose: bool = True,
+) -> dict:
+    """Write `data` to `output_path` in `output_format`.
+
+    `data` may be an encoded container (written/transcoded as-is) or raw
+    16-bit mono PCM (wrapped as WAV at the derived rate, then transcoded).
+    """
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    container = _looks_like_container(data)
+    if container:
+        if out.suffix.lower().lstrip(".") == container:
+            out.write_bytes(data)
+            return {"success": True}
+        # Container format differs from the requested extension — transcode.
+        tmp = tempfile.NamedTemporaryFile(suffix=f".{container}", delete=False)
+        tmp.write(data)
+        tmp.close()
+        res = subprocess.run(
+            ["ffmpeg", "-y", "-i", tmp.name, str(out)],
+            capture_output=True, text=True,
+        )
+        Path(tmp.name).unlink(missing_ok=True)
+        if res.returncode != 0:
+            return {"success": False, "error": f"ffmpeg transcode error: {res.stderr[-300:]}"}
+        return {"success": True}
+
+    # Raw PCM.
+    rate = int(declared_rate) if declared_rate else _derive_pcm_sample_rate(len(data), audio_sec)
+    if verbose:
+        print(f"  Decoded {len(data)} bytes of raw PCM @ {rate} Hz", file=sys.stderr)
+    if not _write_pcm_as_audio(data, rate, output_path):
+        return {"success": False, "error": "Failed to write/transcode PCM audio"}
+    return {"success": True}
+
+
 def _synthesize_rest(
     text: str, voice_id: str, stability: int, similarity: int,
     speed: float, enhance: bool, output_format: str, api_key: str,
     output_path: str, timeout: int, verbose: bool,
 ) -> dict:
-    """POST /tts-synthesize — single JSON response with base64 audio."""
+    """POST /tts-synthesize.
+
+    The 60db docs describe a single JSON object with `audio_base64` in the
+    requested container format. The live production endpoint instead streams
+    newline-delimited JSON (`Content-Type: application/x-ndjson`): many
+    `{"result": {"audioContent": <base64>}}` lines and a trailing
+    `{"metadata": {...}}` line, with audio as raw 16-bit mono LINEAR16 PCM
+    rather than an encoded container. Both shapes are handled defensively, and
+    the audio bytes are sniffed so this keeps working if 60db switches formats.
+    """
     body = {
         "text": text,
         "voice_id": voice_id,
@@ -196,6 +286,7 @@ def _synthesize_rest(
             },
             json=body,
             timeout=timeout,
+            stream=True,
         )
     except requests.RequestException as e:
         return {"success": False, "error": f"Request failed: {e}"}
@@ -203,30 +294,60 @@ def _synthesize_rest(
     if resp.status_code != 200:
         return {"success": False, "error": f"HTTP {resp.status_code}: {resp.text[:300]}"}
 
-    try:
-        data = resp.json()
-    except ValueError:
-        return {"success": False, "error": f"Invalid JSON response: {resp.text[:300]}"}
+    audio = bytearray()
+    metadata = None
+    for line in resp.iter_lines():
+        if not line:
+            continue
+        try:
+            msg = json.loads(line)
+        except ValueError:
+            continue  # skip non-JSON / partial line
 
-    if not data.get("success", True):
-        return {"success": False, "error": data.get("message", "Synthesis unsuccessful")}
+        # Documented single-object shape (whole body is one JSON object).
+        if "audio_base64" in msg:
+            if not msg.get("success", True):
+                return {"success": False, "error": msg.get("message", "Synthesis unsuccessful")}
+            data = base64.b64decode(msg["audio_base64"])
+            return _finalize_audio(
+                data, output_path, output_format,
+                declared_rate=msg.get("sample_rate"), verbose=verbose,
+            )
 
-    audio_b64 = data.get("audio_base64")
-    if not audio_b64:
-        return {"success": False, "error": f"No audio_base64 in response: {list(data.keys())}"}
+        if msg.get("type") == "error" or (msg.get("success") is False):
+            return {"success": False, "error": msg.get("message", "Synthesis unsuccessful")}
+        if "metadata" in msg:
+            metadata = msg["metadata"]
+            continue
+        b64 = (msg.get("result") or {}).get("audioContent")
+        if b64:
+            audio.extend(base64.b64decode(b64))
 
-    out = Path(output_path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_bytes(base64.b64decode(audio_b64))
-    return {"success": True}
+    if not audio:
+        return {"success": False, "error": "No audio received from /tts-synthesize"}
+
+    warnings = (metadata or {}).get("warnings") or []
+    if warnings and verbose:
+        print(f"  60db warnings: {warnings}", file=sys.stderr)
+
+    return _finalize_audio(
+        bytes(audio), output_path, output_format,
+        audio_sec=(metadata or {}).get("audio_sec"), verbose=verbose,
+    )
 
 
 def _synthesize_stream(
     text: str, voice_id: str, stability: int, similarity: int,
-    speed: float, enhance: bool, api_key: str,
+    speed: float, enhance: bool, output_format: str, api_key: str,
     output_path: str, timeout: int, verbose: bool,
 ) -> dict:
-    """POST /tts-stream — NDJSON chunks, each carrying a base64 audio slice."""
+    """POST /tts-stream — NDJSON chunks, each carrying a base64 audio slice.
+
+    NOTE: as of testing, the live /tts-stream endpoint returns HTTP 500. The
+    default `synthesize` transport already streams NDJSON and is the reliable
+    path; this transport is kept for when 60db restores /tts-stream. Audio is
+    collected and finalized through the same PCM-aware path as `synthesize`.
+    """
     body = {
         "text": text,
         "voice_id": voice_id,
@@ -252,9 +373,8 @@ def _synthesize_stream(
     if resp.status_code != 200:
         return {"success": False, "error": f"HTTP {resp.status_code}: {resp.text[:300]}"}
 
-    out = Path(output_path)
-    out.parent.mkdir(parents=True, exist_ok=True)
     audio = bytearray()
+    metadata = None
     chunk_count = 0
 
     for line in resp.iter_lines():
@@ -264,24 +384,27 @@ def _synthesize_stream(
             msg = json.loads(line)
         except ValueError:
             continue  # skip malformed line
-        mtype = msg.get("type")
-        if mtype == "error":
+        if msg.get("type") == "error":
             return {"success": False, "error": msg.get("message", "stream error")}
-        if mtype in ("chunk", "complete"):
-            b64 = (msg.get("result") or {}).get("audioContent")
-            if b64:
-                audio.extend(base64.b64decode(b64))
-                chunk_count += 1
-        if mtype == "complete":
+        if "metadata" in msg:
+            metadata = msg["metadata"]
+            continue
+        b64 = (msg.get("result") or {}).get("audioContent")
+        if b64:
+            audio.extend(base64.b64decode(b64))
+            chunk_count += 1
+        if msg.get("type") == "complete":
             break
 
     if not audio:
         return {"success": False, "error": "No audio received from stream"}
 
-    out.write_bytes(bytes(audio))
     if verbose:
         print(f"  Received {chunk_count} audio chunk(s)", file=sys.stderr)
-    return {"success": True}
+    return _finalize_audio(
+        bytes(audio), output_path, output_format,
+        audio_sec=(metadata or {}).get("audio_sec"), verbose=verbose,
+    )
 
 
 def _synthesize_websocket(
@@ -423,7 +546,7 @@ def generate_audio(
         )
     elif transport == "stream":
         result = _synthesize_stream(
-            text, voice_id, stab, sim, speed, enhance,
+            text, voice_id, stab, sim, speed, enhance, output_format,
             api_key, output_path, timeout, verbose,
         )
     else:  # websocket
@@ -470,7 +593,7 @@ Examples:
     parser.add_argument("--no-enhance", dest="enhance", action="store_false", help="Disable 60db audio enhancement (on by default)")
     parser.set_defaults(enhance=True)
     parser.add_argument("--output-format", type=str, default="mp3", choices=SUPPORTED_FORMATS, help="Audio format (default: mp3). REST/synthesize only.")
-    parser.add_argument("--transport", type=str, default="synthesize", choices=SUPPORTED_TRANSPORTS, help="API transport (default: synthesize)")
+    parser.add_argument("--transport", type=str, default="synthesize", choices=SUPPORTED_TRANSPORTS, help="API transport (default: synthesize; 'stream' currently 500s upstream)")
     parser.add_argument("--sample-rate", type=int, default=24000, choices=[8000, 16000, 24000, 48000], help="Sample rate for websocket transport (default: 24000)")
     parser.add_argument("--timeout", type=int, default=120, help="Request timeout in seconds (default: 120)")
     parser.add_argument("--list-voices", action="store_true", help="List your 60db voices and exit")
