@@ -124,6 +124,7 @@ This is especially critical for background commands where the working directory 
 | **Project tools** | voiceover, music, music_gen, sfx, sync_timing | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`) |
+| **Publishing** | youtube_upload | Upload a finished render to YouTube (use `/publish` for the guided workflow) |
 
 Utility tools work on any video file without requiring a project structure.
 
@@ -348,6 +349,35 @@ python tools/notebooklm_brand.py \
 
 Trims NotebookLM visuals, keeps full audio, bridges with freeze frame, adds branded outro.
 
+### Publishing to YouTube
+
+Upload a finished render to YouTube via the Data API v3. Use the `/publish` command for the
+guided workflow (it auto-fills title/description/tags from `project.json`), or call the tool directly.
+
+```bash
+# One-time login (opens a browser, caches a refresh token under _internal/.youtube/)
+python3 tools/youtube_upload.py --auth
+
+# Upload privately (the safe default)
+python3 tools/youtube_upload.py --video out/video.mp4 --title "My video" \
+    --description-file DESCRIPTION.md --tags "ai,agents,explainer" --json-out
+
+# Schedule a public go-live
+python3 tools/youtube_upload.py --video out/video.mp4 --title "My video" \
+    --publish-at 2026-06-10T09:00:00Z --thumbnail out/thumb.png --json-out
+
+# Validate everything without uploading (also reports auth readiness)
+python3 tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
+```
+
+**Setup is OAuth, not an API key** (uploads act on behalf of a channel). See
+`docs/youtube-upload.md` for the one-time Google Cloud Console walkthrough and
+`YOUTUBE_CLIENT_SECRETS_FILE` in `.env`. Key realities:
+- Default quota is 10,000 units/day; `videos.insert` costs ~1,600 units → **~6 uploads/day**.
+- **Until your OAuth app passes Google verification, uploads are force-locked to private**
+  regardless of `--privacy`, and "Testing"-mode refresh tokens expire after ~7 days.
+- Cached tokens live in `_internal/.youtube/` (gitignored — they grant channel-upload access).
+
 ## Video Production Workflow
 
 1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing)
@@ -360,6 +390,7 @@ Trims NotebookLM visuals, keeps full audio, bridges with freeze frame, adds bran
 8. **Preview** - `npm run studio` in project directory
 9. **Iterate** - Adjust timing, content, styling with Claude Code
 10. **Render** - `npm run render` for final MP4
+11. **Publish** - Run `/publish` to upload the render to YouTube (metadata auto-filled from `project.json`)
 
 ## Project Lifecycle
 

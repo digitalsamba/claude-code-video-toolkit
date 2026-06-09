@@ -72,6 +72,34 @@ def get_ideogram_api_key() -> str | None:
     return os.getenv("IDEOGRAM_API_KEY")
 
 
+def get_youtube_client_secrets_file() -> str | None:
+    """Path to the OAuth 2.0 'Desktop app' client_secret JSON used for YouTube uploads.
+
+    Returns None if unset or still the placeholder. YouTube uploads use OAuth (acting
+    on behalf of a channel), not an API key — see docs/youtube-upload.md.
+    """
+    from dotenv import load_dotenv
+    load_dotenv()
+    path = os.getenv("YOUTUBE_CLIENT_SECRETS_FILE")
+    if path and path != "/absolute/path/to/client_secret.json":
+        return path
+    return None
+
+
+def get_youtube_token_dir() -> Path:
+    """Directory holding per-account cached OAuth tokens for YouTube.
+
+    Override via YOUTUBE_TOKEN_DIR. Default: <workspace>/_internal/.youtube/
+    (must be gitignored — refresh tokens are long-lived secrets).
+    """
+    from dotenv import load_dotenv
+    load_dotenv()
+    override = os.getenv("YOUTUBE_TOKEN_DIR")
+    if override:
+        return Path(override)
+    return find_workspace_root() / "_internal" / ".youtube"
+
+
 def get_runpod_api_key() -> str | None:
     """Get RunPod API key from environment."""
     from dotenv import load_dotenv

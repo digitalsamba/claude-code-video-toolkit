@@ -5,6 +5,9 @@
 *.pem
 *.key
 
+# YouTube OAuth token cache (cached refresh tokens — long-lived channel-upload secrets)
+_internal/.youtube/
+
 # Python
 .venv/
 venv/
