@@ -154,6 +154,7 @@ Pre-built video structures in `templates/`:
 - **sprint-review** — Sprint review videos with demos, stats, and voiceover
 - **sprint-review-v2** — Composable scene-based sprint review with modular architecture
 - **product-demo** — Marketing videos with dark tech aesthetic, stats, CTA
+- **concept-explainer-short** — 9:16 vertical TikTok/Reels/Shorts explainers (Python/moviepy, no Remotion)
 
 See `examples/` for finished projects you can learn from (oldest first, showing toolkit evolution):
 
@@ -167,6 +168,8 @@ See `examples/` for finished projects you can learn from (oldest first, showing 
 | 2026-03-15 | [the-space-between](https://demos.digitalsamba.com/video/the-space-between.mp4) | AI-generated video essay — flux2 avatar, Qwen3-TTS voice, SadTalker animation |
 | 2026-04-08 | [q2-townhall-longarm-ad](https://demos.digitalsamba.com/video/q2-townhall-longarm-ad.mp4) | Super Bowl-style launch ad with dramatic Qwen3-TTS announcer and LTX-2 animated Lugh cameo |
 | 2026-04-08 | [q2-townhall-stars](https://demos.digitalsamba.com/video/q2-townhall-stars.mp4) | GitHub star history time-lapse with animated chart and deadpan-to-excited commentary |
+| 2026-06-09 | [hallucinations-short](https://demos.digitalsamba.com/video/hallucinations_short.mp4) | 3:41 vertical explainer on AI hallucinations — Ideogram 4 cards, LTX-2 b-roll, burned karaoke captions, Qwen3-TTS voice *clone* (reference sample from [Pixabay](https://pixabay.com/sound-effects/search/voice%20overs/)) |
+| 2026-06-09 | [sky-blue-short](https://demos.digitalsamba.com/video/short-blue-sky.mp4) | 52s "Why is the sky blue?" — concept-explainer-short template showcase (`examples/sky-blue-short`), stock Qwen3-TTS voice |
 
 ### Scene Transitions
 
