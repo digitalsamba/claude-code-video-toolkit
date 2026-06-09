@@ -857,6 +857,14 @@
       "status": "stable",
       "created": "2025-12-09",
       "updated": "2025-12-10"
+    },
+    "concept-explainer-short": {
+      "path": "templates/concept-explainer-short/",
+      "description": "9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts) — Python/moviepy build driven by scenes.json: cloned TTS with pacing QC, Ideogram cards, LTX b-roll, burned karaoke captions",
+      "stack": "python-moviepy",
+      "status": "beta",
+      "created": "2026-06-09",
+      "updated": "2026-06-09"
     }
   },
   "transitions": {

@@ -13,3 +13,7 @@ Pillow>=10.0
 # short-form ad spots, lower thirds, and data-driven scenes
 moviepy>=2.0
 matplotlib>=3.7
+
+# Optional — burned karaoke captions in templates/concept-explainer-short
+# (word-level timing; heavy install, pulls in torch). Uncomment to enable:
+# openai-whisper
