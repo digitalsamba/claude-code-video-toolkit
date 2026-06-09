@@ -153,6 +153,7 @@ def generate_audio(
     top_p: float | None = None,
     cloud: str = "modal",
     progress=None,
+    max_wpm: float | None = None,
 ) -> dict:
     """Generate audio using Qwen3-TTS via cloud GPU.
 
@@ -165,8 +166,14 @@ def generate_audio(
     matching list. The handler reuses a single voice_clone_prompt across
     all utterances for consistent voice (proper Qwen3-TTS pattern).
 
+    Pacing QC: every result includes `wpm` (words per minute) and a `pacing`
+    label ('fast'/'slow'/'ok'/None). If `max_wpm` is set, takes that exceed
+    it are slowed in place with pitch-preserving ffmpeg atempo (floor 0.85x)
+    — cloned voices inherit pace from their reference and resist temperature,
+    so deterministic correction beats regenerating. See tools/pacing.py.
+
     Returns dict with:
-      single call: {success, output, duration_seconds, duration_frames_30fps}
+      single call: {success, output, duration_seconds, duration_frames_30fps, wpm, pacing}
       batch call:  {success, outputs: [{output, duration_seconds, ...}, ...]}
     """
     start_time = time.time()
@@ -334,12 +341,42 @@ def generate_audio(
             return {"success": False, "error": f"No audio in output[{i}]: {list(item.keys())}"}
 
         duration = get_audio_duration(dest_path)
-        downloaded_items.append({
+        item_result = {
             "output": dest_path,
             "duration_seconds": round(duration, 2) if duration else None,
             "duration_frames_30fps": int(duration * 30) if duration else None,
             "script_chars": len(texts[i]),
-        })
+        }
+
+        # Pacing QC (voice_design seed sentences are auditions, not narration)
+        if mode != "voice_design":
+            from pacing import clamp_pace, pace_label
+            if max_wpm:
+                clamp = clamp_pace(dest_path, texts[i], max_wpm, verbose=verbose)
+                if clamp.get("applied"):
+                    new_dur = clamp["duration_seconds"]
+                    item_result["duration_seconds"] = new_dur
+                    item_result["duration_frames_30fps"] = (
+                        int(new_dur * 30) if new_dur else None
+                    )
+                    item_result["pace_adjusted"] = {
+                        "original_wpm": clamp["original_wpm"],
+                        "atempo": clamp["atempo"],
+                    }
+                elif clamp.get("error") and verbose:
+                    print(f"  Pace clamp skipped: {clamp['error']}", file=sys.stderr)
+            wpm, label = pace_label(texts[i], item_result["duration_seconds"])
+            item_result["wpm"] = wpm
+            item_result["pacing"] = label
+            if verbose and label in ("fast", "slow"):
+                print(
+                    f"  Pacing warning: {Path(dest_path).name} is {wpm:.0f} wpm "
+                    f"({label}; comfortable narration is 140-160). "
+                    "Consider --max-wpm to auto-correct.",
+                    file=sys.stderr,
+                )
+
+        downloaded_items.append(item_result)
 
     # Cleanup R2 objects
     for key in r2_keys_to_cleanup:
@@ -354,10 +391,7 @@ def generate_audio(
     else:
         return {
             "success": True,
-            "output": downloaded_items[0]["output"],
-            "duration_seconds": downloaded_items[0]["duration_seconds"],
-            "duration_frames_30fps": downloaded_items[0]["duration_frames_30fps"],
-            "script_chars": downloaded_items[0]["script_chars"],
+            **downloaded_items[0],
             "mode": mode,
         }
 
@@ -937,6 +971,14 @@ Examples:
 
     # Cloud GPU options
     parser.add_argument(
+        "--max-wpm",
+        type=float,
+        default=None,
+        help="Pace clamp: if the take exceeds this words-per-minute, slow it "
+             "with pitch-preserving atempo (floor 0.85x). Try 165. Cloned "
+             "voices inherit pace from the reference and resist temperature.",
+    )
+    parser.add_argument(
         "--cloud",
         type=str,
         default="modal",
@@ -1101,6 +1143,7 @@ def main():
         top_p=args.top_p,
         cloud=args.cloud,
         progress=reporter,
+        max_wpm=args.max_wpm,
     )
 
     if not result.get("success"):
@@ -1116,7 +1159,8 @@ def main():
         duration = result.get("duration_seconds", 0)
         print(f"Generated: {result['output']}")
         if duration:
-            print(f"  Duration: {duration:.1f}s ({int(duration * 30)} frames @ 30fps)")
+            wpm_note = f", {result['wpm']:.0f} wpm" if result.get("wpm") else ""
+            print(f"  Duration: {duration:.1f}s ({int(duration * 30)} frames @ 30fps{wpm_note})")
 
 
 if __name__ == "__main__":

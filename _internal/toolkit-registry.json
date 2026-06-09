@@ -195,7 +195,10 @@
       "usage": "python tools/voiceover.py --script SCRIPT.md --output out.mp3",
       "status": "stable",
       "created": "2025-12-08",
-      "updated": "2026-02-19"
+      "updated": "2026-06-09",
+      "options": {
+        "pacingQC": "results include wpm + pacing label (fast/slow/ok); --max-wpm clamps fast takes with pitch-preserving atempo (floor 0.85x)"
+      }
     },
     "music": {
       "path": "tools/music.py",
@@ -487,7 +490,8 @@
         "formats": [
           "mp3",
           "wav"
-        ]
+        ],
+        "pacingQC": "results include wpm + pacing label (fast/slow/ok); --max-wpm clamps fast takes with pitch-preserving atempo (floor 0.85x)"
       },
       "envVars": [
         "RUNPOD_API_KEY",
@@ -495,7 +499,7 @@
       ],
       "estimatedCost": "$0.005-0.10 per generation",
       "created": "2026-02-19",
-      "updated": "2026-02-19"
+      "updated": "2026-06-09"
     },
     "sync_timing": {
       "path": "tools/sync_timing.py",
