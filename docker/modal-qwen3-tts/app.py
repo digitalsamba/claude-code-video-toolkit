@@ -231,19 +231,22 @@ class Qwen3TTS:
                 speaker = request.get("speaker", "Ryan")
                 instruct = request.get("instruct", "")
 
-                cv_kwargs = {
-                    "text": texts if len(texts) > 1 else texts[0],
-                    "language": languages if len(texts) > 1 else languages[0],
-                    "speaker": speaker,
-                }
-                if instruct:
-                    cv_kwargs["instruct"] = instruct
-                cv_kwargs.update(gen_kwargs)
-
-                wavs, sr = self.custom_voice_model.generate_custom_voice(**cv_kwargs)
-                if len(texts) == 1 and not isinstance(wavs, list):
-                    wavs = [wavs]
-                wavs = list(wavs)
+                # Batching via text=[...] hits the same qwen-tts tensor-aliasing
+                # bug as clone mode ("written-to tensor refers to a single
+                # memory location") — iterate one text at a time instead.
+                print(f"Generating {len(texts)} utterance(s) with speaker {speaker}...")
+                wavs = []
+                sr = None
+                for i, (t, lang) in enumerate(zip(texts, languages)):
+                    cv_kwargs = {"text": t, "language": lang, "speaker": speaker}
+                    if instruct:
+                        cv_kwargs["instruct"] = instruct
+                    cv_kwargs.update(gen_kwargs)
+                    single_wavs, single_sr = self.custom_voice_model.generate_custom_voice(**cv_kwargs)
+                    wav = single_wavs[0] if isinstance(single_wavs, list) else single_wavs
+                    wavs.append(wav)
+                    sr = single_sr
+                    print(f"  [{i + 1}/{len(texts)}] generated")
 
             # --- Encode, upload (or base64), per utterance ---
             outputs = []

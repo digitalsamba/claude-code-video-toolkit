@@ -1,0 +1,75 @@
+{
+  "high_level_description": "A vertical dark-blue science diagram poster showing white sunlight splitting into wavelengths, with short blue waves scattering in all directions off air molecules while a long red wave passes straight through, headlined SHORT WAVES SCATTER MOST, with clear space in the bottom fifth of the frame.",
+  "style_description": {
+    "aesthetics": "clean, diagrammatic, modern science explainer, elegant",
+    "lighting": "flat even lighting with a soft blue glow around the scattering molecules",
+    "medium": "flat vector graphic design, clean geometric",
+    "art_style": "minimalist physics infographic poster, generous negative space",
+    "color_palette": [
+      "#0A1428",
+      "#4DA8FF",
+      "#FFB347",
+      "#FF6B5E",
+      "#FFFFFF"
+    ]
+  },
+  "compositional_deconstruction": {
+    "background": "Deep navy-blue night-sky gradient background, slightly lighter toward the center, with faint tiny dots suggesting air molecules.",
+    "elements": [
+      {
+        "type": "text",
+        "bbox": [
+          100,
+          80,
+          200,
+          920
+        ],
+        "text": "SHORT WAVES SCATTER MOST",
+        "desc": "Bold condensed sans-serif headline across two lines, all caps, white, centered at the top.",
+        "color_palette": [
+          "#FFFFFF"
+        ]
+      },
+      {
+        "type": "obj",
+        "bbox": [
+          260,
+          100,
+          420,
+          900
+        ],
+        "desc": "A wide beam of white sunlight entering from the upper left, drawn as a soft glowing white ray that splits into a small spectrum fan.",
+        "color_palette": [
+          "#FFFFFF",
+          "#FFB347"
+        ]
+      },
+      {
+        "type": "obj",
+        "bbox": [
+          430,
+          120,
+          700,
+          880
+        ],
+        "desc": "A cluster of small glowing spheres representing air molecules, with short tightly-rippled blue waves bouncing off them in many directions, drawn as zigzag blue arrows radiating outward.",
+        "color_palette": [
+          "#4DA8FF"
+        ]
+      },
+      {
+        "type": "obj",
+        "bbox": [
+          720,
+          100,
+          830,
+          900
+        ],
+        "desc": "A single long lazily-curved red wave passing straight through from left to right, unbothered, drawn as a smooth long-wavelength sine line with an arrowhead.",
+        "color_palette": [
+          "#FF6B5E"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "high_level_description": "A vertical end-card with a twilight sky gradient from deep navy to warm gold at the horizon, the words ONE CONCEPT EVERY WEEK in elegant type, and a sky-blue FOLLOW button.",
+  "style_description": {
+    "aesthetics": "calm, premium, cinematic, hopeful finale",
+    "lighting": "soft twilight glow rising from the bottom edge, stars fading in toward the top",
+    "medium": "flat vector graphic design, clean geometric",
+    "art_style": "channel end-card poster, generous negative space",
+    "color_palette": ["#0A1428", "#4DA8FF", "#FFB347", "#FFFFFF"]
+  },
+  "compositional_deconstruction": {
+    "background": "Vertical twilight gradient: deep navy with faint stars at the top blending into a warm golden glow at the bottom horizon, a few thin dark cloud silhouettes.",
+    "elements": [
+      { "type": "obj", "bbox": [220, 400, 340, 600], "desc": "A minimal line-art icon of a small sun half-hidden behind a cloud, drawn in thin gold and white strokes, centered above the headline.", "color_palette": ["#FFB347", "#FFFFFF"] },
+      { "type": "text", "bbox": [400, 100, 490, 900], "text": "ONE CONCEPT", "desc": "Wide bold sans-serif, all caps, letterspaced, crisp white, centered.", "color_palette": ["#FFFFFF"] },
+      { "type": "text", "bbox": [510, 150, 590, 850], "text": "EVERY WEEK", "desc": "Wide bold sans-serif, all caps, letterspaced, warm gold, centered directly below the first line.", "color_palette": ["#FFB347"] },
+      { "type": "text", "bbox": [680, 300, 780, 700], "text": "FOLLOW", "desc": "Bold sans-serif capitals in deep navy, centered inside a rounded rectangular sky-blue button with a soft glow.", "color_palette": ["#0A1428", "#4DA8FF"] }
+    ]
+  }
+}
