@@ -61,7 +61,7 @@ python3 tools/youtube_upload.py \
   --category 28 \
   --json-out
 
-# Schedule a public go-live (effective only once the app is verified — see Gotchas)
+# Schedule a public go-live (works for first-party uploads — see Gotchas re: the audit)
 python3 tools/youtube_upload.py --video out/video.mp4 --title "My video" \
   --publish-at 2026-06-10T09:00:00Z --thumbnail out/thumb.png
 
@@ -121,10 +121,15 @@ Compare `requestedPrivacy` vs `privacyStatus` to detect the unverified-app force
 
 ## Gotchas
 
-- **Unverified-app private lock.** Until your OAuth app passes Google verification, YouTube
-  force-sets every uploaded video to `private` regardless of `--privacy`/`--publish-at`. The
-  tool warns and reports the *actual* returned privacy. Workaround until verified: upload as
-  private and publish manually in YouTube Studio.
+- **Unaudited-project private lock (often a non-issue for first-party uploads).** Google's
+  docs say videos uploaded via `videos.insert` from unaudited API projects (created after
+  2020-07-28) are restricted to `private`. In practice this targets *third-party* apps
+  uploading to *other people's* channels — when the Cloud project owner, the channel, and the
+  authenticated account are all **you** (a first-party upload), it generally isn't enforced and
+  public/scheduled uploads go live fine (verified empirically on this toolkit). If it does bite
+  (e.g. uploading to a different channel via `--account`), lift it by completing the **YouTube
+  API compliance audit** (publish the app to production, then submit the audit form). Either way
+  the tool reports the *actual* returned privacy — treat that as the source of truth.
 - **7-day refresh-token expiry in "Testing".** Consent screens left in Testing mode expire
   refresh tokens after ~7 days. If an unattended run fails with `errorType: "auth"`, just re-run
   `python3 tools/youtube_upload.py --auth`. Publishing the consent screen removes this (but

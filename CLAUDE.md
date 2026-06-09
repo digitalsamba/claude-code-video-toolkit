@@ -374,8 +374,10 @@ python3 tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run -
 `docs/youtube-upload.md` for the one-time Google Cloud Console walkthrough and
 `YOUTUBE_CLIENT_SECRETS_FILE` in `.env`. Key realities:
 - Default quota is 10,000 units/day; `videos.insert` costs ~1,600 units → **~6 uploads/day**.
-- **Until your OAuth app passes Google verification, uploads are force-locked to private**
-  regardless of `--privacy`, and "Testing"-mode refresh tokens expire after ~7 days.
+- **Unaudited API projects *may* have public uploads force-locked to private** — but this
+  mainly affects uploads to *other* people's channels. First-party uploads (your own project +
+  channel + account) generally publish public/scheduled fine without the audit. The tool reports
+  the actual returned privacy. "Testing"-mode refresh tokens expire after ~7 days (re-run `--auth`).
 - Cached tokens live in `_internal/.youtube/` (gitignored — they grant channel-upload access).
 
 ## Video Production Workflow

@@ -41,11 +41,15 @@ Examples:
 #   Hitting quota returns HTTP 403 'quotaExceeded' (NOT retriable). Request more
 #   via the Google Cloud quota form if you need volume.
 #
-#   UNVERIFIED OAUTH APP LOCK: until the OAuth app passes Google verification,
-#   every uploaded video is force-set to PRIVATE regardless of the requested
-#   privacyStatus, and cannot be made public via the API. 'Testing'-mode consent
-#   screens additionally expire refresh tokens after ~7 days. This tool warns at
-#   runtime and reports the *actual* returned privacyStatus, not just the request.
+#   UNAUDITED-PROJECT PRIVATE LOCK: Google's docs state that videos uploaded via
+#   videos.insert from unaudited API projects (created after 2020-07-28) are
+#   restricted to private. In practice this targets THIRD-PARTY apps uploading to
+#   OTHER users' channels — first-party uploads (your own Cloud project + your own
+#   channel + your own account) generally are NOT affected and go public fine
+#   (verified empirically). If it does bite, lift it via the YouTube API compliance
+#   audit. 'Testing'-mode consent screens also expire refresh tokens after ~7 days.
+#   This tool always reports the *actual* returned privacyStatus (the source of
+#   truth), not just what was requested.
 # ---------------------------------------------------------------------------
 """
 from __future__ import annotations
@@ -575,11 +579,13 @@ def main():
             })
         sys.exit(0)
 
-    # --- Warn about the unverified-app private lock ------------------------------
+    # --- Note the possible unaudited-project private lock ------------------------
     if args.privacy == "public" or args.publish_at:
         log(
-            "Requested public/scheduled visibility. Unverified OAuth apps force uploads "
-            "to PRIVATE regardless; the video stays private until your app is Google-verified.",
+            "Requested public/scheduled visibility. Unaudited API projects MAY have public "
+            "uploads force-locked to private (mainly affects uploads to OTHER users' channels; "
+            "first-party uploads to your own channel usually go public). Check the actual "
+            "privacy reported below.",
             "warn",
         )
 
@@ -622,8 +628,9 @@ def main():
     if args.privacy != "private" or args.publish_at:
         if actual_privacy == "private" and (args.publish_at or args.privacy == "public"):
             log(
-                "YouTube returned privacy=private despite the request — this is the "
-                "unverified-app lock. Verify your OAuth app to enable public/scheduled.",
+                "YouTube returned privacy=private despite the request — likely the "
+                "unaudited-project lock. For your own channel this usually doesn't apply; "
+                "otherwise lift it via the YouTube API compliance audit.",
                 "warn",
             )
 
