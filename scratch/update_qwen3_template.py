@@ -2,10 +2,10 @@
 """One-shot: update the RunPod Qwen3-TTS template to a new image tag.
 
 Usage:
-    python3 scratch/update_qwen3_template.py <new-image-ref>
+    uv run scratch/update_qwen3_template.py <new-image-ref>
 
 Example:
-    python3 scratch/update_qwen3_template.py \
+    uv run scratch/update_qwen3_template.py \
         ghcr.io/conalmullan/video-toolkit-qwen3-tts:0.2.0-voicedesign
 """
 

@@ -7,23 +7,23 @@ Supports text-to-video and image-to-video with joint audio generation.
 
 Examples:
   # Text-to-video
-  python tools/ltx2.py --prompt "A cat playing with yarn in a sunlit room"
+  uv run tools/ltx2.py --prompt "A cat playing with yarn in a sunlit room"
 
   # Higher resolution
-  python tools/ltx2.py --prompt "Ocean waves at sunset" --width 1024 --height 576
+  uv run tools/ltx2.py --prompt "Ocean waves at sunset" --width 1024 --height 576
 
   # Image-to-video (animate a still image)
-  python tools/ltx2.py --prompt "Camera slowly pans right" --input photo.jpg
+  uv run tools/ltx2.py --prompt "Camera slowly pans right" --input photo.jpg
 
   # Fast mode (fewer steps, lower quality)
-  python tools/ltx2.py --prompt "A rocket launch" --quality fast
+  uv run tools/ltx2.py --prompt "A rocket launch" --quality fast
 
   # Custom parameters
-  python tools/ltx2.py --prompt "A timelapse of flowers blooming" \\
+  uv run tools/ltx2.py --prompt "A timelapse of flowers blooming" \\
       --num-frames 161 --fps 24 --steps 40 --seed 42
 
   # Output to specific file
-  python tools/ltx2.py --prompt "A dog running on the beach" --output dog_beach.mp4
+  uv run tools/ltx2.py --prompt "A dog running on the beach" --output dog_beach.mp4
 """
 
 import argparse
@@ -36,7 +36,7 @@ try:
     from dotenv import load_dotenv
 except ImportError as e:
     print(f"Missing dependency: {e}")
-    print("Install with: pip install python-dotenv")
+    print("Install with: uv sync")
     sys.exit(1)
 
 load_dotenv()

@@ -169,5 +169,5 @@ Run `/voice-clone` for a guided workflow that:
 Once saved, use `--brand` to load it automatically:
 
 ```bash
-python tools/voiceover.py --provider qwen3 --brand my-company --scene-dir public/audio/scenes --json
+uv run tools/voiceover.py --provider qwen3 --brand my-company --scene-dir public/audio/scenes --json
 ```

@@ -18,14 +18,14 @@ Pipeline:
 
 Usage:
     # Basic usage with logo and URL
-    python tools/notebooklm_brand.py \\
+    uv run tools/notebooklm_brand.py \\
         --input video_synced.mp4 \\
         --logo assets/logo.png \\
         --url "mysite.com" \\
         --output video_final.mp4
 
     # Specify trim point manually (seconds from start where NotebookLM outro begins)
-    python tools/notebooklm_brand.py \\
+    uv run tools/notebooklm_brand.py \\
         --input video_synced.mp4 \\
         --logo assets/logo.png \\
         --url "mysite.com" \\
@@ -33,13 +33,13 @@ Usage:
         --output video_final.mp4
 
     # Use existing outro card image
-    python tools/notebooklm_brand.py \\
+    uv run tools/notebooklm_brand.py \\
         --input video_synced.mp4 \\
         --outro-card assets/outro_card.png \\
         --output video_final.mp4
 
     # Custom outro duration and freeze duration
-    python tools/notebooklm_brand.py \\
+    uv run tools/notebooklm_brand.py \\
         --input video_synced.mp4 \\
         --logo assets/logo.png \\
         --url "mysite.com" \\

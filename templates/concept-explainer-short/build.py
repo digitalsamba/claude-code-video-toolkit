@@ -13,7 +13,7 @@ Captions (captions/words_*.json, from gen_captions.py) are burned as karaoke
 pills sized/positioned via config.json. VO + ducked looped music are mixed if
 present. Run from this project directory:
 
-    python3 build.py
+    uv run build.py
 """
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ try:
     from moviepy.audio.fx.MultiplyVolume import MultiplyVolume
 except ImportError as e:
     print(f"Missing dependency: {e}")
-    print("    python3 -m pip install -r tools/requirements.txt   (from toolkit root)")
+    print("    uv sync   (from toolkit root)")
     sys.exit(1)
 
 HERE = Path(__file__).resolve().parent

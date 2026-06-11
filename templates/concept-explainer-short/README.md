@@ -25,14 +25,14 @@ cp -r templates/concept-explainer-short projects/my-short
 cd projects/my-short
 
 # 0. Renders immediately — placeholder cards, estimated timing, silent
-python3 build.py
+uv run build.py
 
 # 1. Write your scenes (see scenes.json for the example)
 # 2. Generate visuals (from the TOOLKIT ROOT — see "Visuals" below)
 # 3. Voiceover → captions → final render (from the project dir)
-python3 gen_vo.py
-python3 gen_captions.py        # needs: pip install openai-whisper
-python3 build.py
+uv run gen_vo.py
+uv run gen_captions.py        # needs: uv sync --extra whisper
+uv run build.py
 ```
 
 ## scenes.json
@@ -68,15 +68,15 @@ Generate from the **toolkit root**, save into the project's `images/` and
 
 ```bash
 # Text-bearing cards (Ideogram 4, JSON captions; 9:16 = --resolution 1440x2560)
-python3 tools/ideogram4.py --json caption.json --resolution 1440x2560 \
+uv run tools/ideogram4.py --json caption.json --resolution 1440x2560 \
     --output projects/my-short/images/02_scattering.png
 
 # Motion b-roll (LTX-2; 576x1024 scales exactly to 1080x1920)
-python3 tools/ltx2.py --width 576 --height 1024 --num-frames 161 \
+uv run tools/ltx2.py --width 576 --height 1024 --num-frames 161 \
     --prompt "..." --output projects/my-short/clips/01_hook.mp4
 
 # Optional music bed (looped + ducked automatically if present)
-python3 tools/music_gen.py --prompt "..." --duration 120 \
+uv run tools/music_gen.py --prompt "..." --duration 120 \
     --output projects/my-short/audio/music.mp3
 ```
 

@@ -4,10 +4,10 @@ Generate background music using ElevenLabs Music API.
 
 Usage:
     # Generate background music
-    python tools/music.py --prompt "Upbeat tech corporate" --duration 120 --output music.mp3
+    uv run tools/music.py --prompt "Upbeat tech corporate" --duration 120 --output music.mp3
 
     # JSON output for machine parsing
-    python tools/music.py --prompt "Calm ambient" --duration 60 --output bg.mp3 --json
+    uv run tools/music.py --prompt "Calm ambient" --duration 60 --output bg.mp3 --json
 """
 from __future__ import annotations
 
@@ -31,8 +31,8 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python tools/music.py --prompt "Subtle corporate tech" --duration 150 --output public/audio/bg-music.mp3
-  python tools/music.py --prompt "Upbeat indie rock" --duration 60 --output music.mp3 --json
+  uv run tools/music.py --prompt "Subtle corporate tech" --duration 150 --output public/audio/bg-music.mp3
+  uv run tools/music.py --prompt "Upbeat indie rock" --duration 60 --output music.mp3 --json
 
 Prompt tips:
   Include genre, mood, instruments, tempo, and use case.

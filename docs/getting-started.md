@@ -12,7 +12,7 @@ This guide will help you create your first video using the claude-code-video-too
 
 | Provider | Cost | Setup |
 |----------|------|-------|
-| Qwen3-TTS | Free (self-hosted) | RunPod account + `python tools/qwen3_tts.py --setup` |
+| Qwen3-TTS | Free (self-hosted) | RunPod account + `uv run tools/qwen3_tts.py --setup` |
 | ElevenLabs | Pay-per-use | API key in `.env` |
 
 ### Optional: Full Toolkit
@@ -43,11 +43,19 @@ No API keys needed. Edit `src/config/sprint-config.ts` to customize content.
    cd claude-code-video-toolkit
    ```
 
-2. **Install Python dependencies**
+2. **Install Python dependencies with [uv](https://docs.astral.sh/uv/)**
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   pip install -r tools/requirements.txt
+   # Install uv if you don't have it:
+   #   macOS/Linux:  curl -LsSf https://astral.sh/uv/install.sh | sh
+   #   Windows:      powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+   uv sync
+   ```
+   This creates `.venv/` and installs every locked dependency in one step — no manual
+   virtualenv or pip required. Run any Python tool through the environment with
+   `uv run tools/<tool>.py` (no activation needed). Optional extras:
+   ```bash
+   uv sync --extra whisper   # burned karaoke captions (heavy, pulls in torch)
+   uv sync --extra modal     # Modal CLI for self-hosted cloud GPU
    ```
 
 3. **Start Claude Code and run the setup wizard**
@@ -66,7 +74,7 @@ No API keys needed. Edit `src/config/sprint-config.ts` to customize content.
 If you use Codex instead of Claude Code, install the toolkit's Codex-compatible wrappers and regenerate `AGENTS.md` from `CLAUDE.md`:
 
 ```bash
-python3 scripts/migrate_to_codex.py --force
+uv run scripts/migrate_to_codex.py --force
 ```
 
 This installs toolkit skills into `~/.codex/skills` and appends or updates a generated Codex block in the repository root `AGENTS.md`.
@@ -82,12 +90,12 @@ Important:
 1. The script manages only a generated block inside the repository root `AGENTS.md`.
 2. Manual `AGENTS.md` content outside that block is preserved.
 3. The generated block is derived from `CLAUDE.md`.
-4. Re-run `python3 scripts/migrate_to_codex.py --force` after updating `CLAUDE.md`.
+4. Re-run `uv run scripts/migrate_to_codex.py --force` after updating `CLAUDE.md`.
 
 To remove the installed toolkit skills later:
 
 ```bash
-python3 scripts/migrate_to_codex.py --reset
+uv run scripts/migrate_to_codex.py --reset
 ```
 
 `--reset` removes the generated Codex block from `AGENTS.md`, but does not remove the rest of the file.

@@ -10,11 +10,11 @@ Curated showcase projects demonstrating toolkit capabilities.
 | quick-spot | moviepy + PIL | — | 15s ad-style spot with audio-anchored timeline. Runs with zero external assets. | Beginner |
 | data-viz-chart | moviepy + matplotlib | — | Animated time-series chart with deterministic title and source attribution. Runs with included data file. | Beginner |
 | ds-crt-stinger | LTX-2 + moviepy + PIL | — | 6s brand stinger — LTX-2 CRT LoRA footage + post-processed grunged logo | Intermediate |
-| sky-blue-short | concept-explainer-short (moviepy) | — | 52s vertical 9:16 explainer short — Qwen3 VO + Ideogram cards + LTX b-roll + burned captions. All assets committed; re-renders with `python3 build.py`. | Intermediate |
+| sky-blue-short | concept-explainer-short (moviepy) | — | 52s vertical 9:16 explainer short — Qwen3 VO + Ideogram cards + LTX b-roll + burned captions. All assets committed; re-renders with `uv run build.py`. | Intermediate |
 | digital-samba-skill-demo | Remotion product-demo | [Digital Samba](https://digitalsamba.com) | Marketing video for Claude Code skill | Intermediate |
 | sprint-review-cho-oyu | Remotion sprint-review | [Digital Samba](https://digitalsamba.com) | iOS sprint review for Digital Samba Mobile | Intermediate |
 
-> **Note:** Remotion examples include configs and documentation but NOT large media files — see each example's `ASSETS-NEEDED.md` for what to create. The moviepy examples (`quick-spot`, `data-viz-chart`) are fully self-contained and run end-to-end with `python3 build.py`.
+> **Note:** Remotion examples include configs and documentation but NOT large media files — see each example's `ASSETS-NEEDED.md` for what to create. The moviepy examples (`quick-spot`, `data-viz-chart`) are fully self-contained and run end-to-end with `uv run build.py`.
 
 ## Contributors
 
@@ -41,7 +41,7 @@ npm run studio
 
 ```bash
 cd examples/quick-spot   # or examples/data-viz-chart
-python3 build.py         # produces out.mp4 in the example directory
+uv run build.py         # produces out.mp4 in the example directory
 ```
 
 These are fully self-contained references for the moviepy skill. Read the `build.py` and `README.md` in each.
@@ -52,7 +52,7 @@ Examples don't include large media files (videos, audio). To run them:
 
 1. **Record demos** - Use `/record-demo` to capture screen recordings
 2. **Generate voiceover** - Use `/generate-voiceover` with the included script
-3. **Add music** - Use `python tools/music.py` for background tracks
+3. **Add music** - Use `uv run tools/music.py` for background tracks
 
 Each example includes a `ASSETS-NEEDED.md` documenting what to create.
 

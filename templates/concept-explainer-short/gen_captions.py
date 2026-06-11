@@ -7,10 +7,10 @@ interpolating unmatched runs) so the burned captions are word-perfect even
 when whisper mishears the TTS — never burn whisper's own transcription.
 
 Requires openai-whisper (not in the toolkit's base requirements — it pulls
-in torch):    pip install openai-whisper
+in torch):    uv sync --extra whisper
 
 Run from this project directory after gen_vo.py:
-    python3 gen_captions.py
+    uv run gen_captions.py
 Writes captions/words_{id}.json — chunks with start/end seconds relative to
 each scene's audio file. Captions are optional: build.py renders without them.
 """
@@ -28,7 +28,7 @@ try:
     import whisper
 except ImportError:
     sys.exit("openai-whisper is required for captions:\n"
-             "    pip install openai-whisper\n"
+             "    uv sync --extra whisper\n"
              "(or set captions.enabled=false in config.json and skip this step)")
 
 
@@ -109,7 +109,7 @@ def main() -> None:
         out.write_text(json.dumps(chunks, indent=1))
         print(f"  {out.name}: {len(chunks)} chunks")
 
-    print("Next: python3 build.py")
+    print("Next: uv run build.py")
 
 
 if __name__ == "__main__":

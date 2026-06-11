@@ -334,12 +334,12 @@ Use `/record-demo` command or Playwright scripts
 
 ### Voiceover
 ```bash
-python tools/voiceover.py --script VOICEOVER-SCRIPT.md --output public/audio/voiceover.mp3
+uv run tools/voiceover.py --script VOICEOVER-SCRIPT.md --output public/audio/voiceover.mp3
 ```
 
 ### Background music
 ```bash
-python tools/music.py --prompt "subtle tech ambient" --duration 180 --output public/audio/background-music.mp3
+uv run tools/music.py --prompt "subtle tech ambient" --duration 180 --output public/audio/background-music.mp3
 ```
 ```
 

@@ -9,11 +9,11 @@ Renders out of the box with **zero external assets** — solid colour background
 ```bash
 # From the toolkit root (one-time — installs moviepy, Pillow, matplotlib
 # alongside the rest of the toolkit's optional Python deps):
-python3 -m pip install -r tools/requirements.txt
+uv sync
 
 # Then:
 cd examples/quick-spot
-python3 build.py
+uv run build.py
 ```
 
 That's it. ~15 seconds later you have `out.mp4` — a silent text-on-colour spot. Open it to verify the timing and layout look right.
@@ -40,20 +40,20 @@ See the **moviepy** skill (`.claude/skills/moviepy/SKILL.md`) for the full patte
 
 ```bash
 # 1. Generate per-scene VO from the script (uses Qwen3-TTS by default; pass --provider elevenlabs for ElevenLabs)
-python3 ../../tools/voiceover.py \
+uv run ../../tools/voiceover.py \
     --script VOICEOVER-SCRIPT.md \
     --scene-dir public/audio/scenes
 
 # 2. Optional: generate background music
-python3 ../../tools/music_gen.py \
+uv run ../../tools/music_gen.py \
     --preset cta --duration 15 \
     --output public/audio/music.mp3
 
 # 3. Re-render — build.py picks up the new files automatically
-python3 build.py
+uv run build.py
 ```
 
-After the first audio render, run `python3 ../../tools/sync_timing.py --voiceover-json` against the generated audio to verify your scene-anchored timestamps still match the actual audio durations. If the audio is significantly longer/shorter than your timeline, edit the `start=` values and the comment block at the top of `build.py`.
+After the first audio render, run `uv run ../../tools/sync_timing.py --voiceover-json` against the generated audio to verify your scene-anchored timestamps still match the actual audio durations. If the audio is significantly longer/shorter than your timeline, edit the `start=` values and the comment block at the top of `build.py`.
 
 ## Adding LTX-2 b-roll
 
@@ -83,7 +83,7 @@ clips.append(
 Generate b-roll with:
 
 ```bash
-python3 ../../tools/ltx2.py \
+uv run ../../tools/ltx2.py \
     --prompt "Dark moody abstract background, blue light streaks, cinematic" \
     --num-frames 121 \
     --output public/broll/scene1.mp4

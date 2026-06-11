@@ -7,20 +7,20 @@ talking head video suitable for explainer videos, avatars, and narration.
 
 Usage:
     # Basic usage
-    python tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --output talking.mp4
+    uv run tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --output talking.mp4
 
     # With options
-    python tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --still --output talking.mp4
+    uv run tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --still --output talking.mp4
 
     # Higher resolution (512px)
-    python tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --size 512 --output talking.mp4
+    uv run tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --size 512 --output talking.mp4
 
     # Setup endpoint
-    python tools/sadtalker.py --setup
+    uv run tools/sadtalker.py --setup
 
 Setup:
     1. Create account at runpod.io
-    2. Run: python tools/sadtalker.py --setup
+    2. Run: uv run tools/sadtalker.py --setup
     3. Or manually deploy docker/runpod-sadtalker/ and add endpoint ID to .env
 
 Cost:
@@ -596,7 +596,7 @@ def setup_runpod(gpu_id: str = "AMPERE_24", verbose: bool = True) -> dict:
             print(f"Endpoint ID:  {result['endpoint_id']}")
             print()
             print("You can now run:")
-            print("  python tools/sadtalker.py --image avatar.png --audio voice.mp3 --output talking.mp4")
+            print("  uv run tools/sadtalker.py --image avatar.png --audio voice.mp3 --output talking.mp4")
             print()
 
     except Exception as e:
@@ -614,19 +614,19 @@ def parse_args():
         epilog="""
 Examples:
   # Basic usage
-  python tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --output talking.mp4
+  uv run tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --output talking.mp4
 
   # Less head movement (good for serious content)
-  python tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --still --output talking.mp4
+  uv run tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --still --output talking.mp4
 
   # Higher resolution (512px)
-  python tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --size 512 --output talking.mp4
+  uv run tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --size 512 --output talking.mp4
 
   # No face enhancement (faster)
-  python tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --no-enhance --output talking.mp4
+  uv run tools/sadtalker.py --image avatar.png --audio voiceover.mp3 --no-enhance --output talking.mp4
 
   # Setup RunPod endpoint (first-time)
-  python tools/sadtalker.py --setup
+  uv run tools/sadtalker.py --setup
         """,
     )
 

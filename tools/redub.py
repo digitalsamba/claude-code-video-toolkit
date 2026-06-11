@@ -10,22 +10,22 @@ Pipeline:
 
 Usage:
     # Basic usage - redub video with a new voice
-    python tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --output dubbed.mp4
+    uv run tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --output dubbed.mp4
 
     # Word-level sync (recommended for different pacing)
-    python tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --output dubbed.mp4 --sync
+    uv run tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --output dubbed.mp4 --sync
 
     # Save transcript for review/editing
-    python tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --output dubbed.mp4 --save-transcript transcript.txt
+    uv run tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --output dubbed.mp4 --save-transcript transcript.txt
 
     # Use existing transcript (skip STT step)
-    python tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --transcript edited.txt --output dubbed.mp4
+    uv run tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --transcript edited.txt --output dubbed.mp4
 
     # Keep intermediate files (extracted audio, new audio)
-    python tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --output dubbed.mp4 --keep-temp
+    uv run tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --output dubbed.mp4 --keep-temp
 
     # JSON output for machine parsing
-    python tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --output dubbed.mp4 --json
+    uv run tools/redub.py --input video.mp4 --voice-id NEW_VOICE_ID --output dubbed.mp4 --json
 
 Sync Mode:
     The --sync flag enables word-level time remapping. This is useful when the TTS
@@ -63,9 +63,9 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python tools/redub.py --input video.mp4 --voice-id ABC123 --output dubbed.mp4
-  python tools/redub.py --input video.mp4 --voice-id ABC123 --output dubbed.mp4 --save-transcript script.txt
-  python tools/redub.py --input video.mp4 --voice-id ABC123 --transcript edited.txt --output dubbed.mp4
+  uv run tools/redub.py --input video.mp4 --voice-id ABC123 --output dubbed.mp4
+  uv run tools/redub.py --input video.mp4 --voice-id ABC123 --output dubbed.mp4 --save-transcript script.txt
+  uv run tools/redub.py --input video.mp4 --voice-id ABC123 --transcript edited.txt --output dubbed.mp4
         """,
     )
     parser.add_argument(
@@ -534,7 +534,7 @@ def main():
             "  echo \"ELEVENLABS_API_KEY=your_key\" >> .env\n"
             "\n"
             "Alternative: Use Qwen3-TTS for free, self-hosted voice generation.\n"
-            "  python3 tools/qwen3_tts.py --setup",
+            "  uv run tools/qwen3_tts.py --setup",
             file=sys.stderr,
         )
         sys.exit(1)

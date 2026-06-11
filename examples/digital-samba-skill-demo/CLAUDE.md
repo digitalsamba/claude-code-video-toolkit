@@ -73,16 +73,14 @@ Target: 2:30 (4500 frames @ 30fps)
 
 ## Python Environment
 
-This project uses a Python virtual environment for audio generation scripts.
+Audio generation scripts run in the toolkit's uv-managed environment.
 
 ```bash
-# First time setup
-python3 -m venv .venv
-source .venv/bin/activate
-pip install python-dotenv elevenlabs
+# First time setup (from the toolkit root)
+uv sync
 
-# Subsequent runs - always activate venv first
-source .venv/bin/activate
+# Run scripts through the environment — no venv activation needed
+uv run <script>.py
 ```
 
 **Required**: Create a `.env` file with your ElevenLabs API key:

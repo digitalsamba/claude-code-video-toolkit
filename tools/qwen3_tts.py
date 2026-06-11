@@ -7,41 +7,41 @@ Cloud providers: RunPod (default), Modal.
 
 Usage:
     # Built-in speaker (RunPod, default)
-    python tools/qwen3_tts.py --text "Hello world" --speaker Ryan --output hello.mp3
+    uv run tools/qwen3_tts.py --text "Hello world" --speaker Ryan --output hello.mp3
 
     # Using Modal instead of RunPod
-    python tools/qwen3_tts.py --text "Hello world" --cloud modal --output hello.mp3
+    uv run tools/qwen3_tts.py --text "Hello world" --cloud modal --output hello.mp3
 
     # With tone preset
-    python tools/qwen3_tts.py --text "Hello world" --tone warm --output hello.mp3
+    uv run tools/qwen3_tts.py --text "Hello world" --tone warm --output hello.mp3
 
     # With custom emotion/style instruction (overrides --tone)
-    python tools/qwen3_tts.py --text "I'm so excited!" --instruct "Speak enthusiastically" --output excited.mp3
+    uv run tools/qwen3_tts.py --text "I'm so excited!" --instruct "Speak enthusiastically" --output excited.mp3
 
     # List tone presets
-    python tools/qwen3_tts.py --list-tones
+    uv run tools/qwen3_tts.py --list-tones
 
     # Voice cloning
-    python tools/qwen3_tts.py --text "Hello" --ref-audio sample.wav --ref-text "transcript" --output cloned.mp3
+    uv run tools/qwen3_tts.py --text "Hello" --ref-audio sample.wav --ref-text "transcript" --output cloned.mp3
 
     # List built-in voices
-    python tools/qwen3_tts.py --list-voices
+    uv run tools/qwen3_tts.py --list-voices
 
     # Setup endpoint (RunPod)
-    python tools/qwen3_tts.py --setup
+    uv run tools/qwen3_tts.py --setup
 
     # Setup endpoint (Modal)
-    python tools/qwen3_tts.py --setup --cloud modal
+    uv run tools/qwen3_tts.py --setup --cloud modal
 
 Setup:
     RunPod:
         1. Create account at runpod.io
-        2. Run: python tools/qwen3_tts.py --setup
+        2. Run: uv run tools/qwen3_tts.py --setup
         3. Or manually deploy docker/runpod-qwen3-tts/ and add endpoint ID to .env
 
     Modal:
-        1. pip install modal && python3 -m modal setup
-        2. Run: python tools/qwen3_tts.py --setup --cloud modal
+        1. uv sync --extra modal && uv run modal setup
+        2. Run: uv run tools/qwen3_tts.py --setup --cloud modal
         3. Or manually: modal deploy docker/modal-qwen3-tts/app.py
 """
 from __future__ import annotations
@@ -696,7 +696,7 @@ def setup_runpod(gpu_id: str = "AMPERE_24", verbose: bool = True) -> dict:
             print(f"Endpoint ID:  {result['endpoint_id']}")
             print()
             print("You can now run:")
-            print('  python tools/qwen3_tts.py --text "Hello world" --speaker Ryan --output hello.mp3')
+            print('  uv run tools/qwen3_tts.py --text "Hello world" --speaker Ryan --output hello.mp3')
             print()
 
     except Exception as e:
@@ -715,7 +715,7 @@ def setup_modal(verbose: bool = True) -> dict:
     """Set up Modal endpoint for Qwen3-TTS.
 
     Deploys the Modal app and saves the endpoint URL to .env.
-    Requires: pip install modal && python3 -m modal setup
+    Requires: uv sync --extra modal && uv run modal setup
     """
     import shutil
     import subprocess
@@ -735,8 +735,8 @@ def setup_modal(verbose: bool = True) -> dict:
     if not shutil.which("modal"):
         result["error"] = (
             "Modal CLI not found. Install with:\n"
-            "  pip install modal\n"
-            "  python3 -m modal setup"
+            "  uv sync --extra modal\n"
+            "  uv run modal setup"
         )
         if verbose:
             print(f"Error: {result['error']}", file=sys.stderr)
@@ -798,7 +798,7 @@ def setup_modal(verbose: bool = True) -> dict:
         if not endpoint_url:
             result["error"] = (
                 "Deploy succeeded but could not parse endpoint URL from output.\n"
-                "Check `modal app list` for the URL and add to .env manually:\n"
+                "Check `uv run modal app list` for the URL and add to .env manually:\n"
                 "  MODAL_QWEN3_TTS_ENDPOINT_URL=https://your-workspace--video-toolkit-qwen3-tts-qwen3tts-generate.modal.run"
             )
             if verbose:
@@ -847,7 +847,7 @@ def setup_modal(verbose: bool = True) -> dict:
             print(f"Endpoint: {endpoint_url}")
             print()
             print("You can now run:")
-            print('  python tools/qwen3_tts.py --text "Hello world" --cloud modal --output hello.mp3')
+            print('  uv run tools/qwen3_tts.py --text "Hello world" --cloud modal --output hello.mp3')
             print()
 
     except subprocess.TimeoutExpired:
@@ -869,25 +869,25 @@ def parse_args():
         epilog="""
 Examples:
   # Built-in speaker (RunPod, default)
-  python tools/qwen3_tts.py --text "Hello world" --speaker Ryan --output hello.mp3
+  uv run tools/qwen3_tts.py --text "Hello world" --speaker Ryan --output hello.mp3
 
   # Using Modal instead
-  python tools/qwen3_tts.py --text "Hello world" --cloud modal --output hello.mp3
+  uv run tools/qwen3_tts.py --text "Hello world" --cloud modal --output hello.mp3
 
   # With emotion control
-  python tools/qwen3_tts.py --text "Great news!" --instruct "Speak enthusiastically" --output excited.mp3
+  uv run tools/qwen3_tts.py --text "Great news!" --instruct "Speak enthusiastically" --output excited.mp3
 
   # Voice cloning
-  python tools/qwen3_tts.py --text "Hello" --ref-audio sample.wav --ref-text "transcript" --output cloned.mp3
+  uv run tools/qwen3_tts.py --text "Hello" --ref-audio sample.wav --ref-text "transcript" --output cloned.mp3
 
   # List voices
-  python tools/qwen3_tts.py --list-voices
+  uv run tools/qwen3_tts.py --list-voices
 
   # Setup endpoint (RunPod)
-  python tools/qwen3_tts.py --setup
+  uv run tools/qwen3_tts.py --setup
 
   # Setup endpoint (Modal)
-  python tools/qwen3_tts.py --setup --cloud modal
+  uv run tools/qwen3_tts.py --setup --cloud modal
         """,
     )
 

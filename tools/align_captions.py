@@ -16,15 +16,15 @@ one aligned against that scene's MP3.
 
 Usage:
     # Dry run — print proposed changes
-    python3 tools/align_captions.py \\
+    uv run tools/align_captions.py \\
         --config templates/ai-engineering-review/src/config/sprint-config.ts \\
         --scene-dir templates/ai-engineering-review/public/audio/scenes
 
     # Apply changes to config file (with 0.3s trailing hold per phrase)
-    python3 tools/align_captions.py --apply --tail-pad 0.3
+    uv run tools/align_captions.py --apply --tail-pad 0.3
 
     # JSON output
-    python3 tools/align_captions.py --json
+    uv run tools/align_captions.py --json
 """
 
 import argparse

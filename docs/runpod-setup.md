@@ -31,14 +31,14 @@ The fastest way to set up RunPod:
 echo "RUNPOD_API_KEY=your_key_here" >> .env
 
 # 2. Run automated setup for each tool you need
-python tools/image_edit.py --setup    # AI image editing
-python tools/upscale.py --setup       # AI upscaling
-python tools/dewatermark.py --setup   # AI watermark removal
+uv run tools/image_edit.py --setup    # AI image editing
+uv run tools/upscale.py --setup       # AI upscaling
+uv run tools/dewatermark.py --setup   # AI watermark removal
 
 # 3. Done! Now use them:
-python tools/image_edit.py --input photo.jpg --style cyberpunk
-python tools/upscale.py --input photo.jpg --output photo_4x.png --runpod
-python tools/dewatermark.py --input video.mp4 --region x,y,w,h --output out.mp4 --runpod
+uv run tools/image_edit.py --input photo.jpg --style cyberpunk
+uv run tools/upscale.py --input photo.jpg --output photo_4x.png --runpod
+uv run tools/dewatermark.py --input video.mp4 --region x,y,w,h --output out.mp4 --runpod
 ```
 
 Each `--setup` command will:
@@ -115,13 +115,13 @@ RUNPOD_ENDPOINT_ID=ghi789              # For dewatermark
 
 ```bash
 # Image editing
-python tools/image_edit.py --input photo.jpg --prompt "Add sunglasses"
+uv run tools/image_edit.py --input photo.jpg --prompt "Add sunglasses"
 
 # Upscaling
-python tools/upscale.py --input photo.jpg --output photo_4x.png --runpod
+uv run tools/upscale.py --input photo.jpg --output photo_4x.png --runpod
 
 # Dewatermark (with dry run)
-python tools/dewatermark.py \
+uv run tools/dewatermark.py \
     --input video.mp4 \
     --region 1080,660,195,40 \
     --output clean.mp4 \
@@ -187,7 +187,7 @@ RUNPOD_ENDPOINT_ID=abc123xyz
 
 Default timeout is 30 minutes. For longer videos:
 ```bash
-python tools/dewatermark.py ... --runpod --runpod-timeout 3600
+uv run tools/dewatermark.py ... --runpod --runpod-timeout 3600
 ```
 
 ### "Failed to upload video"
@@ -253,7 +253,7 @@ By default, videos are uploaded via free file hosting services (litterbox.catbox
 
 6. **Install boto3** (if not already):
    ```bash
-   pip install boto3
+   uv sync
    ```
 
 That's it! All RunPod tools will automatically use R2 for file transfer when configured.

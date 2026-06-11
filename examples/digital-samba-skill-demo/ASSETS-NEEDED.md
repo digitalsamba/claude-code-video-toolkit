@@ -38,13 +38,13 @@ Recording specs: 1920x1080, 30fps
 | File | Duration | Description | How to Create |
 |------|----------|-------------|---------------|
 | `remotion/public/audio/voiceover.mp3` | ~2:30 | Narration from VOICEOVER-SCRIPT.md | `/generate-voiceover` |
-| `remotion/public/audio/background-music.mp3` | ~3:00 | Subtle tech ambient | `python tools/music.py` |
+| `remotion/public/audio/background-music.mp3` | ~3:00 | Subtle tech ambient | `uv run tools/music.py` |
 
 ### Voiceover Generation
 
 ```bash
 cd /path/to/toolkit
-python tools/voiceover.py \
+uv run tools/voiceover.py \
   --script examples/digital-samba-skill-demo/VOICEOVER-SCRIPT.md \
   --output examples/digital-samba-skill-demo/remotion/public/audio/voiceover.mp3
 ```
@@ -52,7 +52,7 @@ python tools/voiceover.py \
 ### Background Music Generation
 
 ```bash
-python tools/music.py \
+uv run tools/music.py \
   --prompt "subtle tech ambient, modern, clean" \
   --duration 180 \
   --output examples/digital-samba-skill-demo/remotion/public/audio/background-music.mp3
