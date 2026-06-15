@@ -1,0 +1,57 @@
+{
+  "name": "GrowWithBA",
+  "description": "GrowWithBA (Bridging Associates) - digital marketing & growth agency",
+  "version": "1.0.0",
+  "website": "https://growwithba.com",
+
+  "colors": {
+    "primary": "#0D1421",
+    "primaryLight": "#1B2435",
+    "primaryDark": "#070B12",
+    "accent": "#2DD4BF",
+    "accentLight": "#5EEAD4",
+    "accentDark": "#14B8A6",
+    "textDark": "#0D1421",
+    "textMedium": "#334155",
+    "textLight": "#94A3B8",
+    "bgLight": "#FFFFFF",
+    "bgAlt": "#F1F5F9",
+    "bgDark": "#0D1421",
+    "bgOverlay": "rgba(13, 20, 33, 0.92)",
+    "divider": "#1E293B",
+    "shadow": "rgba(0, 0, 0, 0.25)"
+  },
+
+  "fonts": {
+    "primary": "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    "mono": "ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, monospace"
+  },
+
+  "spacing": {
+    "xs": 8,
+    "sm": 16,
+    "md": 24,
+    "lg": 48,
+    "xl": 80,
+    "xxl": 120
+  },
+
+  "borderRadius": {
+    "sm": 6,
+    "md": 10,
+    "lg": 16
+  },
+
+  "typography": {
+    "h1": { "size": 88, "weight": 700 },
+    "h2": { "size": 72, "weight": 700 },
+    "h3": { "size": 48, "weight": 600 },
+    "body": { "size": 44, "weight": 400 },
+    "label": { "size": 34, "weight": 600, "letterSpacing": 2 }
+  },
+
+  "assets": {
+    "logo": "assets/growwithba-logo.png",
+    "logoLight": "assets/growwithba-logo.png"
+  }
+}
