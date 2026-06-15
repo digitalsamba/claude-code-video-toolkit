@@ -1,0 +1,43 @@
+{
+  "format": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "palette": {
+    "ink": "#0A0A14",
+    "accent1": "#4DA8FF",
+    "accent2": "#FFB347",
+    "warn": "#FF4D5E",
+    "white": "#FFFFFF",
+    "slate": "#8B91A3"
+  },
+  "captions": {
+    "enabled": true,
+    "y": 1640,
+    "size": 80,
+    "maxWords": 3,
+    "maxChars": 22,
+    "fill": "#FFFFFF",
+    "whisperModel": "base"
+  },
+  "timing": {
+    "startPad": 0.3,
+    "lead": 0.4,
+    "tail": 0.8,
+    "xfade": 0.45
+  },
+  "voice": {
+    "provider": "qwen3",
+    "cloud": "modal",
+    "maxWpm": 165,
+    "refAudio": "",
+    "refText": "",
+    "speaker": "Ryan",
+    "tone": "warm"
+  },
+  "music": {
+    "file": "audio/music.mp3",
+    "volume": 0.14
+  }
+}

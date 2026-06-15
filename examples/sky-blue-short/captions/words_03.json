@@ -1,0 +1,47 @@
+[
+ {
+  "text": "At sunset the",
+  "start": 0.0,
+  "end": 1.26
+ },
+ {
+  "text": "light travels through",
+  "start": 1.26,
+  "end": 2.44
+ },
+ {
+  "text": "far more air,",
+  "start": 2.44,
+  "end": 4.86
+ },
+ {
+  "text": "the blue scatters",
+  "start": 4.86,
+  "end": 5.92
+ },
+ {
+  "text": "away before it",
+  "start": 5.92,
+  "end": 6.94
+ },
+ {
+  "text": "reaches you, and",
+  "start": 6.94,
+  "end": 8.54
+ },
+ {
+  "text": "only the reds",
+  "start": 8.54,
+  "end": 9.74
+ },
+ {
+  "text": "and oranges survive",
+  "start": 9.74,
+  "end": 10.86
+ },
+ {
+  "text": "the trip.",
+  "start": 10.86,
+  "end": 11.58
+ }
+]

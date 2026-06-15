@@ -43,6 +43,7 @@ No video projects found. Let's create one!
 Which template would you like to use?
   1. Sprint Review - internal demos, release videos
   2. Product Demo - marketing, launches, features
+  3. Concept Explainer Short - vertical TikTok/Reels/Shorts explainers
 ```
 → Proceed to New Project Flow
 
@@ -160,7 +161,14 @@ Which template would you like to use?
 |----------|----------|-------------|
 | Sprint Review | Internal demos, release videos | title, overview, demo, split-demo, summary, credits |
 | Product Demo | Marketing, launches, features | title, problem, solution, demo, feature, stats, cta |
+| Concept Explainer Short | Vertical 9:16 TikTok/Reels/Shorts explainers | hook, concept cards (Ideogram), b-roll (LTX), recap, cta |
 ```
+
+> **Concept Explainer Short is Python-based** (moviepy, no Remotion/npm). Its
+> flow differs after scene planning: author `scenes.json` → generate visuals
+> (ideogram4/ltx2 from toolkit root) → `gen_vo.py` → `gen_captions.py` →
+> `build.py`. See `templates/concept-explainer-short/README.md`. Skip the
+> npm-install and brand.ts steps below; preview = open `out/short.mp4`.
 
 **Brand Selection:**
 
@@ -294,6 +302,7 @@ Help refine:
    ```bash
    cd projects/{name} && npm install
    ```
+   (Skip for concept-explainer-short — Python template, no npm.)
 
 ### Phase 5: Asset Guidance
 
@@ -361,6 +370,9 @@ cd projects/{name}
 npm run studio    # Preview in browser
 npm run render    # Final render
 ```
+
+(For concept-explainer-short use instead: `python3 gen_vo.py`,
+`python3 gen_captions.py`, `python3 build.py` — output: `out/short.mp4`.)
 
 ## Session History
 

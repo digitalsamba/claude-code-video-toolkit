@@ -1,6 +1,6 @@
 {
   "name": "claude-code-video-toolkit",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "AI-native video production workspace for Claude Code",
   "repository": "https://github.com/digitalsamba/claude-code-video-toolkit",
   "skills": {
@@ -202,7 +202,10 @@
       "usage": "python tools/voiceover.py --script SCRIPT.md --output out.mp3",
       "status": "stable",
       "created": "2025-12-08",
-      "updated": "2026-02-19"
+      "updated": "2026-06-09",
+      "options": {
+        "pacingQC": "results include wpm + pacing label (fast/slow/ok); --max-wpm clamps fast takes with pitch-preserving atempo (floor 0.85x)"
+      }
     },
     "music": {
       "path": "tools/music.py",
@@ -494,7 +497,8 @@
         "formats": [
           "mp3",
           "wav"
-        ]
+        ],
+        "pacingQC": "results include wpm + pacing label (fast/slow/ok); --max-wpm clamps fast takes with pitch-preserving atempo (floor 0.85x)"
       },
       "envVars": [
         "RUNPOD_API_KEY",
@@ -502,7 +506,7 @@
       ],
       "estimatedCost": "$0.005-0.10 per generation",
       "created": "2026-02-19",
-      "updated": "2026-02-19"
+      "updated": "2026-06-09"
     },
     "sync_timing": {
       "path": "tools/sync_timing.py",
@@ -894,6 +898,14 @@
       "status": "stable",
       "created": "2025-12-09",
       "updated": "2025-12-10"
+    },
+    "concept-explainer-short": {
+      "path": "templates/concept-explainer-short/",
+      "description": "9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts) — Python/moviepy build driven by scenes.json: cloned TTS with pacing QC, Ideogram cards, LTX b-roll, burned karaoke captions",
+      "stack": "python-moviepy",
+      "status": "beta",
+      "created": "2026-06-09",
+      "updated": "2026-06-09"
     }
   },
   "transitions": {

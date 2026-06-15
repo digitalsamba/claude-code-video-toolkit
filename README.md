@@ -4,9 +4,20 @@
   <img src="assets/banner/toolkit-banner.gif" alt="claude-code-video-toolkit — NARRATE ▸ SCORE ▸ GENERATE ▸ COMPOSE ▸ RENDER" width="960" />
 </p>
 
-[![GitHub release](https://img.shields.io/github/v/release/digitalsamba/claude-code-video-toolkit)](https://github.com/digitalsamba/claude-code-video-toolkit/releases)
+[![GitHub release](https://img.shields.io/github/v/release/digitalsamba/claude-code-video-toolkit)](https://github.com/digitalsamba/claude-code-video-toolkit/releases) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/digitalsamba/claude-code-video-toolkit?style=social)](https://github.com/digitalsamba/claude-code-video-toolkit/stargazers)
 
-An AI-native video production workspace for [Claude Code](https://claude.ai/code), with experimental bridges to other agent runtimes like [Codex](#using-with-codex). Skills, commands, templates, and tools that give your AI agent everything it needs to help you create professional videos — from concept to final render.
+Tell [Claude Code](https://claude.ai/code) what video you want — it writes the script, generates the voiceover, music, and visuals, and renders the MP4. An AI-native video production workspace: the skills, commands, templates, and tools your AI agent needs to take a video from concept to final render, on open-source models that cost cents (voiceover ~$0.01, AI video clips ~$0.23).
+
+## See What It Makes
+
+Every frame below was generated in this workspace — click to watch.
+
+| | | |
+|:--:|:--:|:--:|
+| <a href="https://demos.digitalsamba.com/video/q2-townhall-longarm-ad.mp4"><img src="assets/readme-thumbs/q2-townhall-longarm-ad.jpg" height="280" alt="Super Bowl-style launch ad"></a> | <a href="https://demos.digitalsamba.com/video/hallucinations_short.mp4"><img src="assets/readme-thumbs/hallucinations-short.jpg" height="280" alt="AI hallucinations explainer short"></a> | <a href="https://demos.digitalsamba.com/video/short-blue-sky.mp4"><img src="assets/readme-thumbs/sky-blue-short.jpg" height="280" alt="Why is the sky blue? short"></a> |
+| **Super Bowl-style launch ad**<br>LTX-2 animated cameo,<br>dramatic AI announcer | **AI hallucinations explainer**<br>9:16 short — Ideogram 4 cards,<br>cloned voice, burned captions | **"Why is the sky blue?"**<br>52s vertical short,<br>~$0.80 in generation |
+
+More in the [showcase table](#templates) below.
 
 ## Quick Start
 
@@ -25,62 +36,6 @@ Then in Claude Code:
 ```
 
 **That's it.** `/setup` walks you through everything interactively — cloud GPU provider, file transfer, voice config. `/video` creates a project from a template and guides you through the whole workflow.
-
-## Using with Codex
-
-This toolkit is built around Claude Code assets in `.claude/` and `CLAUDE.md`, but it also ships an experimental migration script for Codex — contributed by [@kimhoontae-gogo](https://github.com/kimhoontae-gogo) in [#16](https://github.com/digitalsamba/claude-code-video-toolkit/pull/16).
-
-```bash
-python3 scripts/migrate_to_codex.py --force
-```
-
-This does two things:
-
-1. Installs Codex skills into `~/.codex/skills`
-2. Appends or updates a generated Codex block in the repository root `AGENTS.md` from `CLAUDE.md`
-
-Resources created or updated by `python3 scripts/migrate_to_codex.py --force`:
-
-1. `~/.codex/skills/acestep/`
-2. `~/.codex/skills/elevenlabs/`
-3. `~/.codex/skills/ffmpeg/`
-4. `~/.codex/skills/frontend-design/`
-5. `~/.codex/skills/ltx2/`
-6. `~/.codex/skills/moviepy/`
-7. `~/.codex/skills/playwright-recording/`
-8. `~/.codex/skills/qwen-edit/`
-9. `~/.codex/skills/remotion/`
-10. `~/.codex/skills/remotion-best-practices/`
-11. `~/.codex/skills/runpod/`
-12. `~/.codex/skills/brand/`
-13. `~/.codex/skills/contribute/`
-14. `~/.codex/skills/design/`
-15. `~/.codex/skills/generate-voiceover/`
-16. `~/.codex/skills/record-demo/`
-17. `~/.codex/skills/redub/`
-18. `~/.codex/skills/scene-review/`
-19. `~/.codex/skills/setup/`
-20. `~/.codex/skills/skills/`
-21. `~/.codex/skills/template/`
-22. `~/.codex/skills/versions/`
-23. `~/.codex/skills/video/`
-24. `~/.codex/skills/video-toolkit/`
-25. `~/.codex/skills/voice-clone/`
-26. A generated Codex block inside `AGENTS.md` in the repository root
-
-Important:
-
-1. The migration script manages only a generated block inside the repository root `AGENTS.md`.
-2. Manual `AGENTS.md` content outside that block is preserved.
-3. The generated block is derived from `CLAUDE.md`, so changes to `CLAUDE.md` should be followed by `python3 scripts/migrate_to_codex.py --force`.
-
-To remove the installed Codex skills later:
-
-```bash
-python3 scripts/migrate_to_codex.py --reset
-```
-
-`--reset` removes the toolkit skills previously installed under `~/.codex/skills` and removes the generated Codex block from `AGENTS.md`. It does not delete other user skills and it does not remove the rest of `AGENTS.md`.
 
 **What's free:** The toolkit leans heavily on open-source AI models — voiceovers (Qwen3-TTS), image generation (FLUX.2), music (ACE-Step), and more. You deploy them to your own cloud GPU account and run them at cost. Cloudflare R2 has a generous free tier (10GB, zero egress), and Modal gives $30/month free compute on the Starter plan — more than enough for a few 5-minute videos a month.
 
@@ -122,10 +77,13 @@ Claude Code has deep knowledge in:
 | **playwright-recording** | Browser automation — record demos as video |
 | **frontend-design** | Visual design refinement for distinctive, production-grade aesthetics |
 | **qwen-edit** | AI image editing — prompting patterns and best practices |
+| **ideogram4** | AI image generation with best-in-class in-image text — title cards, thumbnails, exact brand colors |
 | **acestep** | AI music generation — prompts, lyrics, scene presets, video integration |
 | **ltx2** | AI video generation — text-to-video, image-to-video clips, prompting guide |
 | **moviepy** | Python video composition — overlay text on LTX-2/SadTalker output, build.py-style projects |
 | **runpod** | Cloud GPU — setup, Docker images, endpoint management, costs |
+
+> The always-current catalog of skills, commands, tools, and templates lives in [`_internal/toolkit-registry.json`](_internal/toolkit-registry.json).
 
 ### Commands
 
@@ -154,19 +112,22 @@ Pre-built video structures in `templates/`:
 - **sprint-review** — Sprint review videos with demos, stats, and voiceover
 - **sprint-review-v2** — Composable scene-based sprint review with modular architecture
 - **product-demo** — Marketing videos with dark tech aesthetic, stats, CTA
+- **concept-explainer-short** — 9:16 vertical TikTok/Reels/Shorts explainers (Python/moviepy, no Remotion)
 
-See `examples/` for finished projects you can learn from (oldest first, showing toolkit evolution):
+See `examples/` for finished projects you can learn from (newest first — scroll down to watch the toolkit evolve in reverse):
 
 | Date | Demo | Description |
 |------|------|-------------|
-| 2025-12-05 | [sprint-review-cho-oyu](https://demos.digitalsamba.com/sprint-review-cho-oyu.mp4) | iOS sprint review with demos |
-| 2025-12-10 | [digital-samba-skill-demo](https://demos.digitalsamba.com/video/digital-samba-skill-demo.mp4) | Product demo showcasing Claude Code skill |
-| 2026-01-22 | [ds-remote-mcp](https://demos.digitalsamba.com/video/ds-remote-mcp.mp4) | Remote MCP server demo *(the jazz background music is a joke)* |
-| 2026-01-25 | [schlumbergera](https://demos.digitalsamba.com/video/schlumbergera.mp4) | Android sprint review video |
-| 2026-02-23 | [cortina](https://demos.digitalsamba.com/video/sprint-review.mp4) | Mobile platforms sprint review |
-| 2026-03-15 | [the-space-between](https://demos.digitalsamba.com/video/the-space-between.mp4) | AI-generated video essay — flux2 avatar, Qwen3-TTS voice, SadTalker animation |
-| 2026-04-08 | [q2-townhall-longarm-ad](https://demos.digitalsamba.com/video/q2-townhall-longarm-ad.mp4) | Super Bowl-style launch ad with dramatic Qwen3-TTS announcer and LTX-2 animated Lugh cameo |
+| 2026-06-09 | [hallucinations-short](https://demos.digitalsamba.com/video/hallucinations_short.mp4) | 3:41 vertical explainer on AI hallucinations — Ideogram 4 cards, LTX-2 b-roll, burned karaoke captions, Qwen3-TTS voice *clone* (reference sample from [Pixabay](https://pixabay.com/sound-effects/search/voice%20overs/)) |
+| 2026-06-09 | [sky-blue-short](https://demos.digitalsamba.com/video/short-blue-sky.mp4) | 52s "Why is the sky blue?" — concept-explainer-short template showcase (`examples/sky-blue-short`), stock Qwen3-TTS voice |
 | 2026-04-08 | [q2-townhall-stars](https://demos.digitalsamba.com/video/q2-townhall-stars.mp4) | GitHub star history time-lapse with animated chart and deadpan-to-excited commentary |
+| 2026-04-08 | [q2-townhall-longarm-ad](https://demos.digitalsamba.com/video/q2-townhall-longarm-ad.mp4) | Super Bowl-style launch ad with dramatic Qwen3-TTS announcer and LTX-2 animated Lugh cameo |
+| 2026-03-15 | [the-space-between](https://demos.digitalsamba.com/video/the-space-between.mp4) | AI-generated video essay — flux2 avatar, Qwen3-TTS voice, SadTalker animation |
+| 2026-02-23 | [cortina](https://demos.digitalsamba.com/video/sprint-review.mp4) | Mobile platforms sprint review |
+| 2026-01-25 | [schlumbergera](https://demos.digitalsamba.com/video/schlumbergera.mp4) | Android sprint review video |
+| 2026-01-22 | [ds-remote-mcp](https://demos.digitalsamba.com/video/ds-remote-mcp.mp4) | Remote MCP server demo *(the jazz background music is a joke)* |
+| 2025-12-10 | [digital-samba-skill-demo](https://demos.digitalsamba.com/video/digital-samba-skill-demo.mp4) | Product demo showcasing Claude Code skill |
+| 2025-12-05 | [sprint-review-cho-oyu](https://demos.digitalsamba.com/sprint-review-cho-oyu.mp4) | iOS sprint review with demos |
 
 ### Scene Transitions
 
@@ -229,6 +190,27 @@ See [lib/project/README.md](lib/project/README.md) for schema details, scene sta
 Audio, video, and image tools in `tools/`:
 
 ```bash
+# AI voiceover — ElevenLabs or self-hosted Qwen3-TTS (9 voices + cloning)
+python tools/voiceover.py --provider qwen3 --speaker Ryan --scene-dir public/audio/scenes --json
+
+# AI music (ACE-Step — free cloud API)
+python tools/music_gen.py --preset corporate-bg --duration 120 --output music.mp3
+
+# AI image generation (FLUX.2) and editing (Qwen-Image-Edit)
+python tools/flux2.py --preset title-bg --brand digital-samba --cloud modal
+python tools/image_edit.py --input photo.jpg --prompt "Add sunglasses" --cloud modal
+
+# AI video generation (LTX-2.3 — text-to-video, image-to-video)
+python tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
+
+# Talking head from a portrait + audio (SadTalker)
+python tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4 --cloud modal
+```
+
+<details>
+<summary><strong>All tools</strong> — sound effects, redub, upscaling, watermark removal, NotebookLM rebranding, in-image text…</summary>
+
+```bash
 # Generate voiceover (ElevenLabs)
 python tools/voiceover.py --script script.md --output voiceover.mp3
 
@@ -281,6 +263,8 @@ python tools/flux2.py --list-presets
 python tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
 python tools/ltx2.py --prompt "Gentle camera drift" --input photo.jpg --cloud modal
 ```
+</details>
+
 
 **Tool Categories:**
 
@@ -361,6 +345,16 @@ claude-code-video-toolkit/
 8. **Preview** — `npm run studio` for live preview
 9. **Iterate** — Work with Claude Code to adjust timing, styling, content
 10. **Render** — `npm run render` for final MP4
+
+## Using with Codex
+
+The toolkit is built for Claude Code, but an experimental migration script installs its skills and workflows for [Codex](https://openai.com/codex/) and generates an `AGENTS.md` block from `CLAUDE.md`:
+
+```bash
+python3 scripts/migrate_to_codex.py --force
+```
+
+See [docs/codex.md](docs/codex.md) for what it installs, how the `AGENTS.md` block is managed, and how to remove it. Contributed by [@kimhoontae-gogo](https://github.com/kimhoontae-gogo) in [#16](https://github.com/digitalsamba/claude-code-video-toolkit/pull/16).
 
 ## Contributing
 

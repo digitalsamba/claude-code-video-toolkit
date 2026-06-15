@@ -73,13 +73,16 @@ npm run render   # Export
 
 ## Templates
 
-Templates live in `templates/`. Each is a standalone Remotion project. See registry `templates` section for the full list.
+Templates live in `templates/`. Most are standalone Remotion projects; concept-explainer-short is pure Python. See registry `templates` section for the full list.
 
 ### sprint-review
 Config-driven sprint review videos with theme system, config-driven content (`sprint-config.ts`), pre-built slides (Title, Overview, Summary, Credits), demo components (single video, split-screen), and audio integration.
 
 ### product-demo
 Marketing/product demo videos with dark tech aesthetic, scene-based composition (title, problem, solution, demo, stats, CTA), animated background, Narrator PiP, browser/terminal chrome, and stats cards with spring animations.
+
+### concept-explainer-short
+9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts). **Python/moviepy, not Remotion** — the whole video derives from `scenes.json` (per-scene narration + visual asset). Pipeline: `gen_vo.py` (per-scene TTS via voiceover.py, clone or built-in, `--max-wpm` pacing clamp) → `gen_captions.py` (whisper word timing force-aligned to script text, needs `pip install openai-whisper`) → `build.py` (audio-anchored composite: Ken Burns on stills, boomerang-looped clips, burned karaoke caption pills, ducked music). Renders at every stage — placeholder cards before assets, silent before audio. Visuals follow the FLUX/Ideogram/LTX split: Ideogram cards at `1440x2560` for anything text-bearing, LTX b-roll at `576x1024` for motion.
 
 ## Brand Profiles
 
@@ -498,6 +501,12 @@ TTS engines do NOT consistently produce 150 WPM output. In practice:
 | Demo too fast for narration | Viewer can't follow | Decrease `playbackRate` or cut narration |
 | Demo too slow for narration | Waiting for demo to catch up | Increase `playbackRate` (1.5-2x typical) |
 | Pauses lost in TTS | Script felt spacious, audio feels rushed | Add explicit `<break time="1s"/>` in SSML or extend scene padding |
+| Cloned voice rushes | Scenes land >170 wpm; retakes also fast (temperature doesn't help) | Pace is inherited from the reference audio. Use `--max-wpm 165` (pitch-preserving atempo clamp, both voiceover.py and qwen3_tts.py), and record clone references as 12-25s of varied sentences *at narration pace* |
+
+**Pacing QC:** voiceover.py and qwen3_tts.py report `wpm` and a `pacing` label
+(fast/slow/ok) per generated file — check these before composition. Comfortable
+narration is 140-160 wpm; flag anything over ~170. `--max-wpm` turns the check
+into an automatic fix.
 
 ### Fixing Mismatches
 - **Voiceover too long**: Speed up demos, trim pauses, cut content

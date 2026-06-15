@@ -218,6 +218,14 @@ Examples:
 
     # Common options
     parser.add_argument(
+        "--max-wpm",
+        type=float,
+        default=None,
+        help="Pace clamp (any provider): takes exceeding this words-per-minute "
+             "are slowed with pitch-preserving atempo (floor 0.85x). Try 165. "
+             "Results always include wpm + a pacing label for QC.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Output result as JSON (for machine parsing)",
@@ -277,6 +285,7 @@ def generate_single_audio(
     similarity: float,
     style: float,
     speed: float,
+    max_wpm: float | None = None,
 ) -> dict:
     """Generate a single audio file from script text using ElevenLabs. Returns result dict."""
     _, VoiceSettings, save = _get_elevenlabs_imports()
@@ -308,7 +317,29 @@ def generate_single_audio(
         result["duration_seconds"] = round(duration, 2)
         result["duration_frames_30fps"] = int(duration * 30)
 
+    _apply_pacing_qc(result, script, max_wpm)
     return result
+
+
+def _apply_pacing_qc(result: dict, script: str, max_wpm: float | None) -> None:
+    """Add wpm/pacing fields to a result; clamp pace in place if max_wpm set."""
+    from pacing import clamp_pace, pace_label
+
+    if not result.get("success") or not result.get("output"):
+        return
+    if max_wpm:
+        clamp = clamp_pace(result["output"], script, max_wpm, verbose=False)
+        if clamp.get("applied"):
+            new_dur = clamp["duration_seconds"]
+            result["duration_seconds"] = new_dur
+            result["duration_frames_30fps"] = int(new_dur * 30) if new_dur else None
+            result["pace_adjusted"] = {
+                "original_wpm": clamp["original_wpm"],
+                "atempo": clamp["atempo"],
+            }
+    wpm, label = pace_label(script, result.get("duration_seconds"))
+    result["wpm"] = wpm
+    result["pacing"] = label
 
 
 def generate_single_audio_qwen3(
@@ -322,6 +353,7 @@ def generate_single_audio_qwen3(
     temperature: float | None = None,
     top_p: float | None = None,
     cloud: str = "runpod",
+    max_wpm: float | None = None,
 ) -> dict:
     """Generate a single audio file from script text using Qwen3-TTS. Returns result dict."""
     from qwen3_tts import generate_audio
@@ -340,6 +372,7 @@ def generate_single_audio_qwen3(
         temperature=temperature,
         top_p=top_p,
         cloud=cloud,
+        max_wpm=max_wpm,
     )
 
 
@@ -354,6 +387,7 @@ def generate_batch_audio_qwen3(
     top_p: float | None = None,
     cloud: str = "runpod",
     timeout_per_scene: int = 120,
+    max_wpm: float | None = None,
 ) -> list[dict]:
     """Generate multiple audio files in a single Qwen3-TTS call.
 
@@ -380,6 +414,7 @@ def generate_batch_audio_qwen3(
         top_p=top_p,
         cloud=cloud,
         timeout=timeout_per_scene,
+        max_wpm=max_wpm,
     )
 
     if not result.get("success"):
@@ -416,6 +451,7 @@ def process_scene_directory(
     temperature: float | None = None,
     top_p: float | None = None,
     cloud: str = "runpod",
+    max_wpm: float | None = None,
 ) -> list[dict]:
     """Process all .txt files in directory, generate .mp3 for each."""
     txt_files = sorted(scene_dir.glob("*.txt"))
@@ -503,6 +539,7 @@ def process_scene_directory(
             temperature=temperature,
             top_p=top_p,
             cloud=cloud,
+            max_wpm=max_wpm,
         )
 
         for s, r in zip(scenes, batch_results):
@@ -512,7 +549,7 @@ def process_scene_directory(
                 total_duration += r["duration_seconds"]
             if not json_output:
                 if r.get("success"):
-                    dur = f" ({r.get('duration_seconds', '?')}s)"
+                    dur = f" ({r.get('duration_seconds', '?')}s{_pace_note(r)})"
                     print(f"  {s['mp3_file'].name}{dur}", file=sys.stderr)
                 else:
                     print(f"  {s['mp3_file'].name}  [FAILED: {r.get('error')}]", file=sys.stderr)
@@ -535,6 +572,7 @@ def process_scene_directory(
                 temperature=temperature,
                 top_p=top_p,
                 cloud=cloud,
+                max_wpm=max_wpm,
             )
         else:
             result = generate_single_audio(
@@ -547,6 +585,7 @@ def process_scene_directory(
                 similarity=similarity,
                 style=style,
                 speed=speed,
+                max_wpm=max_wpm,
             )
         result["script"] = str(s["txt_file"])
         results.append(result)
@@ -555,10 +594,23 @@ def process_scene_directory(
             total_duration += result["duration_seconds"]
 
         if not json_output:
-            duration_str = f" ({result.get('duration_seconds', '?')}s)"
+            duration_str = f" ({result.get('duration_seconds', '?')}s{_pace_note(result)})"
             print(f"  {s['mp3_file'].name}{duration_str}", file=sys.stderr)
 
     return results, total_duration, total_chars
+
+
+def _pace_note(result: dict) -> str:
+    """Human-mode pacing annotation for a per-scene result line."""
+    wpm = result.get("wpm")
+    if not wpm:
+        return ""
+    note = f", {wpm:.0f} wpm"
+    if result.get("pace_adjusted"):
+        note += f" [clamped from {result['pace_adjusted']['original_wpm']:.0f}]"
+    elif result.get("pacing") in ("fast", "slow"):
+        note += f" [{result['pacing'].upper()} — try --max-wpm 165]"
+    return note
 
 
 def concat_audio_files(mp3_files: list[Path], output_path: Path) -> dict:
@@ -845,6 +897,7 @@ def main():
             temperature=args.temperature,
             top_p=args.top_p,
             cloud=args.cloud,
+            max_wpm=args.max_wpm,
         )
 
         # Build final result
@@ -947,6 +1000,7 @@ def main():
             temperature=args.temperature,
             top_p=args.top_p,
             cloud=args.cloud,
+            max_wpm=args.max_wpm,
         )
     else:
         result = generate_single_audio(
@@ -959,6 +1013,7 @@ def main():
             similarity=args.similarity,
             style=args.style,
             speed=args.speed,
+            max_wpm=args.max_wpm,
         )
 
     result["mode"] = "single"
@@ -975,7 +1030,7 @@ def main():
             duration = result.get("duration_seconds")
             if duration:
                 print(
-                    f"Duration: {duration:.2f}s ({int(duration * 30)} frames @ 30fps)",
+                    f"Duration: {duration:.2f}s ({int(duration * 30)} frames @ 30fps{_pace_note(result)})",
                     file=sys.stderr,
                 )
         else:

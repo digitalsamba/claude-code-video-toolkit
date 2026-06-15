@@ -22,3 +22,7 @@ matplotlib>=3.7
 google-api-python-client>=2.100.0
 google-auth-oauthlib>=1.2.0
 google-auth-httplib2>=0.2.0
+
+# Optional — burned karaoke captions in templates/concept-explainer-short
+# (word-level timing; heavy install, pulls in torch). Uncomment to enable:
+# openai-whisper
