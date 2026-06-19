@@ -101,6 +101,7 @@ Claude Code has deep knowledge in:
 | `/generate-voiceover` | Generate AI voiceover from a script |
 | `/redub` | Redub existing video with a different voice |
 | `/voice-clone` | Record, test, and save a cloned voice to a brand |
+| `/publish` | Publish a finished video to YouTube (metadata auto-filled from `project.json`) |
 | `/versions` | Check dependency versions and toolkit updates |
 
 > **Note:** After creating or modifying commands/skills, restart Claude Code to load changes.
@@ -262,6 +263,10 @@ python tools/flux2.py --list-presets
 # AI video generation (LTX-2.3 22B — text-to-video + image-to-video)
 python tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
 python tools/ltx2.py --prompt "Gentle camera drift" --input photo.jpg --cloud modal
+
+# Publish a finished render to YouTube (OAuth 2.0 + Data API v3) — contributed by @dascope (#29)
+python tools/youtube_upload.py --auth                                   # one-time browser login
+python tools/youtube_upload.py --video out/video.mp4 --title "My video" --privacy private --json-out
 ```
 </details>
 
@@ -273,6 +278,7 @@ python tools/ltx2.py --prompt "Gentle camera drift" --input photo.jpg --cloud mo
 | **Project** | voiceover, music, music_gen, sfx | Used during video creation workflow |
 | **Utility** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations, no project needed |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
+| **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
 
 ### Cloud GPU (Modal + RunPod)
 
@@ -332,7 +338,7 @@ claude-code-video-toolkit/
 ## Video Workflow
 
 ```
-/video → Script → Assets → Scene Review → Design → Audio → Preview → Render
+/video → Script → Assets → Scene Review → Design → Audio → Preview → Render → Publish
 ```
 
 1. **Create project** — Run `/video`, choose template and brand
