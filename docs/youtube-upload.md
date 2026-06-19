@@ -149,9 +149,12 @@ Success:
 ```
 Failure:
 ```json
-{"success": false, "error": "...", "errorType": "auth", "videoId": null}
+{"success": false, "error": "...", "errorType": "config", "errorReason": "accessNotConfigured", "videoId": null}
 ```
-`errorType` ∈ `auth | quota | validation | upload | http | thumbnail | captions`.
+`errorType` ∈ `auth | quota | config | forbidden | validation | upload | http | thumbnail | captions`.
+For HTTP errors, `errorReason` carries YouTube's machine reason (e.g. `accessNotConfigured`,
+`quotaExceeded`, `forbidden`) so a disabled API (`config`) is distinguishable from a real quota
+wall (`quota`) or a permission denial (`forbidden`) — all three are HTTP 403.
 Compare `requestedPrivacy` vs `privacyStatus` to detect the unverified-app force-to-private case.
 
 ---

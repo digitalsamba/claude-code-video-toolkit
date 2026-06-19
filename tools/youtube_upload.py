@@ -303,6 +303,58 @@ def build_request_body(args, description: str, tags: list[str]) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Error classification
+# ---------------------------------------------------------------------------
+# YouTube returns a machine-readable reason in the error body (e.g. "quotaExceeded",
+# "accessNotConfigured", "forbidden"). A bare HTTP status is ambiguous — 403 covers
+# a genuine quota wall, a disabled API, and a plain permission denial alike — so we
+# read the reason to give the caller an accurate errorType instead of calling every
+# 403 "quota".
+_QUOTA_REASONS = {
+    "quotaExceeded",
+    "dailyLimitExceeded",
+    "rateLimitExceeded",
+    "userRateLimitExceeded",
+}
+
+
+def extract_api_reason(e: "HttpError") -> Optional[str]:
+    """Pull the YouTube error 'reason' (e.g. 'accessNotConfigured') from an HttpError body."""
+    content = getattr(e, "content", None)
+    if content is None:
+        return None
+    try:
+        if isinstance(content, (bytes, bytearray)):
+            content = content.decode("utf-8", "replace")
+        error = json.loads(content).get("error", {})
+        errors = error.get("errors") or []
+        if errors and errors[0].get("reason"):
+            return errors[0]["reason"]
+        return error.get("status")  # e.g. "PERMISSION_DENIED"
+    except (ValueError, AttributeError, TypeError):
+        return None
+
+
+def classify_http_error(e: "HttpError") -> tuple[str, Optional[str]]:
+    """Map an HttpError to (errorType, apiReason).
+
+    errorType ∈ quota | config | forbidden | auth | http. The reason disambiguates
+    same-status failures; we fall back to the status code when no reason is present.
+    """
+    status = getattr(e.resp, "status", None)
+    reason = extract_api_reason(e)
+    if reason in _QUOTA_REASONS:
+        return "quota", reason
+    if reason == "accessNotConfigured":
+        return "config", reason
+    if status == 401:
+        return "auth", reason
+    if status == 403:
+        return "forbidden", reason
+    return "http", reason
+
+
+# ---------------------------------------------------------------------------
 # Upload
 # ---------------------------------------------------------------------------
 def resumable_upload(request) -> dict:
@@ -609,11 +661,23 @@ def main():
         response = resumable_upload(request)
     except HttpError as e:
         status = getattr(e.resp, "status", None)
-        etype = "quota" if status == 403 else "http"
+        etype, reason = classify_http_error(e)
         msg = f"HTTP {status}: {e}"
         log(msg, "error")
+        if etype == "config":
+            log(
+                "The YouTube Data API v3 isn't enabled on this Cloud project (or was just "
+                "enabled and is still propagating). Enable it, wait 1-2 min, and retry — "
+                "see docs/youtube-upload.md.",
+                "warn",
+            )
+        elif etype == "quota":
+            log("Daily API quota exhausted (~6 uploads/day on the default quota). Wait or request more.", "warn")
         if args.json_out:
-            emit_json({"success": False, "error": msg, "errorType": etype, "videoId": None})
+            emit_json({
+                "success": False, "error": msg,
+                "errorType": etype, "errorReason": reason, "videoId": None,
+            })
         sys.exit(1)
     except UploadError as e:
         log(str(e), "error")

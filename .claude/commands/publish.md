@@ -151,7 +151,9 @@ run a dry-run before the real upload.
 |-----------------------|----------|
 | `auth` | Run `python3 tools/youtube_upload.py --auth` once; if the refresh token expired (7-day Testing limit), re-run `--auth`. |
 | `validation` | Fix the flagged field (missing video/title, bad `--publish-at`). |
+| `config` | YouTube Data API v3 isn't enabled on the Cloud project (or just enabled, still propagating). Enable it, wait 1–2 min, retry. See `docs/youtube-upload.md`. |
 | `quota` | Daily quota exhausted — wait, or request more in Google Cloud. |
+| `forbidden` | Permission denied (e.g. the authorized account lacks rights to the target channel). Check the account / `--account`. |
 | `upload` / `http` | Transient network/server issue; the tool already retried — try again later. |
 | Video uploaded but stuck `private` | Unverified OAuth app lock — verify the app, or publish manually. |
 
