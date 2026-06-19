@@ -14,14 +14,16 @@ Pillow>=10.0
 moviepy>=2.0
 matplotlib>=3.7
 
-# YouTube upload (tools/youtube_upload.py) — OAuth 2.0 + Data API v3 resumable upload.
-# NOTE: pip package names differ from their import names, e.g.
+# Optional — YouTube upload (tools/youtube_upload.py) — OAuth 2.0 + Data API v3
+# resumable upload. Only needed if you publish to YouTube. Uncomment to enable
+# (the tool prints an install hint if they're missing). NOTE: pip package names
+# differ from their import names, e.g.
 #   google-api-python-client -> import googleapiclient
 #   google-auth-oauthlib     -> import google_auth_oauthlib
 #   google-auth-httplib2     -> (transport glue, pulled in transitively)
-google-api-python-client>=2.100.0
-google-auth-oauthlib>=1.2.0
-google-auth-httplib2>=0.2.0
+# google-api-python-client>=2.100.0
+# google-auth-oauthlib>=1.2.0
+# google-auth-httplib2>=0.2.0
 
 # Optional — burned karaoke captions in templates/concept-explainer-short
 # (word-level timing; heavy install, pulls in torch). Uncomment to enable:
