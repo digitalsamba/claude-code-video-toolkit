@@ -9,18 +9,63 @@ v3**. The `/publish` command wraps it with metadata auto-filled from a project's
 
 ---
 
+## Fast path with Claude Code
+
+Most of this setup is wiring Claude can do for you — the only parts that *require a human*
+are the Google Cloud Console clicks and the one browser consent. Split the work like this:
+
+**You do (in the browser, ~5 min) — three things, in this order:**
+
+1. **Enable the API.** Pick/create a Cloud project, then **APIs & Services → Library →
+   "YouTube Data API v3" → Enable.** ⚠️ *Don't skip this* — creating the OAuth client does
+   **not** enable the API, and a missing enable surfaces only at upload time as
+   `HTTP 403 accessNotConfigured`. After enabling, give it **1–2 minutes to propagate**.
+2. **Add yourself as a Test user.** **APIs & Services → OAuth consent screen** (Google's newer
+   UI calls this **"Google Auth Platform" → Audience** tab). Set **User type: External**, keep
+   **Publishing status: Testing**, then under **Test users → Add users** add the *exact* Google
+   account you'll log in with, and **Save**. ⚠️ If you skip this you get a hard
+   *"Access blocked: … has not completed the Google verification process"* with no way through.
+   (When you*are* a test user you instead get a softer "Google hasn't verified this app →
+   Advanced → Continue" screen — that one is expected; click through it.)
+3. **Create a Desktop OAuth client and download it.** **APIs & Services → Credentials → Create
+   Credentials → OAuth client ID → Application type: Desktop app → Create → Download JSON.**
+
+**Then hand the rest to Claude.** Tell it where the downloaded `client_secret_*.json` is, and
+ask it to finish YouTube setup. Claude will: move the secret somewhere stable out of the repo,
+add `YOUTUBE_CLIENT_SECRETS_FILE` to `.env`, install the `google-*` deps into `.venv`, launch
+the `--auth` browser login (you click "Allow" once), confirm with a `--dry-run`, and run a
+private test upload to verify the round-trip.
+
+**Two account gotchas worth stating up front:**
+- **Brand Accounts:** if your channel is a Brand Account, log in with the *personal* Google
+  account that **manages** it (add *that* email as the Test user). The upload still lands on the
+  brand channel.
+- **Exact-match:** the email you add as a Test user must be byte-for-byte the account you pick
+  in the consent screen.
+
+The detailed manual version of all of this follows.
+
+---
+
 ## One-time setup
 
 ### 1. Create a Google Cloud project + enable the API
 1. Go to [console.cloud.google.com](https://console.cloud.google.com/) and create (or pick) a project.
+   Confirm the **project selector in the top bar** shows the project you mean — operating in the
+   wrong project is the most common source of confusing failures here.
 2. **APIs & Services → Library → "YouTube Data API v3" → Enable.**
+   - **This is mandatory and easy to forget.** If it's not enabled, auth and `--dry-run` both
+     succeed, but the real upload fails with `HTTP 403 accessNotConfigured` naming this exact
+     project. After enabling, **wait 1–2 minutes** for it to propagate before retrying.
 
 ### 2. Configure the OAuth consent screen
-1. **APIs & Services → OAuth consent screen.**
-2. User type **External** → fill in app name + your email.
-3. On **Test users**, add the Google account that owns the YouTube channel.
-   - While the app is in "Testing", only listed test users can authorize it, and refresh
-     tokens expire after ~7 days (see [Gotchas](#gotchas)).
+1. **APIs & Services → OAuth consent screen** (newer UI: **"Google Auth Platform" → Audience**).
+2. User type **External** → fill in app name + your email. Leave **Publishing status: Testing**.
+3. On **Test users → Add users**, add the Google account that owns the YouTube channel (a Brand
+   Account's *managing personal account* if applicable), and **Save**.
+   - While the app is in "Testing", **only listed test users can authorize it** — a non-listed
+     account gets a hard *"Access blocked … verification process"* with no override. Refresh
+     tokens also expire after ~7 days in Testing (see [Gotchas](#gotchas)).
 
 ### 3. Create the OAuth client
 1. **APIs & Services → Credentials → Create Credentials → OAuth client ID.**
@@ -33,11 +78,13 @@ echo 'YOUTUBE_CLIENT_SECRETS_FILE=/absolute/path/to/client_secret.json' >> .env
 ```
 
 ### 5. Install dependencies
+The three `google-*` packages are **opt-in** — they're commented out in
+`tools/requirements.txt` so base installs stay lean, so install them explicitly:
 ```bash
-pip install -r tools/requirements.txt
-# or just the three:
 pip install google-api-python-client google-auth-oauthlib google-auth-httplib2
+# (or uncomment the YouTube block in tools/requirements.txt and re-run the -r install)
 ```
+The tool prints this exact command if you run it before the deps are present.
 
 ### 6. Log in once
 ```bash
