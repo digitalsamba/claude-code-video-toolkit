@@ -1,0 +1,92 @@
+{
+  "title": "ArbEdge Ad \u2014 Sportsbet Misprice",
+  "beats": [
+    {
+      "id": "hook-1",
+      "type": "hook",
+      "narration": "Sportsbet just mispriced the Eagles. Again, mate.",
+      "headline": "Sportsbet\nmispriced\nthe Eagles.",
+      "subline": "ArbEdge caught it first.",
+      "duration_frames": 87,
+      "audio_hash": "4e4693cf"
+    },
+    {
+      "id": "odds-1",
+      "type": "odds_compare",
+      "narration": "Sportsbet's paying two-forty on the Eagles. Pinnacle's got them at two-ten. That gap's four-point-two percent pure value.",
+      "event": "Eagles vs Lions",
+      "sport": "AFL",
+      "team": "Eagles",
+      "rows": [
+        {
+          "bookmaker": "Sportsbet",
+          "odds": 2.4,
+          "is_outlier": true
+        },
+        {
+          "bookmaker": "Neds",
+          "odds": 2.15
+        },
+        {
+          "bookmaker": "Ladbrokes",
+          "odds": 2.2
+        },
+        {
+          "bookmaker": "TAB",
+          "odds": 2.1
+        }
+      ],
+      "pinnacle_odds": 2.1,
+      "ev_percent": 4.2,
+      "duration_frames": 191,
+      "audio_hash": "f0d7c704"
+    },
+    {
+      "id": "stat-1",
+      "type": "stat",
+      "narration": "Four-point-two percent expected value, on every single flagged bet.",
+      "value": "+4.2% EV",
+      "context": "Expected value on every flagged bet",
+      "duration_frames": 122,
+      "audio_hash": "bff4fe90"
+    },
+    {
+      "id": "proof-1",
+      "type": "proof",
+      "narration": "Here's three real edges, flagged in the last hour. No hype, just the numbers.",
+      "opportunities": [
+        {
+          "event": "Eagles vs Lions",
+          "bookmaker": "Sportsbet",
+          "odds": 2.4,
+          "ev_percent": 4.2,
+          "sport": "AFL"
+        },
+        {
+          "event": "Storm vs Warriors",
+          "bookmaker": "PointsBet",
+          "odds": 3.1,
+          "ev_percent": 6.1,
+          "sport": "NRL"
+        },
+        {
+          "event": "Lakers vs Celtics",
+          "bookmaker": "Neds",
+          "odds": 2.05,
+          "ev_percent": 2.8,
+          "sport": "NBA"
+        }
+      ],
+      "duration_frames": 135,
+      "audio_hash": "29900969"
+    },
+    {
+      "id": "cta-1",
+      "type": "cta",
+      "narration": "Get onto ArbEdge. Forty-nine bucks a month, seven days free. Stop leaving money on the table.",
+      "price": "$49/mo AUD",
+      "duration_frames": 148,
+      "audio_hash": "4723aa90"
+    }
+  ]
+}

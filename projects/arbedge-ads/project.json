@@ -1,0 +1,15 @@
+{
+  "name": "arbedge-ads",
+  "template": "custom",
+  "brand": "arbedge",
+  "created": "2026-07-06T00:00:00Z",
+  "updated": "2026-07-06T00:00:00Z",
+  "phase": "planning",
+  "notes": "9:16 vertical ad system (1080x1920, 30fps). Beat-based composition driven by script.json. Five beat types: hook, odds_compare, stat, proof, cta.",
+  "sessions": [
+    {
+      "date": "2026-07-06",
+      "summary": "Project scaffolded. Remotion project created with all 5 beat components and per-beat idempotent rendering."
+    }
+  ]
+}
