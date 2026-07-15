@@ -77,6 +77,15 @@
       "created": "2026-03-25",
       "updated": "2026-04-08"
     },
+    "minimax-video": {
+      "path": ".claude/skills/minimax-video/",
+      "description": "Hosted text-to-video and image-to-video generation with regional API support, async task polling, and camera-control prompting",
+      "status": "beta",
+      "category": "video-generation",
+      "backend": "MiniMax video generation API",
+      "created": "2026-07-08",
+      "updated": "2026-07-08"
+    },
     "moviepy": {
       "path": ".claude/skills/moviepy/",
       "description": "Python video composition with moviepy 2.x — overlaying text on LTX-2/SadTalker output, single-file build.py video projects",
@@ -633,6 +642,44 @@
       "estimatedCost": "$0.20-0.25 per 5s clip",
       "created": "2026-03-25",
       "updated": "2026-04-21"
+    },
+    "minimax_video": {
+      "path": "tools/minimax_video.py",
+      "description": "Hosted text-to-video and image-to-video generation with async polling and download",
+      "usage": "python3 tools/minimax_video.py --prompt \"A cinematic ocean sunrise\" --output sunrise.mp4",
+      "status": "beta",
+      "category": "video-generation",
+      "backend": "MiniMax video generation API",
+      "requires": "MINIMAX_API_KEY",
+      "options": {
+        "modes": [
+          "text-to-video",
+          "image-to-video"
+        ],
+        "models": [
+          "MiniMax-Hailuo-2.3",
+          "MiniMax-Hailuo-2.3-Fast",
+          "MiniMax-Hailuo-02"
+        ],
+        "regions": [
+          "global_en",
+          "cn_zh"
+        ],
+        "duration": [
+          6,
+          10
+        ],
+        "resolution": [
+          "512P",
+          "768P",
+          "1080P"
+        ]
+      },
+      "envVars": [
+        "MINIMAX_API_KEY"
+      ],
+      "created": "2026-07-08",
+      "updated": "2026-07-08"
     },
     "chain_video": {
       "path": "tools/chain_video.py",

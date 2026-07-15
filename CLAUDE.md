@@ -127,6 +127,7 @@ This is especially critical for background commands where the working directory 
 | **Project tools** | voiceover, music, music_gen, sfx, sync_timing | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`) |
+| **Hosted API** | minimax_video | Text-to-video and image-to-video through regional API endpoints |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (use `/publish` for the guided workflow) |
 
 Utility tools work on any video file without requiring a project structure.
@@ -185,6 +186,34 @@ modal deploy docker/modal-upscale/app.py        # Then save URL to .env
 modal deploy docker/modal-image-edit/app.py
 # See docs/modal-setup.md for full guide
 ```
+
+### MiniMax Video Generation
+
+`tools/minimax_video.py` generates video through the hosted MiniMax API. It supports
+text-to-video, image-to-video, global and China regions, asynchronous task polling,
+and automatic MP4 download. Set `MINIMAX_API_KEY` in `.env` first.
+
+```bash
+# Text-to-video
+python3 tools/minimax_video.py \
+  --prompt "A cinematic aerial shot over a coastal city" \
+  --output coast.mp4
+
+# Image-to-video
+python3 tools/minimax_video.py \
+  --input first-frame.png \
+  --prompt "Slow camera push-in, natural wind in the trees" \
+  --output animated.mp4
+
+# China region
+python3 tools/minimax_video.py \
+  --region cn_zh \
+  --prompt "A clean studio product reveal" \
+  --output reveal.mp4
+```
+
+Use `.claude/skills/minimax-video/` for model limits, camera-control syntax, and
+prompting guidance.
 
 ### AI Image Generation (FLUX.2 vs Ideogram 4)
 

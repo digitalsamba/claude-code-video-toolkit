@@ -72,6 +72,13 @@ def get_ideogram_api_key() -> str | None:
     return os.getenv("IDEOGRAM_API_KEY")
 
 
+def get_minimax_api_key() -> str | None:
+    """Get the MiniMax hosted API key from environment."""
+    from dotenv import load_dotenv
+    load_dotenv()
+    return os.getenv("MINIMAX_API_KEY")
+
+
 def get_youtube_client_secrets_file() -> str | None:
     """Path to the OAuth 2.0 'Desktop app' client_secret JSON used for YouTube uploads.
 

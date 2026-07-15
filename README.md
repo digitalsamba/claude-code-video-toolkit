@@ -80,6 +80,7 @@ Claude Code has deep knowledge in:
 | **ideogram4** | AI image generation with best-in-class in-image text — title cards, thumbnails, exact brand colors |
 | **acestep** | AI music generation — prompts, lyrics, scene presets, video integration |
 | **ltx2** | AI video generation — text-to-video, image-to-video clips, prompting guide |
+| **minimax-video** | Hosted video generation — text-to-video, image-to-video, regional endpoints |
 | **moviepy** | Python video composition — overlay text on LTX-2/SadTalker output, build.py-style projects |
 | **runpod** | Cloud GPU — setup, Docker images, endpoint management, costs |
 
@@ -204,6 +205,9 @@ python tools/image_edit.py --input photo.jpg --prompt "Add sunglasses" --cloud m
 # AI video generation (LTX-2.3 — text-to-video, image-to-video)
 python tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
 
+# Hosted AI video generation (text-to-video or image-to-video)
+python3 tools/minimax_video.py --prompt "A cinematic ocean sunrise" --output sunrise.mp4
+
 # Talking head from a portrait + audio (SadTalker)
 python tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4 --cloud modal
 ```
@@ -264,6 +268,10 @@ python tools/flux2.py --list-presets
 python tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
 python tools/ltx2.py --prompt "Gentle camera drift" --input photo.jpg --cloud modal
 
+# Hosted AI video generation (global or China region)
+python3 tools/minimax_video.py --prompt "A cinematic ocean sunrise" --output sunrise.mp4
+python3 tools/minimax_video.py --input photo.jpg --prompt "Slow camera push-in" --output animated.mp4
+
 # Publish a finished render to YouTube (OAuth 2.0 + Data API v3) — contributed by @dascope (#29)
 python tools/youtube_upload.py --auth                                   # one-time browser login
 python tools/youtube_upload.py --video out/video.mp4 --title "My video" --privacy private --json-out
@@ -278,6 +286,7 @@ python tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | **Project** | voiceover, music, music_gen, sfx | Used during video creation workflow |
 | **Utility** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations, no project needed |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
+| **Hosted API** | minimax_video | Text-to-video and image-to-video without a GPU deployment |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
 
 ### Cloud GPU (Modal + RunPod)
