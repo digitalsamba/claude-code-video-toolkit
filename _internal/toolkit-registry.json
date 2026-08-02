@@ -592,6 +592,25 @@
       },
       "note": "Commercial license via paid API. Skill `.claude/skills/ideogram4/` teaches the JSON caption format; Claude is the magic-prompt expander. Live-tested (json_prompt + text_prompt paths)."
     },
+    "atlascloud": {
+      "path": "tools/atlascloud.py",
+      "description": "Asynchronous text-to-image generation through Atlas Cloud with task polling and local result download",
+      "usage": "python3 tools/atlascloud.py --prompt \"Editorial title card, no text\" --output title.jpg",
+      "status": "beta",
+      "category": "image-generation",
+      "backend": "Atlas Cloud media generation API",
+      "requires": "ATLASCLOUD_API_KEY (atlascloud.ai)",
+      "options": {
+        "defaultModel": "bytedance/seedream-v5.0-lite",
+        "customModel": true,
+        "customParams": true,
+        "outputFormats": [
+          "jpeg",
+          "png"
+        ]
+      },
+      "note": "Uses Atlas Cloud's asynchronous generateImage and prediction endpoints. The default model and request contract were live-tested."
+    },
     "ltx2": {
       "path": "tools/ltx2.py",
       "description": "AI video generation using LTX-2.3 22B - text-to-video, image-to-video clips with synchronized audio",

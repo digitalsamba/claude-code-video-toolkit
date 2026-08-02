@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 
+
 # Find workspace root (where _internal/ lives)
 def find_workspace_root() -> Path:
     """Find the workspace root by looking for _internal directory."""
@@ -70,6 +71,13 @@ def get_ideogram_api_key() -> str | None:
     from dotenv import load_dotenv
     load_dotenv()
     return os.getenv("IDEOGRAM_API_KEY")
+
+
+def get_atlascloud_api_key() -> str | None:
+    """Get Atlas Cloud API key from environment."""
+    from dotenv import load_dotenv
+    load_dotenv()
+    return os.getenv("ATLASCLOUD_API_KEY")
 
 
 def get_youtube_client_secrets_file() -> str | None:
