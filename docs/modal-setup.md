@@ -19,6 +19,41 @@ python3 -m modal setup    # Opens browser to authenticate, saves token to ~/.mod
 modal app list             # Verify it works
 ```
 
+### Windows prerequisites
+
+Two Windows-specific issues will otherwise make the commands in this guide fail in ways
+that look like toolkit bugs.
+
+**Set `PYTHONIOENCODING=utf-8` before deploying.** Modal's progress output contains
+characters the default `cp1252` console codec can't encode, so `modal deploy` aborts
+mid-build with `'charmap' codec can't encode characters in position ...`. The build
+itself is fine — only the printing fails. Make it permanent:
+
+```powershell
+[Environment]::SetEnvironmentVariable('PYTHONIOENCODING','utf-8','User')
+```
+
+Reopen your terminal afterwards so new processes inherit it.
+
+**Make sure `python3` isn't the Microsoft Store stub.** A default Windows install puts
+`C:\Users\<you>\AppData\Local\Microsoft\WindowsApps` ahead of your real Python on
+`PATH`. That directory holds zero-byte App Execution Aliases which fail with
+`Permission denied` — and since this toolkit's docs and commands all invoke
+`python3 tools/...`, everything breaks. Check what resolves:
+
+```powershell
+(Get-Command python3).Source
+```
+
+If it points into `WindowsApps`, either turn off the `python.exe` / `python3.exe`
+aliases in *Settings → Apps → App execution aliases*, or move your Python directory
+ahead of `WindowsApps` in your user `PATH`.
+
+**FFmpeg** is not bundled on Windows and several tools need it. If `winget install
+Gyan.FFmpeg` fails with a corrupted-source error, download
+`ffmpeg-release-essentials.zip` from https://www.gyan.dev/ffmpeg/builds/, extract it,
+and add its `bin\` directory to `PATH`.
+
 ## Deploy Tools
 
 Each AI tool has its own Modal app. Deploy only what you need, or deploy all of them — idle apps cost nothing.
@@ -38,7 +73,23 @@ modal deploy docker/modal-music-gen/app.py
 # Video processing
 modal deploy docker/modal-sadtalker/app.py
 modal deploy docker/modal-propainter/app.py
+
+# Video generation (see the LTX-2 prerequisites note below)
+modal deploy docker/modal-ltx2/app.py
 ```
+
+**Deploy them one at a time.** Modal rate-limits `AppCreate`; launching several
+`modal deploy` calls in parallel makes most of them fail with
+`App create rate limit exceeded`. Image builds happen server-side, so serial
+deploys cost you nothing extra in compute — only wall-clock.
+
+**GPU tier gates some tools.** Most apps request an `A10G`, which works on the free
+tier. Two request A100-class GPUs and fail at deploy time with
+`Please add a payment method to use A100-40GB GPU functions` until a card is on the
+account: `image-edit` (A100) and `ltx2` (A100-80GB). The image still gets built and
+cached before that error, so re-deploying after adding a payment method is fast.
+`ltx2` additionally needs a Modal secret named `huggingface-token` for its gated
+weights — it fails on the missing secret *before* it ever reaches the GPU check.
 
 Each deploy prints an endpoint URL like:
 ```
@@ -56,7 +107,14 @@ MODAL_UPSCALE_ENDPOINT_URL=https://yourname--video-toolkit-upscale-...modal.run
 MODAL_MUSIC_GEN_ENDPOINT_URL=https://yourname--video-toolkit-music-gen-...modal.run
 MODAL_SADTALKER_ENDPOINT_URL=https://yourname--video-toolkit-sadtalker-...modal.run
 MODAL_DEWATERMARK_ENDPOINT_URL=https://yourname--video-toolkit-dewatermark-...modal.run
+MODAL_LTX2_ENDPOINT_URL=https://yourname--video-toolkit-ltx2-...modal.run
 ```
+
+When an endpoint label exceeds Modal's length limit, Modal truncates it and appends a
+hash — `dewatermark` typically becomes `...-dewatermark-de-3e6418.modal.run`. Copy the
+URL Modal actually prints; don't reconstruct it from the pattern. Note that the deploy
+log wraps long URLs across lines, so check for a `(label truncated)` marker and rejoin
+the pieces.
 
 > **Tip:** `/setup` automates this — it runs each deploy, parses the URL, and writes it to `.env` for you.
 
