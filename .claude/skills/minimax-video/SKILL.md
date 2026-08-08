@@ -34,6 +34,7 @@ python3 tools/minimax_video.py \
 # Fast image-to-video model
 python3 tools/minimax_video.py \
   --model MiniMax-Hailuo-2.3-Fast \
+  --resolution 768P \
   --input first-frame.png \
   --prompt "The subject turns toward the camera" \
   --output fast.mp4
@@ -43,8 +44,8 @@ python3 tools/minimax_video.py \
 
 | Mode | Required input | Recommended model |
 |------|----------------|-------------------|
-| Text-to-video | `--prompt` | `MiniMax-Hailuo-2.3` |
-| Image-to-video | `--prompt` and `--input` | `MiniMax-Hailuo-2.3` |
+| Text-to-video | `--prompt` | `MiniMax-H3` |
+| Image-to-video | `--prompt` and `--input` | `MiniMax-H3` |
 | Fast image-to-video | `--prompt` and `--input` | `MiniMax-Hailuo-2.3-Fast` |
 
 `--input` accepts a local JPG, PNG, or WebP under 20 MB, a public image URL, or an
@@ -66,17 +67,20 @@ Keep the region consistent with the account that issued `MINIMAX_API_KEY`.
 | `--prompt` | required | Video content and motion description |
 | `--input` | none | First-frame image for image-to-video |
 | `--output` | required | Output MP4 path |
-| `--model` | `MiniMax-Hailuo-2.3` | Video generation model |
-| `--duration` | `6` | `6` or `10` seconds |
-| `--resolution` | `768P` | `512P`, `768P`, or `1080P`, subject to model limits |
+| `--model` | `MiniMax-H3` | Video generation model |
+| `--duration` | `6` | `4` to `15` seconds for `MiniMax-H3` |
+| `--resolution` | `2K` | `2K` for `MiniMax-H3`; legacy models use `512P`, `768P`, or `1080P` |
+| `--ratio` | `adaptive` | `adaptive`, `21:9`, `16:9`, `4:3`, `1:1`, `3:4`, or `9:16` for `MiniMax-H3` |
 | `--region` | `global_en` | `global_en` or `cn_zh` |
-| `--no-prompt-optimizer` | off | Disable server-side prompt optimization |
-| `--fast-pretreatment` | off | Reduce prompt optimization time on supported models |
+| `--no-prompt-optimizer` | off | Disable server-side prompt optimization on legacy models |
+| `--fast-pretreatment` | off | Reduce prompt optimization time on supported legacy models |
 | `--generation-timeout` | `900` | Overall async generation timeout in seconds |
 | `--poll-interval` | `10` | Task status polling interval in seconds |
 | `--json-out` | off | Print a machine-readable result line |
 
-Ten-second generation uses `768P`. The fast model is image-to-video only.
+`MiniMax-H3` uses the v2 video generation endpoint and returns a downloadable URL
+from the task query response. Legacy Hailuo models use the v1 endpoint and file
+retrieval flow. The fast legacy model is image-to-video only.
 
 ## Prompting
 
@@ -122,7 +126,8 @@ if the local polling process stops.
 
 ### Unsupported duration or resolution
 
-Use `6` seconds for `1080P`, or switch to `768P` for `10` seconds.
+Use `2K` with `MiniMax-H3` and keep the duration between 4 and 15 seconds. For
+legacy models, use `6` seconds for `1080P`, or switch to `768P` for `10` seconds.
 
 ### Image rejected
 

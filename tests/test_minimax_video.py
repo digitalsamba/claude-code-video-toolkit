@@ -39,16 +39,30 @@ class MiniMaxVideoTests(unittest.TestCase):
             prompt="A city skyline at dusk",
             model=minimax_video.DEFAULT_MODEL,
             duration=6,
-            resolution="1080P",
-            prompt_optimizer=False,
-            fast_pretreatment=True,
+            resolution="2K",
+            ratio="16:9",
         )
 
         self.assertEqual(payload["model"], minimax_video.DEFAULT_MODEL)
-        self.assertEqual(payload["prompt"], "A city skyline at dusk")
-        self.assertFalse(payload["prompt_optimizer"])
-        self.assertTrue(payload["fast_pretreatment"])
+        self.assertEqual(payload["content"], [{"type": "text", "text": "A city skyline at dusk"}])
+        self.assertEqual(payload["resolution"], "2K")
+        self.assertEqual(payload["ratio"], "16:9")
         self.assertNotIn("first_frame_image", payload)
+
+    def test_builds_v2_image_to_video_payload(self):
+        payload = minimax_video.build_payload(
+            prompt="A moving camera",
+            model=minimax_video.DEFAULT_MODEL,
+            duration=8,
+            resolution="2K",
+            first_frame_image="https://example.com/frame.png",
+        )
+
+        self.assertEqual(payload["content"][1], {
+            "type": "image_url",
+            "image_url": "https://example.com/frame.png",
+            "role": "first_frame",
+        })
 
     def test_encodes_local_image_as_data_url(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -72,6 +86,15 @@ class MiniMaxVideoTests(unittest.TestCase):
                 resolution="768P",
             )
 
+    def test_v1_model_rejects_v2_resolution(self):
+        with self.assertRaisesRegex(ValueError, "does not support 2K"):
+            minimax_video.build_payload(
+                prompt="A moving camera",
+                model=minimax_video.HAILUO_23_MODEL,
+                duration=6,
+                resolution="2K",
+            )
+
     def test_512p_hailuo_02_requires_image_input(self):
         with self.assertRaisesRegex(ValueError, "only for image-to-video"):
             minimax_video.build_payload(
@@ -81,14 +104,14 @@ class MiniMaxVideoTests(unittest.TestCase):
                 resolution="512P",
             )
 
-    def test_create_task_uses_cn_endpoint(self):
+    def test_create_task_uses_v2_cn_endpoint(self):
         session = FakeSession([
             FakeResponse({"task_id": "task-1", "base_resp": {"status_code": 0}}),
         ])
 
         task_id = minimax_video.create_video_task(
             "test-key",
-            {"model": minimax_video.DEFAULT_MODEL, "prompt": "Test"},
+            {"model": minimax_video.DEFAULT_MODEL, "content": [{"type": "text", "text": "Test"}]},
             region="cn_zh",
             request_timeout=30,
             session=session,
@@ -97,8 +120,51 @@ class MiniMaxVideoTests(unittest.TestCase):
         self.assertEqual(task_id, "task-1")
         method, url, kwargs = session.calls[0]
         self.assertEqual(method, "POST")
-        self.assertEqual(url, "https://api.minimaxi.com/v1/video_generation")
+        self.assertEqual(url, "https://api.minimaxi.com/v2/video_generation")
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-key")
+
+    def test_create_task_uses_v1_endpoint_for_hailuo_model(self):
+        session = FakeSession([
+            FakeResponse({"task_id": "task-1", "base_resp": {"status_code": 0}}),
+        ])
+
+        minimax_video.create_video_task(
+            "test-key",
+            {"model": minimax_video.HAILUO_23_MODEL, "prompt": "Test"},
+            region="global_en",
+            request_timeout=30,
+            session=session,
+        )
+
+        self.assertEqual(session.calls[0][1], "https://api.minimax.io/v1/video_generation")
+
+    def test_poll_v2_returns_content_url_after_processing(self):
+        session = FakeSession([
+            FakeResponse({"task": {"status": "Processing"}, "base_resp": {"status_code": 0}}),
+            FakeResponse({
+                "task": {
+                    "status": "Success",
+                    "content": {"url": "https://download.example/video.mp4"},
+                },
+                "base_resp": {"status_code": 0},
+            }),
+        ])
+        clock = iter([0.0, 0.0, 1.0])
+
+        url = minimax_video.poll_video_task_v2(
+            "test-key",
+            "task-1",
+            region="global_en",
+            request_timeout=30,
+            generation_timeout=60,
+            poll_interval=10,
+            session=session,
+            sleep=lambda _: None,
+            monotonic=lambda: next(clock),
+        )
+
+        self.assertEqual(url, "https://download.example/video.mp4")
+        self.assertEqual(session.calls[0][1], "https://api.minimax.io/v2/query/video_generation/task-1")
 
     def test_poll_returns_file_id_after_processing(self):
         session = FakeSession([
@@ -130,7 +196,7 @@ class MiniMaxVideoTests(unittest.TestCase):
         with self.assertRaisesRegex(minimax_video.MiniMaxVideoError, "authentication failed"):
             minimax_video.create_video_task(
                 "test-key",
-                {"model": minimax_video.DEFAULT_MODEL, "prompt": "Test"},
+                {"model": minimax_video.DEFAULT_MODEL, "content": [{"type": "text", "text": "Test"}]},
                 region="global_en",
                 request_timeout=30,
                 session=session,
