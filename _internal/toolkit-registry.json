@@ -70,6 +70,13 @@
       "created": "2026-03-22",
       "updated": "2026-03-22"
     },
+    "minimax-music": {
+      "path": ".claude/skills/minimax-music/",
+      "description": "Hosted text-to-music generation with global and mainland China endpoints",
+      "status": "beta",
+      "created": "2026-08-12",
+      "updated": "2026-08-12"
+    },
     "ltx2": {
       "path": ".claude/skills/ltx2/",
       "description": "AI video generation — prompting guide, parameters, video production use cases (b-roll, animated slides, portraits)",
@@ -262,6 +269,27 @@
       ],
       "created": "2026-03-22",
       "updated": "2026-04-03"
+    },
+    "minimax_music": {
+      "path": "tools/minimax_music.py",
+      "description": "Generate instrumental or vocal music with the MiniMax hosted API",
+      "usage": "python tools/minimax_music.py --instrumental --prompt 'Cinematic ambient score' --output music.mp3",
+      "status": "beta",
+      "options": {
+        "model": "music-3.0, music-2.6, music-3.0-free, or music-2.6-free",
+        "region": "global_en or cn_zh",
+        "stream": "Stream hex audio chunks",
+        "output-format": "hex or url",
+        "format": "mp3, wav, or pcm",
+        "lyrics-optimizer": "Generate lyrics from the prompt",
+        "instrumental": "Generate music without vocals",
+        "aigc-watermark": "Enable the cn_zh non-streaming AIGC watermark"
+      },
+      "envVars": [
+        "MINIMAX_API_KEY"
+      ],
+      "created": "2026-08-12",
+      "updated": "2026-08-12"
     },
     "sfx": {
       "path": "tools/sfx.py",

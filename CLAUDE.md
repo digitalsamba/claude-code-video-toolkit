@@ -124,7 +124,7 @@ This is especially critical for background commands where the working directory 
 
 | Type | Tools | When to Use |
 |------|-------|-------------|
-| **Project tools** | voiceover, music, music_gen, sfx, sync_timing | During video creation workflow |
+| **Project tools** | voiceover, music, music_gen, minimax_music, sfx, sync_timing | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`) |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (use `/publish` for the guided workflow) |
@@ -287,6 +287,23 @@ python tools/music_gen.py --list-presets
 ```
 
 8 scene presets: `corporate-bg`, `upbeat-tech`, `ambient`, `dramatic`, `tension`, `hopeful`, `cta`, `lofi`. See `.claude/skills/acestep/` for prompt engineering patterns and video production integration guide.
+
+### MiniMax Music Generation
+
+Use the hosted global or mainland China API for instrumental tracks, supplied lyrics, or prompt-generated lyrics. Set `MINIMAX_API_KEY` in `.env` first.
+
+```bash
+# Instrumental music from the global endpoint
+python tools/minimax_music.py --instrumental --prompt "Cinematic ambient score" --output music.mp3
+
+# Vocal music with generated lyrics from the mainland China endpoint
+python tools/minimax_music.py --region cn_zh --lyrics-optimizer --prompt "Hopeful acoustic folk song" --output song.mp3
+
+# Stream hex audio chunks
+python tools/minimax_music.py --stream --instrumental --prompt "Driving electronic pulse" --output pulse.wav --format wav
+```
+
+Supported models: `music-3.0`, `music-2.6`, `music-3.0-free`, and `music-2.6-free`. See `.claude/skills/minimax-music/` for request and output controls.
 
 ### Watermark Removal
 
