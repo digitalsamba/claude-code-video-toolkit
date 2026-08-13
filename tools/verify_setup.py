@@ -146,13 +146,15 @@ def check_modal_apps() -> dict:
             return {"ok": False, "apps": [], "detail": "modal app list failed — run `modal setup`?"}
 
         apps = json.loads(result.stdout)
+        # `modal app list --json` emits lowercase keys ("description", "state"),
+        # unlike the capitalised column headers of its human-readable table.
         toolkit_apps = [
             a for a in apps
-            if a.get("Description", "").startswith("video-toolkit-")
-            and a.get("State") == "deployed"
+            if a.get("description", "").startswith("video-toolkit-")
+            and a.get("state") == "deployed"
         ]
 
-        app_names = [a["Description"] for a in toolkit_apps]
+        app_names = [a["description"] for a in toolkit_apps]
         return {
             "ok": len(toolkit_apps) > 0,
             "apps": app_names,
@@ -172,6 +174,7 @@ def check_modal_env_vars() -> list[dict]:
         "MODAL_MUSIC_GEN_ENDPOINT_URL": "Music (ACE-Step)",
         "MODAL_SADTALKER_ENDPOINT_URL": "Talking Heads (SadTalker)",
         "MODAL_DEWATERMARK_ENDPOINT_URL": "Watermark Removal (ProPainter)",
+        "MODAL_LTX2_ENDPOINT_URL": "Video (LTX-2)",
     }
 
     results = []
@@ -314,7 +317,7 @@ def main():
     modal_configured = sum(1 for t in modal_env if t["ok"])
     results["modal_tools"] = modal_env
     if verbose:
-        print(f"Modal ({modal_configured}/7 tools):")
+        print(f"Modal ({modal_configured}/{len(modal_env)} tools):")
         for t in modal_env:
             print(f"  {'[x]' if t['ok'] else '[ ]'} {t['name']}: {t['detail']}")
 
