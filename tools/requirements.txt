@@ -4,6 +4,11 @@ python-dotenv>=1.0.0
 requests>=2.28.0
 boto3>=1.28.0  # For Cloudflare R2 (S3-compatible)
 
+# 60db TTS websocket transport (tools/sixtydb_tts.py --transport websocket).
+# Optional: only needed for the realtime websocket transport; the default
+# REST 'synthesize' transport uses `requests` above.
+websocket-client>=1.6.0
+
 # Image processing — used by tools/flux2.py, tools/image_edit.py, and the
 # moviepy examples for PIL-based text rendering
 Pillow>=10.0

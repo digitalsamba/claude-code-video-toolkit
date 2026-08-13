@@ -14,5 +14,14 @@
     "tone": "",
     "instruct": "",
     "clone": null
+  },
+  "sixtydb": {
+    "voiceId": "YOUR_VOICE_ID_HERE",
+    "settings": {
+      "stability": 0.85,
+      "similarity": 0.95,
+      "speed": 1.0,
+      "enhance": true
+    }
   }
 }
