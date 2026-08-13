@@ -375,6 +375,7 @@ def generate_single_audio_60db(
     enhance: bool,
     transport: str,
     api_key: str | None,
+    max_wpm: float | None = None,
 ) -> dict:
     """Generate a single audio file from script text using 60db. Returns result dict.
 
@@ -385,7 +386,7 @@ def generate_single_audio_60db(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    return generate_audio(
+    result = generate_audio(
         text=script,
         output_path=str(output_path),
         voice_id=voice_id,
@@ -397,6 +398,8 @@ def generate_single_audio_60db(
         api_key=api_key,
         verbose=False,
     )
+    _apply_pacing_qc(result, script, max_wpm)
+    return result
 
 def generate_single_audio_qwen3(
     script: str,
@@ -645,6 +648,7 @@ def process_scene_directory(
                 enhance=enhance,
                 transport=transport,
                 api_key=sixtydb_api_key,
+                max_wpm=max_wpm,
             )
         else:
             result = generate_single_audio(
@@ -1155,6 +1159,7 @@ def main():
             enhance=args.enhance,
             transport=args.transport,
             api_key=sixtydb_api_key,
+            max_wpm=args.max_wpm,
         )
     else:
         result = generate_single_audio(
