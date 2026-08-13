@@ -146,15 +146,19 @@ def check_modal_apps() -> dict:
             return {"ok": False, "apps": [], "detail": "modal app list failed — run `modal setup`?"}
 
         apps = json.loads(result.stdout)
-        # `modal app list --json` emits lowercase keys ("description", "state"),
-        # unlike the capitalised column headers of its human-readable table.
+        # `modal app list --json` key casing depends on CLI version: <=1.3.x emits
+        # the capitalised table headers ("Description", "State"), newer CLIs emit
+        # lowercase ("description", "state"). Accept both.
+        def field(app: dict, key: str) -> str:
+            return app.get(key) or app.get(key.capitalize()) or ""
+
         toolkit_apps = [
             a for a in apps
-            if a.get("description", "").startswith("video-toolkit-")
-            and a.get("state") == "deployed"
+            if field(a, "description").startswith("video-toolkit-")
+            and field(a, "state") == "deployed"
         ]
 
-        app_names = [a["description"] for a in toolkit_apps]
+        app_names = [field(a, "description") for a in toolkit_apps]
         return {
             "ok": len(toolkit_apps) > 0,
             "apps": app_names,
