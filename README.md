@@ -362,6 +362,16 @@ python3 scripts/migrate_to_codex.py --force
 
 See [docs/codex.md](docs/codex.md) for what it installs, how the `AGENTS.md` block is managed, and how to remove it. Contributed by [@kimhoontae-gogo](https://github.com/kimhoontae-gogo) in [#16](https://github.com/digitalsamba/claude-code-video-toolkit/pull/16).
 
+## Using with Kiro CLI
+
+A sibling migration script installs the toolkit for [Kiro CLI](https://kiro.dev/). Kiro shares Claude Code's `SKILL.md` format and `$ARGUMENTS` slash-command convention, so the skills copy verbatim and `/video`, `/setup`, etc. work as slash commands:
+
+```bash
+python3 scripts/migrate_to_kiro.py --force
+```
+
+Skills install to the workspace `.kiro/skills/` (gitignored) and toolkit instructions are generated into `.kiro/steering/` from `CLAUDE.md`. See [docs/kiro.md](docs/kiro.md) for details, options, and removal.
+
 ## Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
