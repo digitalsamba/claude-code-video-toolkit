@@ -6,6 +6,13 @@ All notable changes to claude-code-video-toolkit.
 
 ---
 
+## Unreleased
+
+### Added
+- **Kiro CLI support** (`scripts/migrate_to_kiro.py`) — sibling of the Codex migration script. Installs the toolkit skills into `~/.kiro/skills` (Kiro shares Claude Code's `SKILL.md` frontmatter format, so they copy verbatim), generates a wrapper skill per `.claude/commands/*.md` invoked as the same `/video`, `/setup`, … slash commands, and generates `.kiro/steering/video-toolkit.md` from `CLAUDE.md` inside a managed marker block. Wrappers pin the toolkit's absolute path so commands work from any directory (Claude Code parity — Kiro doesn't walk up the directory tree). Supports `--force`, `--dry-run`, `--reset`, `--workspace-skills`, and `kiro/migration_map.json` for skips/renames. See `docs/kiro.md`.
+
+---
+
 ## 2026-04-09 (v0.14.2)
 
 ### Added

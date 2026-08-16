@@ -92,6 +92,20 @@ python3 scripts/migrate_to_codex.py --reset
 
 `--reset` removes the generated Codex block from `AGENTS.md`, but does not remove the rest of the file.
 
+## Optional: Kiro CLI Setup
+
+If you use Kiro CLI instead of Claude Code, install the toolkit's Kiro-compatible skills and command wrappers:
+
+```bash
+python3 scripts/migrate_to_kiro.py --force
+```
+
+This installs the toolkit skills and slash-command wrappers into `~/.kiro/skills` and generates `.kiro/steering/video-toolkit.md` from `CLAUDE.md`. `/video`, `/setup`, etc. then work as Kiro slash commands from any directory. See [docs/kiro.md](kiro.md) for details, and re-run with `--force` after `CLAUDE.md` changes. To remove:
+
+```bash
+python3 scripts/migrate_to_kiro.py --reset
+```
+
 ## Your First Video
 
 The easiest way to create a video is using the `/video` command:

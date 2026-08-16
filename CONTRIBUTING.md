@@ -83,6 +83,13 @@ If your change affects Codex compatibility, also update:
 | Claude guidance source | `CLAUDE.md` and then re-run `python3 scripts/migrate_to_codex.py --force` to regenerate the Codex block in `AGENTS.md` |
 | Generated resource list or warnings | `README.md` and `docs/getting-started.md` |
 
+If your change affects Kiro CLI compatibility, also update:
+
+| What Changed | Update These Files |
+|--------------|-------------------|
+| Kiro migration flow | `README.md` ("Using with Kiro CLI"), `docs/kiro.md`, `docs/getting-started.md`, `scripts/migrate_to_kiro.py` |
+| Claude guidance source | `CLAUDE.md` and then re-run `python3 scripts/migrate_to_kiro.py --force` to regenerate the steering file in `.kiro/steering/` |
+
 **Quick verification:** After adding a command, grep for it across docs:
 ```bash
 grep -r "/your-command" README.md CLAUDE.md
