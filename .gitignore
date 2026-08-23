@@ -84,6 +84,10 @@ assets/voices/*.m4a
 # Projects directory (user's local video work - not part of toolkit)
 projects/
 
+# Scratch directory (local experiment output — generated images, test renders,
+# one-off scripts). Tools that write to the repo root should target scratch/.
+scratch/
+
 # Keep directory structure
 !projects/.gitkeep
 
@@ -101,7 +105,7 @@ examples/*/out/
 examples/*/.text_cache/
 examples/*/chart_anim.mp4
 
-# Playwright recordings (can be large)
-playwright/output/*.mp4
+# Playwright recordings and run artifacts (videos, screenshots, audit JSON)
+playwright/output/
 playwright/recordings/*.mp4
 .ai_dev/
