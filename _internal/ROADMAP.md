@@ -19,9 +19,9 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 
 ## Current Status
 
-**Phase:** 3 - Templates & Brands (nearly complete)
-**Focus:** Additional templates (tutorial, changelog), testing
-**Recent:** Qwen3-TTS integration, sprint-review-v2 template, voice cloning, FilmGrain component
+**Phase:** 3 - Templates & Brands (nearly complete) → moving into Phase 4
+**Focus:** Publishing & distribution, generator coverage (image/video/music), external contributions
+**Recent (v0.15–v0.18):** YouTube publishing (`/publish`), 60db TTS provider, Ideogram 4 T2I, LTX-2 Modal + style LoRAs, concept-explainer-short (9:16) and ai-engineering-review templates, TTS pacing QC, Qwen3 VoiceDesign
 
 ---
 
@@ -131,12 +131,33 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 - [x] `--runpod` deprecated in upscale.py and dewatermark.py (alias for `--cloud runpod`)
 - [x] `voiceover.py` passes `--cloud` through to Qwen3-TTS
 - [x] `dewatermark.py` migrated to `cloud_gpu.py` (removed ~393 lines of inline RunPod code)
-- [ ] `docs/modal-setup.md` — setup guide for Modal deployment
+- [x] `docs/modal-setup.md` — setup guide for Modal deployment
 - [ ] Add `--setup --cloud modal` to tools (currently manual `modal deploy`)
 
 **Sprint Review v2:**
 - [x] `sprint-review-v2` template — composable scene-based architecture
 - [x] Modular scene components
+
+**Generators & Providers (v0.11–v0.18):**
+- [x] FLUX.2 Klein text-to-image (`tools/flux2.py`, RunPod + Modal)
+- [x] Ideogram 4 text-to-image for in-image text (`tools/ideogram4.py`, hosted API)
+- [x] LTX-2 video generation (`tools/ltx2.py`, `tools/chain_video.py`, style LoRAs incl. crt-terminal)
+- [x] ACE-Step 1.5 music generation (`tools/music_gen.py`, acemusic API + Modal/RunPod)
+- [x] Qwen3-TTS VoiceDesign + shared-prompt cloning (v0.2)
+- [x] 60db TTS provider (`--provider 60db`, `tools/sixtydb_tts.py`)
+- [x] TTS pacing QC (`tools/pacing.py`, `--max-wpm`)
+- [ ] Edge-TTS provider (PR #46, needs rebase over 60db)
+- [ ] Make Qwen3-TTS the default provider (replacing ElevenLabs) — still open
+
+**Publishing:**
+- [x] YouTube upload (`tools/youtube_upload.py`, `/publish`) — OAuth, scheduling, thumbnails
+- [ ] Other destinations (LinkedIn, X, S3/R2 CDN)
+
+**Additional Templates (shipped):**
+- [x] `ai-engineering-review` — Lugh-presented monthly review (ticket-driven)
+- [x] `concept-explainer-short` — 9:16 vertical shorts, first Python/moviepy template
+- [ ] `sync_timing.py` support for ai-engineering-review's `tickets[]` config shape
+- [ ] ai-engineering-review README/CLAUDE.md are still copies of sprint-review's — rewrite
 
 **Additional Components:**
 - [x] `FilmGrain` — SVG noise overlay for cinematic texture
@@ -194,6 +215,10 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 | qwen-edit | stable | AI image editing prompting patterns |
 | runpod | stable | Cloud GPU setup, Docker images, endpoint management |
 | modal | beta | Alternative cloud GPU provider — faster cold starts, all 6 tools deployed |
+| acestep | stable | ACE-Step 1.5 music generation prompting |
+| ltx2 | beta | LTX-2 video generation prompting, style LoRAs |
+| moviepy | stable | Python composition, deterministic text overlay |
+| ideogram4 | beta | Structured JSON captions for in-image text |
 
 ---
 
@@ -217,14 +242,14 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 
 | Category | Count | Items |
 |----------|-------|-------|
-| Templates | 3 | sprint-review, sprint-review-v2, product-demo |
-| Brands | 2 | default, digital-samba |
-| Skills | 8 | 6 stable, 2 beta |
-| Tools | 12 | voiceover, music, sfx, redub, addmusic, dewatermark, locate_watermark, notebooklm_brand, image_edit, upscale, sadtalker, qwen3_tts |
-| Commands | 13 | setup, video, brand, template, skills, contribute, record-demo, generate-voiceover, scene-review, design, versions, redub, voice-clone |
+| Templates | 5 | sprint-review, sprint-review-v2, product-demo, concept-explainer-short, ai-engineering-review |
+| Brands | 3 | default, digital-samba, digital-samba-ai-engineering |
+| Skills | 12 | remotion, remotion-official, elevenlabs, ffmpeg, playwright-recording, frontend-design, qwen-edit, runpod, acestep, ltx2, moviepy, ideogram4 |
+| Tools | 22 | voiceover, qwen3_tts, sixtydb_tts, music, music_gen, sfx, redub, addmusic, sync_timing, align_captions, dewatermark, locate_watermark, notebooklm_brand, image_edit, upscale, flux2, ideogram4, ltx2, chain_video, sadtalker, verify_setup, youtube_upload |
+| Commands | 14 | setup, video, brand, template, skills, contribute, record-demo, generate-voiceover, scene-review, design, versions, redub, voice-clone, publish |
 | Components | 11 | AnimatedBackground, SlideTransition, Label, Vignette, FilmGrain, LogoWatermark, SplitScreen, NarratorPiP, Envelope, PointingHand, MazeDecoration |
 | Transitions | 7 | glitch, rgbSplit, zoomBlur, lightLeak, clockWipe, pixelate, checkerboard |
-| Examples | 3 | hello-world, digital-samba-skill-demo, sprint-review-cho-oyu |
+| Examples | 7 | hello-world, quick-spot, data-viz-chart, ds-crt-stinger, sky-blue-short, digital-samba-skill-demo, sprint-review-cho-oyu |
 
 ---
 

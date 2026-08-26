@@ -114,6 +114,7 @@ Pre-built video structures in `templates/`:
 - **sprint-review-v2** — Composable scene-based sprint review with modular architecture
 - **product-demo** — Marketing videos with dark tech aesthetic, stats, CTA
 - **concept-explainer-short** — 9:16 vertical TikTok/Reels/Shorts explainers (Python/moviepy, no Remotion)
+- **ai-engineering-review** — Monthly engineering review presented by a designed Qwen3 VoiceDesign narrator; ticket-driven config with caption alignment
 
 See `examples/` for finished projects you can learn from (newest first — scroll down to watch the toolkit evolve in reverse):
 

@@ -1,6 +1,6 @@
 {
   "name": "claude-code-video-toolkit",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "description": "AI-native video production workspace for Claude Code",
   "repository": "https://github.com/digitalsamba/claude-code-video-toolkit",
   "skills": {
@@ -563,6 +563,19 @@
       "created": "2026-02-24",
       "updated": "2026-02-24"
     },
+    "align_captions": {
+      "path": "tools/align_captions.py",
+      "description": "Align hand-estimated cap() caption timings in sprint-config.ts to actual TTS audio — transcribes each scene with ElevenLabs Scribe, fuzzy-matches phrases to word timestamps, patches fromSec/durSec in --apply mode",
+      "usage": "python3 tools/align_captions.py --config src/config/sprint-config.ts --scene-dir public/audio/scenes [--apply --tail-pad 0.3]",
+      "status": "beta",
+      "category": "project",
+      "requires": "ElevenLabs API key (Scribe)",
+      "envVars": [
+        "ELEVENLABS_API_KEY"
+      ],
+      "created": "2026-05-07",
+      "updated": "2026-05-07"
+    },
     "flux2": {
       "path": "tools/flux2.py",
       "description": "AI image generation and editing using FLUX.2 Klein 4B - text-to-image, image editing, and scene presets",
@@ -951,6 +964,15 @@
       "status": "beta",
       "created": "2026-06-09",
       "updated": "2026-06-09"
+    },
+    "ai-engineering-review": {
+      "path": "templates/ai-engineering-review/",
+      "description": "Lugh-presented monthly AI Engineering review — ticket-driven (tickets[] + lugh intro/outro) rather than scene-driven, designed Qwen3 VoiceDesign narrator, caption alignment via align_captions.py",
+      "stack": "remotion",
+      "status": "beta",
+      "brand": "digital-samba-ai-engineering",
+      "created": "2026-05-07",
+      "updated": "2026-05-07"
     }
   },
   "transitions": {
@@ -1124,6 +1146,12 @@
       "description": "Digital Samba - European video conferencing platform",
       "created": "2025-12-09",
       "updated": "2025-12-09"
+    },
+    "digital-samba-ai-engineering": {
+      "path": "brands/digital-samba-ai-engineering/",
+      "description": "Digital Samba AI Engineering team — Lugh presenter, runic metallurgy aesthetic; voice.json carries a Qwen3 VoiceDesign brief with a cached designed reference (assets/voice-design-ref.wav)",
+      "created": "2026-05-07",
+      "updated": "2026-05-07"
     }
   },
   "examples": {
@@ -1149,12 +1177,46 @@
       "contributor": "Digital Samba"
     },
     "the-space-between": {
-      "path": "examples/the-space-between/",
-      "description": "AI-generated video essay — flux2 avatar, Qwen3-TTS voice, SadTalker animation",
+      "path": null,
+      "description": "AI-generated video essay — flux2 avatar, Qwen3-TTS voice, SadTalker animation (finished video only — no source directory in examples/)",
       "template": "custom",
       "complexity": "advanced",
       "demo": "https://demos.digitalsamba.com/video/the-space-between.mp4",
-      "created": "2026-03-15"
+      "created": "2026-03-15",
+      "showcaseOnly": true
+    },
+    "quick-spot": {
+      "path": "examples/quick-spot/",
+      "description": "15s ad-style moviepy spot — audio-anchored timeline, PIL text, zero external assets",
+      "template": null,
+      "stack": "python-moviepy",
+      "complexity": "beginner",
+      "created": "2026-04-08"
+    },
+    "data-viz-chart": {
+      "path": "examples/data-viz-chart/",
+      "description": "Animated time-series chart (matplotlib for data, moviepy for deterministic title/attribution)",
+      "template": null,
+      "stack": "python-moviepy",
+      "complexity": "beginner",
+      "created": "2026-04-08"
+    },
+    "ds-crt-stinger": {
+      "path": "examples/ds-crt-stinger/",
+      "description": "6s brand stinger — LTX-2 crt-terminal LoRA footage + post-processed grunged logo",
+      "template": null,
+      "stack": "ltx2+python-moviepy",
+      "complexity": "intermediate",
+      "created": "2026-04-21"
+    },
+    "sky-blue-short": {
+      "path": "examples/sky-blue-short/",
+      "description": "52s vertical 9:16 'Why is the sky blue?' — concept-explainer-short showcase; all assets committed, re-renders with build.py",
+      "template": "concept-explainer-short",
+      "stack": "python-moviepy",
+      "complexity": "intermediate",
+      "demo": "https://demos.digitalsamba.com/video/short-blue-sky.mp4",
+      "created": "2026-06-10"
     }
   },
   "config": {
