@@ -109,6 +109,13 @@ grep -r "/your-command" README.md CLAUDE.md
 4. Update documentation if needed
 5. Submit a PR with a clear description
 
+### Automated and AI-generated PRs
+
+Automated or AI-generated PRs are welcome only when a human author responds to review and the
+PR states why the toolkit needs the feature — cost, license, and how it differs from the tools
+already here (e.g. a hosted alternative to a self-hosted generator must say when to choose it).
+PRs with no human response within 14 days are closed without further review.
+
 ## Toolkit Tracking Files
 
 | File | Purpose |
