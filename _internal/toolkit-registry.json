@@ -964,15 +964,6 @@
       "status": "beta",
       "created": "2026-06-09",
       "updated": "2026-06-09"
-    },
-    "ai-engineering-review": {
-      "path": "templates/ai-engineering-review/",
-      "description": "Lugh-presented monthly AI Engineering review — ticket-driven (tickets[] + lugh intro/outro) rather than scene-driven, designed Qwen3 VoiceDesign narrator, caption alignment via align_captions.py",
-      "stack": "remotion",
-      "status": "beta",
-      "brand": "digital-samba-ai-engineering",
-      "created": "2026-05-07",
-      "updated": "2026-05-07"
     }
   },
   "transitions": {
@@ -1146,12 +1137,6 @@
       "description": "Digital Samba - European video conferencing platform",
       "created": "2025-12-09",
       "updated": "2025-12-09"
-    },
-    "digital-samba-ai-engineering": {
-      "path": "brands/digital-samba-ai-engineering/",
-      "description": "Digital Samba AI Engineering team — Lugh presenter, runic metallurgy aesthetic; voice.json carries a Qwen3 VoiceDesign brief with a cached designed reference (assets/voice-design-ref.wav)",
-      "created": "2026-05-07",
-      "updated": "2026-05-07"
     }
   },
   "examples": {

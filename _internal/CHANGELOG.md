@@ -24,7 +24,7 @@ All notable changes to claude-code-video-toolkit.
 - `verify_setup.py` accepts both `modal` CLI JSON key casings when detecting deployed apps.
 
 ### Registry
-- Added missing entries: `ai-engineering-review` template, `digital-samba-ai-engineering` brand, `align_captions` tool, `quick-spot` / `data-viz-chart` / `ds-crt-stinger` / `sky-blue-short` examples. `the-space-between` marked showcase-only (no source directory).
+- Added missing entries: `align_captions` tool, `quick-spot` / `data-viz-chart` / `ds-crt-stinger` / `sky-blue-short` examples. `the-space-between` marked showcase-only (no source directory).
 
 ---
 
@@ -44,8 +44,6 @@ All notable changes to claude-code-video-toolkit.
 
 ### Added
 - **Ideogram 4 text-to-image** — `tools/ideogram4.py` + `ideogram4` skill. Structured JSON captions for legible in-image text and exact brand colours; hosted paid API. FLUX-vs-Ideogram decision rule added to CLAUDE.md. (#28)
-- **ai-engineering-review template** — Lugh-presented monthly review, ticket-driven config.
-- **digital-samba-ai-engineering brand** with a Qwen3 VoiceDesign-designed narrator voice.
 - **Qwen3-TTS v0.2** — VoiceDesign mode (`--design-instruct`), shared-prompt cloning for consistent multi-scene narration, `clone.design` brand schema with self-caching reference; `tools/align_captions.py` (Scribe-based caption timing alignment).
 - **Codex migration flow** for toolkit skills/commands (#16, thanks @kimhoontae-gogo); thin `AGENTS.md`.
 

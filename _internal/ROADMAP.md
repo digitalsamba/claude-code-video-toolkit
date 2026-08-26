@@ -21,7 +21,7 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 
 **Phase:** 3 - Templates & Brands (nearly complete) → moving into Phase 4
 **Focus:** Publishing & distribution, generator coverage (image/video/music), external contributions
-**Recent (v0.15–v0.18):** YouTube publishing (`/publish`), 60db TTS provider, Ideogram 4 T2I, LTX-2 Modal + style LoRAs, concept-explainer-short (9:16) and ai-engineering-review templates, TTS pacing QC, Qwen3 VoiceDesign
+**Recent (v0.15–v0.18):** YouTube publishing (`/publish`), 60db TTS provider, Ideogram 4 T2I, LTX-2 Modal + style LoRAs, concept-explainer-short (9:16) template, TTS pacing QC, Qwen3 VoiceDesign
 
 ---
 
@@ -154,10 +154,8 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 - [ ] Other destinations (LinkedIn, X, S3/R2 CDN)
 
 **Additional Templates (shipped):**
-- [x] `ai-engineering-review` — Lugh-presented monthly review (ticket-driven)
 - [x] `concept-explainer-short` — 9:16 vertical shorts, first Python/moviepy template
-- [ ] `sync_timing.py` support for ai-engineering-review's `tickets[]` config shape
-- [ ] ai-engineering-review README/CLAUDE.md are still copies of sprint-review's — rewrite
+- [ ] Monthly engineering-review template (ticket-driven, presenter-narrated) — in-tree but not yet ready to publish
 
 **Additional Components:**
 - [x] `FilmGrain` — SVG noise overlay for cinematic texture
@@ -242,8 +240,8 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 
 | Category | Count | Items |
 |----------|-------|-------|
-| Templates | 5 | sprint-review, sprint-review-v2, product-demo, concept-explainer-short, ai-engineering-review |
-| Brands | 3 | default, digital-samba, digital-samba-ai-engineering |
+| Templates | 4 | sprint-review, sprint-review-v2, product-demo, concept-explainer-short |
+| Brands | 2 | default, digital-samba |
 | Skills | 12 | remotion, remotion-official, elevenlabs, ffmpeg, playwright-recording, frontend-design, qwen-edit, runpod, acestep, ltx2, moviepy, ideogram4 |
 | Tools | 22 | voiceover, qwen3_tts, sixtydb_tts, music, music_gen, sfx, redub, addmusic, sync_timing, align_captions, dewatermark, locate_watermark, notebooklm_brand, image_edit, upscale, flux2, ideogram4, ltx2, chain_video, sadtalker, verify_setup, youtube_upload |
 | Commands | 14 | setup, video, brand, template, skills, contribute, record-demo, generate-voiceover, scene-review, design, versions, redub, voice-clone, publish |
