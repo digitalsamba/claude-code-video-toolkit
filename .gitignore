@@ -113,3 +113,6 @@ examples/*/chart_anim.mp4
 playwright/output/
 playwright/recordings/*.mp4
 .ai_dev/
+
+# Kiro CLI generated skills/steering (scripts/migrate_to_kiro.py)
+.kiro/
