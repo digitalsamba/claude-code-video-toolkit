@@ -6,11 +6,13 @@
   "skills": {
     "remotion-official": {
       "path": ".claude/skills/remotion-official/",
-      "description": "Official Remotion framework knowledge (synced from remotion-dev/skills)",
+      "description": "Official Remotion framework knowledge (synced weekly from remotion-dev/skills `skills/remotion-best-practices/` — router skill embedding markup, maps, captions, render, saas, studio, docs, upgrade sub-skills)",
       "status": "stable",
       "upstream": "https://github.com/remotion-dev/skills",
       "created": "2026-02-19",
-      "updated": "2026-02-19"
+      "updated": "2026-08-26",
+      "upstreamPath": "skills/remotion-best-practices",
+      "upstreamVersion": "4.0.518"
     },
     "remotion": {
       "path": ".claude/skills/remotion/",
