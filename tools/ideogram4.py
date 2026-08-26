@@ -18,19 +18,19 @@ Two prompt modes (mutually exclusive, mirroring the API's text_prompt vs json_pr
 
 Examples:
   # Structured caption (recommended) — Claude writes caption.json via the skill
-  python3 tools/ideogram4.py --json caption.json --output title.png
+  uv run tools/ideogram4.py --json caption.json --output title.png
 
   # Caption from stdin
-  cat caption.json | python3 tools/ideogram4.py --json - --output title.png
+  cat caption.json | uv run tools/ideogram4.py --json - --output title.png
 
   # Plain prompt (server-side magic prompt)
-  python3 tools/ideogram4.py --prompt "Title card: 'AI ENGINEERING REVIEW' bold white on dark" --output title.png
+  uv run tools/ideogram4.py --prompt "Title card: 'AI ENGINEERING REVIEW' bold white on dark" --output title.png
 
   # Inject brand palette into a JSON caption's style_description.color_palette
-  python3 tools/ideogram4.py --json caption.json --brand digital-samba --output cta.png
+  uv run tools/ideogram4.py --json caption.json --brand digital-samba --output cta.png
 
   # Quality tier + resolution
-  python3 tools/ideogram4.py --json caption.json --speed QUALITY --resolution 2048x2048 --output slide.png
+  uv run tools/ideogram4.py --json caption.json --speed QUALITY --resolution 2048x2048 --output slide.png
 """
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ try:
     from dotenv import load_dotenv
 except ImportError as e:
     print(f"Missing dependency: {e}")
-    print("Install with: pip install requests python-dotenv")
+    print("Install with: uv sync")
     sys.exit(1)
 
 load_dotenv()

@@ -8,22 +8,22 @@ automates the feedback loop: measure audio → compare → update config.
 
 Usage:
     # Compare only (dry run, default)
-    python3 tools/sync_timing.py
+    uv run tools/sync_timing.py
 
     # Apply changes with 1s padding (default)
-    python3 tools/sync_timing.py --apply
+    uv run tools/sync_timing.py --apply
 
     # Custom padding
-    python3 tools/sync_timing.py --apply --padding 1.5
+    uv run tools/sync_timing.py --apply --padding 1.5
 
     # Accept voiceover.py JSON output (skip re-measuring)
-    python3 tools/sync_timing.py --voiceover-json /tmp/vo.json --apply
+    uv run tools/sync_timing.py --voiceover-json /tmp/vo.json --apply
 
     # Explicit paths
-    python3 tools/sync_timing.py --config src/config/sprint-config.ts --audio-dir public/audio/scenes
+    uv run tools/sync_timing.py --config src/config/sprint-config.ts --audio-dir public/audio/scenes
 
     # JSON output for scripting
-    python3 tools/sync_timing.py --json
+    uv run tools/sync_timing.py --json
 """
 from __future__ import annotations
 
@@ -710,11 +710,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python3 tools/sync_timing.py                          # Dry run comparison
-  python3 tools/sync_timing.py --apply                  # Update config
-  python3 tools/sync_timing.py --apply --padding 1.5    # Custom padding
-  python3 tools/sync_timing.py --voiceover-json vo.json # Use voiceover.py output
-  python3 tools/sync_timing.py --json                   # Machine-readable output
+  uv run tools/sync_timing.py                          # Dry run comparison
+  uv run tools/sync_timing.py --apply                  # Update config
+  uv run tools/sync_timing.py --apply --padding 1.5    # Custom padding
+  uv run tools/sync_timing.py --voiceover-json vo.json # Use voiceover.py output
+  uv run tools/sync_timing.py --json                   # Machine-readable output
 """,
     )
     parser.add_argument(

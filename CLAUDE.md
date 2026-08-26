@@ -82,7 +82,7 @@ Config-driven sprint review videos with theme system, config-driven content (`sp
 Marketing/product demo videos with dark tech aesthetic, scene-based composition (title, problem, solution, demo, stats, CTA), animated background, Narrator PiP, browser/terminal chrome, and stats cards with spring animations.
 
 ### concept-explainer-short
-9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts). **Python/moviepy, not Remotion** — the whole video derives from `scenes.json` (per-scene narration + visual asset). Pipeline: `gen_vo.py` (per-scene TTS via voiceover.py, clone or built-in, `--max-wpm` pacing clamp) → `gen_captions.py` (whisper word timing force-aligned to script text, needs `pip install openai-whisper`) → `build.py` (audio-anchored composite: Ken Burns on stills, boomerang-looped clips, burned karaoke caption pills, ducked music). Renders at every stage — placeholder cards before assets, silent before audio. Visuals follow the FLUX/Ideogram/LTX split: Ideogram cards at `1440x2560` for anything text-bearing, LTX b-roll at `576x1024` for motion.
+9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts). **Python/moviepy, not Remotion** — the whole video derives from `scenes.json` (per-scene narration + visual asset). Pipeline: `gen_vo.py` (per-scene TTS via voiceover.py, clone or built-in, `--max-wpm` pacing clamp) → `gen_captions.py` (whisper word timing force-aligned to script text, needs `uv sync --extra whisper`) → `build.py` (audio-anchored composite: Ken Burns on stills, boomerang-looped clips, burned karaoke caption pills, ducked music). Renders at every stage — placeholder cards before assets, silent before audio. Visuals follow the FLUX/Ideogram/LTX split: Ideogram cards at `1440x2560` for anything text-bearing, LTX b-roll at `576x1024` for motion.
 
 ## Brand Profiles
 
@@ -110,13 +110,17 @@ import { AnimatedBackground, SlideTransition, Label } from '../../../../lib/comp
 Audio, video, and image tools in `tools/`. See registry `tools` section for the full catalog with descriptions, options, presets, and env vars. Every tool supports `--help`.
 
 ```bash
-# Setup
-pip install -r tools/requirements.txt
+# Setup (one-time) — uv creates .venv/ and installs all locked dependencies
+uv sync
+uv sync --extra whisper   # optional: karaoke captions (heavy, pulls in torch)
+uv sync --extra modal     # optional: Modal CLI for self-hosted cloud GPU
 ```
 
-**Important: always invoke tools from the toolkit root directory.** When working inside a project (`projects/my-video/`), tool paths like `python3 tools/upscale.py` will fail because `tools/` is relative. Always use:
+Run every Python tool through the project environment with `uv run` — it auto-syncs the venv, so no activation is needed.
+
+**Important: always invoke tools from the toolkit root directory.** When working inside a project (`projects/my-video/`), tool paths like `uv run tools/upscale.py` will fail because `tools/` is relative. Always use:
 ```bash
-cd /path/to/claude-code-video-toolkit && python3 tools/upscale.py ...
+cd /path/to/claude-code-video-toolkit && uv run tools/upscale.py ...
 ```
 This is especially critical for background commands where the working directory may not be obvious.
 
@@ -140,17 +144,17 @@ across all providers — for 60db they are auto-converted to its native 0-100 sc
 
 ```bash
 # Per-scene generation (recommended, ElevenLabs default)
-python tools/voiceover.py --scene-dir public/audio/scenes --json
+uv run tools/voiceover.py --scene-dir public/audio/scenes --json
 
 # Using Qwen3-TTS (self-hosted, free alternative to ElevenLabs)
-python tools/voiceover.py --provider qwen3 --tone warm --scene-dir public/audio/scenes --json
+uv run tools/voiceover.py --provider qwen3 --tone warm --scene-dir public/audio/scenes --json
 
 # Using 60db (premium cloud TTS — needs SIXTYDB_API_KEY)
-python tools/voiceover.py --provider 60db --scene-dir public/audio/scenes --json
-python tools/voiceover.py --provider 60db --voice-id <uuid> --stability 0.6 --script SCRIPT.md --output out.mp3
+uv run tools/voiceover.py --provider 60db --scene-dir public/audio/scenes --json
+uv run tools/voiceover.py --provider 60db --voice-id <uuid> --stability 0.6 --script SCRIPT.md --output out.mp3
 
 # Single file (legacy)
-python tools/voiceover.py --script SCRIPT.md --output out.mp3
+uv run tools/voiceover.py --script SCRIPT.md --output out.mp3
 ```
 
 #### 60db (standalone)
@@ -161,9 +165,9 @@ Three transports all produce a finished audio file: `synthesize` (REST, default)
 `stream` (NDJSON), and `websocket` (realtime; needs `pip install websocket-client`).
 
 ```bash
-python tools/sixtydb_tts.py --text "Hello world" --output hello.mp3
-python tools/sixtydb_tts.py --text "Hello" --transport stream --output hello.mp3
-python tools/sixtydb_tts.py --list-voices          # GET /myvoices
+uv run tools/sixtydb_tts.py --text "Hello world" --output hello.mp3
+uv run tools/sixtydb_tts.py --text "Hello" --transport stream --output hello.mp3
+uv run tools/sixtydb_tts.py --list-voices          # GET /myvoices
 ```
 
 Config: `SIXTYDB_API_KEY` (required), `SIXTYDB_VOICE_ID` (optional — falls back to
@@ -175,22 +179,22 @@ transcription stays on ElevenLabs Scribe (60db has no STT); in `--sync` mode the
 ### Timing Sync (after voiceover)
 
 ```bash
-python3 tools/sync_timing.py                          # Dry run comparison
-python3 tools/sync_timing.py --apply                  # Update config (1s default padding)
-python3 tools/sync_timing.py --apply --padding 1.5    # Custom padding
-python3 tools/sync_timing.py --voiceover-json vo.json # Use voiceover.py output
-python3 tools/sync_timing.py --json                   # Machine-readable output
+uv run tools/sync_timing.py                          # Dry run comparison
+uv run tools/sync_timing.py --apply                  # Update config (1s default padding)
+uv run tools/sync_timing.py --apply --padding 1.5    # Custom padding
+uv run tools/sync_timing.py --voiceover-json vo.json # Use voiceover.py output
+uv run tools/sync_timing.py --json                   # Machine-readable output
 ```
 
 ### Qwen3-TTS (Standalone)
 
 ```bash
-python tools/qwen3_tts.py --text "Hello world" --speaker Ryan --output hello.mp3
-python tools/qwen3_tts.py --text "Hello world" --tone warm --output hello.mp3
-python tools/qwen3_tts.py --text "Hello" --instruct "Speak enthusiastically" --output excited.mp3
-python tools/qwen3_tts.py --text "Hello" --ref-audio sample.wav --ref-text "transcript" --output cloned.mp3
-python tools/qwen3_tts.py --list-voices   # 9 speakers: Ryan, Aiden, Vivian, etc.
-python tools/qwen3_tts.py --list-tones    # neutral, warm, professional, excited, etc.
+uv run tools/qwen3_tts.py --text "Hello world" --speaker Ryan --output hello.mp3
+uv run tools/qwen3_tts.py --text "Hello world" --tone warm --output hello.mp3
+uv run tools/qwen3_tts.py --text "Hello" --instruct "Speak enthusiastically" --output excited.mp3
+uv run tools/qwen3_tts.py --text "Hello" --ref-audio sample.wav --ref-text "transcript" --output cloned.mp3
+uv run tools/qwen3_tts.py --list-voices   # 9 speakers: Ryan, Aiden, Vivian, etc.
+uv run tools/qwen3_tts.py --list-tones    # neutral, warm, professional, excited, etc.
 ```
 
 Temperature controls expressiveness: `--temperature 1.2` (more expressive) or `--temperature 0.4` (more consistent).
@@ -202,15 +206,15 @@ All cloud GPU tools support two providers via `--cloud runpod|modal`. RunPod is 
 ```bash
 # --- RunPod setup (automated, one-time per tool) ---
 echo "RUNPOD_API_KEY=your_key_here" >> .env
-python tools/image_edit.py --setup
-python tools/upscale.py --setup
-python tools/qwen3_tts.py --setup
-python tools/music_gen.py --setup
+uv run tools/image_edit.py --setup
+uv run tools/upscale.py --setup
+uv run tools/qwen3_tts.py --setup
+uv run tools/music_gen.py --setup
 
 # --- Modal setup (deploy each app you need) ---
-pip install modal && python3 -m modal setup
-modal deploy docker/modal-upscale/app.py        # Then save URL to .env
-modal deploy docker/modal-image-edit/app.py
+uv sync --extra modal && uv run modal setup
+uv run modal deploy docker/modal-upscale/app.py        # Then save URL to .env
+uv run modal deploy docker/modal-image-edit/app.py
 # See docs/modal-setup.md for full guide
 ```
 
@@ -221,12 +225,12 @@ The toolkit has **two** text-to-image generators. They barely overlap — the de
 
 ```bash
 # FLUX.2 — text-FREE backgrounds + image editing (self-hosted, free, Apache-2.0/commercial-OK)
-python tools/flux2.py --preset title-bg --brand digital-samba   # background for Remotion text overlay
-python tools/flux2.py --prompt "Abstract tech background, no text"
+uv run tools/flux2.py --preset title-bg --brand digital-samba   # background for Remotion text overlay
+uv run tools/flux2.py --prompt "Abstract tech background, no text"
 
 # Ideogram 4 — legible IN-IMAGE text + exact color/layout (hosted API, ~$0.03-0.09/img, commercial-OK)
-python3 tools/ideogram4.py --json caption.json --output title.png   # text baked into the image
-python3 tools/ideogram4.py --prompt "Thumbnail: 'SHIP FASTER' bold" --output thumb.png
+uv run tools/ideogram4.py --json caption.json --output title.png   # text baked into the image
+uv run tools/ideogram4.py --prompt "Thumbnail: 'SHIP FASTER' bold" --output thumb.png
 ```
 
 **The key distinction — baked-in text vs. background-for-overlay:**
@@ -257,15 +261,15 @@ format — Claude authors the caption as the "magic prompt" expander; needs `IDE
 ```bash
 
 # Image editing (Qwen-Image-Edit)
-python tools/image_edit.py --input photo.jpg --prompt "Add sunglasses"
-python tools/image_edit.py --input photo.jpg --prompt "Add sunglasses" --cloud modal
-python tools/image_edit.py --input photo.jpg --style cyberpunk
-python tools/image_edit.py --input photo.jpg --background office
-python tools/image_edit.py --list-presets  # Full preset list
+uv run tools/image_edit.py --input photo.jpg --prompt "Add sunglasses"
+uv run tools/image_edit.py --input photo.jpg --prompt "Add sunglasses" --cloud modal
+uv run tools/image_edit.py --input photo.jpg --style cyberpunk
+uv run tools/image_edit.py --input photo.jpg --background office
+uv run tools/image_edit.py --list-presets  # Full preset list
 
 # Upscaling (RealESRGAN)
-python tools/upscale.py --input photo.jpg --output photo_4x.png --cloud runpod
-python tools/upscale.py --input photo.jpg --scale 2 --model anime --face-enhance --cloud runpod
+uv run tools/upscale.py --input photo.jpg --output photo_4x.png --cloud runpod
+uv run tools/upscale.py --input photo.jpg --scale 2 --model anime --face-enhance --cloud runpod
 ```
 
 See `docs/qwen-edit-patterns.md` and `.claude/skills/qwen-edit/` for prompting guidance.
@@ -276,42 +280,42 @@ Default provider is **acemusic** (official cloud API, free key from [acemusic.ai
 
 ```bash
 # Background music (acemusic cloud API by default)
-python tools/music_gen.py --prompt "Upbeat tech corporate" --duration 60 --bpm 128 --key "G Major" --output music.mp3
+uv run tools/music_gen.py --prompt "Upbeat tech corporate" --duration 60 --bpm 128 --key "G Major" --output music.mp3
 
 # Generate 4 variations, pick the best
-python tools/music_gen.py --prompt "Subtle corporate tech" --duration 60 --variations 4 --output bg.mp3
+uv run tools/music_gen.py --prompt "Subtle corporate tech" --duration 60 --variations 4 --output bg.mp3
 
 # Fast mode (disable thinking)
-python tools/music_gen.py --no-thinking --prompt "Quick draft" --duration 30 --output draft.mp3
+uv run tools/music_gen.py --no-thinking --prompt "Quick draft" --duration 30 --output draft.mp3
 
 # Scene presets for video production
-python tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3
-python tools/music_gen.py --preset tension --duration 20 --output problem.mp3
-python tools/music_gen.py --preset cta --brand digital-samba --output cta.mp3
+uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3
+uv run tools/music_gen.py --preset tension --duration 20 --output problem.mp3
+uv run tools/music_gen.py --preset cta --brand digital-samba --output cta.mp3
 
 # Song with vocals and lyrics (use structure tags for sections)
-python tools/music_gen.py \
+uv run tools/music_gen.py \
   --prompt "Indie pop anthem, male vocal, bright guitar, studio polish" \
   --lyrics "[Verse]\nWalking through the morning light\nCoffee in my hand feels right\n\n[Chorus - anthemic]\nWE KEEP MOVING FORWARD\nThrough the noise and doubt\n\n[Outro - fade]\n(Moving forward...)" \
   --duration 60 --bpm 128 --key "G Major" --output song.mp3
 
 # Cover / style transfer
-python tools/music_gen.py --cover --reference theme.mp3 --prompt "Jazz piano version" --output cover.mp3
+uv run tools/music_gen.py --cover --reference theme.mp3 --prompt "Jazz piano version" --output cover.mp3
 
 # Repaint a weak section (acemusic only)
-python tools/music_gen.py --repaint --input track.mp3 --repaint-start 15 --repaint-end 25 --prompt "Guitar solo" --output fixed.mp3
+uv run tools/music_gen.py --repaint --input track.mp3 --repaint-start 15 --repaint-end 25 --prompt "Guitar solo" --output fixed.mp3
 
 # Continue from existing audio (acemusic only)
-python tools/music_gen.py --continuation --input track.mp3 --prompt "Continue with jazz piano" --output extended.mp3
+uv run tools/music_gen.py --continuation --input track.mp3 --prompt "Continue with jazz piano" --output extended.mp3
 
 # Stem extraction
-python tools/music_gen.py --extract vocals --input mixed.mp3 --output vocals.mp3
+uv run tools/music_gen.py --extract vocals --input mixed.mp3 --output vocals.mp3
 
 # Fall back to self-hosted
-python tools/music_gen.py --cloud modal --prompt "Background music" --duration 60 --output bg.mp3
+uv run tools/music_gen.py --cloud modal --prompt "Background music" --duration 60 --output bg.mp3
 
 # List presets
-python tools/music_gen.py --list-presets
+uv run tools/music_gen.py --list-presets
 ```
 
 8 scene presets: `corporate-bg`, `upbeat-tech`, `ambient`, `dramatic`, `tension`, `hopeful`, `cta`, `lofi`. See `.claude/skills/acestep/` for prompt engineering patterns and video production integration guide.
@@ -320,12 +324,12 @@ python tools/music_gen.py --list-presets
 
 ```bash
 # Locate watermark coordinates
-python tools/locate_watermark.py --input video.mp4 --grid --output-dir ./review/
-python tools/locate_watermark.py --input video.mp4 --preset notebooklm --verify
+uv run tools/locate_watermark.py --input video.mp4 --grid --output-dir ./review/
+uv run tools/locate_watermark.py --input video.mp4 --preset notebooklm --verify
 
 # Remove watermark (RunPod)
-python tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output clean.mp4 --runpod
-python tools/dewatermark.py --setup  # One-time setup
+uv run tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output clean.mp4 --runpod
+uv run tools/dewatermark.py --setup  # One-time setup
 ```
 
 **Workflow:** grid overlay → note coordinates → verify with `--region` → remove with dewatermark.
@@ -336,11 +340,11 @@ python tools/dewatermark.py --setup  # One-time setup
 
 ```bash
 # Basic usage
-python tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4
+uv run tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4
 
 # For NarratorPiP integration (recommended settings)
 # CRITICAL: --preprocess full preserves image dimensions (otherwise outputs square crop)
-python tools/sadtalker.py \
+uv run tools/sadtalker.py \
   --image presenter_16x9.png \
   --audio voiceover.mp3 \
   --preprocess full --still --expression-scale 0.8 \
@@ -359,7 +363,7 @@ See `docs/sadtalker.md` for detailed options and troubleshooting.
 ### Redub Sync Mode
 
 ```bash
-python tools/redub.py --input video.mp4 --voice-id VOICE_ID --sync --output dubbed.mp4
+uv run tools/redub.py --input video.mp4 --voice-id VOICE_ID --sync --output dubbed.mp4
 ```
 
 The `--sync` flag enables word-level time remapping — essential when TTS voice pacing differs from original. Without it, audio can drift 3-4+ seconds by the end.
@@ -371,7 +375,7 @@ The `--sync` flag enables word-level time remapping — essential when TTS voice
 Post-processes NotebookLM videos with custom branding. Solves the problem where redubbed TTS audio extends beyond the safe visual trim point.
 
 ```bash
-python tools/notebooklm_brand.py \
+uv run tools/notebooklm_brand.py \
     --input video_synced.mp4 \
     --logo assets/logo.png \
     --url "mysite.com" \
@@ -387,18 +391,18 @@ guided workflow (it auto-fills title/description/tags from `project.json`), or c
 
 ```bash
 # One-time login (opens a browser, caches a refresh token under _internal/.youtube/)
-python3 tools/youtube_upload.py --auth
+uv run tools/youtube_upload.py --auth
 
 # Upload privately (the safe default)
-python3 tools/youtube_upload.py --video out/video.mp4 --title "My video" \
+uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
     --description-file DESCRIPTION.md --tags "ai,agents,explainer" --json-out
 
 # Schedule a public go-live
-python3 tools/youtube_upload.py --video out/video.mp4 --title "My video" \
+uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
     --publish-at 2026-06-10T09:00:00Z --thumbnail out/thumb.png --json-out
 
 # Validate everything without uploading (also reports auth readiness)
-python3 tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
+uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
 ```
 
 **Setup is OAuth, not an API key** (uploads act on behalf of a channel). See
@@ -419,7 +423,7 @@ python3 tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run -
 4. **Scene review** - Run `/scene-review` to verify visuals in Remotion Studio
 5. **Design refinement** - Use `/design` or the "Refine" option in scene-review to improve slide visuals
 6. **Generate audio** - Use `/generate-voiceover` for AI narration
-7. **Sync timing** - Run `python3 tools/sync_timing.py --apply` to update config durations
+7. **Sync timing** - Run `uv run tools/sync_timing.py --apply` to update config durations
 8. **Preview** - `npm run studio` in project directory
 9. **Iterate** - Adjust timing, content, styling with Claude Code
 10. **Render** - `npm run render` for final MP4
@@ -515,8 +519,8 @@ TTS engines do NOT consistently produce 150 WPM output. In practice:
 **The feedback loop after TTS generation:**
 
 1. Generate per-scene audio files
-2. Run `python3 tools/sync_timing.py` to compare actual vs config durations
-3. Run `python3 tools/sync_timing.py --apply` to update config automatically
+2. Run `uv run tools/sync_timing.py` to compare actual vs config durations
+3. Run `uv run tools/sync_timing.py --apply` to update config automatically
 4. For demo scenes: recalculate `playbackRate = rawDemoDuration / actualNarrationDuration`
 5. Re-preview in Remotion Studio before rendering
 

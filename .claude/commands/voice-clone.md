@@ -14,7 +14,7 @@ Verify the environment is ready:
 1. Check .env for RUNPOD_API_KEY
    - If missing: "Add `RUNPOD_API_KEY=your_key` to `.env`"
 2. Check .env for RUNPOD_QWEN3_TTS_ENDPOINT_ID
-   - If missing and API key exists: offer to run `python3 tools/qwen3_tts.py --setup`
+   - If missing and API key exists: offer to run `uv run tools/qwen3_tts.py --setup`
    - If API key also missing: guide user to add it first
 3. Only proceed once both are confirmed
 ```
@@ -103,7 +103,7 @@ The transcript must match what was actually said — this is critical for clone 
 Generate a test clip using the reference audio:
 
 ```bash
-python3 tools/qwen3_tts.py \
+uv run tools/qwen3_tts.py \
   --text "This is a test of the cloned voice. It should sound natural and similar to the original recording." \
   --ref-audio brands/{name}/assets/voice-reference.{ext} \
   --ref-text "TRANSCRIPT_HERE" \
@@ -174,10 +174,10 @@ Voice clone saved to: brands/{name}/voice.json
 Usage:
 
   # Per-scene voiceover with cloned voice
-  python3 tools/voiceover.py --provider qwen3 --brand {name} --scene-dir public/audio/scenes --json
+  uv run tools/voiceover.py --provider qwen3 --brand {name} --scene-dir public/audio/scenes --json
 
   # Single file
-  python3 tools/voiceover.py --provider qwen3 --brand {name} --script script.txt --output out.mp3
+  uv run tools/voiceover.py --provider qwen3 --brand {name} --script script.txt --output out.mp3
 
   # In /generate-voiceover, select Qwen3-TTS — the clone profile will be detected automatically.
 

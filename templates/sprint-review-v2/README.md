@@ -81,7 +81,7 @@ public/audio/scenes/
 
 Generate with:
 ```bash
-python tools/voiceover.py --scene-dir public/audio/scenes --json
+uv run tools/voiceover.py --scene-dir public/audio/scenes --json
 ```
 
 Then reference in config:

@@ -149,7 +149,7 @@ def get_modal_token() -> tuple[str | None, str | None]:
     """Get Modal authentication token from environment.
 
     Returns (token_id, token_secret) tuple. Both are None if not configured.
-    Modal stores tokens in ~/.modal.toml after `modal setup`, but for
+    Modal stores tokens in ~/.modal.toml after `uv run modal setup`, but for
     web endpoint auth we read from .env.
     """
     from dotenv import load_dotenv

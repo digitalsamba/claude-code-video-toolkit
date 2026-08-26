@@ -69,10 +69,10 @@ Use for reproducibility when iterating on prompts.
 
 ```bash
 # First attempt
-python tools/image_edit.py --input photo.jpg --prompt "..." --seed 12345
+uv run tools/image_edit.py --input photo.jpg --prompt "..." --seed 12345
 
 # Same seed, different prompt - compare results
-python tools/image_edit.py --input photo.jpg --prompt "..." --seed 12345
+uv run tools/image_edit.py --input photo.jpg --prompt "..." --seed 12345
 ```
 
 ## Cost vs Quality Tradeoffs

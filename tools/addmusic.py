@@ -10,16 +10,16 @@ Pipeline:
 
 Usage:
     # Add existing music file
-    python tools/addmusic.py -i video.mp4 -m background.mp3 -o output.mp4
+    uv run tools/addmusic.py -i video.mp4 -m background.mp3 -o output.mp4
 
     # Generate and add music with ElevenLabs
-    python tools/addmusic.py -i video.mp4 -p "Subtle corporate ambient" -o output.mp4
+    uv run tools/addmusic.py -i video.mp4 -p "Subtle corporate ambient" -o output.mp4
 
     # Custom volumes with fades
-    python tools/addmusic.py -i video.mp4 -m music.mp3 --music-volume 0.2 --fade-in 2 --fade-out 3 -o output.mp4
+    uv run tools/addmusic.py -i video.mp4 -m music.mp3 --music-volume 0.2 --fade-in 2 --fade-out 3 -o output.mp4
 
     # Dry run to preview
-    python tools/addmusic.py -i video.mp4 -p "Upbeat tech" --dry-run
+    uv run tools/addmusic.py -i video.mp4 -p "Upbeat tech" --dry-run
 """
 from __future__ import annotations
 
@@ -48,9 +48,9 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python tools/addmusic.py -i video.mp4 -m background.mp3 -o output.mp4
-  python tools/addmusic.py -i video.mp4 -p "Subtle corporate ambient" -o output.mp4
-  python tools/addmusic.py -i video.mp4 -m music.mp3 --music-volume 0.2 --fade-in 2 --fade-out 3 -o output.mp4
+  uv run tools/addmusic.py -i video.mp4 -m background.mp3 -o output.mp4
+  uv run tools/addmusic.py -i video.mp4 -p "Subtle corporate ambient" -o output.mp4
+  uv run tools/addmusic.py -i video.mp4 -m music.mp3 --music-volume 0.2 --fade-in 2 --fade-out 3 -o output.mp4
 
 Prompt tips (for ElevenLabs generation):
   Include genre, mood, instruments, tempo, and use case.
@@ -299,7 +299,7 @@ def main():
                 "  echo \"ELEVENLABS_API_KEY=your_key\" >> .env\n"
                 "\n"
                 "Alternative: Use --music flag with your own audio file:\n"
-                "  python3 tools/addmusic.py --input video.mp4 --music your_music.mp3 --output output.mp4",
+                "  uv run tools/addmusic.py --input video.mp4 --music your_music.mp3 --output output.mp4",
                 file=sys.stderr,
             )
             sys.exit(1)

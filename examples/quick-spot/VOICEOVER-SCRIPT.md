@@ -3,7 +3,7 @@
 A 15-second ad-style spot. Generate per-scene mp3s into `public/audio/scenes/` with:
 
 ```bash
-python3 ../../tools/voiceover.py --script VOICEOVER-SCRIPT.md --scene-dir public/audio/scenes
+uv run ../../tools/voiceover.py --script VOICEOVER-SCRIPT.md --scene-dir public/audio/scenes
 ```
 
 ## Scene 1 — hook (0.0–4.0s)

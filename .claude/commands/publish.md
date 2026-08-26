@@ -13,7 +13,7 @@ project.json + rendered MP4 → metadata draft → dry-run → upload → write 
 
 > **One-time setup required.** YouTube uploads need OAuth (not an API key). If the user
 > hasn't set this up, point them at `docs/youtube-upload.md` and stop until
-> `YOUTUBE_CLIENT_SECRETS_FILE` is in `.env` and `python3 tools/youtube_upload.py --auth`
+> `YOUTUBE_CLIENT_SECRETS_FILE` is in `.env` and `uv run tools/youtube_upload.py --auth`
 > has been run once. Don't attempt an upload without a cached token.
 
 ## Entry Point
@@ -54,7 +54,7 @@ editable, and re-runnable. If a `publish` block already exists, use it as defaul
 ### Step 3: Dry-run first (no upload)
 
 ```bash
-cd /path/to/claude-code-video-toolkit && python3 tools/youtube_upload.py \
+cd /path/to/claude-code-video-toolkit && uv run tools/youtube_upload.py \
   --video "projects/NAME/out/video.mp4" \
   --title "TITLE" \
   --description-file "projects/NAME/.publish-description.txt" \
@@ -68,7 +68,7 @@ cd /path/to/claude-code-video-toolkit && python3 tools/youtube_upload.py \
 Write the description to a temp file (`--description-file`) rather than passing a long
 `--description` on the command line. Parse the JSON: confirm `requestBody` looks right and
 `authOk` is `true`. If `authOk` is `false`, surface the auth error and have the user run
-`python3 tools/youtube_upload.py --auth` first — do not proceed.
+`uv run tools/youtube_upload.py --auth` first — do not proceed.
 
 ### Step 4: Upload
 
@@ -149,7 +149,7 @@ run a dry-run before the real upload.
 
 | Symptom (`errorType`) | Solution |
 |-----------------------|----------|
-| `auth` | Run `python3 tools/youtube_upload.py --auth` once; if the refresh token expired (7-day Testing limit), re-run `--auth`. |
+| `auth` | Run `uv run tools/youtube_upload.py --auth` once; if the refresh token expired (7-day Testing limit), re-run `--auth`. |
 | `validation` | Fix the flagged field (missing video/title, bad `--publish-at`). |
 | `config` | YouTube Data API v3 isn't enabled on the Cloud project (or just enabled, still propagating). Enable it, wait 1–2 min, retry. See `docs/youtube-upload.md`. |
 | `quota` | Daily quota exhausted — wait, or request more in Google Cloud. |

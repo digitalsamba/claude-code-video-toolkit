@@ -6,8 +6,8 @@ the directory (clone or built-in speaker, pacing-clamped via --max-wpm), and
 records the actual durations in vo_durations.json — the timeline anchor that
 build.py reads. Run from this project directory:
 
-    python3 gen_vo.py            # generate all scenes
-    python3 gen_vo.py --force    # regenerate even if MP3s exist
+    uv run gen_vo.py            # generate all scenes
+    uv run gen_vo.py --force    # regenerate even if MP3s exist
 """
 from __future__ import annotations
 
@@ -119,7 +119,7 @@ def main() -> None:
         print("Note: over ~3 min — fine for TikTok, too long for YouTube Shorts/Reels.")
     if problems:
         print(f"Pacing flags on: {', '.join(problems)} — consider voice.maxWpm in config.json")
-    print("Next: python3 gen_captions.py")
+    print("Next: uv run gen_captions.py")
 
 
 if __name__ == "__main__":

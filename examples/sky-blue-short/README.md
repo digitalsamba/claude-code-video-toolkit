@@ -8,7 +8,7 @@ All source assets are committed, so you can study or rebuild it immediately:
 
 ```bash
 cd examples/sky-blue-short
-python3 build.py          # re-render from committed assets → out/short.mp4
+uv run build.py          # re-render from committed assets → out/short.mp4
 ```
 
 ## How it was made

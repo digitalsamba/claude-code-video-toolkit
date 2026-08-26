@@ -58,19 +58,19 @@ Worked title-card / thumbnail / quote-card examples are in **`examples.md`**.
 
 ```bash
 # Hand-authored JSON caption (the recommended path for text/layout) — Claude writes caption.json
-python3 tools/ideogram4.py --json caption.json --output title.png
+uv run tools/ideogram4.py --json caption.json --output title.png
 
 # Caption from stdin (Claude can pipe it directly)
-cat caption.json | python3 tools/ideogram4.py --json - --output title.png
+cat caption.json | uv run tools/ideogram4.py --json - --output title.png
 
 # Plain prompt — Ideogram's server-side magic prompt expands it (weaker; prefer --json)
-python3 tools/ideogram4.py --prompt "Title card: 'AI ENGINEERING REVIEW' bold white on dark" --output title.png
+uv run tools/ideogram4.py --prompt "Title card: 'AI ENGINEERING REVIEW' bold white on dark" --output title.png
 
 # Inject brand hex colors into the caption's palette (JSON mode)
-python3 tools/ideogram4.py --json caption.json --brand digital-samba --output cta.png
+uv run tools/ideogram4.py --json caption.json --brand digital-samba --output cta.png
 
 # Quality tier + resolution
-python3 tools/ideogram4.py --json caption.json --speed QUALITY --resolution 2048x2048 --output slide.png
+uv run tools/ideogram4.py --json caption.json --speed QUALITY --resolution 2048x2048 --output slide.png
 ```
 
 ## Key Files

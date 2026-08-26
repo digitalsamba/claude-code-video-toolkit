@@ -27,7 +27,7 @@ if not CRT_CLIP.exists():
     sys.exit(
         f"Missing CRT clip: {CRT_CLIP.name}\n"
         "Generate one with:\n"
-        "  python3 ../../tools/ltx2.py --lora crt-terminal "
+        "  uv run ../../tools/ltx2.py --lora crt-terminal "
         f'--prompt "..." --output examples/ds-crt-stinger/{CRT_CLIP.name}'
     )
 if not LOGO_IMG.exists():

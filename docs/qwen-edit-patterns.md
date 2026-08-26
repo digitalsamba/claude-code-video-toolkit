@@ -124,10 +124,10 @@ pipe.to("cuda")
 
 ```bash
 # Basic test
-python tools/test_qwen_edit.py --image photo.jpg --prompt "description" --steps 8
+uv run tools/test_qwen_edit.py --image photo.jpg --prompt "description" --steps 8
 
 # With seed for reproducibility
-python tools/test_qwen_edit.py --image photo.jpg --prompt "description" --seed 42
+uv run tools/test_qwen_edit.py --image photo.jpg --prompt "description" --seed 42
 ```
 
 ## Sample Results

@@ -39,16 +39,16 @@ The `SplitScreen` component will combine them.
 | File | Duration | Description | How to Create |
 |------|----------|-------------|---------------|
 | `remotion/public/audio/voiceover.mp3` | ~3:00 | Narration from VOICEOVER-SCRIPT.md | `/generate-voiceover` |
-| `remotion/public/audio/background-music.mp3` | ~4:00 | Subtle background track | `python tools/music.py` |
-| `remotion/public/audio/sfx-whoosh.mp3` | ~1s | Transition sound | `python tools/sfx.py --preset whoosh` |
-| `remotion/public/audio/sfx-chime.mp3` | ~1s | Success sound | `python tools/sfx.py --preset chime` |
-| `remotion/public/audio/sfx-click.mp3` | ~0.5s | Click sound | `python tools/sfx.py --preset click` |
+| `remotion/public/audio/background-music.mp3` | ~4:00 | Subtle background track | `uv run tools/music.py` |
+| `remotion/public/audio/sfx-whoosh.mp3` | ~1s | Transition sound | `uv run tools/sfx.py --preset whoosh` |
+| `remotion/public/audio/sfx-chime.mp3` | ~1s | Success sound | `uv run tools/sfx.py --preset chime` |
+| `remotion/public/audio/sfx-click.mp3` | ~0.5s | Click sound | `uv run tools/sfx.py --preset click` |
 
 ### Voiceover Generation
 
 ```bash
 cd /path/to/toolkit
-python tools/voiceover.py \
+uv run tools/voiceover.py \
   --script examples/sprint-review-cho-oyu/VOICEOVER-SCRIPT.md \
   --output examples/sprint-review-cho-oyu/remotion/public/audio/voiceover.mp3
 ```
@@ -56,7 +56,7 @@ python tools/voiceover.py \
 ### Background Music Generation
 
 ```bash
-python tools/music.py \
+uv run tools/music.py \
   --prompt "subtle corporate, professional, clean" \
   --duration 240 \
   --output examples/sprint-review-cho-oyu/remotion/public/audio/background-music.mp3
@@ -65,9 +65,9 @@ python tools/music.py \
 ### Sound Effects
 
 ```bash
-python tools/sfx.py --preset whoosh --output examples/sprint-review-cho-oyu/remotion/public/audio/sfx-whoosh.mp3
-python tools/sfx.py --preset chime --output examples/sprint-review-cho-oyu/remotion/public/audio/sfx-chime.mp3
-python tools/sfx.py --preset click --output examples/sprint-review-cho-oyu/remotion/public/audio/sfx-click.mp3
+uv run tools/sfx.py --preset whoosh --output examples/sprint-review-cho-oyu/remotion/public/audio/sfx-whoosh.mp3
+uv run tools/sfx.py --preset chime --output examples/sprint-review-cho-oyu/remotion/public/audio/sfx-chime.mp3
+uv run tools/sfx.py --preset click --output examples/sprint-review-cho-oyu/remotion/public/audio/sfx-click.mp3
 ```
 
 ## Small Assets (Already Included)

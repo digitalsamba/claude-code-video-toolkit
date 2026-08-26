@@ -39,10 +39,10 @@ This is a PyTorch/MPS limitation, not something we can fix in the tool.
 
 ```bash
 # Check current status
-python tools/dewatermark.py --status
+uv run tools/dewatermark.py --status
 
 # Install ProPainter
-python tools/dewatermark.py --install
+uv run tools/dewatermark.py --install
 ```
 
 This will:
@@ -55,7 +55,7 @@ This will:
 
 **Remove watermark by specifying region:**
 ```bash
-python tools/dewatermark.py \
+uv run tools/dewatermark.py \
     --input video.mp4 \
     --region 1080,660,195,40 \
     --output clean.mp4
@@ -63,7 +63,7 @@ python tools/dewatermark.py \
 
 **Use a custom mask image:**
 ```bash
-python tools/dewatermark.py \
+uv run tools/dewatermark.py \
     --input video.mp4 \
     --mask mask.png \
     --output clean.mp4
@@ -75,10 +75,10 @@ Use the `locate_watermark.py` helper:
 
 ```bash
 # Extract frames with coordinate grid
-python tools/locate_watermark.py --input video.mp4 --grid --output-dir ./review/
+uv run tools/locate_watermark.py --input video.mp4 --grid --output-dir ./review/
 
 # Verify a region across multiple frames
-python tools/locate_watermark.py --input video.mp4 --region 1100,650,150,50 --verify
+uv run tools/locate_watermark.py --input video.mp4 --region 1100,650,150,50 --verify
 ```
 
 ### Cloud GPU Alternative

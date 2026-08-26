@@ -4,7 +4,7 @@ data-viz-chart — animated chart with deterministic text overlay.
 Demonstrates the toolkit's "matplotlib for data, moviepy for trustworthy
 text" pattern. Run as:
 
-    python3 build.py
+    uv run build.py
 
 Produces a 15-second animated time-series chart from data/star_series.json
 with a title, axis labels, and source attribution rendered via PIL +
@@ -58,8 +58,8 @@ try:
 except ImportError as e:
     print(f"Missing dependency: {e}")
     print("Install the toolkit's Python dependencies:")
-    print("    python3 -m pip install -r ../../tools/requirements.txt")
-    print("(run from this directory, or use an absolute path)")
+    print("    uv sync")
+    print("(run from the toolkit root, then re-run this script with `uv run build.py`)")
     sys.exit(1)
 
 HERE = Path(__file__).resolve().parent

@@ -31,10 +31,10 @@ cd $TOOLKIT
 
 ```bash
 # CORRECT — always include --progress json
-python3 tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3 --progress json
+uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3 --progress json
 
 # WRONG — no visibility into job status
-python3 tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3
+uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3
 ```
 
 Tools that support `--progress json`: `music_gen.py`, `qwen3_tts.py`, `flux2.py`, `upscale.py`, `sadtalker.py`, `image_edit.py`, `dewatermark.py`, `ltx2.py`, `chain_video.py`.
@@ -46,7 +46,7 @@ See the **Progress Reporting** section below for output format and stage definit
 **Any tool command that takes more than 30 seconds MUST use `exec` with `yieldMs` so you can report progress to the user live.** This includes: batch FLUX generation, chain_video, SadTalker, music generation, and any multi-scene pipeline.
 
 ```
-exec command:"cd ~/.openclaw/workspace/claude-code-video-toolkit && python3 tools/chain_video.py --output-dir /path/ --progress json ..." yieldMs:10000
+exec command:"cd ~/.openclaw/workspace/claude-code-video-toolkit && uv run tools/chain_video.py --output-dir /path/ --progress json ..." yieldMs:10000
 ```
 
 **The polling loop:**
@@ -69,7 +69,7 @@ exec command:"cd ~/.openclaw/workspace/claude-code-video-toolkit && python3 tool
 
 ```bash
 cd ~/.openclaw/workspace/claude-code-video-toolkit
-python3 tools/verify_setup.py
+uv run tools/verify_setup.py
 ```
 
 If everything shows `[x]`, skip to "Quick Test" below. Otherwise continue setup.
@@ -78,10 +78,10 @@ If everything shows `[x]`, skip to "Quick Test" below. Otherwise continue setup.
 
 ```bash
 cd ~/.openclaw/workspace/claude-code-video-toolkit
-pip3 install --break-system-packages -r tools/requirements.txt
+uv sync
 ```
 
-Note: `--break-system-packages` is needed on Debian/Ubuntu with managed Python (PEP 668). Safe inside containers.
+Note: `uv sync` creates its own `.venv/` from the lockfile, so it sidesteps Debian/Ubuntu's managed-Python restrictions (PEP 668) — no `--break-system-packages` needed. If `uv` is missing, install it first: `curl -LsSf https://astral.sh/uv/install.sh | sh`.
 
 ### Step 3: Configure Cloud GPU Endpoints
 
@@ -94,24 +94,24 @@ cat ~/.openclaw/workspace/claude-code-video-toolkit/.env | grep MODAL
 If Modal endpoints are configured, you're ready. If not, **ask the user to provide Modal endpoint URLs** or set up Modal:
 
 ```bash
-pip3 install --break-system-packages modal
-python3 -m modal setup   # Opens browser for authentication
+uv sync --extra modal
+uv run modal setup   # Opens browser for authentication
 
 # Deploy each tool — capture the endpoint URL from output
 cd ~/.openclaw/workspace/claude-code-video-toolkit
-modal deploy docker/modal-qwen3-tts/app.py
-modal deploy docker/modal-flux2/app.py
-modal deploy docker/modal-music-gen/app.py
-modal deploy docker/modal-sadtalker/app.py
-modal deploy docker/modal-image-edit/app.py
-modal deploy docker/modal-upscale/app.py
-modal deploy docker/modal-propainter/app.py
-modal deploy docker/modal-ltx2/app.py      # Requires: modal secret create huggingface-token HF_TOKEN=hf_...
+uv run modal deploy docker/modal-qwen3-tts/app.py
+uv run modal deploy docker/modal-flux2/app.py
+uv run modal deploy docker/modal-music-gen/app.py
+uv run modal deploy docker/modal-sadtalker/app.py
+uv run modal deploy docker/modal-image-edit/app.py
+uv run modal deploy docker/modal-upscale/app.py
+uv run modal deploy docker/modal-propainter/app.py
+uv run modal deploy docker/modal-ltx2/app.py      # Requires: uv run modal secret create huggingface-token HF_TOKEN=hf_...
 ```
 
 **LTX-2 prerequisite:** Before deploying LTX-2, create a HuggingFace secret and accept the [Gemma 3 license](https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized):
 ```bash
-modal secret create huggingface-token HF_TOKEN=hf_your_read_access_token
+uv run modal secret create huggingface-token HF_TOKEN=hf_your_read_access_token
 ```
 
 Add each URL to `.env`:
@@ -139,19 +139,19 @@ R2_BUCKET_NAME=video-toolkit
 
 ```bash
 cd ~/.openclaw/workspace/claude-code-video-toolkit
-python3 tools/verify_setup.py
+uv run tools/verify_setup.py
 ```
 
 All tools should show `[x]`. Then run a quick test to confirm the GPU pipeline works:
 
 ```bash
 cd ~/.openclaw/workspace/claude-code-video-toolkit
-python3 tools/qwen3_tts.py --text "Hello, this is a test." --speaker Ryan --tone warm --output /tmp/video-toolkit-test.mp3 --cloud modal
+uv run tools/qwen3_tts.py --text "Hello, this is a test." --speaker Ryan --tone warm --output /tmp/video-toolkit-test.mp3 --cloud modal
 ```
 
 If you get a valid .mp3 file, setup is complete. If it fails, check:
 - `.env` has the correct `MODAL_QWEN3_TTS_ENDPOINT_URL`
-- Run `python3 tools/verify_setup.py --json` and check `modal_tools` for which endpoints are missing
+- Run `uv run tools/verify_setup.py --json` and check `modal_tools` for which endpoints are missing
 
 **Cost:** Modal includes $30/month free compute. A typical 60s video costs $1-3.
 
@@ -229,21 +229,21 @@ Default provider is **acemusic** (official cloud API, free key). No GPU required
 cd ~/.openclaw/workspace/claude-code-video-toolkit
 
 # Using acemusic cloud API (default — best quality, XL Turbo 4B model)
-python3 tools/music_gen.py \
+uv run tools/music_gen.py \
   --preset corporate-bg \
   --duration 90 \
   --output projects/PROJECT_NAME/public/audio/bg-music.mp3 \
   --progress json
 
 # Or with custom prompt and thinking mode
-python3 tools/music_gen.py \
+uv run tools/music_gen.py \
   --prompt "Subtle ambient tech, soft synth pads" \
   --duration 90 \
   --output projects/PROJECT_NAME/public/audio/bg-music.mp3 \
   --progress json
 
 # Fall back to self-hosted Modal if no acemusic key
-python3 tools/music_gen.py \
+uv run tools/music_gen.py \
   --preset corporate-bg \
   --duration 90 \
   --output projects/PROJECT_NAME/public/audio/bg-music.mp3 \
@@ -262,14 +262,14 @@ Generate ONE .mp3 file PER SCENE. Do NOT generate a single voiceover file.
 cd ~/.openclaw/workspace/claude-code-video-toolkit
 
 # Scene 01
-python3 tools/qwen3_tts.py \
+uv run tools/qwen3_tts.py \
   --text "The voiceover text for scene one." \
   --speaker Ryan --tone warm \
   --output projects/PROJECT_NAME/public/audio/scenes/01.mp3 \
   --cloud modal --progress json
 
 # Scene 02
-python3 tools/qwen3_tts.py \
+uv run tools/qwen3_tts.py \
   --text "The voiceover text for scene two." \
   --speaker Ryan --tone warm \
   --output projects/PROJECT_NAME/public/audio/scenes/02.mp3 \
@@ -284,7 +284,7 @@ python3 tools/qwen3_tts.py \
 For voice cloning (needs a reference recording):
 ```bash
 cd ~/.openclaw/workspace/claude-code-video-toolkit
-python3 tools/qwen3_tts.py \
+uv run tools/qwen3_tts.py \
   --text "Text to speak" \
   --ref-audio assets/voices/reference.m4a \
   --ref-text "Exact transcript of the reference audio" \
@@ -296,7 +296,7 @@ python3 tools/qwen3_tts.py \
 
 ```bash
 cd ~/.openclaw/workspace/claude-code-video-toolkit
-python3 tools/flux2.py \
+uv run tools/flux2.py \
   --prompt "Dark tech background with blue geometric grid, cinematic lighting" \
   --width 1920 --height 1080 \
   --output projects/PROJECT_NAME/public/images/title-bg.png \
@@ -308,7 +308,7 @@ Image presets (use `--preset` instead of `--prompt --width --height`):
 
 ```bash
 cd ~/.openclaw/workspace/claude-code-video-toolkit
-python3 tools/flux2.py \
+uv run tools/flux2.py \
   --preset title-bg \
   --output projects/PROJECT_NAME/public/images/title-bg.png \
   --cloud modal --progress json
@@ -322,20 +322,20 @@ Generate AI video clips for b-roll cutaways, animated slide backgrounds, or intr
 cd ~/.openclaw/workspace/claude-code-video-toolkit
 
 # B-roll clip from text
-python3 tools/ltx2.py \
+uv run tools/ltx2.py \
   --prompt "Aerial drone shot over a European city at golden hour, cinematic wide angle" \
   --output projects/PROJECT_NAME/public/videos/broll-europe.mp4 \
   --cloud modal --progress json
 
 # Animate a slide/screenshot (image-to-video)
-python3 tools/ltx2.py \
+uv run tools/ltx2.py \
   --prompt "Gentle particle effects, soft ambient light shifts, very slight camera drift" \
   --input projects/PROJECT_NAME/public/images/title-bg.png \
   --output projects/PROJECT_NAME/public/videos/animated-title.mp4 \
   --cloud modal --progress json
 
 # Abstract intro/outro background
-python3 tools/ltx2.py \
+uv run tools/ltx2.py \
   --prompt "Dark moody abstract background with flowing blue light streaks, bokeh particles, cinematic" \
   --output projects/PROJECT_NAME/public/videos/intro-bg.mp4 \
   --cloud modal --progress json
@@ -362,7 +362,7 @@ Generate a sequence of video clips where each scene flows from the last frame of
 cd ~/.openclaw/workspace/claude-code-video-toolkit
 
 # Chain scenes 1-30 from a directory of FLUX images
-python3 tools/chain_video.py \
+uv run tools/chain_video.py \
   --scenes-dir projects/PROJECT_NAME/public/images/scenes/ \
   --output-dir projects/PROJECT_NAME/public/videos/chain/ \
   --prompt "Cinematic continuation, flowing transition" \
@@ -370,21 +370,21 @@ python3 tools/chain_video.py \
   --progress json
 
 # Resume from scene 10 (skips existing files automatically)
-python3 tools/chain_video.py \
+uv run tools/chain_video.py \
   --scenes-dir projects/PROJECT_NAME/public/images/scenes/ \
   --output-dir projects/PROJECT_NAME/public/videos/chain/ \
   --start 10 --end 30 \
   --progress json
 
 # Per-scene prompts from JSON file
-python3 tools/chain_video.py \
+uv run tools/chain_video.py \
   --scenes-dir projects/PROJECT_NAME/public/images/scenes/ \
   --output-dir projects/PROJECT_NAME/public/videos/chain/ \
   --prompts-file projects/PROJECT_NAME/scenes.json \
   --progress json
 
 # Chain from an existing clip (no scene images needed)
-python3 tools/chain_video.py \
+uv run tools/chain_video.py \
   --first-clip output/chain-04.mp4 \
   --output-dir output/ \
   --start 5 --end 30 \
@@ -417,7 +417,7 @@ python3 tools/chain_video.py \
 **CRITICAL: Run with `yieldMs` for live progress reporting.** Don't break it into per-scene tool calls — OpenClaw's agent run ends between calls, causing the sequence to stall. Instead, use `exec` with `yieldMs` so you stay in the loop and can relay progress to the user:
 
 ```
-exec command:"cd ~/.openclaw/workspace/claude-code-video-toolkit && python3 tools/chain_video.py --scenes-dir /path/to/images/ --output-dir /path/to/output/ --prompts-file scenes.json --progress json" yieldMs:10000
+exec command:"cd ~/.openclaw/workspace/claude-code-video-toolkit && uv run tools/chain_video.py --scenes-dir /path/to/images/ --output-dir /path/to/output/ --prompts-file scenes.json --progress json" yieldMs:10000
 ```
 
 **How this works:**
@@ -437,14 +437,14 @@ Generate a presenter portrait, then animate per-scene clips:
 cd ~/.openclaw/workspace/claude-code-video-toolkit
 
 # 1. Generate portrait
-python3 tools/flux2.py \
+uv run tools/flux2.py \
   --prompt "Professional presenter portrait, clean style, dark background, facing camera, upper body" \
   --width 1024 --height 576 \
   --output projects/PROJECT_NAME/public/images/presenter.png \
   --cloud modal --progress json
 
 # 2. Generate per-scene narrator clips (one per scene, NOT one long video)
-python3 tools/sadtalker.py \
+uv run tools/sadtalker.py \
   --image projects/PROJECT_NAME/public/images/presenter.png \
   --audio projects/PROJECT_NAME/public/audio/scenes/01.mp3 \
   --preprocess full --still --expression-scale 0.8 \
@@ -467,7 +467,7 @@ Create scene variants from existing images:
 
 ```bash
 cd ~/.openclaw/workspace/claude-code-video-toolkit
-python3 tools/image_edit.py \
+uv run tools/image_edit.py \
   --input projects/PROJECT_NAME/public/images/title-bg.png \
   --prompt "Make it darker with red tones, more ominous" \
   --output projects/PROJECT_NAME/public/images/problem-bg.png \
@@ -478,7 +478,7 @@ python3 tools/image_edit.py \
 
 ```bash
 cd ~/.openclaw/workspace/claude-code-video-toolkit
-python3 tools/upscale.py \
+uv run tools/upscale.py \
   --input projects/PROJECT_NAME/public/images/some-image.png \
   --output projects/PROJECT_NAME/public/images/some-image-4x.png \
   --scale 4 --cloud modal --progress json
@@ -569,7 +569,7 @@ Add `--progress json` to any tool command to get JSON Lines on stderr:
 
 ```bash
 cd ~/.openclaw/workspace/claude-code-video-toolkit
-python3 tools/music_gen.py \
+uv run tools/music_gen.py \
   --preset corporate-bg --duration 60 \
   --output projects/PROJECT_NAME/public/audio/bg-music.mp3 \
   --progress json
@@ -613,14 +613,14 @@ Default mode (`--progress human`) shows the same events as colored terminal outp
 
 | Problem | Solution |
 |---------|----------|
-| Tool command fails with "No module named..." | Run `pip3 install --break-system-packages -r tools/requirements.txt` from toolkit root |
-| "MODAL_*_ENDPOINT_URL not configured" | Check `.env` has the endpoint URL. Run `python3 tools/verify_setup.py` |
+| Tool command fails with "No module named..." | Run `uv sync` from toolkit root and invoke tools via `uv run` |
+| "MODAL_*_ENDPOINT_URL not configured" | Check `.env` has the endpoint URL. Run `uv run tools/verify_setup.py` |
 | SadTalker output is square/cropped | You forgot `--preprocess full`. Re-run with that flag |
 | Audio too short/long for scene | Re-run Step 5 (sync timing) and update config |
 | `npm run render` fails | Make sure you're in the project dir, not toolkit root. Run `npm install` first |
 | "Cannot find module" in Remotion | Check import paths. Custom components use `../../../lib/` relative paths |
 | Cold start timeout on Modal | First call after idle takes 30-120s. Retry once — second call uses warm GPU |
-| SadTalker client timeout (long audio) | The client HTTP request can time out before Modal finishes. **Modal still uploads the result to R2.** Check `sadtalker/results/` in the `video-toolkit` R2 bucket for the output. Use `python3 -c "import boto3; ..."` with the R2 creds from `.env` to list and generate a presigned URL |
+| SadTalker client timeout (long audio) | The client HTTP request can time out before Modal finishes. **Modal still uploads the result to R2.** Check `sadtalker/results/` in the `video-toolkit` R2 bucket for the output. Use `uv run python -c "import boto3; ..."` with the R2 creds from `.env` to list and generate a presigned URL |
 
 ---
 

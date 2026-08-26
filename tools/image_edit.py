@@ -14,22 +14,22 @@ Capabilities:
 
 Examples:
   # Background replacement
-  python tools/image_edit.py --input photo.jpg --background "pyramids of Egypt"
+  uv run tools/image_edit.py --input photo.jpg --background "pyramids of Egypt"
 
   # Style transfer
-  python tools/image_edit.py --input photo.jpg --style "cyberpunk neon city"
+  uv run tools/image_edit.py --input photo.jpg --style "cyberpunk neon city"
 
   # Custom prompt (full control)
-  python tools/image_edit.py --input photo.jpg --prompt "Add warm sunset lighting"
+  uv run tools/image_edit.py --input photo.jpg --prompt "Add warm sunset lighting"
 
   # Using Modal instead of RunPod
-  python tools/image_edit.py --input photo.jpg --background "office" --cloud modal
+  uv run tools/image_edit.py --input photo.jpg --background "office" --cloud modal
 
   # Batch processing
-  python tools/image_edit.py --input-dir ./photos --background "studio backdrop" --output-dir ./edited
+  uv run tools/image_edit.py --input-dir ./photos --background "studio backdrop" --output-dir ./edited
 
   # With seed for reproducibility
-  python tools/image_edit.py --input photo.jpg --background "office" --seed 42
+  uv run tools/image_edit.py --input photo.jpg --background "office" --seed 42
 """
 
 import argparse
@@ -45,7 +45,7 @@ try:
     from PIL import Image
 except ImportError as e:
     print(f"Missing dependency: {e}")
-    print("Install with: pip install requests Pillow")
+    print("Install with: uv sync")
     sys.exit(1)
 
 sys.path.insert(0, str(Path(__file__).parent))

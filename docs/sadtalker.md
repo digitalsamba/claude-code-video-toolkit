@@ -6,10 +6,10 @@ Generate realistic talking head videos from a portrait image and audio file.
 
 ```bash
 # Basic usage
-python tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4
+uv run tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4
 
 # With preset
-python tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --preset natural --output talking.mp4
+uv run tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --preset natural --output talking.mp4
 ```
 
 ## When NOT to Use SadTalker
@@ -32,7 +32,7 @@ For these cases, use **LTX-2 image-to-video** instead. It animates the whole ima
 
 2. Run setup to create the endpoint:
    ```bash
-   python tools/sadtalker.py --setup
+   uv run tools/sadtalker.py --setup
    ```
 
 ## Presets
@@ -97,7 +97,7 @@ For these cases, use **LTX-2 image-to-video** instead. It animates the whole ima
 
 ### Natural Talking Head
 ```bash
-python tools/sadtalker.py \
+uv run tools/sadtalker.py \
   --image portrait.png \
   --audio narration.mp3 \
   --preset natural \
@@ -106,7 +106,7 @@ python tools/sadtalker.py \
 
 ### Professional/Calm Style
 ```bash
-python tools/sadtalker.py \
+uv run tools/sadtalker.py \
   --image headshot.png \
   --audio presentation.mp3 \
   --preset professional \
@@ -116,7 +116,7 @@ python tools/sadtalker.py \
 
 ### Expressive Animation
 ```bash
-python tools/sadtalker.py \
+uv run tools/sadtalker.py \
   --image avatar.png \
   --audio excited_speech.mp3 \
   --preset expressive \
@@ -125,7 +125,7 @@ python tools/sadtalker.py \
 
 ### Full Body Shot
 ```bash
-python tools/sadtalker.py \
+uv run tools/sadtalker.py \
   --image fullbody.png \
   --audio voiceover.mp3 \
   --preset fullbody \
@@ -134,7 +134,7 @@ python tools/sadtalker.py \
 
 ### Fine-Tuned Settings
 ```bash
-python tools/sadtalker.py \
+uv run tools/sadtalker.py \
   --image portrait.png \
   --audio speech.mp3 \
   --pose-style 45 \
@@ -160,10 +160,10 @@ If your client times out but the job completes on RunPod:
 
 ```bash
 # Get job ID from the error output, then retrieve results
-python tools/sadtalker.py --retrieve JOB_ID --output result.mp4
+uv run tools/sadtalker.py --retrieve JOB_ID --output result.mp4
 
 # Example
-python tools/sadtalker.py --retrieve 7d69546a-3d31-4f74-bf12-b1c19a2f4d3c-u1 --output narrator.mp4
+uv run tools/sadtalker.py --retrieve 7d69546a-3d31-4f74-bf12-b1c19a2f4d3c-u1 --output narrator.mp4
 ```
 
 Jobs persist on RunPod for ~24 hours, so you can retrieve later.
@@ -194,7 +194,7 @@ SadTalker doesn't resize or change backgrounds. To customize:
    ffmpeg -i portrait.png -vf scale=1280:720 portrait_720p.png
 
    # Or use image_edit.py for background changes
-   python tools/image_edit.py --input portrait.png --background studio --output portrait_studio.png
+   uv run tools/image_edit.py --input portrait.png --background studio --output portrait_studio.png
    ```
 
 2. **Post-process output video:**
@@ -284,7 +284,7 @@ Humans frame faces better than automated cropping. Guide users to:
 ### 4. Recommended Command for NarratorPiP
 
 ```bash
-python tools/sadtalker.py \
+uv run tools/sadtalker.py \
   --image presenter_16x9.png \
   --audio voiceover.mp3 \
   --still --expression-scale 0.8 --preprocess full \
@@ -300,13 +300,13 @@ Key flags:
 
 ```bash
 # 1. Generate voiceover
-python tools/voiceover.py --script script.md --output narration.mp3
+uv run tools/voiceover.py --script script.md --output narration.mp3
 
 # 2. Prepare 16:9 image (user crops manually for best framing)
 # presenter_16x9.png should be ~640x360 or similar 16:9 ratio
 
 # 3. Create talking head with NarratorPiP-optimized settings
-python tools/sadtalker.py \
+uv run tools/sadtalker.py \
   --image presenter_16x9.png \
   --audio narration.mp3 \
   --still --expression-scale 0.8 --preprocess full \
