@@ -150,8 +150,8 @@ uv run tools/voiceover.py --scene-dir public/audio/scenes --json
 uv run tools/voiceover.py --provider qwen3 --tone warm --scene-dir public/audio/scenes --json
 
 # Using 60db (premium cloud TTS — needs SIXTYDB_API_KEY)
-python tools/voiceover.py --provider 60db --scene-dir public/audio/scenes --json
-python tools/voiceover.py --provider 60db --voice-id <uuid> --stability 0.6 --script SCRIPT.md --output out.mp3
+uv run tools/voiceover.py --provider 60db --scene-dir public/audio/scenes --json
+uv run tools/voiceover.py --provider 60db --voice-id <uuid> --stability 0.6 --script SCRIPT.md --output out.mp3
 
 # Single file (legacy)
 uv run tools/voiceover.py --script SCRIPT.md --output out.mp3
@@ -165,9 +165,9 @@ Three transports all produce a finished audio file: `synthesize` (REST, default)
 `stream` (NDJSON), and `websocket` (realtime; needs `pip install websocket-client`).
 
 ```bash
-python tools/sixtydb_tts.py --text "Hello world" --output hello.mp3
-python tools/sixtydb_tts.py --text "Hello" --transport stream --output hello.mp3
-python tools/sixtydb_tts.py --list-voices          # GET /myvoices
+uv run tools/sixtydb_tts.py --text "Hello world" --output hello.mp3
+uv run tools/sixtydb_tts.py --text "Hello" --transport stream --output hello.mp3
+uv run tools/sixtydb_tts.py --list-voices          # GET /myvoices
 ```
 
 Config: `SIXTYDB_API_KEY` (required), `SIXTYDB_VOICE_ID` (optional — falls back to
@@ -391,18 +391,18 @@ guided workflow (it auto-fills title/description/tags from `project.json`), or c
 
 ```bash
 # One-time login (opens a browser, caches a refresh token under _internal/.youtube/)
-python3 tools/youtube_upload.py --auth
+uv run tools/youtube_upload.py --auth
 
 # Upload privately (the safe default)
-python3 tools/youtube_upload.py --video out/video.mp4 --title "My video" \
+uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
     --description-file DESCRIPTION.md --tags "ai,agents,explainer" --json-out
 
 # Schedule a public go-live
-python3 tools/youtube_upload.py --video out/video.mp4 --title "My video" \
+uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
     --publish-at 2026-06-10T09:00:00Z --thumbnail out/thumb.png --json-out
 
 # Validate everything without uploading (also reports auth readiness)
-python3 tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
+uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
 ```
 
 **Setup is OAuth, not an API key** (uploads act on behalf of a channel). See

@@ -518,7 +518,7 @@
     "sixtydb_tts": {
       "path": "tools/sixtydb_tts.py",
       "description": "Generate speech using 60db cloud TTS - REST, streaming, and websocket transports",
-      "usage": "python tools/sixtydb_tts.py --text \"Hello\" --output hello.mp3",
+      "usage": "uv run tools/sixtydb_tts.py --text \"Hello\" --output hello.mp3",
       "status": "beta",
       "category": "audio-generation",
       "backend": "60db",
@@ -566,7 +566,7 @@
     "align_captions": {
       "path": "tools/align_captions.py",
       "description": "Align hand-estimated cap() caption timings in sprint-config.ts to actual TTS audio — transcribes each scene with ElevenLabs Scribe, fuzzy-matches phrases to word timestamps, patches fromSec/durSec in --apply mode",
-      "usage": "python3 tools/align_captions.py --config src/config/sprint-config.ts --scene-dir public/audio/scenes [--apply --tail-pad 0.3]",
+      "usage": "uv run tools/align_captions.py --config src/config/sprint-config.ts --scene-dir public/audio/scenes [--apply --tail-pad 0.3]",
       "status": "beta",
       "category": "project",
       "requires": "ElevenLabs API key (Scribe)",
@@ -723,7 +723,7 @@
     "youtube_upload": {
       "path": "tools/youtube_upload.py",
       "description": "Upload a rendered video to YouTube via the Data API v3 (OAuth 2.0, resumable upload) — title/description/tags/thumbnail/captions/playlist, private/unlisted/public or scheduled publish",
-      "usage": "python3 tools/youtube_upload.py --video out/video.mp4 --title \"My video\" --tags \"ai,explainer\" --json-out",
+      "usage": "uv run tools/youtube_upload.py --video out/video.mp4 --title \"My video\" --tags \"ai,explainer\" --json-out",
       "status": "beta",
       "category": "publishing",
       "backend": "YouTube Data API v3 (OAuth 2.0 installed-app flow)",

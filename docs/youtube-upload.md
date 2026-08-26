@@ -88,7 +88,7 @@ The tool prints this exact command if you run it before the deps are present.
 
 ### 6. Log in once
 ```bash
-python3 tools/youtube_upload.py --auth
+uv run tools/youtube_upload.py --auth
 ```
 A browser opens for consent. On success the refresh token is cached at
 `_internal/.youtube/token_default.json` (chmod 600, gitignored). Every later upload reuses it
@@ -100,7 +100,7 @@ silently — no browser needed.
 
 ```bash
 # Upload privately (the safe default)
-python3 tools/youtube_upload.py \
+uv run tools/youtube_upload.py \
   --video out/video.mp4 \
   --title "My video title" \
   --description-file DESCRIPTION.md \
@@ -109,11 +109,11 @@ python3 tools/youtube_upload.py \
   --json-out
 
 # Schedule a public go-live (works for first-party uploads — see Gotchas re: the audit)
-python3 tools/youtube_upload.py --video out/video.mp4 --title "My video" \
+uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
   --publish-at 2026-06-10T09:00:00Z --thumbnail out/thumb.png
 
 # Validate everything without uploading (also reports whether auth is ready)
-python3 tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
+uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
 ```
 
 Prefer **`/publish`** for finished projects — it derives the title/description/tags from
@@ -182,7 +182,7 @@ Compare `requestedPrivacy` vs `privacyStatus` to detect the unverified-app force
   the tool reports the *actual* returned privacy — treat that as the source of truth.
 - **7-day refresh-token expiry in "Testing".** Consent screens left in Testing mode expire
   refresh tokens after ~7 days. If an unattended run fails with `errorType: "auth"`, just re-run
-  `python3 tools/youtube_upload.py --auth`. Publishing the consent screen removes this (but
+  `uv run tools/youtube_upload.py --auth`. Publishing the consent screen removes this (but
   keeps the verification private-lock until verified).
 - **Headless servers.** `--auth` needs a browser + reachable localhost. Run it once on a
   machine with a browser, then copy `_internal/.youtube/token_<account>.json` to the server.
@@ -199,7 +199,7 @@ Compare `requestedPrivacy` vs `privacyStatus` to detect the unverified-app force
 |---------|-----|
 | `Missing dependency: ...` | `pip install google-api-python-client google-auth-oauthlib google-auth-httplib2` |
 | `OAuth client secrets file not found` | Set `YOUTUBE_CLIENT_SECRETS_FILE` in `.env` (absolute path) or pass `--client-secrets` |
-| `No cached credentials` | Run `python3 tools/youtube_upload.py --auth` once |
+| `No cached credentials` | Run `uv run tools/youtube_upload.py --auth` once |
 | `Refresh token ... is invalid` | Re-run `--auth` (7-day Testing expiry or revoked token) |
 | `errorType: "quota"` | Daily quota hit — wait or request more quota |
 | Video uploaded but stays `private` | Unverified-app lock — verify your OAuth app, or publish manually |

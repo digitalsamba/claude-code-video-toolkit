@@ -3,7 +3,7 @@
 This toolkit is built around Claude Code assets in `.claude/` and `CLAUDE.md`, but it also ships a migration script for [Kiro CLI](https://kiro.dev/) — the sibling of `scripts/migrate_to_codex.py`.
 
 ```bash
-python3 scripts/migrate_to_kiro.py --force
+uv run scripts/migrate_to_kiro.py --force
 ```
 
 This does three things:
@@ -30,7 +30,7 @@ Then `/video`, `/setup`, `/brand`, etc. are available as slash commands (tab com
 
 ## Keeping it fresh
 
-- After `CLAUDE.md` changes: re-run `python3 scripts/migrate_to_kiro.py --force` to refresh the steering file.
+- After `CLAUDE.md` changes: re-run `uv run scripts/migrate_to_kiro.py --force` to refresh the steering file.
 - After new skills/commands are added upstream: re-run with `--force` — the set is rediscovered from the registry.
 - Command workflow edits need no re-run at all (wrappers read the originals at invocation time).
 - Moved or re-cloned the repo: re-run with `--force` to refresh the absolute paths in the wrappers.
@@ -48,7 +48,7 @@ Then `/video`, `/setup`, `/brand`, etc. are available as slash commands (tab com
 ## Removing
 
 ```bash
-python3 scripts/migrate_to_kiro.py --reset
+uv run scripts/migrate_to_kiro.py --reset
 ```
 
 `--reset` removes the toolkit skills previously installed under `~/.kiro/skills` (or the workspace `.kiro/skills` with `--workspace-skills`) and removes the generated block from the steering file. It does not touch other skills you have installed and it does not remove manual steering content.

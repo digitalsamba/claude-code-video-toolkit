@@ -369,7 +369,7 @@ See [docs/codex.md](docs/codex.md) for what it installs, how the `AGENTS.md` blo
 A sibling migration script installs the toolkit's skills and workflows for [Kiro CLI](https://kiro.dev/) — `/video`, `/setup`, etc. work as slash commands, from any directory:
 
 ```bash
-python3 scripts/migrate_to_kiro.py --force
+uv run scripts/migrate_to_kiro.py --force
 ```
 
 See [docs/kiro.md](docs/kiro.md) for what it installs, how it achieves Claude Code-parity, and how to remove it.

@@ -4,6 +4,7 @@
 #   uv sync                    # from the toolkit root — reads pyproject.toml + uv.lock
 #   uv sync --extra whisper    # optional karaoke captions (heavy, pulls in torch)
 #   uv sync --extra modal      # optional Modal CLI for self-hosted cloud GPU
+#   uv sync --extra youtube    # optional YouTube upload deps
 # This file is kept as a pip fallback only. Keep it in sync with pyproject.toml.
 elevenlabs>=1.0.0
 python-dotenv>=1.0.0

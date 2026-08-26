@@ -5,6 +5,7 @@
 #   uv sync                      # core deps: voiceover, image gen, music, moviepy examples
 #   uv sync --extra whisper      # + openai-whisper for burned karaoke captions (heavy, pulls in torch)
 #   uv sync --extra modal        # + Modal CLI for self-hosted cloud GPU fallback
+#   uv sync --extra youtube      # + Google API client for tools/youtube_upload.py / /publish
 #   uv sync --all-extras         # everything
 #
 # Then run any tool through the project environment:
@@ -16,7 +17,7 @@
 
 [project]
 name = "claude-code-video-toolkit"
-version = "0.17.0"
+version = "0.18.0"
 description = "AI-native video production workspace: Remotion templates, AI voiceover/music/image tools, and browser demo recording"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,6 +27,8 @@ dependencies = [
     "requests>=2.28.0",
     # Cloudflare R2 file transfer (S3-compatible)
     "boto3>=1.28.0",
+    # 60db TTS websocket transport (tools/sixtydb_tts.py --transport websocket)
+    "websocket-client>=1.6.0",
     # Image processing — tools/flux2.py, tools/image_edit.py, and the moviepy
     # examples for PIL-based text rendering
     "pillow>=10.0",
@@ -44,4 +47,11 @@ whisper = [
 # Self-hosted cloud GPU fallback via Modal (see docs/modal-setup.md)
 modal = [
     "modal>=0.64",
+]
+# YouTube upload (tools/youtube_upload.py, /publish) — OAuth 2.0 + Data API v3.
+# Only needed if you publish to YouTube. See docs/youtube-upload.md.
+youtube = [
+    "google-api-python-client>=2.100.0",
+    "google-auth-oauthlib>=1.2.0",
+    "google-auth-httplib2>=0.2.0",
 ]

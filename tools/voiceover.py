@@ -880,8 +880,8 @@ def main():
                 "     echo \"SIXTYDB_API_KEY=sk_live_your_key\" >> .env\n"
                 "\n"
                 "  2. Use ElevenLabs or Qwen3-TTS instead:\n"
-                "     python3 tools/voiceover.py --provider elevenlabs --scene-dir public/audio/scenes --json\n"
-                "     python3 tools/voiceover.py --provider qwen3 --scene-dir public/audio/scenes --json\n"
+                "     uv run tools/voiceover.py --provider elevenlabs --scene-dir public/audio/scenes --json\n"
+                "     uv run tools/voiceover.py --provider qwen3 --scene-dir public/audio/scenes --json\n"
                 "\n"
                 "  3. Skip voiceover entirely:\n"
                 "     Videos render fine without audio. Add voiceover later when ready.",

@@ -8,28 +8,28 @@ and .env.example for the click-path. In short:
   1. Enable "YouTube Data API v3" on a Google Cloud project.
   2. Create an OAuth client ID of type "Desktop app", download client_secret_*.json.
   3. Point YOUTUBE_CLIENT_SECRETS_FILE at it (or pass --client-secrets).
-  4. Log in once (opens a browser): python3 tools/youtube_upload.py --auth
+  4. Log in once (opens a browser): uv run tools/youtube_upload.py --auth
 
 After the first login the refresh token is cached under _internal/.youtube/ and
 reused silently, so subsequent uploads need no browser.
 
 Examples:
   # One-time login (interactive, opens a browser)
-  python3 tools/youtube_upload.py --auth
+  uv run tools/youtube_upload.py --auth
 
   # Upload privately (the safe default)
-  python3 tools/youtube_upload.py --video out/video.mp4 --title "My video" \\
+  uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \\
       --description-file DESCRIPTION.md --tags "ai,agents,explainer"
 
   # Schedule a public go-live (only effective once the OAuth app is verified)
-  python3 tools/youtube_upload.py --video out/video.mp4 --title "My video" \\
+  uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \\
       --publish-at 2026-06-10T15:00:00Z --thumbnail out/thumb.png
 
   # Validate everything without uploading (also reports auth readiness)
-  python3 tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
+  uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
 
   # A second channel keeps its own cached token
-  python3 tools/youtube_upload.py --auth --account work
+  uv run tools/youtube_upload.py --auth --account work
 
 # ---------------------------------------------------------------------------
 # QUOTA & VERIFICATION REALITIES (YouTube Data API v3)
@@ -206,7 +206,7 @@ def get_credentials(
             if not allow_interactive:
                 raise AuthError(
                     f"Refresh token for account '{account}' is invalid ({e}). "
-                    f"Re-run interactively: python3 tools/youtube_upload.py --auth --account {account}"
+                    f"Re-run interactively: uv run tools/youtube_upload.py --auth --account {account}"
                 )
             creds = None  # fall through to a fresh consent flow
 
@@ -214,7 +214,7 @@ def get_credentials(
     if not allow_interactive:
         raise AuthError(
             f"No cached credentials for account '{account}'. "
-            f"Log in once interactively: python3 tools/youtube_upload.py --auth --account {account}"
+            f"Log in once interactively: uv run tools/youtube_upload.py --auth --account {account}"
         )
 
     secrets = client_secrets or get_youtube_client_secrets_file()

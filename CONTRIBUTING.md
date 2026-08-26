@@ -86,7 +86,7 @@ If your change affects Kiro CLI compatibility, also update:
 | What Changed | Update These Files |
 |--------------|-------------------|
 | Kiro migration flow | `README.md` ("Using with Kiro CLI"), `docs/kiro.md`, `docs/getting-started.md`, `scripts/migrate_to_kiro.py` |
-| Claude guidance source | `CLAUDE.md` and then re-run `python3 scripts/migrate_to_kiro.py --force` to regenerate the steering file in `.kiro/steering/` |
+| Claude guidance source | `CLAUDE.md` and then re-run `uv run scripts/migrate_to_kiro.py --force` to regenerate the steering file in `.kiro/steering/` |
 
 **Quick verification:** After adding a command, grep for it across docs:
 ```bash

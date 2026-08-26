@@ -21,20 +21,20 @@ They are converted to 60db's native 0-100 scale internally.
 
 Usage:
     # Quick generation (REST, default voice)
-    python tools/sixtydb_tts.py --text "Hello world" --output hello.mp3
+    uv run tools/sixtydb_tts.py --text "Hello world" --output hello.mp3
 
     # Pick a voice and tune settings (0-1 scale)
-    python tools/sixtydb_tts.py --text "Hello" --voice-id <uuid> \
+    uv run tools/sixtydb_tts.py --text "Hello" --voice-id <uuid> \
         --stability 0.6 --similarity 0.9 --speed 1.0 --output hello.mp3
 
     # Streaming transport
-    python tools/sixtydb_tts.py --text "Hello" --transport stream --output hello.mp3
+    uv run tools/sixtydb_tts.py --text "Hello" --transport stream --output hello.mp3
 
     # Realtime websocket transport (writes a WAV, transcoded to --output format)
-    python tools/sixtydb_tts.py --text "Hello" --transport websocket --output hello.mp3
+    uv run tools/sixtydb_tts.py --text "Hello" --transport websocket --output hello.mp3
 
     # List your voices (GET /myvoices)
-    python tools/sixtydb_tts.py --list-voices
+    uv run tools/sixtydb_tts.py --list-voices
 
 Setup:
     echo "SIXTYDB_API_KEY=sk_live_your_key" >> .env
@@ -578,10 +578,10 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python tools/sixtydb_tts.py --text "Hello world" --output hello.mp3
-  python tools/sixtydb_tts.py --text "Hello" --voice-id <uuid> --stability 0.6 --output hello.mp3
-  python tools/sixtydb_tts.py --text "Hello" --transport stream --output hello.mp3
-  python tools/sixtydb_tts.py --list-voices
+  uv run tools/sixtydb_tts.py --text "Hello world" --output hello.mp3
+  uv run tools/sixtydb_tts.py --text "Hello" --voice-id <uuid> --stability 0.6 --output hello.mp3
+  uv run tools/sixtydb_tts.py --text "Hello" --transport stream --output hello.mp3
+  uv run tools/sixtydb_tts.py --list-voices
         """,
     )
     parser.add_argument("--text", "-t", type=str, help="Text to synthesize (max 5000 chars for REST)")
