@@ -9,11 +9,11 @@ Renders out of the box with the included `data/star_series.json` (real GitHub st
 ```bash
 # From the toolkit root (one-time — installs matplotlib, moviepy, and
 # Pillow alongside the rest of the toolkit's optional Python deps):
-python3 -m pip install -r tools/requirements.txt
+uv sync
 
 # Then:
 cd examples/data-viz-chart
-python3 build.py
+uv run build.py
 ```
 
 First run takes ~30 seconds (matplotlib renders 450 frames, moviepy composites). Subsequent runs reuse the cached chart animation unless `data/star_series.json` is newer.
@@ -55,7 +55,7 @@ To plot something else:
 2. Update the title in `build.py` (`text_clip("github.com/...", ...)`).
 3. Update the y-axis label in `render_chart_animation()` (`ax.set_ylabel("Stars", ...)`).
 4. Update the unit label (`text_clip("stars", ...)`) and source attribution.
-5. Run `python3 build.py`.
+5. Run `uv run build.py`.
 
 The chart re-renders automatically because the data file mtime is newer than the cached animation.
 
@@ -64,7 +64,7 @@ The chart re-renders automatically because the data file mtime is newer than the
 Same pattern as `examples/quick-spot`:
 
 ```bash
-python3 ../../tools/voiceover.py \
+uv run ../../tools/voiceover.py \
     --script VOICEOVER-SCRIPT.md \
     --scene-dir public/audio/scenes
 ```

@@ -85,7 +85,7 @@ Accept default or enter custom path:
 Run the redub tool:
 
 ```bash
-source .venv/bin/activate && python tools/redub.py \
+source .venv/bin/activate && uv run tools/redub.py \
   --input "INPUT_PATH" \
   --voice-id "VOICE_ID" \
   --output "OUTPUT_PATH" \
@@ -95,7 +95,7 @@ source .venv/bin/activate && python tools/redub.py \
 For transcript review workflow:
 ```bash
 # Step 1: Transcribe only
-source .venv/bin/activate && python tools/redub.py \
+source .venv/bin/activate && uv run tools/redub.py \
   --input "INPUT_PATH" \
   --voice-id "VOICE_ID" \
   --output "OUTPUT_PATH" \
@@ -104,7 +104,7 @@ source .venv/bin/activate && python tools/redub.py \
 
 # Show transcript to user, let them edit
 # Step 2: After approval, run with edited transcript
-source .venv/bin/activate && python tools/redub.py \
+source .venv/bin/activate && uv run tools/redub.py \
   --input "INPUT_PATH" \
   --voice-id "VOICE_ID" \
   --output "OUTPUT_PATH" \

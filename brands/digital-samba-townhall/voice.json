@@ -1,0 +1,18 @@
+{
+  "description": "Townhall narrator voice — cinematic, dramatic, movie-trailer energy",
+  "provider": "qwen3",
+  "defaultSpeaker": "Aiden",
+  "tones": {
+    "trailer": "Speak like a blockbuster movie trailer narrator — measured, dramatic, with gravity. Long pauses between phrases.",
+    "commentary": "Deadpan sports commentator who gradually becomes excited as events unfold.",
+    "commercial": "Over-the-top Super Bowl commercial announcer, maximum drama, mock-sincere.",
+    "lugh": "Deep, ancient Celtic warrior-god voice with tremendous gravitas. Slow, resonant, weight of ages."
+  },
+  "speakers": {
+    "trailer": "Aiden",
+    "commentary": "Ryan",
+    "commercial": "Aiden",
+    "lugh": "Ryan"
+  },
+  "notes": "Uses Qwen3-TTS on Modal. Free-form --instruct text on each tone gives character without needing cloned voices. Lugh uses Ryan base with the Celtic god instruct because Ryan carries depth better than Aiden."
+}

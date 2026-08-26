@@ -24,11 +24,11 @@ A 6-second brand stinger that opens with a pixel-art astronaut waving in an ambe
 
 ```bash
 # From the toolkit root:
-python3 -m pip install -r tools/requirements.txt   # moviepy, Pillow, numpy
+uv sync   # moviepy, Pillow, numpy
 brew install librsvg                               # rsvg-convert (one-time)
 
 cd examples/ds-crt-stinger
-python3 build.py                                   # → ds_stinger_astro.mp4
+uv run build.py                                   # → ds_stinger_astro.mp4
 ```
 
 The first run auto-rasterises the white SVG and bakes the grungy logo. Subsequent runs reuse the cached intermediates.
@@ -41,7 +41,7 @@ The LTX-2 step requires the Modal LTX-2 endpoint to be deployed (see `docs/modal
 
 ```bash
 # From the toolkit root:
-python3 tools/ltx2.py \
+uv run tools/ltx2.py \
   --lora crt-terminal --seed 42 \
   --prompt 'a CRT aesthetic with heavy scanlines and bloom, warm amber phosphor glow, chromatic aberration, a chunky pixel-art cartoon astronaut in a rounded white spacesuit with a reflective dome helmet, slowly floating in zero gravity and waving cheerfully at the camera, a few small twinkling stars in the dark background, static centered composition, low choppy frame rate, friendly retro arcade mood' \
   --output examples/ds-crt-stinger/ds_boot_astro.mp4
@@ -52,15 +52,15 @@ python3 tools/ltx2.py \
 The grungy-logo builder ships three palettes. Regenerate a different phosphor color:
 
 ```bash
-python3 make_grungy_logo.py amber   # warm orange — default
-python3 make_grungy_logo.py coral   # deeper red, closer to DS brand coral
-python3 make_grungy_logo.py green   # classic hacker phosphor
+uv run make_grungy_logo.py amber   # warm orange — default
+uv run make_grungy_logo.py coral   # deeper red, closer to DS brand coral
+uv run make_grungy_logo.py green   # classic hacker phosphor
 ```
 
 Then pass the palette to `build.py`:
 
 ```bash
-python3 build.py astro coral        # astro clip + coral-grunged wordmark
+uv run build.py astro coral        # astro clip + coral-grunged wordmark
 ```
 
 ## Tuning knobs

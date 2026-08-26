@@ -14,14 +14,14 @@ Input modes:
 
 Examples:
   # Chain 10 scenes from a directory of FLUX images
-  python tools/chain_video.py \\
+  uv run tools/chain_video.py \\
       --scenes-dir projects/myproject/public/images/scenes/ \\
       --output-dir projects/myproject/public/videos/chain/ \\
       --prompt "Cinematic transition, flowing camera movement" \\
       --progress json
 
   # Chain from scene 5 to 30 (resume interrupted run)
-  python tools/chain_video.py \\
+  uv run tools/chain_video.py \\
       --scenes-dir projects/myproject/public/images/scenes/ \\
       --output-dir projects/myproject/public/videos/chain/ \\
       --start 5 --end 30 \\
@@ -29,14 +29,14 @@ Examples:
       --progress json
 
   # Chain with per-scene prompts from a JSON file
-  python tools/chain_video.py \\
+  uv run tools/chain_video.py \\
       --scenes-dir projects/myproject/public/images/scenes/ \\
       --output-dir projects/myproject/public/videos/chain/ \\
       --prompts-file scenes.json \\
       --progress json
 
   # Resume from an existing clip
-  python tools/chain_video.py \\
+  uv run tools/chain_video.py \\
       --first-clip output/chain-04.mp4 \\
       --output-dir output/ \\
       --start 5 --end 30 \\

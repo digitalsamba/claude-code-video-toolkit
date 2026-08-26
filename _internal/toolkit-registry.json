@@ -201,7 +201,7 @@
     "voiceover": {
       "path": "tools/voiceover.py",
       "description": "Generate TTS voiceovers using ElevenLabs, Qwen3-TTS, or 60db",
-      "usage": "python tools/voiceover.py --script SCRIPT.md --output out.mp3",
+      "usage": "uv run tools/voiceover.py --script SCRIPT.md --output out.mp3",
       "options": {
         "provider": "TTS provider: elevenlabs (default), qwen3, 60db",
         "transport": "60db API transport: synthesize (default), stream, websocket",
@@ -217,7 +217,7 @@
     "music": {
       "path": "tools/music.py",
       "description": "Generate background music using ElevenLabs",
-      "usage": "python tools/music.py --prompt 'description' --duration 120 --output music.mp3",
+      "usage": "uv run tools/music.py --prompt 'description' --duration 120 --output music.mp3",
       "status": "stable",
       "created": "2025-12-08",
       "updated": "2025-12-08"
@@ -225,7 +225,7 @@
     "music_gen": {
       "path": "tools/music_gen.py",
       "description": "AI music generation using ACE-Step 1.5 (text-to-music, cover, stem extraction, repainting, continuation)",
-      "usage": "python tools/music_gen.py --prompt 'Upbeat tech' --duration 60 --bpm 128 --output music.mp3",
+      "usage": "uv run tools/music_gen.py --prompt 'Upbeat tech' --duration 60 --bpm 128 --output music.mp3",
       "status": "stable",
       "options": {
         "prompt": "Music description",
@@ -273,7 +273,7 @@
     "sfx": {
       "path": "tools/sfx.py",
       "description": "Generate sound effects using ElevenLabs",
-      "usage": "python tools/sfx.py --preset whoosh --output sfx.mp3",
+      "usage": "uv run tools/sfx.py --preset whoosh --output sfx.mp3",
       "status": "stable",
       "created": "2025-12-08",
       "updated": "2025-12-08"
@@ -281,7 +281,7 @@
     "redub": {
       "path": "tools/redub.py",
       "description": "Redub video with different voice (extract audio, transcribe, TTS, replace)",
-      "usage": "python tools/redub.py --input video.mp4 --voice-id VOICE_ID --output dubbed.mp4",
+      "usage": "uv run tools/redub.py --input video.mp4 --voice-id VOICE_ID --output dubbed.mp4",
       "status": "beta",
       "created": "2025-12-28",
       "updated": "2025-12-28"
@@ -289,7 +289,7 @@
     "addmusic": {
       "path": "tools/addmusic.py",
       "description": "Add background music to video (generate via ElevenLabs or use existing file)",
-      "usage": "python tools/addmusic.py --input video.mp4 --prompt 'Subtle corporate' --output output.mp4",
+      "usage": "uv run tools/addmusic.py --input video.mp4 --prompt 'Subtle corporate' --output output.mp4",
       "status": "beta",
       "created": "2025-12-28",
       "updated": "2025-12-28"
@@ -297,7 +297,7 @@
     "dewatermark": {
       "path": "tools/dewatermark.py",
       "description": "Remove watermarks using AI inpainting (ProPainter) - supports local and RunPod cloud",
-      "usage": "python tools/dewatermark.py --input video.mp4 --preset sora --output clean.mp4 --runpod",
+      "usage": "uv run tools/dewatermark.py --input video.mp4 --preset sora --output clean.mp4 --runpod",
       "status": "beta",
       "optional": true,
       "requires": "RunPod account OR local NVIDIA GPU + ProPainter (~2GB)",
@@ -315,7 +315,7 @@
     "locate_watermark": {
       "path": "tools/locate_watermark.py",
       "description": "Helper tool to identify watermark coordinates using grid overlay and verification",
-      "usage": "python tools/locate_watermark.py --input video.mp4 --grid --output-dir ./review/",
+      "usage": "uv run tools/locate_watermark.py --input video.mp4 --grid --output-dir ./review/",
       "status": "beta",
       "requires": "ImageMagick (brew install imagemagick)",
       "presets": [
@@ -332,7 +332,7 @@
     "verify_setup": {
       "path": "tools/verify_setup.py",
       "description": "Verify toolkit setup - check prerequisites, cloud GPU, R2, and voice configuration",
-      "usage": "python tools/verify_setup.py [--test] [--json]",
+      "usage": "uv run tools/verify_setup.py [--test] [--json]",
       "status": "beta",
       "created": "2026-03-23",
       "updated": "2026-03-23"
@@ -340,7 +340,7 @@
     "notebooklm_brand": {
       "path": "tools/notebooklm_brand.py",
       "description": "Post-process NotebookLM videos with custom branding (trim outro, add logo/URL)",
-      "usage": "python tools/notebooklm_brand.py --input video.mp4 --logo logo.png --url 'mysite.com' --output branded.mp4",
+      "usage": "uv run tools/notebooklm_brand.py --input video.mp4 --logo logo.png --url 'mysite.com' --output branded.mp4",
       "status": "beta",
       "created": "2025-12-29",
       "updated": "2025-12-29"
@@ -348,7 +348,7 @@
     "image_edit": {
       "path": "tools/image_edit.py",
       "description": "AI image editing using Qwen-Image-Edit - style transfer, backgrounds, prompts",
-      "usage": "python tools/image_edit.py --input photo.jpg --prompt 'Add sunglasses' --output edited.png",
+      "usage": "uv run tools/image_edit.py --input photo.jpg --prompt 'Add sunglasses' --output edited.png",
       "status": "stable",
       "category": "image-editing",
       "backend": "qwen-image-edit-2511",
@@ -397,7 +397,7 @@
     "upscale": {
       "path": "tools/upscale.py",
       "description": "AI image upscaling using RealESRGAN - 2x/4x with optional face enhancement",
-      "usage": "python tools/upscale.py --input photo.jpg --output photo_4x.png --runpod",
+      "usage": "uv run tools/upscale.py --input photo.jpg --output photo_4x.png --runpod",
       "status": "stable",
       "category": "image-editing",
       "backend": "realesrgan",
@@ -430,7 +430,7 @@
     "sadtalker": {
       "path": "tools/sadtalker.py",
       "description": "Generate talking head videos from portrait image + audio using SadTalker",
-      "usage": "python tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --preprocess full --output talking.mp4",
+      "usage": "uv run tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --preprocess full --output talking.mp4",
       "status": "beta",
       "category": "video-generation",
       "backend": "sadtalker",
@@ -467,7 +467,7 @@
     "qwen3_tts": {
       "path": "tools/qwen3_tts.py",
       "description": "Generate speech using Qwen3-TTS - built-in voices, emotion control, voice cloning",
-      "usage": "python tools/qwen3_tts.py --text \"Hello\" --speaker Ryan --output hello.mp3",
+      "usage": "uv run tools/qwen3_tts.py --text \"Hello\" --speaker Ryan --output hello.mp3",
       "status": "beta",
       "category": "audio-generation",
       "backend": "qwen3-tts",
@@ -556,7 +556,7 @@
     "sync_timing": {
       "path": "tools/sync_timing.py",
       "description": "Sync scene durationSeconds in Remotion config with actual audio durations",
-      "usage": "python tools/sync_timing.py --apply",
+      "usage": "uv run tools/sync_timing.py --apply",
       "status": "stable",
       "category": "project",
       "requires": "ffprobe (from ffmpeg)",
@@ -579,7 +579,7 @@
     "flux2": {
       "path": "tools/flux2.py",
       "description": "AI image generation and editing using FLUX.2 Klein 4B - text-to-image, image editing, and scene presets",
-      "usage": "python tools/flux2.py --preset title-bg --brand digital-samba",
+      "usage": "uv run tools/flux2.py --preset title-bg --brand digital-samba",
       "status": "beta",
       "category": "image-generation",
       "backend": "flux2-klein-4b",
@@ -630,7 +630,7 @@
     "ideogram4": {
       "path": "tools/ideogram4.py",
       "description": "Ideogram 4 text-to-image via hosted v4 API — best-in-class in-image text rendering and exact color/layout control through structured JSON captions",
-      "usage": "python3 tools/ideogram4.py --json caption.json --output title.png",
+      "usage": "uv run tools/ideogram4.py --json caption.json --output title.png",
       "status": "beta",
       "category": "image-generation",
       "backend": "ideogram-4 hosted v4 API",
@@ -653,7 +653,7 @@
     "ltx2": {
       "path": "tools/ltx2.py",
       "description": "AI video generation using LTX-2.3 22B - text-to-video, image-to-video clips with synchronized audio",
-      "usage": "python tools/ltx2.py --prompt \"A sunset over the ocean\" --output sunset.mp4",
+      "usage": "uv run tools/ltx2.py --prompt \"A sunset over the ocean\" --output sunset.mp4",
       "status": "beta",
       "category": "video-generation",
       "backend": "ltx-2.3-22b",
@@ -695,7 +695,7 @@
     "chain_video": {
       "path": "tools/chain_video.py",
       "description": "Chain LTX-2 clips with visual continuity — each scene uses the last frame of the previous as input",
-      "usage": "python tools/chain_video.py --scenes-dir images/ --output-dir videos/ --prompt \"Cinematic flow\"",
+      "usage": "uv run tools/chain_video.py --scenes-dir images/ --output-dir videos/ --prompt \"Cinematic flow\"",
       "status": "beta",
       "category": "video-generation",
       "backend": "ltx-2.3-22b (via ltx2.py)",
@@ -767,8 +767,8 @@
         "notSupported": "Apple Silicon, CPU (use --runpod instead)",
         "memory": "8-10GB VRAM for 720p with fp16"
       },
-      "installCommand": "python tools/dewatermark.py --install",
-      "statusCommand": "python tools/dewatermark.py --status",
+      "installCommand": "uv run tools/dewatermark.py --install",
+      "statusCommand": "uv run tools/dewatermark.py --status",
       "documentation": "docs/optional-components.md"
     }
   },

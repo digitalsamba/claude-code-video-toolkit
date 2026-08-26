@@ -15,11 +15,11 @@ Run open-source AI models on cloud GPUs via RunPod serverless. Pay-per-second, n
 echo "RUNPOD_API_KEY=your_key_here" >> .env
 
 # 3. Deploy any tool with --setup
-python tools/image_edit.py --setup
-python tools/upscale.py --setup
-python tools/dewatermark.py --setup
-python tools/sadtalker.py --setup
-python tools/qwen3_tts.py --setup
+uv run tools/image_edit.py --setup
+uv run tools/upscale.py --setup
+uv run tools/dewatermark.py --setup
+uv run tools/sadtalker.py --setup
+uv run tools/qwen3_tts.py --setup
 ```
 
 Each `--setup` command:

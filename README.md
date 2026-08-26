@@ -24,9 +24,11 @@ More in the [showcase table](#templates) below.
 ```bash
 git clone https://github.com/digitalsamba/claude-code-video-toolkit.git
 cd claude-code-video-toolkit
-python3 -m pip install -r tools/requirements.txt   # Optional: AI voiceover, image gen, music, moviepy examples
-claude                                              # Open Claude Code in the toolkit
+uv sync   # Optional: AI voiceover, image gen, music, moviepy examples
+claude    # Open Claude Code in the toolkit
 ```
+
+> Python dependencies are managed with [uv](https://docs.astral.sh/uv/) — `uv sync` creates `.venv/` and installs everything from the lockfile in seconds. No uv yet? `curl -LsSf https://astral.sh/uv/install.sh | sh` (macOS/Linux) or `powershell -c "irm https://astral.sh/uv/install.ps1 | iex"` (Windows).
 
 Then in Claude Code:
 
@@ -39,7 +41,7 @@ Then in Claude Code:
 
 **What's free:** The toolkit leans heavily on open-source AI models — voiceovers (Qwen3-TTS), image generation (FLUX.2), music (ACE-Step), and more. You deploy them to your own cloud GPU account and run them at cost. Cloudflare R2 has a generous free tier (10GB, zero egress), and Modal gives $30/month free compute on the Starter plan — more than enough for a few 5-minute videos a month.
 
-**Requirements:** [Node.js](https://nodejs.org/) 18+ and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Python 3.9+ recommended for AI tools. FFmpeg optional.
+**Requirements:** [Node.js](https://nodejs.org/) 18+ and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). [uv](https://docs.astral.sh/uv/) recommended for the AI tools (it installs Python 3.10+ for you). FFmpeg optional.
 
 > **Want to skip setup and just render something?**
 > ```bash
@@ -192,20 +194,20 @@ Audio, video, and image tools in `tools/`:
 
 ```bash
 # AI voiceover — ElevenLabs or self-hosted Qwen3-TTS (9 voices + cloning)
-python tools/voiceover.py --provider qwen3 --speaker Ryan --scene-dir public/audio/scenes --json
+uv run tools/voiceover.py --provider qwen3 --speaker Ryan --scene-dir public/audio/scenes --json
 
 # AI music (ACE-Step — free cloud API)
-python tools/music_gen.py --preset corporate-bg --duration 120 --output music.mp3
+uv run tools/music_gen.py --preset corporate-bg --duration 120 --output music.mp3
 
 # AI image generation (FLUX.2) and editing (Qwen-Image-Edit)
-python tools/flux2.py --preset title-bg --brand digital-samba --cloud modal
-python tools/image_edit.py --input photo.jpg --prompt "Add sunglasses" --cloud modal
+uv run tools/flux2.py --preset title-bg --brand digital-samba --cloud modal
+uv run tools/image_edit.py --input photo.jpg --prompt "Add sunglasses" --cloud modal
 
 # AI video generation (LTX-2.3 — text-to-video, image-to-video)
-python tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
+uv run tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
 
 # Talking head from a portrait + audio (SadTalker)
-python tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4 --cloud modal
+uv run tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4 --cloud modal
 ```
 
 <details>
@@ -213,60 +215,60 @@ python tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output ta
 
 ```bash
 # Generate voiceover (ElevenLabs)
-python tools/voiceover.py --script script.md --output voiceover.mp3
+uv run tools/voiceover.py --script script.md --output voiceover.mp3
 
 # Generate voiceover (Qwen3-TTS — self-hosted, cheaper alternative)
-python tools/voiceover.py --provider qwen3 --speaker Ryan --scene-dir public/audio/scenes --json
-python tools/qwen3_tts.py --text "Hello world" --tone warm --output hello.mp3
+uv run tools/voiceover.py --provider qwen3 --speaker Ryan --scene-dir public/audio/scenes --json
+uv run tools/qwen3_tts.py --text "Hello world" --tone warm --output hello.mp3
 
 # Generate background music (ElevenLabs)
-python tools/music.py --prompt "Upbeat corporate" --duration 120 --output music.mp3
+uv run tools/music.py --prompt "Upbeat corporate" --duration 120 --output music.mp3
 
 # Generate background music (ACE-Step — free cloud API, XL Turbo 4B model)
-python tools/music_gen.py --preset corporate-bg --duration 120 --output music.mp3
-python tools/music_gen.py --prompt "Dramatic cinematic" --duration 30 --bpm 90 --key "D Minor" --output reveal.mp3
-python tools/music_gen.py --prompt "Upbeat indie rock" --duration 60 --variations 4 --output intro.mp3
+uv run tools/music_gen.py --preset corporate-bg --duration 120 --output music.mp3
+uv run tools/music_gen.py --prompt "Dramatic cinematic" --duration 30 --bpm 90 --key "D Minor" --output reveal.mp3
+uv run tools/music_gen.py --prompt "Upbeat indie rock" --duration 60 --variations 4 --output intro.mp3
 
 # Generate sound effects
-python tools/sfx.py --preset whoosh --output sfx.mp3
+uv run tools/sfx.py --preset whoosh --output sfx.mp3
 
 # Redub video with different voice
-python tools/redub.py --input video.mp4 --voice-id VOICE_ID --output dubbed.mp4
+uv run tools/redub.py --input video.mp4 --voice-id VOICE_ID --output dubbed.mp4
 
 # Add background music to existing video
-python tools/addmusic.py --input video.mp4 --prompt "Subtle ambient" --output output.mp4
+uv run tools/addmusic.py --input video.mp4 --prompt "Subtle ambient" --output output.mp4
 
 # Rebrand NotebookLM videos (trim outro, add your logo/URL)
-python tools/notebooklm_brand.py --input video.mp4 --logo logo.png --url "mysite.com" --output branded.mp4
+uv run tools/notebooklm_brand.py --input video.mp4 --logo logo.png --url "mysite.com" --output branded.mp4
 
 # AI image editing (style transfer, backgrounds, custom prompts)
-python tools/image_edit.py --input photo.jpg --style cyberpunk --cloud modal
-python tools/image_edit.py --input photo.jpg --prompt "Add sunglasses" --cloud modal
+uv run tools/image_edit.py --input photo.jpg --style cyberpunk --cloud modal
+uv run tools/image_edit.py --input photo.jpg --prompt "Add sunglasses" --cloud modal
 
 # AI image upscaling (2x/4x)
-python tools/upscale.py --input photo.jpg --output photo_4x.png --cloud modal
+uv run tools/upscale.py --input photo.jpg --output photo_4x.png --cloud modal
 
 # Remove watermarks (requires cloud GPU)
-python tools/dewatermark.py --input video.mp4 --preset sora --output clean.mp4 --cloud modal
+uv run tools/dewatermark.py --input video.mp4 --preset sora --output clean.mp4 --cloud modal
 
 # Locate watermark coordinates
-python tools/locate_watermark.py --input video.mp4 --grid --output-dir ./review/
+uv run tools/locate_watermark.py --input video.mp4 --grid --output-dir ./review/
 
 # Generate talking head video from image + audio (SadTalker)
-python tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4 --cloud modal
+uv run tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4 --cloud modal
 
 # AI image generation (FLUX.2 Klein 4B — text-to-image + editing)
-python tools/flux2.py --prompt "A sunset over mountains" --cloud modal
-python tools/flux2.py --preset title-bg --brand digital-samba --cloud modal
-python tools/flux2.py --list-presets
+uv run tools/flux2.py --prompt "A sunset over mountains" --cloud modal
+uv run tools/flux2.py --preset title-bg --brand digital-samba --cloud modal
+uv run tools/flux2.py --list-presets
 
 # AI video generation (LTX-2.3 22B — text-to-video + image-to-video)
-python tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
-python tools/ltx2.py --prompt "Gentle camera drift" --input photo.jpg --cloud modal
+uv run tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
+uv run tools/ltx2.py --prompt "Gentle camera drift" --input photo.jpg --cloud modal
 
 # Publish a finished render to YouTube (OAuth 2.0 + Data API v3) — contributed by @dascope (#29)
-python tools/youtube_upload.py --auth                                   # one-time browser login
-python tools/youtube_upload.py --video out/video.mp4 --title "My video" --privacy private --json-out
+uv run tools/youtube_upload.py --auth                                   # one-time browser login
+uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privacy private --json-out
 ```
 </details>
 
@@ -297,7 +299,7 @@ python tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 
 **Modal (recommended):** Each tool deploys from `docker/modal-*/app.py` — Modal builds and hosts the containers. $30/month free compute on the Starter plan, typical usage is $1-2/month. Run `/setup` to deploy all tools automatically.
 
-**RunPod (alternative):** Uses pre-built Docker images from `ghcr.io/conalmullan/video-toolkit-*`. Pay-per-second, no minimums. Run `python3 tools/<tool>.py --setup` to create endpoints.
+**RunPod (alternative):** Uses pre-built Docker images from `ghcr.io/conalmullan/video-toolkit-*`. Pay-per-second, no minimums. Run `uv run tools/<tool>.py --setup` to create endpoints.
 
 See [docs/modal-setup.md](docs/modal-setup.md) and [docs/runpod-setup.md](docs/runpod-setup.md) for details.
 
@@ -357,7 +359,7 @@ claude-code-video-toolkit/
 The toolkit is built for Claude Code, but an experimental migration script installs its skills and workflows for [Codex](https://openai.com/codex/) and generates an `AGENTS.md` block from `CLAUDE.md`:
 
 ```bash
-python3 scripts/migrate_to_codex.py --force
+uv run scripts/migrate_to_codex.py --force
 ```
 
 See [docs/codex.md](docs/codex.md) for what it installs, how the `AGENTS.md` block is managed, and how to remove it. Contributed by [@kimhoontae-gogo](https://github.com/kimhoontae-gogo) in [#16](https://github.com/digitalsamba/claude-code-video-toolkit/pull/16).

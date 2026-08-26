@@ -18,11 +18,9 @@ Thank you for your interest in contributing! This toolkit is designed to help pe
 ## Development Setup
 
 1. Fork and clone the repository
-2. Set up your environment:
+2. Set up your environment with [uv](https://docs.astral.sh/uv/) (creates `.venv/` and installs all locked dependencies):
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install -r tools/requirements.txt
+   uv sync
    ```
 3. Add your ElevenLabs API key to `.env`
 
@@ -80,7 +78,7 @@ If your change affects Codex compatibility, also update:
 | What Changed | Update These Files |
 |--------------|-------------------|
 | Codex migration flow | `README.md` ("Using with Codex"), `docs/getting-started.md`, `scripts/migrate_to_codex.py` |
-| Claude guidance source | `CLAUDE.md` and then re-run `python3 scripts/migrate_to_codex.py --force` to regenerate the Codex block in `AGENTS.md` |
+| Claude guidance source | `CLAUDE.md` and then re-run `uv run scripts/migrate_to_codex.py --force` to regenerate the Codex block in `AGENTS.md` |
 | Generated resource list or warnings | `README.md` and `docs/getting-started.md` |
 
 If your change affects Kiro CLI compatibility, also update:

@@ -14,9 +14,9 @@ Modal is the recommended cloud GPU provider for the toolkit's AI tools. It offer
 ## Install & Authenticate
 
 ```bash
-pip install modal
-python3 -m modal setup    # Opens browser to authenticate, saves token to ~/.modal.toml
-modal app list             # Verify it works
+uv sync --extra modal      # Installs the Modal CLI into the toolkit's .venv
+uv run modal setup         # Opens browser to authenticate, saves token to ~/.modal.toml
+uv run modal app list      # Verify it works
 ```
 
 ### Windows prerequisites
@@ -60,22 +60,22 @@ Each AI tool has its own Modal app. Deploy only what you need, or deploy all of 
 
 ```bash
 # Speech generation (most commonly used)
-modal deploy docker/modal-qwen3-tts/app.py
+uv run modal deploy docker/modal-qwen3-tts/app.py
 
 # Image generation & editing
-modal deploy docker/modal-flux2/app.py
-modal deploy docker/modal-image-edit/app.py
-modal deploy docker/modal-upscale/app.py
+uv run modal deploy docker/modal-flux2/app.py
+uv run modal deploy docker/modal-image-edit/app.py
+uv run modal deploy docker/modal-upscale/app.py
 
 # Music generation
-modal deploy docker/modal-music-gen/app.py
+uv run modal deploy docker/modal-music-gen/app.py
 
 # Video processing
-modal deploy docker/modal-sadtalker/app.py
-modal deploy docker/modal-propainter/app.py
+uv run modal deploy docker/modal-sadtalker/app.py
+uv run modal deploy docker/modal-propainter/app.py
 
 # Video generation (see the LTX-2 prerequisites note below)
-modal deploy docker/modal-ltx2/app.py
+uv run modal deploy docker/modal-ltx2/app.py
 ```
 
 **Deploy them one at a time.** Modal rate-limits `AppCreate`; launching several
@@ -143,26 +143,26 @@ All cloud GPU tools accept `--cloud modal`:
 
 ```bash
 # AI voiceover
-python3 tools/qwen3_tts.py --text "Hello world" --speaker Ryan --output hello.mp3 --cloud modal
+uv run tools/qwen3_tts.py --text "Hello world" --speaker Ryan --output hello.mp3 --cloud modal
 
 # AI image generation
-python3 tools/flux2.py --prompt "A sunset over mountains" --output sunset.png --cloud modal
+uv run tools/flux2.py --prompt "A sunset over mountains" --output sunset.png --cloud modal
 
 # AI image editing
-python3 tools/image_edit.py --input photo.jpg --style cyberpunk --cloud modal
+uv run tools/image_edit.py --input photo.jpg --style cyberpunk --cloud modal
 
 # AI upscaling
-python3 tools/upscale.py --input photo.jpg --output photo_4x.png --cloud modal
+uv run tools/upscale.py --input photo.jpg --output photo_4x.png --cloud modal
 
 # AI music generation (acemusic cloud API is now default — no Modal needed)
-python3 tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3
-# Or use Modal: python3 tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3 --cloud modal
+uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3
+# Or use Modal: uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3 --cloud modal
 
 # Talking head from portrait + audio
-python3 tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4 --cloud modal
+uv run tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4 --cloud modal
 
 # Watermark removal
-python3 tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output clean.mp4 --cloud modal
+uv run tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output clean.mp4 --cloud modal
 ```
 
 ## Tools & Costs
@@ -199,16 +199,16 @@ After 60 seconds of no requests, containers scale back to zero. No charges while
 
 ```bash
 # Check what's running (Tasks column should be 0 when idle)
-modal app list
+uv run modal app list
 
 # Check today's spend
-modal billing report --for today --json
+uv run modal billing report --for today --json
 
 # View container logs
-modal app logs video-toolkit-upscale
+uv run modal app logs video-toolkit-upscale
 
 # Verify your setup
-python3 tools/verify_setup.py
+uv run tools/verify_setup.py
 ```
 
 ## Architecture

@@ -24,10 +24,10 @@ On invocation, assess current state and adapt:
 ```
 1. Check .env exists — if not, create from .env.example
 2. Read current .env values (which keys are set vs placeholder)
-3. Check prerequisites: node --version, python3 --version, ffmpeg -version
-4. Check pip packages: python3 -c "import dotenv; import requests"
-5. Check Modal CLI: modal --version (if installed)
-6. Check for existing Modal apps: modal app list (if authenticated)
+3. Check prerequisites: node --version, uv --version, ffmpeg -version
+4. Check Python deps: uv run python -c "import dotenv; import requests"
+5. Check Modal CLI: uv run modal --version (if installed)
+6. Check for existing Modal apps: uv run modal app list (if authenticated)
 7. Summarize what's ready vs what needs setup
 ```
 
@@ -42,7 +42,7 @@ Prerequisites:
   [check] Node.js 20.x
   [check] Python 3.12
   [check] FFmpeg 7.1
-  [check] pip packages installed
+  [check] Python deps installed (uv)
 
 Cloud GPU:      Not configured
 File transfer:  Not configured (using free fallback services)
@@ -79,8 +79,8 @@ Check and report. Don't install anything automatically — just tell the user wh
 
 ### Recommended
 
-- **Python 3.9+**: `python3 --version`. If missing: "Install from https://python.org/ — needed for AI voiceover, image editing, and all cloud GPU tools"
-- **pip packages**: `python3 -c "import dotenv; import requests"`. If missing: guide through `pip install -r tools/requirements.txt` (or venv setup)
+- **uv**: `uv --version`. If missing: "Install with `curl -LsSf https://astral.sh/uv/install.sh | sh` (macOS/Linux) or `powershell -c \"irm https://astral.sh/uv/install.ps1 | iex\"` (Windows) — manages Python and all toolkit dependencies; needed for AI voiceover, image editing, and all cloud GPU tools"
+- **Python deps**: `uv run python -c "import dotenv; import requests"`. If missing: run `uv sync` from the toolkit root (uv installs a compatible Python automatically if needed)
 - **FFmpeg**: `ffmpeg -version`. If missing: "Install with `brew install ffmpeg` (macOS) or see https://ffmpeg.org/ — needed for media conversion"
 
 ### Output
@@ -119,15 +119,15 @@ Frame the pitch:
 - All 7 toolkit tools typically cost $0.50-2.00/month with normal use
 - Faster cold starts than RunPod
 - Scale to zero — no charges when idle
-- Simple deployment: `modal deploy docker/modal-xxx/app.py`
+- Simple deployment: `uv run modal deploy docker/modal-xxx/app.py`
 
 Setup flow:
 ```
-1. pip install modal
-2. python3 -m modal setup
+1. uv sync --extra modal
+2. uv run modal setup
    → Opens browser for authentication
    → Creates ~/.modal.toml with credentials
-3. Verify: modal app list
+3. Verify: uv run modal app list
 ```
 
 ### Option B: RunPod
@@ -208,7 +208,7 @@ R2_BUCKET_NAME=video-toolkit
 
 Test R2 connectivity:
 ```bash
-python3 -c "
+uv run python -c "
 import sys; sys.path.insert(0, 'tools')
 from file_transfer import upload_to_r2, delete_from_r2
 import tempfile, os
@@ -274,17 +274,17 @@ Recommend "all" — with Modal's free tier, there's no cost to having them deplo
 
 ### Modal Deployment Flow
 
-For each selected tool, run `modal deploy` and capture the endpoint URL:
+For each selected tool, run `uv run modal deploy` and capture the endpoint URL:
 
 ```bash
 # Deploy each app and capture the URL from output
-modal deploy docker/modal-qwen3-tts/app.py
-modal deploy docker/modal-flux2/app.py
-modal deploy docker/modal-image-edit/app.py
-modal deploy docker/modal-upscale/app.py
-modal deploy docker/modal-music-gen/app.py
-modal deploy docker/modal-sadtalker/app.py
-modal deploy docker/modal-propainter/app.py
+uv run modal deploy docker/modal-qwen3-tts/app.py
+uv run modal deploy docker/modal-flux2/app.py
+uv run modal deploy docker/modal-image-edit/app.py
+uv run modal deploy docker/modal-upscale/app.py
+uv run modal deploy docker/modal-music-gen/app.py
+uv run modal deploy docker/modal-sadtalker/app.py
+uv run modal deploy docker/modal-propainter/app.py
 ```
 
 After each deploy, Modal prints the endpoint URL. Parse it and save to .env:
@@ -301,13 +301,13 @@ MODAL_FLUX2_ENDPOINT_URL=https://username--video-toolkit-flux2-...modal.run
 For each selected tool, run the `--setup` command:
 
 ```bash
-python3 tools/qwen3_tts.py --setup
-python3 tools/flux2.py --setup
-python3 tools/image_edit.py --setup
-python3 tools/upscale.py --setup
-python3 tools/music_gen.py --setup
-python3 tools/sadtalker.py --setup
-python3 tools/dewatermark.py --setup
+uv run tools/qwen3_tts.py --setup
+uv run tools/flux2.py --setup
+uv run tools/image_edit.py --setup
+uv run tools/upscale.py --setup
+uv run tools/music_gen.py --setup
+uv run tools/sadtalker.py --setup
+uv run tools/dewatermark.py --setup
 ```
 
 Each `--setup` command creates a RunPod template + endpoint and saves the endpoint ID to .env automatically.
@@ -318,7 +318,7 @@ After deployment, run a quick test for at least one tool to verify the pipeline 
 
 **If Qwen3-TTS was deployed (most common):**
 ```bash
-python3 tools/qwen3_tts.py --text "Setup complete! Your video toolkit is ready." \
+uv run tools/qwen3_tts.py --text "Setup complete! Your video toolkit is ready." \
   --speaker Ryan --tone warm --output /tmp/setup-test.mp3 \
   --cloud modal
 ```
@@ -327,7 +327,7 @@ Check that it produces an audio file. If it does, the full pipeline (upload → 
 
 **If FLUX.2 was deployed:**
 ```bash
-python3 tools/flux2.py --prompt "A minimal geometric logo on dark background" \
+uv run tools/flux2.py --prompt "A minimal geometric logo on dark background" \
   --output /tmp/setup-test.png --cloud modal
 ```
 
@@ -356,7 +356,7 @@ Qwen3-TTS is ready! Available speakers:
 Default speaker: Ryan (warm male voice)
 
 You can change the speaker per-video or set a default in your brand's voice.json.
-To preview voices: python3 tools/qwen3_tts.py --list-voices
+To preview voices: uv run tools/qwen3_tts.py --list-voices
 ```
 
 ### ElevenLabs Setup (Optional)
@@ -405,7 +405,7 @@ Prerequisites:
   [check] Node.js 20.x
   [check] Python 3.12
   [check] FFmpeg 7.1
-  [check] pip packages
+  [check] Python deps (uv)
 
 Cloud GPU: Modal
   [check] Speech (Qwen3-TTS) — deployed
@@ -473,7 +473,7 @@ lines = Path('.env').read_text().splitlines()
 
 ## Error Handling
 
-- If `modal deploy` fails: show the error, suggest checking `modal app logs`, offer to retry
+- If `modal deploy` fails: show the error, suggest checking `uv run modal app logs`, offer to retry
 - If R2 test fails: re-check credentials, common issue is wrong bucket name or region
 - If RunPod setup fails: check API key, check account has billing enabled
 - If any step fails, don't block subsequent steps — mark as failed and continue
@@ -487,13 +487,13 @@ Use `tools/verify_setup.py` throughout and at the end of setup:
 
 ```bash
 # Quick check (no cloud calls) — use at start to detect current state
-python3 tools/verify_setup.py
+uv run tools/verify_setup.py
 
 # With smoke tests (makes cloud GPU calls, ~$0.01) — use at end to verify
-python3 tools/verify_setup.py --test
+uv run tools/verify_setup.py --test
 
 # Machine-readable — use to programmatically check what's configured
-python3 tools/verify_setup.py --json
+uv run tools/verify_setup.py --json
 ```
 
 Run `verify_setup.py --json` at the start of `/setup` to detect current state and skip already-configured phases. Run it with `--test` at the end for the Phase 6 verification.

@@ -6,16 +6,16 @@ Generate ~5 second video clips from text prompts or images using the LTX-2.3 22B
 
 ```bash
 # Text-to-video
-python3 tools/ltx2.py --prompt "A cat playing with yarn in a sunlit room"
+uv run tools/ltx2.py --prompt "A cat playing with yarn in a sunlit room"
 
 # Image-to-video (animate a still image)
-python3 tools/ltx2.py --prompt "Camera slowly pans right" --input photo.jpg
+uv run tools/ltx2.py --prompt "Camera slowly pans right" --input photo.jpg
 
 # Higher resolution
-python3 tools/ltx2.py --prompt "Ocean waves at sunset" --width 1024 --height 576
+uv run tools/ltx2.py --prompt "Ocean waves at sunset" --width 1024 --height 576
 
 # Fast mode (fewer steps, quicker but lower quality)
-python3 tools/ltx2.py --prompt "A rocket launch" --quality fast
+uv run tools/ltx2.py --prompt "A rocket launch" --quality fast
 ```
 
 ## Setup
@@ -24,7 +24,7 @@ LTX-2 runs on Modal cloud GPU (A100-80GB). Setup takes about 15 minutes — most
 
 ### Prerequisites
 
-- Modal account and CLI installed (`pip install modal && python3 -m modal setup`)
+- Modal account and CLI installed (`uv sync --extra modal && uv run modal setup`)
 - HuggingFace account with a **read-access** token ([create one here](https://huggingface.co/settings/tokens) — "Read access to contents of all repos" scope is sufficient)
 - Accept the [Gemma 3 license](https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized) (one-click "Agree" on the model page)
 
@@ -33,7 +33,7 @@ LTX-2 runs on Modal cloud GPU (A100-80GB). Setup takes about 15 minutes — most
 1. **Create a Modal secret** with your HuggingFace token:
 
    ```bash
-   modal secret create huggingface-token HF_TOKEN=hf_your_token_here
+   uv run modal secret create huggingface-token HF_TOKEN=hf_your_token_here
    ```
 
    > **Important:** This token is used for both the LTX-2 weights (~55GB) and the Gemma text encoder (~7GB). While LTX-2 isn't a gated model, unauthenticated downloads from HuggingFace are severely rate-limited — a 46GB checkpoint that takes ~10 minutes with a token can take over an hour without one. The Gemma model is gated and will fail entirely without auth.
@@ -41,7 +41,7 @@ LTX-2 runs on Modal cloud GPU (A100-80GB). Setup takes about 15 minutes — most
 2. **Deploy the Modal app** (downloads and bakes all model weights — takes 10-15 min):
 
    ```bash
-   modal deploy docker/modal-ltx2/app.py
+   uv run modal deploy docker/modal-ltx2/app.py
    ```
 
 3. **Save the endpoint URL** printed by `modal deploy` to your `.env`:
@@ -53,7 +53,7 @@ LTX-2 runs on Modal cloud GPU (A100-80GB). Setup takes about 15 minutes — most
 4. **Test it:**
 
    ```bash
-   python3 tools/ltx2.py --prompt "A single lit candle flickering on a dark table, cinematic lighting"
+   uv run tools/ltx2.py --prompt "A single lit candle flickering on a dark table, cinematic lighting"
    ```
 
 ## Parameters
@@ -172,10 +172,10 @@ Total baked weight: ~55 GB. The pipeline manages memory by loading and freeing c
 Reduce dimensions or frame count:
 ```bash
 # Try smaller resolution
-python3 tools/ltx2.py --prompt "..." --width 512 --height 512
+uv run tools/ltx2.py --prompt "..." --width 512 --height 512
 
 # Or fewer frames
-python3 tools/ltx2.py --prompt "..." --num-frames 73
+uv run tools/ltx2.py --prompt "..." --num-frames 73
 ```
 
 ### "Modal endpoint is scaling up"

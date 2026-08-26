@@ -1,0 +1,62 @@
+{
+  "name": "Digital Samba (Townhall)",
+  "description": "Townhall deck brand variant - navy + coral palette, matches Ops & Support presentation deck",
+  "version": "1.0.0",
+  "website": "https://www.digitalsamba.com",
+
+  "colors": {
+    "primary": "#F06859",
+    "primaryLight": "#F58A7E",
+    "primaryDark": "#D14F3F",
+    "accent": "#3B7DDD",
+    "navy": "#323F66",
+    "navyDark": "#232D49",
+    "textDark": "#1B202F",
+    "textMedium": "#323F66",
+    "textLight": "#5E667A",
+    "bgLight": "#F7F6F3",
+    "bgAlt": "#FFFFFF",
+    "bgDark": "#323F66",
+    "bgDarkAlt": "#232D49",
+    "bgOverlay": "rgba(50, 63, 102, 0.92)",
+    "divider": "#E5E7EE",
+    "shadow": "rgba(27, 32, 47, 0.18)"
+  },
+
+  "fonts": {
+    "primary": "Arial, Helvetica, sans-serif",
+    "display": "Arial Black, Arial, sans-serif",
+    "mono": "ui-monospace, SFMono-Regular, Menlo, monospace"
+  },
+
+  "spacing": {
+    "xs": 8,
+    "sm": 16,
+    "md": 24,
+    "lg": 48,
+    "xl": 80,
+    "xxl": 120
+  },
+
+  "borderRadius": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20
+  },
+
+  "typography": {
+    "h1": { "size": 128, "weight": 900 },
+    "h2": { "size": 88, "weight": 800 },
+    "h3": { "size": 56, "weight": 700 },
+    "body": { "size": 40, "weight": 400 },
+    "label": { "size": 28, "weight": 700, "letterSpacing": 3 }
+  },
+
+  "assets": {
+    "logo": "assets/ds-logo-white.png",
+    "logoLight": "assets/ds-logo-navy.png",
+    "logoDark": "assets/ds-logo-white.png"
+  },
+
+  "notes": "Matches the Ops & Support townhall deck brand. Navy #323F66 for dark backgrounds, coral #F06859 for accents and energy, brand blue #3B7DDD as secondary (from support chart segments). Typography is display-heavy (Arial Black) with tight tracking on labels. Use for any townhall-adjacent video content."
+}

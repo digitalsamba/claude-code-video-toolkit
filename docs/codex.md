@@ -6,7 +6,7 @@ contributed by [@kimhoontae-gogo](https://github.com/kimhoontae-gogo) in
 [#16](https://github.com/digitalsamba/claude-code-video-toolkit/pull/16).
 
 ```bash
-python3 scripts/migrate_to_codex.py --force
+uv run scripts/migrate_to_codex.py --force
 ```
 
 This does two things:
@@ -24,12 +24,12 @@ This does two things:
 - The script manages **only** its generated block inside `AGENTS.md`.
 - Manual `AGENTS.md` content outside that block is preserved.
 - The block is derived from `CLAUDE.md` — after `CLAUDE.md` changes, re-run
-  `python3 scripts/migrate_to_codex.py --force` to refresh it.
+  `uv run scripts/migrate_to_codex.py --force` to refresh it.
 
 ## Removing
 
 ```bash
-python3 scripts/migrate_to_codex.py --reset
+uv run scripts/migrate_to_codex.py --reset
 ```
 
 `--reset` removes the toolkit skills previously installed under `~/.codex/skills` and

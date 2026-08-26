@@ -4,9 +4,9 @@
 Run after /setup to confirm everything is working, or anytime to diagnose issues.
 
 Usage:
-    python3 tools/verify_setup.py           # Full check (no cloud calls)
-    python3 tools/verify_setup.py --test    # Full check + smoke tests (makes cloud GPU calls)
-    python3 tools/verify_setup.py --json    # Machine-readable output
+    uv run tools/verify_setup.py           # Full check (no cloud calls)
+    uv run tools/verify_setup.py --test    # Full check + smoke tests (makes cloud GPU calls)
+    uv run tools/verify_setup.py --json    # Machine-readable output
 """
 
 import json
@@ -80,7 +80,7 @@ def check_prerequisites() -> list[dict]:
             "name": "pip packages",
             "required": False,
             "ok": False,
-            "detail": "pip install -r tools/requirements.txt",
+            "detail": "uv sync",
         })
 
     # Modal CLI
@@ -89,7 +89,7 @@ def check_prerequisites() -> list[dict]:
         "name": "Modal CLI",
         "required": False,
         "ok": ok,
-        "detail": version if ok else "pip install modal",
+        "detail": version if ok else "uv sync --extra modal",
     })
 
     return results
@@ -143,7 +143,7 @@ def check_modal_apps() -> dict:
             capture_output=True, text=True, timeout=30,
         )
         if result.returncode != 0:
-            return {"ok": False, "apps": [], "detail": "modal app list failed — run `modal setup`?"}
+            return {"ok": False, "apps": [], "detail": "modal app list failed — run `uv run modal setup`?"}
 
         apps = json.loads(result.stdout)
         # `modal app list --json` key casing depends on CLI version: <=1.3.x emits

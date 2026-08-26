@@ -4,13 +4,13 @@ Generate sound effects using ElevenLabs Sound Effects API.
 
 Usage:
     # Generate a single sound effect
-    python tools/sfx.py --prompt "Soft whoosh transition" --duration 1.5 --output whoosh.mp3
+    uv run tools/sfx.py --prompt "Soft whoosh transition" --duration 1.5 --output whoosh.mp3
 
     # Generate with stronger prompt adherence
-    python tools/sfx.py --prompt "Thunder crack" --duration 3 --influence 0.5 --output thunder.mp3
+    uv run tools/sfx.py --prompt "Thunder crack" --duration 3 --influence 0.5 --output thunder.mp3
 
     # JSON output for machine parsing
-    python tools/sfx.py --prompt "UI click" --duration 0.5 --output click.mp3 --json
+    uv run tools/sfx.py --prompt "UI click" --duration 0.5 --output click.mp3 --json
 """
 from __future__ import annotations
 
@@ -63,9 +63,9 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 Examples:
-  python tools/sfx.py --prompt "Thunder rumbling" --duration 5 --output thunder.mp3
-  python tools/sfx.py --preset whoosh --output public/audio/sfx-whoosh.mp3
-  python tools/sfx.py --prompt "Footsteps on wood" --duration 3 --influence 0.5 --output steps.mp3
+  uv run tools/sfx.py --prompt "Thunder rumbling" --duration 5 --output thunder.mp3
+  uv run tools/sfx.py --preset whoosh --output public/audio/sfx-whoosh.mp3
+  uv run tools/sfx.py --prompt "Footsteps on wood" --duration 3 --influence 0.5 --output steps.mp3
 
 Available presets: {', '.join(PRESETS.keys())}
         """,

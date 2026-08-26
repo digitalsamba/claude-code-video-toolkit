@@ -4,7 +4,7 @@ quick-spot — a 15-second ad-style example built with moviepy.
 Demonstrates the toolkit's "single-file build.py" pattern for short-form
 video without Remotion. Run as:
 
-    python3 build.py
+    uv run build.py
 
 By default this produces a silent text-on-color spot using only Pillow +
 moviepy. If you generate per-scene voiceover into ./public/audio/scenes/
@@ -42,8 +42,8 @@ try:
 except ImportError as e:
     print(f"Missing dependency: {e}")
     print("Install the toolkit's Python dependencies:")
-    print("    python3 -m pip install -r ../../tools/requirements.txt")
-    print("(run from this directory, or use an absolute path)")
+    print("    uv sync")
+    print("(run from the toolkit root, then re-run this script with `uv run build.py`)")
     sys.exit(1)
 
 HERE = Path(__file__).resolve().parent
@@ -233,9 +233,9 @@ def build_audio(scene_vo):
     """Mix per-scene VO over ducked music if the assets exist, else None.
 
     To enable audio:
-        python3 ../../tools/voiceover.py \\
+        uv run ../../tools/voiceover.py \\
             --script VOICEOVER-SCRIPT.md --scene-dir public/audio/scenes
-        python3 ../../tools/music_gen.py \\
+        uv run ../../tools/music_gen.py \\
             --preset cta --duration 15 --output public/audio/music.mp3
     """
     scenes = AUDIO / "scenes"

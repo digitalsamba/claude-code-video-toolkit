@@ -6,9 +6,9 @@ canvas — so the handoff frame feels like it's actually being displayed ON
 the CRT rather than pasted cleanly over it.
 
 Usage:
-  python3 make_grungy_logo.py amber
-  python3 make_grungy_logo.py coral
-  python3 make_grungy_logo.py green
+  uv run make_grungy_logo.py amber
+  uv run make_grungy_logo.py coral
+  uv run make_grungy_logo.py green
 """
 
 import shutil

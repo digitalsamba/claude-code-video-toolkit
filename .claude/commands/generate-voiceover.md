@@ -317,7 +317,7 @@ Share these tips with the user:
 
 **Qwen3-TTS:**
 - If `RUNPOD_API_KEY` is missing, tell user to add it to `.env`
-- If `RUNPOD_QWEN3_TTS_ENDPOINT_ID` is missing, tell user to run `python tools/qwen3_tts.py --setup`
+- If `RUNPOD_QWEN3_TTS_ENDPOINT_ID` is missing, tell user to run `uv run tools/qwen3_tts.py --setup`
 
 **Both:**
 - If script file not found, offer to create a template

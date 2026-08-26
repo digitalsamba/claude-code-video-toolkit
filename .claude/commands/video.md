@@ -371,8 +371,8 @@ npm run studio    # Preview in browser
 npm run render    # Final render
 ```
 
-(For concept-explainer-short use instead: `python3 gen_vo.py`,
-`python3 gen_captions.py`, `python3 build.py` — output: `out/short.mp4`.)
+(For concept-explainer-short use instead: `uv run gen_vo.py`,
+`uv run gen_captions.py`, `uv run build.py` — output: `out/short.mp4`.)
 
 ## Session History
 
