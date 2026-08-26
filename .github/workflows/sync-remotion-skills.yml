@@ -9,6 +9,13 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  # Upstream re-organised into one skill per topic in mid-2026. `remotion-best-practices`
+  # is the router skill that embeds every other skill as a REFERENCE.md sub-directory, so
+  # syncing just this directory gives us the complete, self-contained knowledge set.
+  UPSTREAM_SKILL_DIR: skills/remotion-best-practices
+  LOCAL_SKILL_DIR: .claude/skills/remotion-official
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -19,24 +26,29 @@ jobs:
       - name: Clone upstream skills
         run: |
           git clone --depth 1 https://github.com/remotion-dev/skills.git /tmp/remotion-skills
-          UPSTREAM_SHA=$(git -C /tmp/remotion-skills rev-parse --short HEAD)
-          echo "UPSTREAM_SHA=$UPSTREAM_SHA" >> "$GITHUB_ENV"
+          echo "UPSTREAM_SHA=$(git -C /tmp/remotion-skills rev-parse --short HEAD)" >> "$GITHUB_ENV"
           echo "UPSTREAM_SHA_FULL=$(git -C /tmp/remotion-skills rev-parse HEAD)" >> "$GITHUB_ENV"
+
+          # Fail loudly (with a useful listing) if upstream moves things around again.
+          if [ ! -f "/tmp/remotion-skills/$UPSTREAM_SKILL_DIR/SKILL.md" ]; then
+            echo "::error::Expected $UPSTREAM_SKILL_DIR/SKILL.md in remotion-dev/skills but it is missing."
+            echo "::error::Upstream layout has changed — update UPSTREAM_SKILL_DIR in this workflow. Top-level skills now:"
+            ls -1 /tmp/remotion-skills/skills
+            exit 1
+          fi
+
+          VERSION=$(sed -n 's/^version:[[:space:]]*//p' "/tmp/remotion-skills/$UPSTREAM_SKILL_DIR/SKILL.md" | head -1)
+          echo "UPSTREAM_VERSION=${VERSION:-unknown}" >> "$GITHUB_ENV"
 
       - name: Check for changes
         id: diff
         run: |
-          # Copy upstream into temp location for comparison
-          rm -rf /tmp/upstream-copy
-          cp -r /tmp/remotion-skills/skills/remotion /tmp/upstream-copy
-
-          # Compare against our copy
-          if diff -rq .claude/skills/remotion-official /tmp/upstream-copy > /dev/null 2>&1; then
+          if diff -rq "$LOCAL_SKILL_DIR" "/tmp/remotion-skills/$UPSTREAM_SKILL_DIR" > /dev/null 2>&1; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No changes detected"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            CHANGED_COUNT=$(diff -rq .claude/skills/remotion-official /tmp/upstream-copy 2>/dev/null | wc -l | tr -d ' ')
+            CHANGED_COUNT=$(diff -rq "$LOCAL_SKILL_DIR" "/tmp/remotion-skills/$UPSTREAM_SKILL_DIR" 2>/dev/null | wc -l | tr -d ' ')
             echo "changed_count=$CHANGED_COUNT" >> "$GITHUB_OUTPUT"
             echo "$CHANGED_COUNT file(s) changed"
           fi
@@ -44,8 +56,8 @@ jobs:
       - name: Sync files
         if: steps.diff.outputs.changed == 'true'
         run: |
-          rm -rf .claude/skills/remotion-official
-          cp -r /tmp/remotion-skills/skills/remotion .claude/skills/remotion-official
+          rm -rf "$LOCAL_SKILL_DIR"
+          cp -r "/tmp/remotion-skills/$UPSTREAM_SKILL_DIR" "$LOCAL_SKILL_DIR"
 
       - name: Create pull request
         if: steps.diff.outputs.changed == 'true'
@@ -53,16 +65,19 @@ jobs:
         with:
           branch: auto/sync-remotion-skills
           delete-branch: true
-          title: "Sync official Remotion skills (${{ env.UPSTREAM_SHA }})"
+          title: "Sync official Remotion skills (v${{ env.UPSTREAM_VERSION }}, ${{ env.UPSTREAM_SHA }})"
           body: |
             ## Automated sync from remotion-dev/skills
 
             **Upstream commit:** [`${{ env.UPSTREAM_SHA }}`](https://github.com/remotion-dev/skills/commit/${{ env.UPSTREAM_SHA_FULL }})
+            **Upstream skill version:** ${{ env.UPSTREAM_VERSION }}
+            **Source directory:** `${{ env.UPSTREAM_SKILL_DIR }}`
             **Files changed:** ${{ steps.diff.outputs.changed_count }}
 
             ### Review checklist
-            - [ ] Skim changed rule files for relevance
+            - [ ] Skim changed files for relevance
+            - [ ] Grep the diff for `OffthreadVideo` / `@remotion/media` — the toolkit deliberately stays on `<OffthreadVideo>` (see CLAUDE.md "Media")
             - [ ] Verify no conflicts with toolkit-specific `remotion/SKILL.md`
-            - [ ] Spot-check that `SKILL.md` frontmatter is intact
-          commit-message: "Sync official Remotion skills (upstream ${{ env.UPSTREAM_SHA }})"
+            - [ ] Spot-check that `SKILL.md` frontmatter is intact and it is still the only `SKILL.md` in the tree
+          commit-message: "Sync official Remotion skills (upstream v${{ env.UPSTREAM_VERSION }}, ${{ env.UPSTREAM_SHA }})"
           labels: dependencies,automated
