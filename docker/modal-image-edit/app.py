@@ -45,7 +45,10 @@ image = (
 
 @app.cls(
     image=image,
-    gpu="A100",
+    # A100-80GB, not plain "A100" (= 40GB): the bfloat16 pipeline lands at ~38.8GiB
+    # resident, so a 40GB card OOMs on the first allocation after load. The RunPod
+    # deployment of this same model runs on AMPERE_80 for the same reason.
+    gpu="A100-80GB",
     timeout=600,
     scaledown_window=60,
 )

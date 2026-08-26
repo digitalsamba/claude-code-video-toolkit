@@ -10,6 +10,70 @@ All notable changes to claude-code-video-toolkit.
 
 ### Added
 - **Kiro CLI support** (`scripts/migrate_to_kiro.py`) — sibling of the Codex migration script. Installs the toolkit skills into `~/.kiro/skills` (Kiro shares Claude Code's `SKILL.md` frontmatter format, so they copy verbatim), generates a wrapper skill per `.claude/commands/*.md` invoked as the same `/video`, `/setup`, … slash commands, and generates `.kiro/steering/video-toolkit.md` from `CLAUDE.md` inside a managed marker block. Wrappers pin the toolkit's absolute path so commands work from any directory (Claude Code parity — Kiro doesn't walk up the directory tree). Supports `--force`, `--dry-run`, `--reset`, `--workspace-skills`, and `kiro/migration_map.json` for skips/renames. See `docs/kiro.md`.
+---
+
+## 2026-08-26 (v0.18.0)
+
+### Added
+- **YouTube publishing** — `tools/youtube_upload.py` + `/publish` command. OAuth login (`--auth`), private-by-default upload, scheduled go-live (`--publish-at`), thumbnails, `--dry-run` validation, 403s classified by API reason. Setup guide in `docs/youtube-upload.md`; google-* deps are opt-in in `tools/requirements.txt`. (#29, #37, #38, #39, #40)
+- **60db TTS provider** — third `voiceover.py --provider 60db` backend plus standalone `tools/sixtydb_tts.py` (synthesize / stream / websocket transports, `--list-voices`). Unified 0-1 voice settings auto-convert to 60db's 0-100 scale; `redub.py --tts-provider 60db`. Brands carry a `sixtydb` block in `voice.json`. (#27)
+- **`_internal/narrative-patterns.md`** — Discovery Story structure for sprint reviews (reorder by narrative arc, turning-point slides, honest bridge framing).
+- **`docs/ltx2.md` Windows gotchas** + LTX-2 Modal config wired into `verify_setup.py`. (#51, #53)
+
+### Changed
+- **Remotion skills sync** now tracks upstream's new per-topic layout via `skills/remotion-best-practices/` (router skill embedding markup/maps/captions/render/saas/studio/docs/upgrade). Workflow fails loudly on the next re-layout and carries the upstream skill version in PR titles. First sync from the new layout: 39 → 137 files. (#56)
+- **Modal image-edit** requests A100-80GB (OOMed on 40GB).
+- `.gitignore` covers `scratch/`, Playwright run artifacts, recursive `assets/voices`; duplicate project copies under `projects/` untracked.
+
+### Fixed
+- Weekly Remotion skills sync had failed every run since 2026-07-13 (upstream directory moved).
+- `verify_setup.py` accepts both `modal` CLI JSON key casings when detecting deployed apps.
+
+### Registry
+- Added missing entries: `align_captions` tool, `quick-spot` / `data-viz-chart` / `ds-crt-stinger` / `sky-blue-short` examples. `the-space-between` marked showcase-only (no source directory).
+
+---
+
+## 2026-06-10 (v0.17.0)
+
+### Added
+- **concept-explainer-short template** — 9:16 vertical TikTok/Reels/Shorts explainers. First pure Python/moviepy template: `scenes.json` → `gen_vo.py` (per-scene TTS) → `gen_captions.py` (whisper forced-align) → `build.py` (Ken Burns stills, boomerang clips, karaoke caption pills, ducked music). (#31)
+- **`examples/sky-blue-short`** — 52s showcase of the template with all assets committed.
+- **TTS pacing QC** — `tools/pacing.py`; `voiceover.py` and `qwen3_tts.py` report per-take `wpm` + `pacing` label and accept `--max-wpm` for a pitch-preserving atempo clamp. Fixes cloned voices inheriting a rushed pace from their reference. (#30)
+
+### Docs
+- README restructured to lead with finished videos; "Using with Codex" moved to `docs/codex.md`.
+
+---
+
+## 2026-06-08 (v0.16.0)
+
+### Added
+- **Ideogram 4 text-to-image** — `tools/ideogram4.py` + `ideogram4` skill. Structured JSON captions for legible in-image text and exact brand colours; hosted paid API. FLUX-vs-Ideogram decision rule added to CLAUDE.md. (#28)
+- **Qwen3-TTS v0.2** — VoiceDesign mode (`--design-instruct`), shared-prompt cloning for consistent multi-scene narration, `clone.design` brand schema with self-caching reference; `tools/align_captions.py` (Scribe-based caption timing alignment).
+- **Codex migration flow** for toolkit skills/commands (#16, thanks @kimhoontae-gogo); thin `AGENTS.md`.
+
+### Changed
+- Remotion pinned to exact versions in lab examples; CLAUDE.md clarifies the `<OffthreadVideo>` choice vs upstream `@remotion/media`.
+- Official Remotion skills synced (upstream 277510e). (#17)
+- GitHub Actions bumped to Node 24-compatible versions; docker-build workflow handles multi-commit pushes and skips `modal-*` dirs.
+
+### Fixed
+- Python 3.9 compatibility restored across `tools/` via `from __future__ import annotations`. (#22)
+- `modal-upscale` basicsr build conflict. (#19, thanks @ATECHPCS)
+- Codex migration name read from registry; no-op skip entry dropped. (closes #20)
+
+---
+
+## 2026-04-21 (v0.15.0)
+
+### Added
+- **LTX-2 style LoRA support** with `crt-terminal` preset.
+- **`examples/ds-crt-stinger`** — 6s CRT LoRA + grunged-logo brand stinger.
+- Animated synthwave README banner (`showcase/banner`).
+
+### Changed
+- Official Remotion skills synced (upstream 41a3b06); "Stsrt" → "Start" typo fixed. (#14)
 
 ---
 
