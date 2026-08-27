@@ -110,7 +110,7 @@ def resolve_tone(tone: str | None, instruct: str) -> str:
 
 
 from file_transfer import (
-    upload_to_storage, download_from_r2, delete_from_r2,
+    upload_to_storage, download_from_r2, r2_cleanup,
     download_from_url, get_r2_payload_config,
 )
 
@@ -177,223 +177,218 @@ def generate_audio(
       batch call:  {success, outputs: [{output, duration_seconds, ...}, ...]}
     """
     start_time = time.time()
-    r2_keys_to_cleanup = []
+    with r2_cleanup() as r2_keys_to_cleanup:
+        # Normalize inputs
+        is_batch = isinstance(text, list)
+        texts = text if is_batch else [text]
+        out_paths = output_path if is_batch else [output_path]
+        if len(out_paths) != len(texts):
+            return {"success": False, "error": "text and output_path must have matching lengths"}
+        if any(not t for t in texts):
+            return {"success": False, "error": "all texts must be non-empty strings"}
 
-    # Normalize inputs
-    is_batch = isinstance(text, list)
-    texts = text if is_batch else [text]
-    out_paths = output_path if is_batch else [output_path]
-    if len(out_paths) != len(texts):
-        return {"success": False, "error": "text and output_path must have matching lengths"}
-    if any(not t for t in texts):
-        return {"success": False, "error": "all texts must be non-empty strings"}
+        # Get R2 config (used for file transfer regardless of cloud provider)
+        r2_payload = get_r2_payload_config()
 
-    # Get R2 config (used for file transfer regardless of cloud provider)
-    r2_payload = get_r2_payload_config()
+        # Determine mode
+        if design_instruct is not None:
+            if is_batch:
+                return {"success": False, "error": "voice_design mode expects a single seed text, not a batch"}
+            mode = "voice_design"
+        elif ref_audio:
+            mode = "clone"
+        else:
+            mode = "custom_voice"
 
-    # Determine mode
-    if design_instruct is not None:
-        if is_batch:
-            return {"success": False, "error": "voice_design mode expects a single seed text, not a batch"}
-        mode = "voice_design"
-    elif ref_audio:
-        mode = "clone"
-    else:
-        mode = "custom_voice"
-
-    # Upload reference audio for clone mode
-    ref_audio_url = None
-    if mode == "clone":
-        if not Path(ref_audio).exists():
-            return {"success": False, "error": f"Reference audio not found: {ref_audio}"}
-        if not ref_text:
-            return {"success": False, "error": "ref_text is required for voice cloning"}
-
-        ref_audio_url, ref_r2_key = upload_to_storage(ref_audio, "qwen3-tts/input")
-        if not ref_audio_url:
-            return {"success": False, "error": "Failed to upload reference audio"}
-        if ref_r2_key:
-            r2_keys_to_cleanup.append(ref_r2_key)
-
-    if verbose:
-        print(f"Cloud provider: {cloud}", file=sys.stderr)
+        # Upload reference audio for clone mode
+        ref_audio_url = None
         if mode == "clone":
-            print(f"Mode: voice clone ({len(texts)} utterance{'s' if len(texts) > 1 else ''}, shared prompt)", file=sys.stderr)
-        elif mode == "voice_design":
-            print(f"Mode: voice design (instruct={design_instruct[:60]!r}...)", file=sys.stderr)
-        else:
-            print(f"Speaker: {speaker}, Language: {language}, mode: custom_voice", file=sys.stderr)
+            if not Path(ref_audio).exists():
+                return {"success": False, "error": f"Reference audio not found: {ref_audio}"}
+            if not ref_text:
+                return {"success": False, "error": "ref_text is required for voice cloning"}
 
-    # Build payload (same format for both providers)
-    payload = {
-        "input": {
-            "text": texts if is_batch else texts[0],
-            "mode": mode,
-            "language": language,
-            "output_format": output_format,
-        }
-    }
+            ref_audio_url, ref_r2_key = upload_to_storage(ref_audio, "qwen3-tts/input")
+            if not ref_audio_url:
+                return {"success": False, "error": "Failed to upload reference audio"}
+            if ref_r2_key:
+                r2_keys_to_cleanup.append(ref_r2_key)
 
-    if mode == "clone":
-        payload["input"]["ref_audio_url"] = ref_audio_url
-        payload["input"]["ref_text"] = ref_text
-    elif mode == "voice_design":
-        payload["input"]["instruct"] = design_instruct
-    else:
-        payload["input"]["speaker"] = speaker
-        if instruct:
-            payload["input"]["instruct"] = instruct
+        if verbose:
+            print(f"Cloud provider: {cloud}", file=sys.stderr)
+            if mode == "clone":
+                print(f"Mode: voice clone ({len(texts)} utterance{'s' if len(texts) > 1 else ''}, shared prompt)", file=sys.stderr)
+            elif mode == "voice_design":
+                print(f"Mode: voice design (instruct={design_instruct[:60]!r}...)", file=sys.stderr)
+            else:
+                print(f"Speaker: {speaker}, Language: {language}, mode: custom_voice", file=sys.stderr)
 
-    if temperature is not None:
-        payload["input"]["temperature"] = temperature
-    if top_p is not None:
-        payload["input"]["top_p"] = top_p
-
-    if r2_payload:
-        payload["input"]["r2"] = r2_payload
-
-    # Submit job via cloud_gpu abstraction
-    try:
-        from cloud_gpu import call_cloud_endpoint
-    except ImportError:
-        sys.path.insert(0, str(Path(__file__).parent))
-        from cloud_gpu import call_cloud_endpoint
-
-    progress_label = (
-        f"Designing voice" if mode == "voice_design"
-        else (f"Generating {len(texts)} utterances" if is_batch else "Generating speech")
-    )
-    # Batch calls can be longer-running; scale timeout by count
-    effective_timeout = timeout * max(1, len(texts) // 3 + 1)
-
-    output, elapsed = call_cloud_endpoint(
-        provider=cloud,
-        payload=payload,
-        tool_name="qwen3_tts",
-        timeout=effective_timeout,
-        poll_interval=3,
-        progress_label=progress_label,
-        verbose=verbose,
-        progress=progress,
-    )
-
-    if isinstance(output, dict) and output.get("error"):
-        return {"success": False, "error": output["error"]}
-
-    # Parse response — handler returns `outputs: [...]` always; legacy top-level
-    # keys also present when input was single-text. Use `outputs` uniformly.
-    outputs_list = None
-    if isinstance(output, dict):
-        if isinstance(output.get("outputs"), list):
-            outputs_list = output["outputs"]
-        else:
-            # Pre-v0.2 handler or single-shot legacy response — synthesize a
-            # one-item list from top-level keys.
-            legacy_item = {
-                k: output[k] for k in ("audio_url", "r2_key", "audio_base64", "duration_seconds")
-                if k in output
+        # Build payload (same format for both providers)
+        payload = {
+            "input": {
+                "text": texts if is_batch else texts[0],
+                "mode": mode,
+                "language": language,
+                "output_format": output_format,
             }
-            if legacy_item:
-                outputs_list = [legacy_item]
-
-    if not outputs_list or len(outputs_list) != len(texts):
-        return {
-            "success": False,
-            "error": f"Expected {len(texts)} output(s), got {len(outputs_list) if outputs_list else 0}: "
-                     f"{list(output.keys()) if isinstance(output, dict) else output}",
         }
 
-    # Download all outputs
-    downloaded_items = []
-    for i, (item, dest_path) in enumerate(zip(outputs_list, out_paths)):
-        Path(dest_path).parent.mkdir(parents=True, exist_ok=True)
-        downloaded = False
+        if mode == "clone":
+            payload["input"]["ref_audio_url"] = ref_audio_url
+            payload["input"]["ref_text"] = ref_text
+        elif mode == "voice_design":
+            payload["input"]["instruct"] = design_instruct
+        else:
+            payload["input"]["speaker"] = speaker
+            if instruct:
+                payload["input"]["instruct"] = instruct
 
-        r2_key = item.get("r2_key")
-        url = item.get("audio_url")
+        if temperature is not None:
+            payload["input"]["temperature"] = temperature
+        if top_p is not None:
+            payload["input"]["top_p"] = top_p
 
-        if r2_key:
-            if verbose:
-                print(f"Downloading output {i+1}/{len(outputs_list)} from R2...", file=sys.stderr)
-            downloaded = download_from_r2(r2_key, dest_path)
-            if downloaded:
-                r2_keys_to_cleanup.append(r2_key)
+        if r2_payload:
+            payload["input"]["r2"] = r2_payload
+
+        # Submit job via cloud_gpu abstraction
+        try:
+            from cloud_gpu import call_cloud_endpoint
+        except ImportError:
+            sys.path.insert(0, str(Path(__file__).parent))
+            from cloud_gpu import call_cloud_endpoint
+
+        progress_label = (
+            f"Designing voice" if mode == "voice_design"
+            else (f"Generating {len(texts)} utterances" if is_batch else "Generating speech")
+        )
+        # Batch calls can be longer-running; scale timeout by count
+        effective_timeout = timeout * max(1, len(texts) // 3 + 1)
+
+        output, elapsed = call_cloud_endpoint(
+            provider=cloud,
+            payload=payload,
+            tool_name="qwen3_tts",
+            timeout=effective_timeout,
+            poll_interval=3,
+            progress_label=progress_label,
+            verbose=verbose,
+            progress=progress,
+        )
+
+        if isinstance(output, dict) and output.get("error"):
+            return {"success": False, "error": output["error"]}
+
+        # Parse response — handler returns `outputs: [...]` always; legacy top-level
+        # keys also present when input was single-text. Use `outputs` uniformly.
+        outputs_list = None
+        if isinstance(output, dict):
+            if isinstance(output.get("outputs"), list):
+                outputs_list = output["outputs"]
+            else:
+                # Pre-v0.2 handler or single-shot legacy response — synthesize a
+                # one-item list from top-level keys.
+                legacy_item = {
+                    k: output[k] for k in ("audio_url", "r2_key", "audio_base64", "duration_seconds")
+                    if k in output
+                }
+                if legacy_item:
+                    outputs_list = [legacy_item]
+
+        if not outputs_list or len(outputs_list) != len(texts):
+            return {
+                "success": False,
+                "error": f"Expected {len(texts)} output(s), got {len(outputs_list) if outputs_list else 0}: "
+                         f"{list(output.keys()) if isinstance(output, dict) else output}",
+            }
+
+        # Download all outputs
+        downloaded_items = []
+        for i, (item, dest_path) in enumerate(zip(outputs_list, out_paths)):
+            Path(dest_path).parent.mkdir(parents=True, exist_ok=True)
+            downloaded = False
+
+            r2_key = item.get("r2_key")
+            url = item.get("audio_url")
+
+            if r2_key:
                 if verbose:
-                    size_kb = Path(dest_path).stat().st_size // 1024
-                    print(f"  Downloaded: {dest_path} ({size_kb}KB)", file=sys.stderr)
+                    print(f"Downloading output {i+1}/{len(outputs_list)} from R2...", file=sys.stderr)
+                downloaded = download_from_r2(r2_key, dest_path)
+                if downloaded:
+                    r2_keys_to_cleanup.append(r2_key)
+                    if verbose:
+                        size_kb = Path(dest_path).stat().st_size // 1024
+                        print(f"  Downloaded: {dest_path} ({size_kb}KB)", file=sys.stderr)
 
-        if not downloaded and url:
-            downloaded = download_from_url(url, dest_path, verbose=verbose)
+            if not downloaded and url:
+                downloaded = download_from_url(url, dest_path, verbose=verbose)
+                # Same object the r2_key names -- register it however we fetched it.
+                if downloaded and r2_key:
+                    r2_keys_to_cleanup.append(r2_key)
 
-        if not downloaded:
-            audio_base64 = item.get("audio_base64")
-            if audio_base64:
-                Path(dest_path).write_bytes(base64.b64decode(audio_base64))
-                downloaded = True
-                if verbose:
-                    size_kb = Path(dest_path).stat().st_size // 1024
-                    print(f"  Decoded from base64: {dest_path} ({size_kb}KB)", file=sys.stderr)
+            if not downloaded:
+                audio_base64 = item.get("audio_base64")
+                if audio_base64:
+                    Path(dest_path).write_bytes(base64.b64decode(audio_base64))
+                    downloaded = True
+                    if verbose:
+                        size_kb = Path(dest_path).stat().st_size // 1024
+                        print(f"  Decoded from base64: {dest_path} ({size_kb}KB)", file=sys.stderr)
 
-        if not downloaded:
-            # Cleanup before returning
-            for key in r2_keys_to_cleanup:
-                delete_from_r2(key)
-            return {"success": False, "error": f"No audio in output[{i}]: {list(item.keys())}"}
+            if not downloaded:
+                return {"success": False, "error": f"No audio in output[{i}]: {list(item.keys())}"}
 
-        duration = get_audio_duration(dest_path)
-        item_result = {
-            "output": dest_path,
-            "duration_seconds": round(duration, 2) if duration else None,
-            "duration_frames_30fps": int(duration * 30) if duration else None,
-            "script_chars": len(texts[i]),
-        }
+            duration = get_audio_duration(dest_path)
+            item_result = {
+                "output": dest_path,
+                "duration_seconds": round(duration, 2) if duration else None,
+                "duration_frames_30fps": int(duration * 30) if duration else None,
+                "script_chars": len(texts[i]),
+            }
 
-        # Pacing QC (voice_design seed sentences are auditions, not narration)
-        if mode != "voice_design":
-            from pacing import clamp_pace, pace_label
-            if max_wpm:
-                clamp = clamp_pace(dest_path, texts[i], max_wpm, verbose=verbose)
-                if clamp.get("applied"):
-                    new_dur = clamp["duration_seconds"]
-                    item_result["duration_seconds"] = new_dur
-                    item_result["duration_frames_30fps"] = (
-                        int(new_dur * 30) if new_dur else None
+            # Pacing QC (voice_design seed sentences are auditions, not narration)
+            if mode != "voice_design":
+                from pacing import clamp_pace, pace_label
+                if max_wpm:
+                    clamp = clamp_pace(dest_path, texts[i], max_wpm, verbose=verbose)
+                    if clamp.get("applied"):
+                        new_dur = clamp["duration_seconds"]
+                        item_result["duration_seconds"] = new_dur
+                        item_result["duration_frames_30fps"] = (
+                            int(new_dur * 30) if new_dur else None
+                        )
+                        item_result["pace_adjusted"] = {
+                            "original_wpm": clamp["original_wpm"],
+                            "atempo": clamp["atempo"],
+                        }
+                    elif clamp.get("error") and verbose:
+                        print(f"  Pace clamp skipped: {clamp['error']}", file=sys.stderr)
+                wpm, label = pace_label(texts[i], item_result["duration_seconds"])
+                item_result["wpm"] = wpm
+                item_result["pacing"] = label
+                if verbose and label in ("fast", "slow"):
+                    print(
+                        f"  Pacing warning: {Path(dest_path).name} is {wpm:.0f} wpm "
+                        f"({label}; comfortable narration is 140-160). "
+                        "Consider --max-wpm to auto-correct.",
+                        file=sys.stderr,
                     )
-                    item_result["pace_adjusted"] = {
-                        "original_wpm": clamp["original_wpm"],
-                        "atempo": clamp["atempo"],
-                    }
-                elif clamp.get("error") and verbose:
-                    print(f"  Pace clamp skipped: {clamp['error']}", file=sys.stderr)
-            wpm, label = pace_label(texts[i], item_result["duration_seconds"])
-            item_result["wpm"] = wpm
-            item_result["pacing"] = label
-            if verbose and label in ("fast", "slow"):
-                print(
-                    f"  Pacing warning: {Path(dest_path).name} is {wpm:.0f} wpm "
-                    f"({label}; comfortable narration is 140-160). "
-                    "Consider --max-wpm to auto-correct.",
-                    file=sys.stderr,
-                )
 
-        downloaded_items.append(item_result)
+            downloaded_items.append(item_result)
 
-    # Cleanup R2 objects
-    for key in r2_keys_to_cleanup:
-        delete_from_r2(key)
-
-    if is_batch:
-        return {
-            "success": True,
-            "outputs": downloaded_items,
-            "mode": mode,
-        }
-    else:
-        return {
-            "success": True,
-            **downloaded_items[0],
-            "mode": mode,
-        }
+        if is_batch:
+            return {
+                "success": True,
+                "outputs": downloaded_items,
+                "mode": mode,
+            }
+        else:
+            return {
+                "success": True,
+                **downloaded_items[0],
+                "mode": mode,
+            }
 
 
 # =============================================================================

@@ -55,7 +55,7 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).parent))
 from file_transfer import (
-    upload_to_storage, download_from_r2, delete_from_r2,
+    upload_to_storage, download_from_r2, r2_cleanup,
     download_from_url, get_r2_payload_config,
 )
 
@@ -1142,142 +1142,137 @@ def process_with_cloud(
     progress=None,
 ) -> dict:
     """Process video using cloud GPU endpoint (RunPod or Modal)."""
-    r2_keys_to_cleanup = []
+    with r2_cleanup() as r2_keys_to_cleanup:
+        if verbose:
+            print(f"Cloud provider: {cloud}", file=sys.stderr)
 
-    if verbose:
-        print(f"Cloud provider: {cloud}", file=sys.stderr)
+        # Upload video
+        video_url, video_r2_key = upload_to_storage(input_path, "dewatermark/input")
+        if not video_url:
+            return {"error": "Failed to upload video"}
+        if video_r2_key:
+            r2_keys_to_cleanup.append(video_r2_key)
 
-    # Upload video
-    video_url, video_r2_key = upload_to_storage(input_path, "dewatermark/input")
-    if not video_url:
-        return {"error": "Failed to upload video"}
-    if video_r2_key:
-        r2_keys_to_cleanup.append(video_r2_key)
+        # Upload mask if provided
+        mask_url = None
+        if mask_path:
+            mask_url, mask_r2_key = upload_to_storage(mask_path, "dewatermark/mask")
+            if not mask_url:
+                return {"error": "Failed to upload mask"}
+            if mask_r2_key:
+                r2_keys_to_cleanup.append(mask_r2_key)
 
-    # Upload mask if provided
-    mask_url = None
-    if mask_path:
-        mask_url, mask_r2_key = upload_to_storage(mask_path, "dewatermark/mask")
-        if not mask_url:
-            return {"error": "Failed to upload mask"}
-        if mask_r2_key:
-            r2_keys_to_cleanup.append(mask_r2_key)
+        # Build payload
+        ratio_value = "auto" if resize_ratio == "auto" else float(resize_ratio)
 
-    # Build payload
-    ratio_value = "auto" if resize_ratio == "auto" else float(resize_ratio)
-
-    payload = {
-        "input": {
-            "operation": "dewatermark",
-            "video_url": video_url,
-            "resize_ratio": ratio_value,
+        payload = {
+            "input": {
+                "operation": "dewatermark",
+                "video_url": video_url,
+                "resize_ratio": ratio_value,
+            }
         }
-    }
 
-    if region:
-        payload["input"]["region"] = region
-    if mask_url:
-        payload["input"]["mask_url"] = mask_url
+        if region:
+            payload["input"]["region"] = region
+        if mask_url:
+            payload["input"]["mask_url"] = mask_url
 
-    r2_payload = get_r2_payload_config()
-    if r2_payload:
-        payload["input"]["r2"] = r2_payload
+        r2_payload = get_r2_payload_config()
+        if r2_payload:
+            payload["input"]["r2"] = r2_payload
 
-    # For Modal, the endpoint expects the inner payload directly
-    modal_payload = payload["input"] if cloud == "modal" else payload
+        # For Modal, the endpoint expects the inner payload directly
+        modal_payload = payload["input"] if cloud == "modal" else payload
 
-    # Call cloud GPU endpoint
-    from cloud_gpu import call_cloud_endpoint
+        # Call cloud GPU endpoint
+        from cloud_gpu import call_cloud_endpoint
 
-    result, elapsed = call_cloud_endpoint(
-        provider=cloud,
-        payload=modal_payload,
-        tool_name="dewatermark",
-        timeout=timeout,
-        progress_label="Removing watermark",
-        verbose=verbose,
-        progress=progress,
-    )
+        result, elapsed = call_cloud_endpoint(
+            provider=cloud,
+            payload=modal_payload,
+            tool_name="dewatermark",
+            timeout=timeout,
+            progress_label="Removing watermark",
+            verbose=verbose,
+            progress=progress,
+        )
 
-    if isinstance(result, dict) and result.get("error"):
-        return {"error": result["error"]}
+        if isinstance(result, dict) and result.get("error"):
+            return {"error": result["error"]}
 
-    # Extract output (RunPod wraps in "output", Modal returns directly)
-    output = result.get("output", result) if cloud == "runpod" else result
+        # Extract output (RunPod wraps in "output", Modal returns directly)
+        output = result.get("output", result) if cloud == "runpod" else result
 
-    if isinstance(output, dict) and output.get("error"):
-        return {"error": output["error"]}
+        if isinstance(output, dict) and output.get("error"):
+            return {"error": output["error"]}
 
-    # Download result
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    downloaded = False
+        # Download result
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        downloaded = False
 
-    output_r2_key = output.get("r2_key") if isinstance(output, dict) else None
-    output_url = output.get("output_url") if isinstance(output, dict) else None
+        output_r2_key = output.get("r2_key") if isinstance(output, dict) else None
+        output_url = output.get("output_url") if isinstance(output, dict) else None
 
-    if output_r2_key:
-        if verbose:
-            print(f"Downloading result from R2...", file=sys.stderr)
-        downloaded = download_from_r2(output_r2_key, output_path)
-        if downloaded:
-            r2_keys_to_cleanup.append(output_r2_key)
-
-    if not downloaded and output_url:
-        downloaded = download_from_url(output_url, output_path, verbose=verbose)
-
-    if not downloaded:
-        # Try base64 fallback (Modal returns base64 when no R2)
-        video_b64 = output.get("video_base64") if isinstance(output, dict) else None
-        if video_b64:
-            import base64
-            with open(output_path, "wb") as f:
-                f.write(base64.b64decode(video_b64))
-            downloaded = True
+        if output_r2_key:
             if verbose:
-                size_mb = Path(output_path).stat().st_size // (1024 * 1024)
-                print(f"  Downloaded: {output_path} ({size_mb}MB)", file=sys.stderr)
+                print(f"Downloading result from R2...", file=sys.stderr)
+            downloaded = download_from_r2(output_r2_key, output_path)
+            if downloaded:
+                r2_keys_to_cleanup.append(output_r2_key)
 
-    if not downloaded:
-        return {"error": f"No output_url, r2_key, or video_base64 in result"}
+        if not downloaded and output_url:
+            downloaded = download_from_url(output_url, output_path, verbose=verbose)
+            # Same object the r2_key names -- register it however we fetched it.
+            if downloaded and output_r2_key:
+                r2_keys_to_cleanup.append(output_r2_key)
 
-    # Restore audio from original (ProPainter strips audio)
-    if preserve_audio:
-        temp_video = output_path + ".noaudio.mp4"
-        shutil.move(output_path, temp_video)
-        if mux_audio_from_original(temp_video, input_path, output_path, verbose=verbose):
-            Path(temp_video).unlink(missing_ok=True)
-        else:
-            shutil.move(temp_video, output_path)
-            if verbose:
-                print(f"  Warning: Could not restore audio, output has no audio", file=sys.stderr)
+        if not downloaded:
+            # Try base64 fallback (Modal returns base64 when no R2)
+            video_b64 = output.get("video_base64") if isinstance(output, dict) else None
+            if video_b64:
+                import base64
+                with open(output_path, "wb") as f:
+                    f.write(base64.b64decode(video_b64))
+                downloaded = True
+                if verbose:
+                    size_mb = Path(output_path).stat().st_size // (1024 * 1024)
+                    print(f"  Downloaded: {output_path} ({size_mb}MB)", file=sys.stderr)
 
-    # Upscale to original resolution if requested
-    actual_ratio = resize_ratio if isinstance(resize_ratio, float) else None
-    if upscale and original_width and original_height and actual_ratio and actual_ratio < 1.0:
-        temp_video = output_path + ".small.mp4"
-        shutil.move(output_path, temp_video)
-        if upscale_video(temp_video, output_path, original_width, original_height, verbose=verbose):
-            Path(temp_video).unlink(missing_ok=True)
-        else:
-            shutil.move(temp_video, output_path)
-            if verbose:
-                print(f"  Warning: Upscale failed, output is at reduced resolution", file=sys.stderr)
+        if not downloaded:
+            return {"error": f"No output_url, r2_key, or video_base64 in result"}
 
-    # Cleanup R2 objects
-    if r2_keys_to_cleanup:
-        if verbose:
-            print(f"Cleaning up {len(r2_keys_to_cleanup)} R2 objects...", file=sys.stderr)
-        for key in r2_keys_to_cleanup:
-            delete_from_r2(key)
+        # Restore audio from original (ProPainter strips audio)
+        if preserve_audio:
+            temp_video = output_path + ".noaudio.mp4"
+            shutil.move(output_path, temp_video)
+            if mux_audio_from_original(temp_video, input_path, output_path, verbose=verbose):
+                Path(temp_video).unlink(missing_ok=True)
+            else:
+                shutil.move(temp_video, output_path)
+                if verbose:
+                    print(f"  Warning: Could not restore audio, output has no audio", file=sys.stderr)
 
-    return {
-        "success": True,
-        "output": output_path,
-        "processing_time_seconds": round(elapsed, 2),
-        "cloud_output": output if not output.get("video_base64") else {
-            k: v for k, v in output.items() if k != "video_base64"
-        },
-    }
+        # Upscale to original resolution if requested
+        actual_ratio = resize_ratio if isinstance(resize_ratio, float) else None
+        if upscale and original_width and original_height and actual_ratio and actual_ratio < 1.0:
+            temp_video = output_path + ".small.mp4"
+            shutil.move(output_path, temp_video)
+            if upscale_video(temp_video, output_path, original_width, original_height, verbose=verbose):
+                Path(temp_video).unlink(missing_ok=True)
+            else:
+                shutil.move(temp_video, output_path)
+                if verbose:
+                    print(f"  Warning: Upscale failed, output is at reduced resolution", file=sys.stderr)
+
+        return {
+            "success": True,
+            "output": output_path,
+            "processing_time_seconds": round(elapsed, 2),
+            "cloud_output": output if not output.get("video_base64") else {
+                k: v for k, v in output.items() if k != "video_base64"
+            },
+        }
 
 
 # =============================================================================
