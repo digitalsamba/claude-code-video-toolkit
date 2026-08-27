@@ -10,10 +10,10 @@
     "upgrade": "npx remotion upgrade"
   },
   "dependencies": {
-    "@remotion/cli": "4.0.425",
-    "@remotion/paths": "4.0.425",
-    "@remotion/shapes": "4.0.425",
-    "@remotion/transitions": "4.0.425",
+    "@remotion/cli": "4.0.516",
+    "@remotion/paths": "4.0.516",
+    "@remotion/shapes": "4.0.516",
+    "@remotion/transitions": "4.0.516",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "remotion": "4.0.425"

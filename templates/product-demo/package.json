@@ -8,7 +8,7 @@
     "render:preview": "remotion render ProductDemo out/preview.mp4 --scale=0.5"
   },
   "dependencies": {
-    "@remotion/cli": "4.0.425",
+    "@remotion/cli": "4.0.516",
     "@remotion/paths": "4.0.425",
     "@remotion/shapes": "4.0.425",
     "@remotion/transitions": "4.0.425",
