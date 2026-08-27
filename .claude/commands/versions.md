@@ -20,6 +20,19 @@ On invocation, perform checks and present results:
 
 ### Step 2: Run Checks
 
+#### Toolkit-wide staleness (always)
+
+```bash
+uv run scripts/check_versions.py          # table; add --json when scripting
+```
+
+This is the source of truth for everything below the project-level check. It reports every
+Remotion pin under `templates/`, `examples/`, `showcase/`, `tests/` against the latest npm
+release (patches behind, age of the pin), flags caret ranges and projects whose pins disagree,
+checks `uv.lock` against `pyproject.toml` plus outdated *direct* Python deps, and compares the
+registry version with the latest GitHub release. Staleness alone is informational — bumps are
+deliberate (see "Bump policy" below). Caret ranges and internal mismatches are defects.
+
 #### Project Dependency Check (if in project)
 
 ```bash
@@ -40,6 +53,13 @@ Parse output for:
 3. Compare versions
 ```
 
+#### Bump policy
+
+Templates pin exact Remotion versions for reproducibility (people clone at a tag). Being
+N patches behind is expected. Bump on a driver — a needed feature/fix, starting a new project,
+or a quarterly check — one template at a time, `sprint-review-v2` first, and only with the
+render-baseline check green (`scripts/render-baseline.mjs`, see `tests/render-baseline/`).
+
 ### Step 3: Present Results
 
 **All Good:**
@@ -52,10 +72,12 @@ Version Check
 
 ## Toolkit
 
-  Current: v0.3.0
-  Latest:  v0.3.0
+  Remotion pins: 4.0.425 across 9 projects (92 patches behind latest 4.0.518, pinned 188d ago)
+  Python: uv.lock in sync, 2 direct deps outdated (elevenlabs, boto3)
+  Current: v0.18.0
+  Latest:  v0.18.0
 
-Everything up to date.
+Everything consistent. Remotion is behind by policy — run a bump when there's a driver.
 ```
 
 **Issues Found:**
