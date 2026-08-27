@@ -1,0 +1,42 @@
+# Dependabot — grouped Remotion bumps only.
+#
+# The toolkit pins exact Remotion versions in every template/example/showcase and
+# in the render-baseline harness. One grouped PR a month moves them all together;
+# .github/workflows/render-baseline.yml renders before/after on the same runner and
+# fails the check if any frame differs, so a human looks before merging.
+#
+# Python deps are managed with uv (pyproject.toml + uv.lock) and are deliberately
+# not automated here — run `uv run scripts/check_versions.py` to see what's behind.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - /templates/sprint-review
+      - /templates/sprint-review-v2
+      - /templates/product-demo
+      - /templates/ai-engineering-review
+      - /examples/hello-world
+      - /examples/digital-samba-skill-demo/remotion
+      - /examples/sprint-review-cho-oyu/remotion
+      - /showcase/transitions
+      - /showcase/banner
+      - /tests/render-baseline
+    schedule:
+      interval: monthly
+    versioning-strategy: increase   # keep exact pins exact
+    groups:
+      remotion:
+        patterns:
+          - "remotion"
+          - "@remotion/*"
+    # Only Remotion; React/TypeScript stay on caret ranges and aren't render-sensitive.
+    allow:
+      - dependency-name: "remotion"
+      - dependency-name: "@remotion/*"
+    labels:
+      - dependencies
+      - remotion-bump
+    commit-message:
+      prefix: "DEPS"
+    open-pull-requests-limit: 1
