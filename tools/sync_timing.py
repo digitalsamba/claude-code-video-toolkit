@@ -6,6 +6,10 @@ After generating per-scene voiceover audio, the actual durations often differ
 from the estimated durationSeconds in the config (TTS drift). This tool
 automates the feedback loop: measure audio → compare → update config.
 
+Understands sprint-review v1/v2 and product-demo configs, and falls back to a
+generic mode for any config that pairs *AudioFile with *DurationSeconds fields
+(e.g. ticket-driven layouts with intro/outro narration).
+
 Usage:
     # Compare only (dry run, default)
     uv run tools/sync_timing.py
@@ -141,6 +145,11 @@ TEMPLATE_TYPES = {
         "has_scene_array": True,
         "description": "product-demo",
     },
+    "generic": {
+        "config_export": None,
+        "has_scene_array": False,
+        "description": "generic (audioFile + durationSeconds pairs)",
+    },
 }
 
 
@@ -165,6 +174,15 @@ def detect_template_type(config_text: str, config_path: Path) -> str:
     if re.search(r"scenes\s*:\s*\[", config_text) and re.search(r"type\s*:\s*['\"](?:title|context|goal|highlights)", config_text):
         return "sprint-review-v2"
 
+    # v1 has a demos[] array
+    if re.search(r"demos\s*:\s*\[", config_text):
+        return "sprint-review-v1"
+
+    # Anything else that pairs *AudioFile with *DurationSeconds fields —
+    # e.g. ticket-driven configs (tickets[] + intro/outro) or future templates.
+    if re.search(r"\w*[aA]udioFile\s*:", config_text) and re.search(r"\w*[dD]urationSeconds\s*:", config_text):
+        return "generic"
+
     return "sprint-review-v1"
 
 
@@ -181,8 +199,107 @@ def parse_scenes_from_config(config_text: str, template_type: str) -> list[dict]
     """
     if template_type == "sprint-review-v1":
         return _parse_v1_scenes(config_text)
+    elif template_type == "generic":
+        return _parse_generic_scenes(config_text)
     else:
         return _parse_scene_array(config_text)
+
+
+_LABEL_FIELDS = ("id", "key", "ticket", "jiraRef", "name", "type")
+
+
+def _enclosing_object(config_text: str, pos: int) -> tuple[int, int]:
+    """Return (start, end) of the innermost {...} object containing pos."""
+    depth = 0
+    start = 0
+    i = pos
+    while i >= 0:
+        c = config_text[i]
+        if c == "}":
+            depth += 1
+        elif c == "{":
+            if depth == 0:
+                start = i
+                break
+            depth -= 1
+        i -= 1
+    depth = 0
+    end = len(config_text)
+    for j in range(start, len(config_text)):
+        c = config_text[j]
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                end = j + 1
+                break
+    return start, end
+
+
+def _parse_generic_scenes(config_text: str) -> list[dict]:
+    """Parse any config by pairing *AudioFile fields with *DurationSeconds fields.
+
+    Handles shapes the named templates don't, without knowing the layout:
+      - objects with `audioFile` + `durationSeconds` anywhere (e.g. tickets[])
+      - prefixed pairs like `introAudioFile` + `introDurationSeconds`
+
+    Each audio field is paired with the nearest unclaimed duration field that
+    carries the same prefix. Objects with a duration but no audio (chapter
+    cards, title cards) are left alone.
+    """
+    audio_fields = list(re.finditer(r"(\w*?)([aA]udioFile)\s*:\s*['\"]([^'\"]+)['\"]", config_text))
+    dur_fields = list(re.finditer(r"(\w*?)([dD]urationSeconds)\s*:\s*(\d+(?:\.\d+)?)", config_text))
+    claimed: set[int] = set()
+    scenes = []
+
+    for am in audio_fields:
+        prefix = am.group(1)
+        best = None
+        best_dist = None
+        for di, dm in enumerate(dur_fields):
+            if di in claimed or dm.group(1) != prefix:
+                continue
+            dist = abs(dm.start() - am.start())
+            if best is None or dist < best_dist:
+                best, best_dist = di, dist
+        if best is None:
+            continue
+        # A plain-prefix pair must live in the same object; prefixed pairs
+        # (intro/outro) are siblings in a parent object, so no check needed.
+        dm = dur_fields[best]
+        if prefix == "":
+            o_start, o_end = _enclosing_object(config_text, am.start())
+            if not (o_start <= dm.start() < o_end):
+                continue
+        claimed.add(best)
+
+        o_start, o_end = _enclosing_object(config_text, am.start())
+        obj_text = config_text[o_start:o_end]
+        label = prefix
+        if not label:
+            for f in _LABEL_FIELDS:
+                m = re.search(rf"\b{f}\s*:\s*['\"]([^'\"]+)['\"]", obj_text)
+                if m:
+                    label = m.group(1)
+                    break
+        scenes.append({
+            "type": label or "scene",
+            "durationSeconds": float(dm.group(3)),
+            "audioFile": am.group(3),
+            "_ds_match_start": dm.start(),
+            "_ds_match_end": dm.end(),
+            "_ds_value_start": dm.start(3),
+            "_ds_value_end": dm.end(3),
+            "_start": o_start,
+            "_end": o_end,
+            "_text": obj_text,
+        })
+
+    scenes.sort(key=lambda sc: sc["_ds_value_start"])
+    for i, sc in enumerate(scenes):
+        sc["_block_index"] = i
+    return scenes
 
 
 def _parse_v1_scenes(config_text: str) -> list[dict]:
