@@ -62,7 +62,11 @@ jobs:
             THRESHOLD="${{ github.event.inputs.threshold }}"
           else
             git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
-            BEFORE=$(git show "origin/${{ github.base_ref }}:tests/render-baseline/package.json" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).dependencies.remotion")
+            # Base branch may predate the harness (first PR) — fall back to the PR pin, which
+            # makes before == after and the job just confirms the composition renders.
+            BEFORE=$(git show "origin/${{ github.base_ref }}:tests/render-baseline/package.json" 2>/dev/null \
+              | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).dependencies.remotion" 2>/dev/null || true)
+            BEFORE="${BEFORE:-$PR_PIN}"
             AFTER="$PR_PIN"
             THRESHOLD="0"
           fi
