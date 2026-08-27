@@ -374,6 +374,19 @@ uv run scripts/migrate_to_kiro.py --force
 
 See [docs/kiro.md](docs/kiro.md) for what it installs, how it achieves Claude Code-parity, and how to remove it.
 
+## Community add-ons
+
+Projects built on or around the toolkit that live in their own repos — typically because they need
+software or a service we can't bundle. We haven't reviewed them; check each project's README.
+
+| Add-on | What it does | Needs |
+|--------|--------------|-------|
+| [VOICEPEAK for voiceover.py](https://github.com/fialuxe/claude-code-video-toolkit-expand-ja-voicepeak/) | Offline Japanese TTS provider (patches `voiceover.py`) | VOICEPEAK (paid, local) |
+
+To be listed, open an issue with a link and a one-line description. The toolkit itself only takes
+integrations that have at least one open or self-hostable path — see
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
