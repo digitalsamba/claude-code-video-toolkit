@@ -1,0 +1,24 @@
+{
+  "name": "render-baseline",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fixed Remotion composition used to detect render changes across Remotion version bumps",
+  "scripts": {
+    "studio": "npx remotion studio src/index.ts",
+    "render": "node ../../scripts/render-baseline.mjs render",
+    "diff": "node ../../scripts/render-baseline.mjs diff"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.425",
+    "@remotion/transitions": "4.0.425",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "4.0.425"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "pixelmatch": "^6.0.0",
+    "pngjs": "^7.0.0",
+    "typescript": "^5.0.0"
+  }
+}
