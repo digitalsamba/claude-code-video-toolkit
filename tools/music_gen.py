@@ -82,7 +82,7 @@ except ImportError as e:
 load_dotenv()
 
 sys.path.insert(0, str(Path(__file__).parent))
-from file_transfer import download_from_url, get_r2_payload_config
+from file_transfer import delete_from_r2, download_from_url, get_r2_payload_config
 
 # --- Constants ---
 
@@ -652,7 +652,11 @@ def generate_music(
 
     if "output_url" in result:
         log("Downloading from R2...", "dim")
-        download_from_url(result["output_url"], output_path, verbose=False)
+        if download_from_url(result["output_url"], output_path, verbose=False):
+            # The GPU side leaves the result object in R2. Drop it once the
+            # download succeeded, so the bucket does not grow without bound.
+            if result.get("r2_key"):
+                delete_from_r2(result["r2_key"])
     elif "audio_base64" in result:
         with open(output_path, "wb") as f:
             f.write(base64.b64decode(result["audio_base64"]))
@@ -748,7 +752,11 @@ def generate_cover(
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
     if "output_url" in result:
-        download_from_url(result["output_url"], output_path, verbose=False)
+        if download_from_url(result["output_url"], output_path, verbose=False):
+            # The GPU side leaves the result object in R2. Drop it once the
+            # download succeeded, so the bucket does not grow without bound.
+            if result.get("r2_key"):
+                delete_from_r2(result["r2_key"])
     elif "audio_base64" in result:
         with open(output_path, "wb") as f:
             f.write(base64.b64decode(result["audio_base64"]))
@@ -823,7 +831,11 @@ def extract_stem(
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
     if "output_url" in result:
-        download_from_url(result["output_url"], output_path, verbose=False)
+        if download_from_url(result["output_url"], output_path, verbose=False):
+            # The GPU side leaves the result object in R2. Drop it once the
+            # download succeeded, so the bucket does not grow without bound.
+            if result.get("r2_key"):
+                delete_from_r2(result["r2_key"])
     elif "audio_base64" in result:
         with open(output_path, "wb") as f:
             f.write(base64.b64decode(result["audio_base64"]))
