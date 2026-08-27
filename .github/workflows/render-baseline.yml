@@ -1,0 +1,132 @@
+name: Render Baseline
+
+# Detects visual changes caused by a Remotion version bump. Renders the fixed
+# composition in tests/render-baseline/ twice on the same runner — at the base
+# branch's pin and at the PR's pin — and diffs the two. See
+# scripts/render-baseline.mjs and tests/render-baseline/README.md.
+
+on:
+  pull_request:
+    paths:
+      - 'templates/**/package.json'
+      - 'examples/**/package.json'
+      - 'showcase/**/package.json'
+      - 'tests/render-baseline/**'
+      - 'lib/**'
+      - 'scripts/render-baseline.mjs'
+      - '.github/workflows/render-baseline.yml'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Candidate Remotion version to compare against the current pin (e.g. 4.0.518)'
+        required: true
+        type: string
+      threshold:
+        description: 'Max changed-pixel % per frame before failing (default 0 = any change fails)'
+        required: false
+        default: '0'
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout PR / current
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install system deps for Chrome Headless Shell
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends \
+            libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
+            libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64 libpango-1.0-0 libcairo2 ffmpeg
+
+      # ── Determine the two versions ───────────────────────────
+      - name: Resolve versions
+        id: versions
+        run: |
+          PR_PIN=$(node -p "require('./tests/render-baseline/package.json').dependencies.remotion")
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BEFORE="$PR_PIN"
+            AFTER="${{ github.event.inputs.version }}"
+            THRESHOLD="${{ github.event.inputs.threshold }}"
+          else
+            git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+            # Base branch may predate the harness (first PR) — fall back to the PR pin, which
+            # makes before == after and the job just confirms the composition renders.
+            BEFORE=$(git show "origin/${{ github.base_ref }}:tests/render-baseline/package.json" 2>/dev/null \
+              | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).dependencies.remotion" 2>/dev/null || true)
+            BEFORE="${BEFORE:-$PR_PIN}"
+            AFTER="$PR_PIN"
+            THRESHOLD="0"
+          fi
+          echo "before=$BEFORE" >> "$GITHUB_OUTPUT"
+          echo "after=$AFTER"   >> "$GITHUB_OUTPUT"
+          echo "threshold=$THRESHOLD" >> "$GITHUB_OUTPUT"
+          echo "Comparing remotion $BEFORE → $AFTER (threshold ${THRESHOLD}%)"
+
+      # ── Before ───────────────────────────────────────────────
+      - name: Install + render BEFORE (${{ steps.versions.outputs.before }})
+        run: |
+          node scripts/render-baseline.mjs install "${{ steps.versions.outputs.before }}"
+          node scripts/render-baseline.mjs render before
+
+      # ── After ────────────────────────────────────────────────
+      - name: Install + render AFTER (${{ steps.versions.outputs.after }})
+        if: steps.versions.outputs.before != steps.versions.outputs.after
+        run: |
+          node scripts/render-baseline.mjs install "${{ steps.versions.outputs.after }}"
+          node scripts/render-baseline.mjs render after
+
+      - name: Diff
+        id: diff
+        if: steps.versions.outputs.before != steps.versions.outputs.after
+        run: |
+          set +e
+          node scripts/render-baseline.mjs diff before after --threshold="${{ steps.versions.outputs.threshold }}"
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          cat tests/render-baseline/out/diff-before-vs-after/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Same version on both sides — nothing to compare
+        if: steps.versions.outputs.before == steps.versions.outputs.after
+        run: |
+          echo "Remotion pin unchanged (${{ steps.versions.outputs.before }}); rendered once to confirm the composition still builds." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload stills + diffs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-baseline-${{ steps.versions.outputs.before }}-vs-${{ steps.versions.outputs.after }}
+          path: tests/render-baseline/out/
+          retention-days: 30
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && steps.diff.outcome != 'skipped'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('tests/render-baseline/out/diff-before-vs-after/report.md', 'utf8')
+              + `\n<sub>Stills and diff images are in the workflow run artifacts.</sub>`;
+            const marker = '<!-- render-baseline -->';
+            const { data: comments } = await github.rest.issues.listComments({ ...context.repo, issue_number: context.issue.number });
+            const existing = comments.find((c) => c.body.includes(marker));
+            const payload = { ...context.repo, body: `${marker}\n${body}` };
+            if (existing) await github.rest.issues.updateComment({ ...payload, comment_id: existing.id });
+            else await github.rest.issues.createComment({ ...payload, issue_number: context.issue.number });
+
+      - name: Gate
+        if: steps.diff.outcome != 'skipped' && steps.diff.outputs.exit != '0'
+        run: |
+          echo "::warning::Render output differs between ${{ steps.versions.outputs.before }} and ${{ steps.versions.outputs.after }} — review the diff images before merging."
+          exit 1
