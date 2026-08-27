@@ -9,11 +9,11 @@
     "render:poster": "remotion still ToolkitBanner out/toolkit-banner-poster.png --frame=120"
   },
   "dependencies": {
-    "@remotion/cli": "4.0.425",
-    "@remotion/google-fonts": "4.0.425",
+    "@remotion/cli": "4.0.518",
+    "@remotion/google-fonts": "4.0.518",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "remotion": "4.0.425"
+    "remotion": "4.0.518"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
