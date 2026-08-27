@@ -35,7 +35,11 @@ image = (
     .pip_install(
         "torch==2.5.1",
         "torchvision==0.20.1",
-        "transformers>=4.45.0",
+        # Flux2KleinPipeline (diffusers git main) imports Qwen3ForCausalLM,
+        # which landed in transformers 4.51. The old >=4.45 floor let a
+        # cached pre-Qwen3 layer sit under a fresh diffusers, crash-looping
+        # the container at load_pipeline with ModuleNotFoundError.
+        "transformers>=4.51.0",
         "accelerate>=0.30.0",
         "sentencepiece",
         "protobuf",
