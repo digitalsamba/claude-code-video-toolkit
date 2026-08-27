@@ -42,7 +42,7 @@ except ImportError as e:
 load_dotenv()
 
 sys.path.insert(0, str(Path(__file__).parent))
-from file_transfer import download_from_url, get_r2_payload_config
+from file_transfer import delete_from_r2, download_from_url, get_r2_payload_config
 
 # Style LoRA presets. Keep keys in sync with AVAILABLE_LORAS in
 # docker/modal-ltx2/app.py — the server only accepts keys it has baked in.
@@ -190,7 +190,11 @@ def generate_video(
     # Download or decode result
     if "output_url" in result:
         log("Downloading from R2...", "dim")
-        download_from_url(result["output_url"], output_path, verbose=False)
+        if download_from_url(result["output_url"], output_path, verbose=False):
+            # The GPU side leaves the result object in R2. Drop it once the
+            # download succeeded, so the bucket does not grow without bound.
+            if result.get("r2_key"):
+                delete_from_r2(result["r2_key"])
     elif "video_base64" in result:
         with open(output_path, "wb") as f:
             f.write(base64.b64decode(result["video_base64"]))
