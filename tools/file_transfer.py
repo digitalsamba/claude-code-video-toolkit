@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 
@@ -95,6 +96,33 @@ def delete_from_r2(object_key: str) -> bool:
         return True
     except Exception:
         return False
+
+
+@contextmanager
+def r2_cleanup():
+    """Collect R2 keys to delete, and delete them however the block exits.
+
+    Cloud GPU tools upload inputs and download results through R2, then delete
+    those objects. Doing that with a plain list plus a loop at the end of the
+    happy path leaks every object whenever the tool returns an error in
+    between -- a failed upload, an endpoint error, a missing result -- which is
+    exactly when a run is most likely to bail out. Draining in `finally` means
+    success, early return and exception all clean up the same way.
+
+    Usage:
+        with r2_cleanup() as r2_keys_to_cleanup:
+            ...
+            r2_keys_to_cleanup.append(key)
+
+    Deletion is best-effort: delete_from_r2 swallows its own errors, so a key
+    that cannot be removed never masks the result of the block.
+    """
+    keys: list[str] = []
+    try:
+        yield keys
+    finally:
+        for key in keys:
+            delete_from_r2(key)
 
 
 def _upload_to_litterbox(file_path: str, file_name: str) -> str | None:
