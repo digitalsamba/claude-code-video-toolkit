@@ -186,6 +186,10 @@ uv run tools/sync_timing.py --voiceover-json vo.json # Use voiceover.py output
 uv run tools/sync_timing.py --json                   # Machine-readable output
 ```
 
+Knows sprint-review v1/v2 and product-demo configs, and falls back to a **generic mode** for any
+config that pairs `*AudioFile` with `*DurationSeconds` fields (e.g. `tickets[]` with intro/outro
+narration) — so new template shapes work without touching the tool.
+
 ### Qwen3-TTS (Standalone)
 
 ```bash
