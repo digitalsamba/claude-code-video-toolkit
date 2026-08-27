@@ -107,6 +107,12 @@ grep -r "/your-command" README.md CLAUDE.md
 4. Update documentation if needed
 5. Submit a PR with a clear description
 
+### Integrations that depend on a single paid service or local software
+
+If your integration only works against one paid API or a piece of software we can't bundle, keep
+it in your own repo and open an issue to be listed under **Community add-ons** in the README.
+In-tree integrations need at least one open or self-hostable path.
+
 ### Automated and AI-generated PRs
 
 Automated or AI-generated PRs are welcome only when a human author responds to review and the
