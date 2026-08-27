@@ -38,11 +38,17 @@ image = (
         "basicsr>=1.4.2",
         extra_options="--no-build-isolation",
     )
+    # opencv 4.12+ hard-requires numpy>=2, which breaks torch 2.1.2's numpy 1.x ABI
+    # ("RuntimeError: Numpy is not available" on `import basicsr`). realesrgan/facexlib/
+    # gfpgan each pull unpinned opencv-python, so cap both variants and restate the
+    # numpy pin here — pip resolves this layer independently of the ones above.
     .pip_install(
+        "numpy>=1.24.0,<2.0",
         "realesrgan>=0.3.0",
         "facexlib>=0.3.0",
         "gfpgan>=1.3.8",
-        "opencv-python-headless>=4.8.0",
+        "opencv-python-headless>=4.8.0,<4.12",
+        "opencv-python<4.12",
         "Pillow>=10.0.0",
         "boto3",
         "requests",
