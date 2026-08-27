@@ -517,7 +517,7 @@ wheels = [
 
 [[package]]
 name = "claude-code-video-toolkit"
-version = "0.18.0"
+version = "0.19.0"
 source = { virtual = "." }
 dependencies = [
     { name = "boto3" },

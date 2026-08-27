@@ -12,6 +12,25 @@ All notable changes to claude-code-video-toolkit.
 - **Kiro CLI support** (`scripts/migrate_to_kiro.py`) — sibling of the Codex migration script. Installs the toolkit skills into `~/.kiro/skills` (Kiro shares Claude Code's `SKILL.md` frontmatter format, so they copy verbatim), generates a wrapper skill per `.claude/commands/*.md` invoked as the same `/video`, `/setup`, … slash commands, and generates `.kiro/steering/video-toolkit.md` from `CLAUDE.md` inside a managed marker block. Wrappers pin the toolkit's absolute path so commands work from any directory (Claude Code parity — Kiro doesn't walk up the directory tree). Supports `--force`, `--dry-run`, `--reset`, `--workspace-skills`, and `kiro/migration_map.json` for skips/renames. See `docs/kiro.md`.
 ---
 
+## 2026-08-27 (v0.19.0)
+
+### Added
+- **uv is the install path** — `pyproject.toml` + `uv.lock`; `uv sync` (extras: `whisper`, `modal`, `youtube`) and every doc/tool now says `uv run tools/…`. `tools/requirements.txt` stays as the pip fallback. Contributed by @AsharibAli (#33, rebased as #59).
+- **Kiro CLI support** — `scripts/migrate_to_kiro.py` installs the toolkit's skills/commands for Kiro with steering-file generation; see `docs/kiro.md`. Contributed by @homeo26 (#55). Follow-up refactor tracked in #58.
+- **Version maintenance (closes #23)** — `scripts/check_versions.py` (toolkit-wide Remotion/Python/toolkit staleness, wired into `/versions`); `tests/render-baseline/` + `scripts/render-baseline.mjs` + `render-baseline.yml` (same-runner before/after render diff that gates Remotion bumps in CI); `scripts/bump_remotion.py` as `/versions --bump-toolkit`; grouped monthly Dependabot for the `remotion` group. (#63, #64, #65)
+- **`sync_timing.py` generic mode** — pairs any `*AudioFile` with `*DurationSeconds` so ticket-driven and future config layouts work without tool changes. (#62)
+- **Community add-ons** README section for integrations that live in their own repos (first entry: VOICEPEAK offline Japanese TTS, #42), plus CONTRIBUTING guidance for single-vendor integrations and automated/AI-generated PRs. (#60, #61)
+
+### Changed
+- **Remotion 4.0.425 → 4.0.518** across all templates, examples, showcases and the baseline harness — first bump gated by the render-baseline check (all frames identical). (#67)
+- All Remotion projects now pin the same exact version (four stragglers were on 4.0.381/4.0.382/`^4.0.0`).
+
+### Housekeeping
+- External PR queue triaged: MiniMax video/music and Atlas Cloud bot PRs closed under the new policy; Edge-TTS (#46) has review feedback pending.
+- Stale branches removed; unmerged experiments preserved as `archive/*` tags.
+
+---
+
 ## 2026-08-26 (v0.18.0)
 
 ### Added
