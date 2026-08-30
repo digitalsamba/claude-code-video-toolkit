@@ -74,6 +74,11 @@ uv run modal deploy docker/modal-music-gen/app.py
 uv run modal deploy docker/modal-sadtalker/app.py
 uv run modal deploy docker/modal-propainter/app.py
 
+# Talking head, diffusion-based. Weights live in a Volume, so populate it FIRST
+# (one-off, ~26GB, ~10 min) or the app deploys with nothing to load.
+uv run modal run docker/modal-echomimic3/app.py::populate_weights
+uv run modal deploy docker/modal-echomimic3/app.py
+
 # Video generation (see the LTX-2 prerequisites note below)
 uv run modal deploy docker/modal-ltx2/app.py
 ```
@@ -106,6 +111,7 @@ MODAL_IMAGE_EDIT_ENDPOINT_URL=https://yourname--video-toolkit-image-edit-...moda
 MODAL_UPSCALE_ENDPOINT_URL=https://yourname--video-toolkit-upscale-...modal.run
 MODAL_MUSIC_GEN_ENDPOINT_URL=https://yourname--video-toolkit-music-gen-...modal.run
 MODAL_SADTALKER_ENDPOINT_URL=https://yourname--video-toolkit-sadtalker-...modal.run
+MODAL_ECHOMIMIC3_ENDPOINT_URL=https://yourname--video-toolkit-echomimic3-...modal.run
 MODAL_DEWATERMARK_ENDPOINT_URL=https://yourname--video-toolkit-dewatermark-...modal.run
 MODAL_LTX2_ENDPOINT_URL=https://yourname--video-toolkit-ltx2-...modal.run
 ```
@@ -160,6 +166,7 @@ uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3
 
 # Talking head from portrait + audio
 uv run tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4 --cloud modal
+uv run tools/echomimic3.py --image portrait.png --audio voiceover.mp3 --output talking.mp4
 
 # Watermark removal
 uv run tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output clean.mp4 --cloud modal
@@ -175,9 +182,30 @@ uv run tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output 
 | `upscale` | RealESRGAN | AI image upscaling (2x/4x) | ~$0.005-0.02 |
 | `music_gen` | ACE-Step 1.5 | AI music generation | Free (acemusic) / ~$0.02-0.10 (Modal) |
 | `sadtalker` | SadTalker | Talking head video | ~$0.05-0.30 |
+| `echomimic3` | EchoMimicV3-Flash | Talking head video, aspect-preserving | ~$0.009 per second of output |
 | `dewatermark` | ProPainter | AI video inpainting | ~$0.05-0.50 |
 
 All apps use A10G GPUs (24GB VRAM) except `image_edit` which uses A100 for its 25GB model.
+
+### Weight storage
+
+Most apps **bake** their model weights into the image at build time. `echomimic3` is the
+exception: it keeps its ~26GB in a **Modal Volume**, which is why it needs the one-off
+`populate_weights` run above before its first deploy.
+
+The split is measured, not stylistic. Cold start and generation speed are the same either
+way; what differs is rebuild time after a dependency change — 1.8-8.2s on a volume against
+79-385s baked, because any invalidated layer re-downloads everything below it. Apps that
+still change often earn a volume; settled ones don't need one.
+
+**Volumes are optional and free at this scale.** Modal charges $0.09/GiB/month for volume
+storage with **1 TiB/month included free**, so `echomimic3`'s 26.6GB costs nothing — it is
+~2.6% of the free allowance. There is no bill either way, which is precisely why the choice
+comes down to rebuild speed versus having one self-contained artifact rather than to cost.
+
+Every app can be built either way. `echomimic3` defaults to a volume and falls back with
+`ECHOMIMIC_WEIGHTS=image`; the rest bake by default. See `docs/echomimic3.md` for the full
+comparison.
 
 ## Cold Starts
 
@@ -191,6 +219,7 @@ First request after idle triggers a cold start while Modal loads the model:
 | `upscale` | ~25-30s | ~3-5s |
 | `music_gen` | ~60-90s | ~10-30s |
 | `sadtalker` | ~45-60s | ~30-60s |
+| `echomimic3` | ~60-95s | 22.8-47.8x realtime |
 | `dewatermark` | ~60-70s | varies by video length |
 
 After 60 seconds of no requests, containers scale back to zero. No charges while idle.

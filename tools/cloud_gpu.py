@@ -45,6 +45,7 @@ _MODAL_ENV_VARS = {
     "music_gen": "MODAL_MUSIC_GEN_ENDPOINT_URL",
     "dewatermark": "MODAL_DEWATERMARK_ENDPOINT_URL",
     "ltx2": "MODAL_LTX2_ENDPOINT_URL",
+    "echomimic3": "MODAL_ECHOMIMIC3_ENDPOINT_URL",
 }
 
 

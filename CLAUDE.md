@@ -130,7 +130,7 @@ This is especially critical for background commands where the working directory 
 |------|-------|-------------|
 | **Project tools** | voiceover, music, music_gen, sfx, sync_timing | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
-| **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`) |
+| **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, echomimic3, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; echomimic3 is Modal-only) |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (use `/publish` for the guided workflow) |
 
 Utility tools work on any video file without requiring a project structure.
@@ -340,29 +340,47 @@ uv run tools/dewatermark.py --setup  # One-time setup
 
 **Local mode** requires NVIDIA GPU (8GB+ VRAM). Mac users should use `--runpod`.
 
-### Talking Head Generation (SadTalker)
+### Talking Head Generation (EchoMimicV3 vs SadTalker)
+
+Two generators, and the deciding factor is **how big the narrator is on screen and how long
+the viewer looks at it**.
 
 ```bash
-# Basic usage
-uv run tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4
+# EchoMimicV3 — diffusion, follows the input aspect ratio, ~6.5x the cost (Modal only)
+uv run tools/echomimic3.py --image presenter_16x9.png --audio voiceover.mp3 \
+  --steps 5 --size 640 --output narrator.mp4
 
-# For NarratorPiP integration (recommended settings)
-# CRITICAL: --preprocess full preserves image dimensions (otherwise outputs square crop)
-uv run tools/sadtalker.py \
-  --image presenter_16x9.png \
-  --audio voiceover.mp3 \
-  --preprocess full --still --expression-scale 0.8 \
-  --output narrator.mp4
+# SadTalker — warp-based, fast and cheap, square crop unless --preprocess full
+uv run tools/sadtalker.py --image presenter_16x9.png --audio voiceover.mp3 \
+  --preprocess full --still --expression-scale 0.8 --output narrator.mp4
 ```
 
+| Need | Use |
+|------|-----|
+| Narrator large in frame, or a shot held long enough to watch | **echomimic3** |
+| Small PiP overlay, drafts, or many takes to choose between | **sadtalker** |
+| Non-square source image you don't want to fight | **echomimic3** (no `--preprocess` needed) |
+
+**Cost is the trade-off, and wall clock more than money.** EchoMimicV3 is ~$0.009 per second
+of output against SadTalker's ~$0.0014 — a 3-minute narrator is ~$1.76 vs ~$0.27. But it also
+runs at 22.8-47.8x realtime, so that same 3 minutes is **1.5-2.4 hours** of generation.
+Generate per-scene narrator clips ahead of time rather than one long render.
+
 **Key flags for NarratorPiP:**
-- `--preprocess full` — **Critical!** Preserves input dimensions (default `crop` outputs square)
-- `--still` — Reduces head movement for professional look
-- `--expression-scale 0.8` — Calmer expression (default 1.0)
+- echomimic3: `--steps 5 --size 640` — the cheap pass; 16:9 in gives 16:9 out, no crop workaround
+- sadtalker: `--preprocess full` — **Critical!** Preserves input dimensions (default `crop` outputs square)
+- sadtalker: `--still` and `--expression-scale 0.8` — calmer, more professional look
 
-**Image requirements:** Face 30-70% of frame, front-facing, 16:9 for NarratorPiP, 512px+ recommended.
+**Image requirements (both):** Face 30-70% of frame, front-facing, 16:9 for NarratorPiP, 512px+.
 
-See `docs/sadtalker.md` for detailed options and troubleshooting.
+**Gotchas that cost hours** (full list in `docs/echomimic3.md`):
+- EchoMimicV3's `transformers==4.49.0` pin is load-bearing. A newer version silently removes
+  **all lip sync** — no error, just a dead mouth.
+- Keep `--wav2vec chinese` even for English audio; the `english` encoder under-articulates.
+- Don't score talking-head quality with a mouth-crop metric. It ranked highest the one
+  variant with a visible eye defect. Whole-face, or human review.
+
+See `docs/echomimic3.md` and `docs/sadtalker.md` for detailed options and troubleshooting.
 
 ### Redub Sync Mode
 
