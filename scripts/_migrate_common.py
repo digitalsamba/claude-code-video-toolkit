@@ -1,4 +1,6 @@
-﻿import json
+from __future__ import annotations
+
+import json
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,19 +19,6 @@ class SkillSpec:
     name: str
     path: Path
     description: str
-
-
-def find_repo_root(explicit: Path | None) -> Path:
-    if explicit:
-        return explicit.resolve(strict=True)
-    current = Path.cwd()
-    while current != current.parent:
-        if (current / "CLAUDE.md").exists():
-            return current
-        current = current.parent
-    raise RuntimeError("Could not find repository root (no CLAUDE.md found).")
-
-
 
 
 def parse_skill_frontmatter(skill_md: Path) -> tuple[str, str]:
