@@ -1,11 +1,11 @@
-# EchoMimicV3 (Modal) — SadTalker replacement spike
+# EchoMimicV3 (Modal)
 
 Audio-driven talking head generation with [EchoMimicV3](https://github.com/antgroup/echomimic_v3)
-(Ant Group, Apache 2.0, AAAI 2026). Evaluated as a replacement for `docker/modal-sadtalker/`,
-which is built on a model that has been unmaintained since 2023.
+(Ant Group, Apache 2.0, AAAI 2026). Runs alongside `docker/modal-sadtalker/`, which is built on a
+model unmaintained since 2023 but remains much cheaper and faster.
 
-**Status: working, measured once.** Deployed to Modal and run end-to-end on a 12s narrator clip
-(A10, 24GB). Results in "Measured results" below. Not yet run at full narration length.
+**Status: shipping.** User-facing docs are `docs/echomimic3.md`; this file keeps the build
+detail, the measurements, and the traps. Still not run at full narration length.
 
 ## Why this model
 
@@ -98,14 +98,44 @@ not rule out a pose getting stuck across the join.
 **Retracted from earlier in this session:** the recommendation to default `--audio-guidance-scale`
 to 2.0. It rested on `sync_r`, which the above invalidates as a selector.
 
-**Still unverified:** behaviour at full narration length (drift over 60+ segments); whether the
-prompt matters (F edged it by eye, but the metric that called it inert is the one that failed);
-and whether the quality gap is even visible at NarratorPiP size (240x135 to 400x225).
+**Still unverified:** behaviour at full narration length (drift over 60+ segments), and whether the
+prompt matters (F edged it by eye, but the metric that called it inert is the one that failed).
+
+## Is the gap visible at NarratorPiP size? (2026-08-30)
+
+Controlled A/B, same still and same 12s of audio: `conal-narrator.png` (772x440) against the
+existing SadTalker render made from it. Both downscaled to 240x135 — NarratorPiP `sm`, ~3% of a
+1080p frame — and measured for how much motion survives the downscale.
+
+| | whole frame | mouth band | eye band |
+|---|---|---|---|
+| SadTalker (`--preprocess full --still`) | 0.325 | 0.130 | 0.359 |
+| EchoMimicV3 (`--steps 5 --size 640`) | 1.151 | 0.800 | 1.208 |
+| ratio | **3.5x** | **6.2x** | **3.4x** |
+
+The difference is not washed out by the downscale. This is a *motion* measure, not a quality
+one — more motion is not automatically better, and the tuning matrix above is the standing
+warning against reading it that way — but it settles the narrow question the test was for:
+whatever gap exists is still there at PiP size rather than being invisible.
+
+**Human verdict on the same pair: "echo is significantly better but sadtalker isn't terrible
+either."** So both tools stay. EchoMimicV3 is the better picture at any size; SadTalker remains
+good enough for a small overlay, and at ~1/6th the cost and a fraction of the wall clock it keeps
+earning its place for PiP boxes, drafts, and generating several takes to choose between. Note the
+SadTalker side was rendered `--preprocess full --still`, so it was already 16:9 and deliberately
+steady — this compared articulation, not framing.
+
+That run also re-measured throughput at 22.8x realtime (274s of GPU for 12.0s of output),
+against 28.9x in the original measurement.
 
 ## Deploy
 
 ```bash
 uv sync --extra modal && uv run modal setup
+
+# One-off: fill the weights volume (~26GB, ~10 min). Must run before the first deploy.
+uv run modal run docker/modal-echomimic3/app.py::populate_weights
+
 uv run modal deploy docker/modal-echomimic3/app.py
 ```
 

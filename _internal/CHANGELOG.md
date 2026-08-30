@@ -9,7 +9,29 @@ All notable changes to claude-code-video-toolkit.
 ## Unreleased
 
 ### Added
+- **EchoMimicV3 talking head** (`tools/echomimic3.py` + `docker/modal-echomimic3/`) — diffusion-based
+  audio-driven talking head (Ant Group, Apache 2.0), Modal-only. Preserves the input aspect ratio, so
+  16:9 presenter images come back 16:9 with no `--preprocess` workaround. Runs alongside SadTalker
+  rather than replacing it: ~$0.009/second of output against ~$0.0014, and 22.8-47.8x realtime, so
+  SadTalker stays the right call for small overlays and drafts. Decision table in CLAUDE.md, full
+  detail in `docs/echomimic3.md`. (#77)
+- **`--anchor-retreat`** — fixes a bug where a segment seam landing mid-blink made the next segment
+  start closed-eyed and hold it. Anchor windows are now scored by upper-frame motion and the calmest
+  is chosen, backing off up to N frames. `0` restores the old behaviour. (#77)
+<!-- NOTE: the Kiro entry below already shipped in v0.19.0; left in place rather than silently
+     dropped, but it should come out when this section is cut into a release. -->
 - **Kiro CLI support** (`scripts/migrate_to_kiro.py`) — sibling of the Codex migration script. Installs the toolkit skills into `~/.kiro/skills` (Kiro shares Claude Code's `SKILL.md` frontmatter format, so they copy verbatim), generates a wrapper skill per `.claude/commands/*.md` invoked as the same `/video`, `/setup`, … slash commands, and generates `.kiro/steering/video-toolkit.md` from `CLAUDE.md` inside a managed marker block. Wrappers pin the toolkit's absolute path so commands work from any directory (Claude Code parity — Kiro doesn't walk up the directory tree). Supports `--force`, `--dry-run`, `--reset`, `--workspace-skills`, and `kiro/migration_map.json` for skips/renames. See `docs/kiro.md`.
+
+### Changed
+- **`docker/modal-echomimic3/` keeps its weights in a Modal Volume**, unlike the other six Modal apps
+  which bake them into the image. Measured: rebuild after a dependency change is 1.8-8.2s against
+  79-385s baked, while cold start and generation speed are unchanged. Needs a one-off
+  `modal run …::populate_weights`. The settled apps stay baked. (#76)
+- Upstream repo ref and all four model revisions in `modal-echomimic3` pinned by SHA — weights in a
+  Volume aren't tied to the image, so nothing else prevents drift. (#76, same lesson as #71/#74)
+- **`NarratorPiP`** honours its `objectPosition` prop, which was declared and documented but silently
+  ignored by a hardcoded value, and gains an `objectFit` prop (default `contain`, unchanged behaviour).
+
 ---
 
 ## 2026-08-27 (v0.19.0)
