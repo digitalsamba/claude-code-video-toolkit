@@ -120,6 +120,7 @@ def process_with_cloud(
     size: int = 768,
     video_length: int = 81,
     overlap: int = 8,
+    anchor_retreat: int = 6,
     guidance_scale: float = 6.0,
     audio_guidance_scale: float = 3.0,
     audio_scale: float = 1.0,
@@ -169,6 +170,7 @@ def process_with_cloud(
                 "sample_size": [size, size],
                 "video_length": video_length,
                 "overlap": overlap,
+                "anchor_retreat": anchor_retreat,
                 "guidance_scale": guidance_scale,
                 "audio_guidance_scale": audio_guidance_scale,
                 "audio_scale": audio_scale,
@@ -275,6 +277,9 @@ def main():
                             help="Frames per segment; lower to cut VRAM (default: 81)")
     tune_group.add_argument("--overlap", type=int, default=8,
                             help="Frames cross-faded between segments (default: 8)")
+    tune_group.add_argument("--anchor-retreat", type=int, default=6,
+                            help="Max frames to back off when the seam lands on a blink "
+                                 "or other transient; 0 disables (default: 6)")
     tune_group.add_argument("--guidance-scale", type=float, default=6.0, help="Text CFG, 3-6")
     tune_group.add_argument("--audio-guidance-scale", type=float, default=3.0,
                             help="Audio CFG; upstream suggests 1.8-2.0 for tightest lip sync")
@@ -310,6 +315,7 @@ def main():
         size=args.size,
         video_length=args.video_length,
         overlap=args.overlap,
+        anchor_retreat=args.anchor_retreat,
         guidance_scale=args.guidance_scale,
         audio_guidance_scale=args.audio_guidance_scale,
         audio_scale=args.audio_scale,

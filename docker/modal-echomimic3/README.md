@@ -45,7 +45,7 @@ is near-frozen. Identity holds against the source portrait (frame 0 is essential
 across all four segments. **No visible seam or identity pop** at the segment joins (frames 73,
 146, 219) — the overlap cross-fade does its job at these settings.
 
-## Tuning matrix (2026-08-27) — and a known bug
+## Tuning matrix (2026-08-27) — and the bug it exposed
 
 Six variants on a 5.8s clip (Rob's SadTalker render: frame 0 as the still, its audio as the driver),
 one factor changed each from a fixed baseline, seed pinned to 43.
@@ -67,7 +67,7 @@ model was trained with it.
 hair and background artifacts. It ranked B highest — and B is the variant with the visible defect.
 Any future scoring needs a whole-face check, or just human eyes.
 
-### Known bug: segment re-anchoring can latch a blink
+### Fixed: segment re-anchoring could latch a blink
 
 Variant B holds the eyes closed across frames ~72-80. Segment 2 starts at frame 73. The loop
 re-anchors each segment on the last `overlap` frames of the previous one, so **if those anchor
@@ -75,9 +75,22 @@ frames land mid-blink, the next segment starts from closed eyes and holds them.*
 and recovers; B latched.
 
 This is a flaw in the chunking, not an audio-CFG property — low audio CFG probably worsens it
-(less audio drive, more deference to the anchor pose) but does not cause it. Candidate fixes:
-detect eye openness and shift the anchor off a blink, or widen `--overlap` so the cross-fade spans
-it. Affects every variant; worth fixing before more parameter sweeps.
+(less audio drive, more deference to the anchor pose) but does not cause it.
+
+**Fixed by `--anchor-retreat` (default 6).** Detecting eyes would need the face-landmark stack
+this image deliberately omits, so `_pick_anchor_retreat` instead scores candidate anchor windows
+by how much motion they contain in the **upper half** of the frame — where blinks live and mouth
+movement does not — and backs off up to N frames to anchor on the calmest one. A blink is the
+largest short transient up there, so it scores worst and gets skipped. It only pays the cost of
+regenerating those frames when there is a clear improvement (< 0.8x the score at retreat 0), so
+clips with clean seams regenerate nothing. `--anchor-retreat 0` restores the old behaviour.
+
+Anchoring on a settled pose is the better default regardless: a continuation segment has to
+extrapolate from whatever frames it is handed.
+
+The selection logic was verified offline against synthetic blinks (detects a blink in the anchor
+window, leaves clean windows alone, chooses a window that excludes the blink frames, clamps on
+short clips) — no GPU needed. Whether it *looks* fixed on a real latching clip is still unwatched.
 
 Note the earlier "no visible seam" finding was about *identity* continuity, which did hold. It did
 not rule out a pose getting stuck across the join.
@@ -167,11 +180,16 @@ uv run tools/echomimic3.py \
    of both `--video-length` and `--overlap`: coverage is complete, the silence padding always
    covers the rounded-up final segment, and there is no runaway. That is bookkeeping only — it
    says nothing about whether the output *looks* right.
-4. **`--wav2vec chinese` vs `english`.** `run_flash.sh` points at `chinese-wav2vec2-base` regardless
-   of language, so that is the default here, but English narration is exactly the case where the
-   `facebook/wav2vec2-base-960h` encoder might sync better. Worth one A/B.
-5. **`--audio-guidance-scale`.** Defaulted to 3.0 to match `run_flash.sh`, but the upstream README
-   recommends 1.8–2.0 for lip sync. Try both.
+   `--anchor-retreat` adds a little to this: each retreat discards frames that then have to be
+   regenerated. It only fires on a detected transient, so the common case costs nothing.
+2. **`--audio-guidance-scale`.** Defaulted to 3.0 to match `run_flash.sh`, but the upstream README
+   recommends 1.8–2.0 for lip sync. Try both — and judge by eye, since the metric that would
+   otherwise decide it is the discredited one.
+3. **Watch a real latching clip with `--anchor-retreat` on.** The selection logic is verified
+   against synthetic blinks, but variant B (audio CFG 1.8) is the known reproducer and has not
+   been re-run.
+
+(`--wav2vec chinese` vs `english` was on this list and is now settled — see the tuning matrix.)
 
 ## Known deviations from upstream
 

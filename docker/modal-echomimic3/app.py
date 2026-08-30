@@ -32,6 +32,7 @@ Input format (POST JSON to web endpoint):
     "steps": int,                   # default: 8 (5 is enough for talking head)
     "video_length": int,            # frames per segment, default 81
     "overlap": int,                 # blended frames between segments, default 8
+    "anchor_retreat": int,          # max frames to back off a bad seam, default 6
     "sample_size": [int, int],      # area target, default [768, 768]
     "guidance_scale": float,        # default 6.0
     "audio_guidance_scale": float,  # default 3.0  (1.8-2.0 per upstream README)
@@ -439,6 +440,59 @@ class EchoMimicV3:
         mask[:, :, n:] = 255
         return video, mask, clip_image
 
+    @staticmethod
+    def _pick_anchor_retreat(accumulated, overlap, max_retreat):
+        """How many trailing frames to drop before re-anchoring the next segment.
+
+        Each continuation segment starts from the last `overlap` frames of the
+        previous one, so whatever pose those frames hold becomes the next
+        segment's opening pose. When they land mid-blink the model starts
+        closed-eyed and *holds* it -- observed as a prolonged closure across a
+        segment boundary, and the reason this exists.
+
+        Rather than detect eyes (which needs the face-landmark stack this image
+        deliberately omits), score each candidate window by how much motion it
+        contains in the upper half of the frame -- where blinks live and mouth
+        movement does not -- and anchor on the calmest one. A blink is the
+        largest short transient up there, so it scores worst and gets skipped.
+        Anchoring on a settled pose is the better default regardless, since a
+        continuation has to extrapolate from whatever it is handed.
+
+        Returns frames to discard: 0 keeps the current behaviour, which is also
+        what a clip with no transient near the seam gets, because dropping
+        frames means regenerating them.
+        """
+        import torch
+
+        total = accumulated.shape[2]
+        # Never retreat past having `overlap` frames left to anchor on.
+        budget = max(0, min(int(max_retreat), total - overlap - 1))
+        if budget <= 0:
+            return 0
+
+        # Upper half only, and greyscale: blink transients are small, and mouth
+        # motion in the lower half would otherwise dominate every score.
+        tail = accumulated[0, :, -(overlap + budget + 1):]        # [C, n, H, W]
+        upper = tail[:, :, : max(1, tail.shape[2] // 2)].mean(dim=0)  # [n, H/2, W]
+        motion = (upper[1:] - upper[:-1]).abs().mean(dim=(1, 2))  # [n-1] per-frame
+
+        # Window r covers the `overlap` frames ending `r` from the end. Score it
+        # by its worst frame, not its mean: one blink frame in the window is
+        # enough to poison the anchor.
+        n = len(motion)
+        scores = [
+            torch.max(motion[n - overlap - r: n - r]).item()
+            for r in range(budget + 1)
+        ]
+
+        best = min(range(len(scores)), key=lambda r: scores[r])
+        # Only pay for a retreat when it is a clear improvement. Without this,
+        # sensor-level noise picks an arbitrary r on every segment and quietly
+        # adds a regenerated frame budget to clips that never needed one.
+        if best == 0 or scores[best] >= 0.8 * scores[0]:
+            return 0
+        return best
+
     def _audio_embed(self, wav, start_frame, seg_frames, fps, which, sr=16000):
         """Wav2Vec embeddings for one segment, windowed the way Flash expects.
 
@@ -531,6 +585,7 @@ class EchoMimicV3:
         steps = int(request.get("steps", 8))
         seg_length = int(request.get("video_length", 81))
         overlap = int(request.get("overlap", 8))
+        anchor_retreat = max(0, int(request.get("anchor_retreat", 6)))
         sample_size = request.get("sample_size") or [768, 768]
         guidance_scale = float(request.get("guidance_scale", 6.0))
         audio_guidance_scale = float(request.get("audio_guidance_scale", 3.0))
@@ -688,6 +743,17 @@ class EchoMimicV3:
                     produced = accumulated.shape[2]
                     if produced >= total_frames:
                         break
+
+                    # Drop a few trailing frames if they hold a blink or another
+                    # transient, so the next segment does not start from it and
+                    # latch it. Costs the dropped frames, which get regenerated.
+                    retreat = self._pick_anchor_retreat(
+                        accumulated, overlap, anchor_retreat
+                    )
+                    if retreat:
+                        accumulated = accumulated[:, :, : produced - retreat]
+                        produced = accumulated.shape[2]
+                        print(f"    re-anchored {retreat} frames back (transient at seam)")
 
                     starts = [
                         Image.fromarray(
