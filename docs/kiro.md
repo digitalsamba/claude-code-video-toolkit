@@ -26,7 +26,7 @@ Prefer a repo-local install anyway? Use `--workspace-skills` — just remember i
 kiro-cli chat   # from anywhere
 ```
 
-Then `/video`, `/setup`, `/brand`, etc. are available as slash commands (tab completion works: `/vid<Tab>`). When running from the toolkit root, Kiro also auto-loads the generated steering and `AGENTS.md` for full always-on context.
+Then `/video`, `/setup`, `/brand`, etc. are available as slash commands (tab completion works: `/vid<Tab>`). When running from the toolkit root, Kiro also auto-loads the generated steering for full always-on context.
 
 ## Keeping it fresh
 

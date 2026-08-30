@@ -3,28 +3,27 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from _migrate_common import (
+    CommandSpec,
+    SkillSpec,
+    find_repo_root,
+    load_mapping,
+    parse_skill_frontmatter,
+    ensure_clean_dir,
+    copy_tree,
+    remove_dir,
+    yaml_quote,
+    contains_generated_block,
+    replace_generated_block,
+    remove_generated_block,
+)
+
 GENERATED_AGENTS_BEGIN = "<!-- BEGIN GENERATED: claude-to-codex -->"
 GENERATED_AGENTS_END = "<!-- END GENERATED: claude-to-codex -->"
-
-
-@dataclass(frozen=True)
-class CommandSpec:
-    name: str
-    description: str
-    path: Path
-
-
-@dataclass(frozen=True)
-class SkillSpec:
-    name: str
-    description: str
-    path: Path
 
 
 def parse_args() -> argparse.Namespace:
@@ -122,28 +121,6 @@ def load_command_specs(
     return commands
 
 
-def parse_skill_frontmatter(skill_md: Path) -> tuple[str, str]:
-    text = skill_md.read_text(encoding="utf-8")
-    lines = text.splitlines()
-    if len(lines) < 3 or lines[0].strip() != "---":
-        raise SystemExit(f"Skill frontmatter missing in {skill_md}")
-
-    name = ""
-    description = ""
-    for line in lines[1:]:
-        stripped = line.strip()
-        if stripped == "---":
-            break
-        if stripped.startswith("name:"):
-            name = stripped.split(":", 1)[1].strip()
-        if stripped.startswith("description:"):
-            description = stripped.split(":", 1)[1].strip()
-
-    if not name or not description:
-        raise SystemExit(f"Skill name/description missing in {skill_md}")
-    return name, description
-
-
 def load_skill_specs(
     repo_root: Path, mapping: dict[str, Any]
 ) -> list[SkillSpec]:
@@ -166,41 +143,11 @@ def load_skill_specs(
     return results
 
 
-def ensure_clean_dir(path: Path, force: bool, dry_run: bool) -> None:
-    if path.exists():
-        if not force:
-            raise SystemExit(
-                f"Destination already exists: {path}. Re-run with --force to overwrite."
-            )
-        if dry_run:
-            return
-        if path.is_dir():
-            shutil.rmtree(path)
-        else:
-            path.unlink()
-
-
-def write_text(path: Path, content: str, dry_run: bool) -> None:
-    if dry_run:
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-
-
-def copy_tree(src: Path, dest: Path, force: bool, dry_run: bool) -> None:
-    ensure_clean_dir(dest, force=force, dry_run=dry_run)
     if dry_run:
         return
     shutil.copytree(src, dest)
 
 
-def yaml_quote(value: str) -> str:
-    return json.dumps(value, ensure_ascii=False)
-
-
-def remove_dir(path: Path, dry_run: bool) -> bool:
-    if not path.exists():
-        return False
     if dry_run:
         return True
     if path.is_dir():
@@ -222,46 +169,13 @@ def build_agents_block(repo_root: Path) -> str:
     )
 
 
-def contains_generated_agents_block(text: str) -> bool:
-    return GENERATED_AGENTS_BEGIN in text and GENERATED_AGENTS_END in text
-
-
-def replace_generated_agents_block(text: str, new_block: str) -> str:
-    start = text.index(GENERATED_AGENTS_BEGIN)
-    end = text.index(GENERATED_AGENTS_END) + len(GENERATED_AGENTS_END)
-    before = text[:start].rstrip()
-    after = text[end:].lstrip()
-
-    parts: list[str] = []
-    if before:
-        parts.append(before)
-    parts.append(new_block)
-    if after:
-        parts.append(after)
-    return "\n\n".join(parts).rstrip() + "\n"
-
-
-def remove_generated_agents_block(text: str) -> str:
-    start = text.index(GENERATED_AGENTS_BEGIN)
-    end = text.index(GENERATED_AGENTS_END) + len(GENERATED_AGENTS_END)
-    before = text[:start].rstrip()
-    after = text[end:].lstrip()
-    if before and after:
-        return f"{before}\n\n{after}\n"
-    if before:
-        return f"{before}\n"
-    if after:
-        return f"{after}\n"
-    return ""
-
-
 def sync_agents_file(repo_root: Path, force: bool, dry_run: bool) -> None:
     agents_path = repo_root / "AGENTS.md"
     new_block = build_agents_block(repo_root)
     existing = agents_path.read_text(encoding="utf-8") if agents_path.exists() else ""
 
-    if agents_path.exists() and contains_generated_agents_block(existing):
-        new_content = replace_generated_agents_block(existing, new_block)
+    if agents_path.exists() and contains_generated_block(existing, GENERATED_AGENTS_BEGIN, GENERATED_AGENTS_END):
+        new_content = replace_generated_block(existing, new_block, GENERATED_AGENTS_BEGIN, GENERATED_AGENTS_END)
         if existing == new_content:
             print("agents_status=up_to_date")
             return
@@ -471,8 +385,8 @@ def reset_installed_skills(
     agents_path = repo_root / "AGENTS.md"
     if agents_path.exists():
         existing = agents_path.read_text(encoding="utf-8")
-        if contains_generated_agents_block(existing):
-            new_content = remove_generated_agents_block(existing)
+        if contains_generated_block(existing, GENERATED_AGENTS_BEGIN, GENERATED_AGENTS_END):
+            new_content = remove_generated_block(existing, GENERATED_AGENTS_BEGIN, GENERATED_AGENTS_END)
             print(f"agents_reset={agents_path}")
             if not dry_run:
                 agents_path.write_text(new_content, encoding="utf-8")
