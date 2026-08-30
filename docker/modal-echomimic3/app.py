@@ -54,29 +54,42 @@ REPO_URL = "https://github.com/antgroup/echomimic_v3.git"
 # Pinned so a rebuild cannot silently pick up a new upstream main whose src/
 # module layout no longer matches the loader below. Bump deliberately, then
 # smoke-test the endpoint (same lesson as flux2/diffusers in #71, #74).
-REPO_REF = "main"
+REPO_REF = "7e89489ca51c0d008fc1963ec6c03fc5bd0b9397"
 
+# Weights are pinned by revision for the same reason the repo is. It matters more
+# here than in the baked apps: with the weights in a Volume they are no longer
+# part of the image, so nothing but these SHAs stops image and weights drifting
+# apart (#76). Bump deliberately, then re-run populate_weights.
 BASE_MODEL = "alibaba-pai/Wan2.1-Fun-V1.1-1.3B-InP"
+BASE_MODEL_REV = "fc913c34361f4ec879e2f9c78b4f11ae50a937d1"
 ECHO_MODEL = "BadToBest/EchoMimicV3"
+ECHO_MODEL_REV = "311e176905a8c4c24b240b530488fe636ce4d249"
 WAV2VEC_CN = "TencentGameMate/chinese-wav2vec2-base"   # what run_flash.sh uses
+WAV2VEC_CN_REV = "3991242c806928916fff4a8c0e4f76acf661b743"
 WAV2VEC_EN = "facebook/wav2vec2-base-960h"             # preview default
+WAV2VEC_EN_REV = "22aad52d435eb6dbaf354bdad9b0da84ce7d6156"
 
 APP_DIR = "/app/echomimic_v3"
 MODELS_DIR = "/models"
 
-# Where weights come from. Set ECHOMIMIC_WEIGHTS=volume at DEPLOY time to build
-# the volume-backed variant as a separate app, so both can be benchmarked
-# side by side. Generation speed cannot differ between them (same weights, same
-# GPU, read once at container start) -- what differs is cold start and, far more,
-# rebuild time after a dependency change.
-WEIGHTS_SOURCE = os.environ.get("ECHOMIMIC_WEIGHTS", "image")
+# Where weights come from. This app keeps them in a Modal Volume, unlike the
+# other six modal-* apps which bake them into the image. That split is deliberate
+# and measured (#76): rebuild after a dependency change is 1.8-8.2s on a volume
+# against 79-385s baked, while cold start and generation speed are the same
+# either way. Getting this model working took four dependency changes, so the
+# rebuild cost is the one that bites. The settled apps gain nothing by moving.
+#
+# Set ECHOMIMIC_WEIGHTS=image at DEPLOY time for the baked variant, which
+# deploys as a separate app -- self-contained, but re-downloads 26GB whenever a
+# layer above the weights is invalidated.
+WEIGHTS_SOURCE = os.environ.get("ECHOMIMIC_WEIGHTS", "volume")
 if WEIGHTS_SOURCE not in ("image", "volume"):
     raise ValueError(f"ECHOMIMIC_WEIGHTS must be 'image' or 'volume', got {WEIGHTS_SOURCE!r}")
 
 USE_VOLUME = WEIGHTS_SOURCE == "volume"
 
 app = modal.App(
-    "video-toolkit-echomimic3-vol" if USE_VOLUME else "video-toolkit-echomimic3"
+    "video-toolkit-echomimic3" if USE_VOLUME else "video-toolkit-echomimic3-baked"
 )
 
 # Created in both modes: unused (and empty, so free) in image mode, but having
@@ -84,11 +97,11 @@ app = modal.App(
 volume = modal.Volume.from_name("echomimic3-weights", create_if_missing=True)
 
 _WEIGHT_FETCH = [
-    (BASE_MODEL, f"{MODELS_DIR}/Wan2.1-Fun-V1.1-1.3B-InP", None),
+    (BASE_MODEL, BASE_MODEL_REV, f"{MODELS_DIR}/Wan2.1-Fun-V1.1-1.3B-InP", None),
     # Only the Flash transformer -- skips the larger preview checkpoint.
-    (ECHO_MODEL, f"{MODELS_DIR}/EchoMimicV3", ["echomimicv3-flash-pro/*"]),
-    (WAV2VEC_CN, f"{MODELS_DIR}/chinese-wav2vec2-base", None),
-    (WAV2VEC_EN, f"{MODELS_DIR}/wav2vec2-base-960h", None),
+    (ECHO_MODEL, ECHO_MODEL_REV, f"{MODELS_DIR}/EchoMimicV3", ["echomimicv3-flash-pro/*"]),
+    (WAV2VEC_CN, WAV2VEC_CN_REV, f"{MODELS_DIR}/chinese-wav2vec2-base", None),
+    (WAV2VEC_EN, WAV2VEC_EN_REV, f"{MODELS_DIR}/wav2vec2-base-960h", None),
 ]
 
 # chinese-wav2vec2-base ships pytorch_model.bin, and current transformers refuses
@@ -104,8 +117,8 @@ def _fetch_weights():
     import torch
     from huggingface_hub import snapshot_download
 
-    for repo, dest, patterns in _WEIGHT_FETCH:
-        snapshot_download(repo, local_dir=dest, allow_patterns=patterns)
+    for repo, revision, dest, patterns in _WEIGHT_FETCH:
+        snapshot_download(repo, revision=revision, local_dir=dest, allow_patterns=patterns)
 
     for d in (f"{MODELS_DIR}/chinese-wav2vec2-base", f"{MODELS_DIR}/wav2vec2-base-960h"):
         b, sf = os.path.join(d, "pytorch_model.bin"), os.path.join(d, "model.safetensors")
@@ -171,8 +184,13 @@ image = (
     # path: tensorflow/retina-face are only for src.face_detect (the preview
     # ip_mask), and gradio/moviepy only for the demo UIs. Left out to keep the
     # image small -- add them back if the preview variant is ever wired up.
+    # Fetch-by-SHA rather than `clone --branch`, which only accepts a branch or
+    # tag name. Still a single-commit download.
     .run_commands(
-        f"git clone --depth 1 --branch {REPO_REF} {REPO_URL} {APP_DIR}",
+        f"git init {APP_DIR}",
+        f"git -C {APP_DIR} remote add origin {REPO_URL}",
+        f"git -C {APP_DIR} fetch --depth 1 origin {REPO_REF}",
+        f"git -C {APP_DIR} checkout FETCH_HEAD",
     )
     .env({
         "PYTHONPATH": APP_DIR,

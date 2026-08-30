@@ -102,8 +102,19 @@ Then put the printed URL in `.env`:
 MODAL_ECHOMIMIC3_ENDPOINT_URL=https://....modal.run
 ```
 
-The image bakes ~20GB of weights (Wan2.1-Fun-V1.1-1.3B-InP, the `echomimicv3-flash-pro`
-transformer, and both wav2vec2 encoders), so the first build is slow and later cold starts are not.
+Weights (Wan2.1-Fun-V1.1-1.3B-InP, the `echomimicv3-flash-pro` transformer, and both
+wav2vec2 encoders) live in a **Modal Volume**, not in the image — the one place this app
+diverges from the other six. Rationale and numbers in #76; the short version is that
+rebuild after a dependency change is 1.8-8.2s instead of 79-385s, while cold start and
+generation speed are unchanged. Because the weights are no longer pinned by the image,
+the upstream repo ref and all four model revisions are pinned by SHA in `app.py` — bump
+them deliberately and re-run `populate_weights`.
+
+For the baked variant (deploys separately as `video-toolkit-echomimic3-baked`):
+
+```bash
+ECHOMIMIC_WEIGHTS=image uv run modal deploy docker/modal-echomimic3/app.py
+```
 
 ## Use
 
@@ -171,5 +182,8 @@ uv run tools/echomimic3.py \
   `requirements.txt`. None are reachable from the Flash path — tensorflow and retina-face are only
   used by `src.face_detect` for the preview variant's `ip_mask`. Add them back if the preview
   variant is ever wired up.
-- `REPO_REF` is `main` rather than a pinned commit. Pin it before this goes anywhere near a
-  release: an unpinned ref silently re-resolves on rebuild, which is how #71/#74 happened to flux2.
+- `REPO_REF` is pinned to a commit SHA, and so are all four model revisions. An unpinned ref
+  silently re-resolves on rebuild, which is how #71/#74 happened to flux2. Pinning matters more
+  here than in the baked apps, because weights in a Volume are not tied to the image at all.
+  Fetching by SHA needs `git init` + `fetch --depth 1 <sha>`; `clone --branch` only takes a
+  branch or tag name.
