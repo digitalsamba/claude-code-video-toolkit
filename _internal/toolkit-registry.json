@@ -464,40 +464,29 @@
       "created": "2026-01-11",
       "updated": "2026-01-12"
     },
-    "echomimic3": {
-      "path": "tools/echomimic3.py",
-      "description": "Generate talking head videos from portrait image + audio using EchoMimicV3-Flash — preserves the input aspect ratio (16:9 in, 16:9 out)",
-      "usage": "uv run tools/echomimic3.py --image presenter_16x9.png --audio voiceover.mp3 --steps 5 --size 640 --output narrator.mp4",
+    "soulx": {
+      "path": "tools/soulx.py",
+      "description": "Generate talking head videos from portrait image + audio using SoulX-FlashHead — holds identity across long renders and preserves the input aspect ratio (16:9 in, 16:9 out)",
+      "usage": "uv run tools/soulx.py --image presenter_16x9.png --audio voiceover.mp3 --size 768 --output narrator.mp4",
       "status": "beta",
       "category": "video-generation",
-      "backend": "echomimicv3-flash",
+      "backend": "soulx-flashhead-1.3b-pro",
       "requires": "Modal account",
       "options": {
-        "size": [
-          512,
-          640,
-          768
-        ],
-        "steps": "5 (fast) to 8+ (quality)",
-        "wav2vec": [
-          "chinese",
-          "english"
-        ],
-        "videoLength": "frames per segment, default 81",
-        "overlap": "frames cross-faded between segments, default 8",
-        "anchorRetreat": "max frames to back off a blink at a seam, default 6, 0 disables",
-        "guidanceScale": "3-6 text CFG",
-        "audioGuidanceScale": "1.8-3.0 audio CFG",
+        "size": "target long edge, default 768; aspect ratio follows the input image",
+        "width/height": "exact dimensions instead of size; both must be multiples of 16",
         "seed": true,
+        "faceCrop": "upstream face detect+crop, square-only so it discards a 16:9 framing, default off",
+        "compare": "also write a labelled side-by-side against an existing render",
         "fps": 25
       },
       "envVars": [
-        "MODAL_ECHOMIMIC3_ENDPOINT_URL"
+        "MODAL_SOULX_ENDPOINT_URL"
       ],
-      "estimatedCost": "~$0.009 per second of output (measured 28.9x realtime at --steps 5 --size 640)",
-      "documentation": "docs/echomimic3.md",
-      "created": "2026-08-30",
-      "updated": "2026-08-30"
+      "estimatedCost": "~$0.0024 per second of output (measured 6.4-7.9x realtime on A10G), plus a one-off ~600s torch.compile per container per resolution",
+      "documentation": "docs/soulx.md",
+      "created": "2026-08-31",
+      "updated": "2026-08-31"
     },
     "qwen3_tts": {
       "path": "tools/qwen3_tts.py",
@@ -946,15 +935,15 @@
           "gpu": "A10G",
           "estimatedCost": "$0.05-0.30 per video"
         },
-        "echomimic3": {
-          "appFile": "docker/modal-echomimic3/app.py",
-          "envVar": "MODAL_ECHOMIMIC3_ENDPOINT_URL",
+        "soulx": {
+          "appFile": "docker/modal-soulx/app.py",
+          "envVar": "MODAL_SOULX_ENDPOINT_URL",
           "operations": [
-            "echomimic3"
+            "soulx"
           ],
           "gpu": "A10G",
           "weights": "modal-volume",
-          "estimatedCost": "~$0.11 per 12s of output"
+          "estimatedCost": "~$0.0024 per second of output, plus a one-off ~600s torch.compile per container per resolution"
         },
         "dewatermark": {
           "appFile": "docker/modal-propainter/app.py",

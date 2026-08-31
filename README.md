@@ -206,8 +206,8 @@ uv run tools/image_edit.py --input photo.jpg --prompt "Add sunglasses" --cloud m
 # AI video generation (LTX-2.3 — text-to-video, image-to-video)
 uv run tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
 
-# Talking head from a portrait + audio (SadTalker)
-uv run tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4 --cloud modal
+# Talking head from a portrait + audio (SoulX-FlashHead)
+uv run tools/soulx.py --image portrait.png --audio voiceover.mp3 --output talking.mp4
 ```
 
 <details>
@@ -254,8 +254,8 @@ uv run tools/dewatermark.py --input video.mp4 --preset sora --output clean.mp4 -
 # Locate watermark coordinates
 uv run tools/locate_watermark.py --input video.mp4 --grid --output-dir ./review/
 
-# Generate talking head video from image + audio (SadTalker)
-uv run tools/sadtalker.py --image portrait.png --audio voiceover.mp3 --output talking.mp4 --cloud modal
+# Generate talking head video from image + audio (SoulX-FlashHead)
+uv run tools/soulx.py --image portrait.png --audio voiceover.mp3 --output talking.mp4
 
 # AI image generation (FLUX.2 Klein 4B — text-to-image + editing)
 uv run tools/flux2.py --prompt "A sunset over mountains" --cloud modal
@@ -279,7 +279,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 |------|-------|---------|
 | **Project** | voiceover, music, music_gen, sfx | Used during video creation workflow |
 | **Utility** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations, no project needed |
-| **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
+| **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
 
 ### Cloud GPU (Modal + RunPod)
@@ -293,7 +293,8 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | `image_edit` | AI image editing & style transfer | ~$0.03 |
 | `upscale` | AI image upscaling (2x/4x) | ~$0.01 |
 | `music_gen` | AI music generation (8 scene presets) | Free (acemusic) / ~$0.05 (self-hosted) |
-| `sadtalker` | Talking head video from portrait + audio | ~$0.10 |
+| `soulx` | Talking head video from portrait + audio — holds identity over long takes | ~$0.0024/sec |
+| `sadtalker` | Talking head video, warp-based — fast, cheap drafts | ~$0.10 |
 | `ltx2` | AI video generation (text-to-video, image-to-video) | ~$0.23 |
 | `dewatermark` | Video watermark removal | ~$0.10 |
 

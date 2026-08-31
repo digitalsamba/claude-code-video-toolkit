@@ -9,28 +9,38 @@ All notable changes to claude-code-video-toolkit.
 ## Unreleased
 
 ### Added
-- **EchoMimicV3 talking head** (`tools/echomimic3.py` + `docker/modal-echomimic3/`) — diffusion-based
-  audio-driven talking head (Ant Group, Apache 2.0), Modal-only. Preserves the input aspect ratio, so
-  16:9 presenter images come back 16:9 with no `--preprocess` workaround. Runs alongside SadTalker
-  rather than replacing it: ~$0.009/second of output against ~$0.0014, and 22.8-47.8x realtime, so
-  SadTalker stays the right call for small overlays and drafts. Decision table in CLAUDE.md, full
-  detail in `docs/echomimic3.md`. (#77)
-- **`--anchor-retreat`** — fixes a bug where a segment seam landing mid-blink made the next segment
-  start closed-eyed and hold it. Anchor windows are now scored by upper-frame motion and the calmest
-  is chosen, backing off up to N frames. `0` restores the old behaviour. (#77)
-<!-- NOTE: the Kiro entry below already shipped in v0.19.0; left in place rather than silently
-     dropped, but it should come out when this section is cut into a release. -->
-- **Kiro CLI support** (`scripts/migrate_to_kiro.py`) — sibling of the Codex migration script. Installs the toolkit skills into `~/.kiro/skills` (Kiro shares Claude Code's `SKILL.md` frontmatter format, so they copy verbatim), generates a wrapper skill per `.claude/commands/*.md` invoked as the same `/video`, `/setup`, … slash commands, and generates `.kiro/steering/video-toolkit.md` from `CLAUDE.md` inside a managed marker block. Wrappers pin the toolkit's absolute path so commands work from any directory (Claude Code parity — Kiro doesn't walk up the directory tree). Supports `--force`, `--dry-run`, `--reset`, `--workspace-skills`, and `kiro/migration_map.json` for skips/renames. See `docs/kiro.md`.
+- **SoulX-FlashHead talking head** (`tools/soulx.py` + `docker/modal-soulx/`) — the toolkit's
+  default talking head generator (Soul AI Lab, Apache 2.0, 1.3B), Modal-only. Preserves the
+  input aspect ratio, so 16:9 presenter images come back 16:9 with no `--preprocess`
+  workaround, and `--size` snaps to the model's latent grid while keeping the aspect. It is
+  the default because identity holds over a long take: measured at **97% of frame-zero
+  sharpness at 70s, flat across 72 segments**, so per-scene generation is a choice rather
+  than a workaround. ~$0.0024 per second of output against SadTalker's ~$0.0014. Decision
+  table in CLAUDE.md, full detail in `docs/soulx.md`. (#81)
 
 ### Changed
-- **`docker/modal-echomimic3/` keeps its weights in a Modal Volume**, unlike the other six Modal apps
-  which bake them into the image. Measured: rebuild after a dependency change is 1.8-8.2s against
+- **`docker/modal-soulx/` keeps its weights in a Modal Volume**, unlike the other Modal apps
+  which bake them into the image. Measured: redeploy after a code change is ~2.3s against
   79-385s baked, while cold start and generation speed are unchanged. Needs a one-off
-  `modal run …::populate_weights`. The settled apps stay baked. (#76)
-- Upstream repo ref and all four model revisions in `modal-echomimic3` pinned by SHA — weights in a
-  Volume aren't tied to the image, so nothing else prevents drift. (#76, same lesson as #71/#74)
-- **`NarratorPiP`** honours its `objectPosition` prop, which was declared and documented but silently
-  ignored by a hardcoded value, and gains an `objectFit` prop (default `contain`, unchanged behaviour).
+  `modal run …::populate_weights` (14.7 GB). The settled apps stay baked.
+- Upstream repo ref and both model revisions in `modal-soulx` pinned by SHA — weights in a
+  Volume aren't tied to the image, so nothing else prevents drift. (same lesson as #71/#74)
+- **`NarratorPiP`** honours its `objectPosition` prop, which was declared and documented but
+  silently ignored by a hardcoded value, and gains an `objectFit` prop (default `contain`,
+  unchanged behaviour).
+- `tools/cloud_gpu.py` learned `soulx`, including its GPU tier, so its jobs report a cost
+  estimate.
+
+### Removed
+- **EchoMimicV3** (`tools/echomimic3.py`, `docker/modal-echomimic3/`, `docs/echomimic3.md`),
+  added earlier in this unreleased cycle and never part of a tagged release. Identity drift
+  made it unusable for real narration: on a controlled A/B — same photo, same 80s audio,
+  same 544x736 — it fell to 50% of frame-zero sharpness by 70s, collapsing to a featureless
+  smear, where SoulX-FlashHead held 97%. The failure is absorbing rather than gradual, since
+  each segment re-anchors on the previous one's output, so it could not be tuned out; it
+  implied a ~30s render ceiling that shaped the surrounding design. SoulX supersedes it on
+  every axis that mattered — drift, cost (~3.7x cheaper), wall clock (~3-6x faster) — while
+  keeping aspect-ratio preservation. (#81, closes #80)
 
 ---
 
