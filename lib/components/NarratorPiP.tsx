@@ -50,7 +50,7 @@ export interface NarratorPiPProps {
    * CSS object-fit for the video (default: 'contain').
    *
    * 'contain' is right for both generators. A 16:9 source fills a PiP box
-   * exactly, since every SIZE_PRESET is 16:9 -- that is what tools/echomimic3.py
+   * exactly, since every SIZE_PRESET is 16:9 -- that is what tools/soulx.py
    * produces, and what tools/sadtalker.py produces with --preprocess full.
    * SadTalker's default square crop letterboxes instead; use 'cover' to fill
    * the box at the cost of cropping the sides.
