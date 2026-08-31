@@ -17,7 +17,7 @@
 
 [project]
 name = "claude-code-video-toolkit"
-version = "0.19.0"
+version = "0.20.0"
 description = "AI-native video production workspace: Remotion templates, AI voiceover/music/image tools, and browser demo recording"
 readme = "README.md"
 requires-python = ">=3.10"

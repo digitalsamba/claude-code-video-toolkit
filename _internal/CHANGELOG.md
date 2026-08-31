@@ -8,6 +8,10 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+---
+
+## 2026-08-31 (v0.20.0)
+
 ### Added
 - **SoulX-FlashHead talking head** (`tools/soulx.py` + `docker/modal-soulx/`) — the toolkit's
   default talking head generator (Soul AI Lab, Apache 2.0, 1.3B), Modal-only. Preserves the
