@@ -1,0 +1,36 @@
+{
+  "name": "Things Worth Doing",
+  "description": "Field guide / documentary / editorial-magazine aesthetic for a men's competence-and-doing content brand. Deliberately avoids neon, gamer, generic-AI-futuristic, and overly polished corporate looks — see the vault's Brand Strategy and Visual Identity sections.",
+  "version": "1.0.0",
+
+  "colors": {
+    "primary": "#B5651D",
+    "primaryLight": "#D98C4A",
+    "textDark": "#2A2620",
+    "textMedium": "#4A4438",
+    "textLight": "#8A8172",
+    "bgLight": "#F4EFE6",
+    "bgDark": "#171410",
+    "bgOverlay": "rgba(23, 20, 16, 0.85)",
+    "divider": "#3A352B",
+    "shadow": "rgba(0, 0, 0, 0.35)"
+  },
+
+  "fonts": {
+    "primary": "Arial, Helvetica, sans-serif",
+    "mono": "ui-monospace, Menlo, monospace"
+  },
+
+  "spacing": { "xs": 8, "sm": 16, "md": 24, "lg": 48, "xl": 80, "xxl": 120 },
+  "borderRadius": { "sm": 7, "md": 12, "lg": 16 },
+
+  "typography": {
+    "h1": { "size": 88, "weight": 700 },
+    "h2": { "size": 72, "weight": 700 },
+    "h3": { "size": 48, "weight": 700 },
+    "body": { "size": 44, "weight": 400 },
+    "label": { "size": 34, "weight": 500, "letterSpacing": 3 }
+  },
+
+  "_proposed_default": "Colors are a proposed default matching the 'field guide + documentary' visual identity (warm rust/amber accent, warm off-black background, warm off-white text) — not yet confirmed by Adrian. Change freely; nothing downstream depends on these specific hex values."
+}

@@ -1,0 +1,43 @@
+{
+  "format": { "width": 1080, "height": 1920, "fps": 30 },
+  "palette": {
+    "ink": "#171410",
+    "accent1": "#B5651D",
+    "accent2": "#5C6B47",
+    "warn": "#B33A3A",
+    "white": "#F4EFE6",
+    "slate": "#8A8172"
+  },
+  "_palette_note": "Matches brands/things-worth-doing/brand.json — proposed 'field guide + documentary' default (warm rust/olive, warm off-black/off-white), not yet confirmed by Adrian. Change both files together if it changes.",
+  "captions": {
+    "enabled": true,
+    "y": 1640,
+    "size": 80,
+    "maxWords": 3,
+    "maxChars": 22,
+    "fill": "#F4EFE6",
+    "whisperModel": "base"
+  },
+  "timing": {
+    "startPad": 0.3,
+    "lead": 0.3,
+    "tail": 0.5,
+    "xfade": 0.25
+  },
+  "_timing_note": "lead/tail/xfade shortened vs. the concept-explainer-short default (0.4/0.8/0.45) — Things Worth Doing's Production Standard calls for visual movement every few seconds, not a ~15s pattern-interrupt cadence, so scenes here run shorter and cut tighter.",
+  "voice": {
+    "provider": "elevenlabs",
+    "brand": "things-worth-doing",
+    "maxWpm": 165,
+    "cloud": "modal",
+    "refAudio": "",
+    "refText": "",
+    "speaker": "Ryan",
+    "tone": ""
+  },
+  "_voice_note": "provider is elevenlabs per Adrian's stated toolkit; brand points gen_vo.py at brands/things-worth-doing/voice.json for the actual voiceId (still a placeholder there — see Gotchas). qwen3/cloud/speaker/tone fields kept only as a fallback if provider is switched back.",
+  "music": {
+    "file": "audio/music.mp3",
+    "volume": 0.16
+  }
+}

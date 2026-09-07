@@ -1,0 +1,33 @@
+{
+  "title": "Why Is the Sky Blue?",
+  "scenes": [
+    {
+      "id": "01",
+      "slug": "hook",
+      "visual": "ltx",
+      "asset": "clips/01_hook.mp4",
+      "text": "Look up on a clear day and you see blue in every direction. But sunlight is white. So where does the blue come from?"
+    },
+    {
+      "id": "02",
+      "slug": "scattering",
+      "visual": "ideogram",
+      "asset": "images/02_scattering.png",
+      "text": "Sunlight is a mix of every color, and air molecules scatter short blue wavelengths far more than long red ones. The sky is blue light, bounced toward your eyes from everywhere at once."
+    },
+    {
+      "id": "03",
+      "slug": "sunset",
+      "visual": "ltx",
+      "asset": "clips/03_sunset.mp4",
+      "text": "At sunset the light travels through far more air, the blue scatters away before it reaches you, and only the reds and oranges survive the trip."
+    },
+    {
+      "id": "04",
+      "slug": "cta",
+      "visual": "ideogram",
+      "asset": "images/04_cta.png",
+      "text": "So the sky isn't blue. It's blue light, scattered. If that made the world a little clearer, follow for one concept every week."
+    }
+  ]
+}

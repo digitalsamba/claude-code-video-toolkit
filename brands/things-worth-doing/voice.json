@@ -1,0 +1,22 @@
+{
+  "voiceId": "cjVigY5qzO86Huf0OWal",
+  "description": "Voice Brief: calm, confident, conversational, knowledgeable, slightly understated (never announcer-register).",
+  "settings": {
+    "stability": 0.68,
+    "similarityBoost": 0.85,
+    "style": 0.15,
+    "useSpeakerBoost": true
+  },
+  "model": "eleven_multilingual_v2",
+  "qwen3": {
+    "speaker": "Ryan",
+    "language": "Auto",
+    "tone": "",
+    "instruct": "",
+    "clone": null
+  },
+  "sixtydb": {
+    "voiceId": "YOUR_VOICE_ID_HERE",
+    "settings": { "stability": 0.85, "similarity": 0.9, "speed": 1.0, "enhance": true }
+  }
+}
