@@ -10,6 +10,39 @@ All notable changes to claude-code-video-toolkit.
 
 ---
 
+## 2026-09-08 (v0.20.1)
+
+Patch release. v0.20.0 shipped with two tools that aborted with a `NameError`
+before doing any work; both are fixed here.
+
+### Fixed
+- **Codex and Kiro migrations** (`scripts/migrate_to_codex.py`,
+  `scripts/migrate_to_kiro.py`) — `write_text()` was dropped by the
+  `_migrate_common` extraction without being moved to the shared module, so
+  `--force` aborted with `NameError: name 'write_text' is not defined` on the
+  first real write. `--dry-run` returned before that path, which is why it went
+  unnoticed. Restored in `_migrate_common`, and the two orphaned function bodies
+  the same refactor left stranded are gone. Thanks @Anai-Guo (#85).
+- **`tools/dewatermark.py --setup`** — `setup_runpod()` called
+  `get_runpod_config()`, which is defined nowhere in the repo, so the documented
+  one-time setup crashed immediately. Now uses the `load_dotenv()` +
+  `os.getenv("RUNPOD_API_KEY")` pattern `tools/upscale.py` already uses (#86).
+- **`_migrate_common.load_mapping`** returned raw JSON instead of the normalized
+  shape, so any caller would `KeyError` on `mapping["skip_commands"]`. It was
+  unreachable only because both scripts shadowed it with a local copy. The real
+  version is now shared and the duplicates (plus a duplicate `find_repo_root`
+  and an unused `yaml_quote` import) are gone — verified byte-identical
+  migration output before and after (#86).
+
+### Added
+- **`Lint Python` CI workflow** — gates on undefined names
+  (`ruff --select F821,F811,F822,F823`) across `scripts/` and `tools/`.
+  Deliberately narrow: only rules where a hit is a real defect, not style. Run
+  against the v0.20.0 tree it reports 26 errors, including both `write_text`
+  sites. There was previously no Python lint in CI (#86).
+
+---
+
 ## 2026-08-31 (v0.20.0)
 
 ### Added
