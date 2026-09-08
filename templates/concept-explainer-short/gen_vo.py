@@ -70,6 +70,8 @@ def main() -> None:
     ]
     if voice.get("maxWpm"):
         cmd += ["--max-wpm", str(voice["maxWpm"])]
+    if voice.get("brand"):
+        cmd += ["--brand", voice["brand"]]
     if voice.get("provider", "qwen3") == "qwen3":
         cmd += ["--cloud", voice.get("cloud", "modal")]
         ref_audio = voice.get("refAudio", "")

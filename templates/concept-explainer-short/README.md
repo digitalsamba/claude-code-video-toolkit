@@ -92,7 +92,8 @@ Alternate cards and motion so the viewer gets a pattern interrupt every
   "provider": "qwen3", "cloud": "modal", "maxWpm": 165,
   "refAudio": "ref/my-voice.m4a",
   "refText": "Exact transcript of the reference recording.",
-  "speaker": "Ryan", "tone": ""
+  "speaker": "Ryan", "tone": "",
+  "brand": ""
 }
 ```
 
@@ -103,6 +104,10 @@ Alternate cards and motion so the viewer gets a pattern interrupt every
 - `maxWpm` is the pacing safety net: rushed takes are slowed in place with
   pitch-preserving atempo. gen_vo.py prints per-scene wpm either way.
 - `provider: "elevenlabs"` also works (uses your configured voice).
+- **Brand voice**: set `"brand": "my-brand"` to take the voice from
+  `brands/my-brand/voice.json` (voiceId and settings) instead of the ambient
+  config. Works with any provider, and pairs with a brand's palette so one
+  brand drives both look and narrator.
 
 ## Captions
 
