@@ -30,7 +30,8 @@
     "refAudio": "",
     "refText": "",
     "speaker": "Ryan",
-    "tone": ""
+    "tone": "",
+    "brand": ""
   },
   "music": {
     "file": "audio/music.mp3",
