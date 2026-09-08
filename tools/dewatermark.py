@@ -1529,8 +1529,9 @@ def setup_runpod(gpu_id: str = "AMPERE_24", verbose: bool = True) -> dict:
     }
 
     # Get API key
-    config = get_runpod_config()
-    api_key = config.get("api_key")
+    from dotenv import load_dotenv
+    load_dotenv()
+    api_key = os.getenv("RUNPOD_API_KEY")
 
     if not api_key:
         result["error"] = "RUNPOD_API_KEY not set. Add to .env file first."
