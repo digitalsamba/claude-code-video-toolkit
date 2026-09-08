@@ -39,6 +39,13 @@ def parse_skill_frontmatter(skill_md: Path) -> tuple[str, str]:
     return name, description
 
 
+def write_text(path: Path, content: str, dry_run: bool) -> None:
+    if dry_run:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
 def ensure_clean_dir(path: Path, force: bool, dry_run: bool) -> None:
     if path.exists():
         if not force:

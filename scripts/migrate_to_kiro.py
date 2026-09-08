@@ -37,6 +37,7 @@ from _migrate_common import (
     find_repo_root,
     load_mapping,
     parse_skill_frontmatter,
+    write_text,
     ensure_clean_dir,
     copy_tree,
     remove_dir,
@@ -165,21 +166,6 @@ def load_skill_specs(repo_root: Path, mapping: dict[str, Any]) -> list[SkillSpec
             )
         )
     return results
-
-
-    if dry_run:
-        return
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(src, dest)
-
-
-    if dry_run:
-        return True
-    if path.is_dir():
-        shutil.rmtree(path)
-    else:
-        path.unlink()
-    return True
 
 
 def build_steering_block(repo_root: Path) -> str:
