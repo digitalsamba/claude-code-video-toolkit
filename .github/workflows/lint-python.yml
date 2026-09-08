@@ -1,0 +1,58 @@
+name: Lint Python
+
+# Catches the crash class of Python bug — a name that is called but never
+# defined — before it reaches a release. This exists because v0.20.0 shipped
+# `scripts/migrate_to_{codex,kiro}.py` with an undefined `write_text`, which
+# made both migrations abort with a NameError on the first real write (#85).
+# `--dry-run` returned before touching that path, so nothing caught it.
+#
+# Deliberately narrow: only rules where a hit is a genuine defect, never a
+# style opinion. The repo has ~800 unused-import / unused-local warnings that
+# are not worth gating on, so they stay out. Add a code here only if a hit
+# means the code is actually broken.
+#
+#   F821  undefined name              -> NameError at runtime
+#   F811  redefinition of unused name -> a later def silently shadows an import
+#   F822  undefined name in __all__
+#   F823  local variable referenced before assignment
+#   E999  syntax error
+#
+# Verified against the tagged v0.20.0 tree: this gate reports 26 errors there,
+# including both `write_text` call sites and the F811 shadowing.
+#
+# Known limit: ruff resolves names per-file, not across modules. If a name is
+# still imported but has been deleted from the module it is imported from, the
+# import counts as a definition and this gate stays green. It catches the
+# v0.20.0 bug because that refactor dropped the import too.
+#
+# Run the same check locally with:
+#   uvx ruff check --select F821,F811,F822,F823 scripts/ tools/
+
+on:
+  pull_request:
+    paths:
+      - '**.py'
+      - '.github/workflows/lint-python.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '**.py'
+      - '.github/workflows/lint-python.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: undefined names
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Check for undefined names
+        run: uvx ruff check --select F821,F811,F822,F823 --output-format github scripts/ tools/

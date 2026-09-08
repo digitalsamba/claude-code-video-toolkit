@@ -61,34 +61,8 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def find_repo_root(explicit: Path | None) -> Path:
-    if explicit is not None:
-        return explicit.resolve()
-
-    current = Path(__file__).resolve().parent
-    for candidate in [current, *current.parents]:
-        if (candidate / "_internal" / "toolkit-registry.json").exists() and (
-            candidate / ".claude"
-        ).exists():
-            return candidate
-
-    raise SystemExit("Could not auto-detect repository root.")
-
-
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
-
-
-def load_mapping(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        raise SystemExit(f"Mapping file not found: {path}")
-    data = load_json(path)
-    return {
-        "skip_commands": set(data.get("skip_commands", [])),
-        "skip_skills": set(data.get("skip_skills", [])),
-        "command_name_overrides": data.get("command_name_overrides", {}),
-        "skill_name_overrides": data.get("skill_name_overrides", {}),
-    }
 
 
 def load_registry(repo_root: Path) -> dict[str, Any]:

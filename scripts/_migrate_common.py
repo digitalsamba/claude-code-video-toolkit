@@ -123,6 +123,14 @@ def find_repo_root(explicit: Path | None) -> Path:
     raise SystemExit("Error: Could not find toolkit root (must contain .claude/ and _internal/toolkit-registry.json)")
 
 def load_mapping(path: Path | None) -> dict[str, Any]:
-    if path is None or not path.exists():
-        return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    data: dict[str, Any] = {}
+    if path is not None:
+        if not path.exists():
+            raise SystemExit(f"Mapping file not found: {path}")
+        data = json.loads(path.read_text(encoding="utf-8"))
+    return {
+        "skip_commands": set(data.get("skip_commands", [])),
+        "skip_skills": set(data.get("skip_skills", [])),
+        "command_name_overrides": data.get("command_name_overrides", {}),
+        "skill_name_overrides": data.get("skill_name_overrides", {}),
+    }
