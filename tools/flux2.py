@@ -878,6 +878,14 @@ Examples:
         sys.exit(0)
 
     # Handle --setup
+    if args.setup and args.cloud == "modelrunner":
+        msg = "modelrunner is hosted — no endpoint to set up. Just set MODELRUNNER_API_KEY in .env."
+        if args.json:
+            print(json.dumps({"status": "no_setup_required", "message": msg}, indent=2))
+        else:
+            log(msg, "info")
+        sys.exit(0)
+
     if args.setup:
         result = setup_runpod(gpu_id=args.setup_gpu, verbose=not args.json)
         if args.json:

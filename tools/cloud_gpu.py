@@ -276,7 +276,9 @@ def call_cloud_endpoint(
         tool_name: Config lookup key (e.g., "qwen3_tts", "flux2")
         timeout: Overall timeout in seconds
         poll_interval: Seconds between status checks (RunPod only)
-        queue_timeout: Cancel if stuck in queue longer than this (RunPod only)
+        queue_timeout: Cancel if stuck in queue longer than this (RunPod only —
+                       ModelRunner reports IN_QUEUE while the job is still
+                       running, so cancelling on it would kill healthy jobs)
         progress_label: Label for progress messages (e.g., "Generating speech")
         verbose: Print progress to stderr
         progress: Optional ProgressReporter for structured progress events.
@@ -627,7 +629,10 @@ def _call_modelrunner(
     Unlike RunPod and Modal there is no endpoint to deploy: the model id is the
     address. Measured behaviours that shape this loop:
       - a job reports IN_QUEUE for its whole cold start and may never report
-        IN_PROGRESS, so only COMPLETED/FAILED/CANCELLED are treated as terminal;
+        IN_PROGRESS, so only COMPLETED/FAILED/CANCELLED are treated as terminal.
+        queue_timeout is deliberately NOT applied here for the same reason: on
+        RunPod it means "no GPU was allocated", here it would cancel a job that
+        is already running;
       - the per-model /status url never carries the output, so the result is
         read from GET /requests/{id}, which needs no model id;
       - `output` is a list of urls for image models and a bare url string for
