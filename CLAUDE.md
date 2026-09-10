@@ -130,7 +130,7 @@ This is especially critical for background commands where the working directory 
 |------|-------|-------------|
 | **Project tools** | voiceover, music, music_gen, sfx, sync_timing | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
-| **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
+| **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only; flux2 also `\|modelrunner`, hosted) |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (use `/publish` for the guided workflow) |
 
 Utility tools work on any video file without requiring a project structure.
@@ -207,6 +207,8 @@ Temperature controls expressiveness: `--temperature 1.2` (more expressive) or `-
 
 All cloud GPU tools support two providers via `--cloud runpod|modal`. RunPod is the default. Modal was added as a reliability fallback after RunPod outages, and offers faster cold starts.
 
+`flux2` also accepts `--cloud modelrunner`, which calls a hosted catalog model instead of a container you deployed: no `--setup`, no deploy, no cold-start warming, billed per output rather than per GPU-hour. Choose it when you do not want to run the generator yourself — a one-off render, a machine with no Modal/RunPod account, or CI. Choose `runpod`/`modal` when you want the weights under your control, a GPU you already pay for, or a model this catalog does not carry. It needs only `MODELRUNNER_API_KEY`; per-tool model overrides are `MODELRUNNER_<TOOL>_MODEL`.
+
 ```bash
 # --- RunPod setup (automated, one-time per tool) ---
 echo "RUNPOD_API_KEY=your_key_here" >> .env
@@ -220,6 +222,10 @@ uv sync --extra modal && uv run modal setup
 uv run modal deploy docker/modal-upscale/app.py        # Then save URL to .env
 uv run modal deploy docker/modal-image-edit/app.py
 # See docs/modal-setup.md for full guide
+
+# --- ModelRunner (hosted; no setup, no deploy) ---
+echo "MODELRUNNER_API_KEY=your_key_here" >> .env
+uv run tools/flux2.py --prompt "dark moody abstract background" --cloud modelrunner
 ```
 
 ### AI Image Generation (FLUX.2 vs Ideogram 4)
