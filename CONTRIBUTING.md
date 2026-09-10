@@ -113,6 +113,18 @@ If your integration only works against one paid API or a piece of software we ca
 it in your own repo and open an issue to be listed under **Community add-ons** in the README.
 In-tree integrations need at least one open or self-hostable path.
 
+### Brand profiles and new templates
+
+If your video differs from an existing template only in colors, fonts, logo, narrator voice, or
+timing values, you want a **brand profile**, not a new template. Templates take their palette and
+voice from a brand (`voice.brand` in `config.json` resolves `brands/<name>/voice.json`), and
+timings like `lead`/`tail`/`xfade` belong in your own project's `config.json`. Copying a template
+to change those leaves you with a fork that no longer inherits fixes to the original.
+
+Brand profiles work fine without being committed here, so keep yours local unless other people
+would genuinely use it. A new template in-tree needs to differ in its composition code — new
+scenes, structure, or rendering — not just its look.
+
 ### Automated and AI-generated PRs
 
 Automated or AI-generated PRs are welcome only when a human author responds to review and the

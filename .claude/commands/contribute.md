@@ -176,6 +176,34 @@ Same as Option 2, but focused on `.claude/skills/{name}/`
 
 ## Option 4: Share a Template
 
+### Step 0: Is it actually a template? (ask this first)
+
+Most "new template" ideas are really a **brand profile**. Ask before anything
+else, and take the answer seriously — this is the single most common wrong turn
+in this command:
+
+```
+What makes your video different from the closest existing template?
+
+  a. Colors, fonts, logo, narrator voice
+  b. Scene pacing / timing values
+  c. Different scenes, different structure, different composition code
+
+If (a) or (b) only -> you want a BRAND PROFILE, not a template.
+```
+
+**If (a) or (b):** stop here and run `/brand` instead. Templates read their
+palette, fonts and voice from a brand (`voice.brand` in `config.json` points at
+`brands/<name>/voice.json`), and timing values like `lead`/`tail`/`xfade` live
+in your project's own `config.json`. Copying a template to change those produces
+a near-identical fork that stops inheriting fixes to the original — worse for
+you than for the toolkit.
+
+A brand profile does not need to be committed to this repo to work. Keep it
+local unless it is genuinely useful to other people.
+
+**Only continue below if (c)** — the composition code itself differs.
+
 ### Step 1: Identify Template
 
 ```
@@ -203,6 +231,17 @@ To turn a project into a shareable template:
    cd templates/my-template
    npm install
    npm run studio
+
+4. Check it is not a near-duplicate — diff every file against the
+   template you started from:
+
+   for f in <new-template>/*; do
+     diff -q "<base-template>/$(basename "$f")" "$f" 2>/dev/null
+   done
+
+   Identical composition code (build.py, gen_captions.py, src/) means this
+   should be a brand profile plus project config, not a template. Go back
+   to Step 0.
 
 Ready to proceed?
 ```
