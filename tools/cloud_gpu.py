@@ -7,6 +7,7 @@ handles submission, polling, timeout, and cancellation for the chosen provider.
 Supported providers:
 - runpod: RunPod serverless endpoints (existing)
 - modal: Modal web endpoints (new)
+- modelrunner: hosted catalog models — nothing to deploy, billed per output
 """
 from __future__ import annotations
 
@@ -34,6 +35,13 @@ _RUNPOD_ENV_VARS = {
     "image_edit": "RUNPOD_QWEN_EDIT_ENDPOINT_ID",
     "music_gen": "RUNPOD_ACESTEP_ENDPOINT_ID",
     "dewatermark": "RUNPOD_ENDPOINT_ID",
+}
+
+# ModelRunner addresses a hosted catalog model by "owner/alias" rather than an
+# endpoint the user deployed, so the map holds the model id itself. Override any
+# entry with MODELRUNNER_<TOOL>_MODEL (e.g. MODELRUNNER_FLUX2_MODEL).
+_MODELRUNNER_MODELS = {
+    "flux2": "black-forest-labs/flux-2/pro",
 }
 
 _MODAL_ENV_VARS = {
@@ -220,6 +228,7 @@ def get_provider_config(provider: str, tool_name: str) -> dict:
     Returns dict with provider-specific keys:
     - RunPod: {"api_key": str, "endpoint_id": str}
     - Modal: {"endpoint_url": str, "token_id": str, "token_secret": str}
+    - ModelRunner: {"api_key": str, "model": str}
     """
     if provider == "runpod":
         env_var = _RUNPOD_ENV_VARS.get(tool_name)
@@ -234,8 +243,14 @@ def get_provider_config(provider: str, tool_name: str) -> dict:
             "token_id": os.getenv("MODAL_TOKEN_ID"),
             "token_secret": os.getenv("MODAL_TOKEN_SECRET"),
         }
+    elif provider == "modelrunner":
+        override = os.getenv(f"MODELRUNNER_{tool_name.upper()}_MODEL")
+        return {
+            "api_key": os.getenv("MODELRUNNER_API_KEY"),
+            "model": override or _MODELRUNNER_MODELS.get(tool_name),
+        }
     else:
-        raise ValueError(f"Unknown provider: {provider}. Use 'runpod' or 'modal'.")
+        raise ValueError(f"Unknown provider: {provider}. Use 'runpod', 'modal' or 'modelrunner'.")
 
 
 # ---------------------------------------------------------------------------
@@ -299,15 +314,34 @@ def call_cloud_endpoint(
             progress=progress,
         )
 
+    elif provider == "modelrunner":
+        result, elapsed = _call_modelrunner(
+            payload=payload,
+            api_key=config["api_key"],
+            model=config["model"],
+            tool_name=tool_name,
+            timeout=timeout,
+            poll_interval=poll_interval,
+            progress_label=progress_label,
+            progress=progress,
+        )
+
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
-    # Print cost estimate
+    # Print cost. A provider that bills per output reports what it actually
+    # charged, which beats estimating from GPU-seconds it never sold us.
     if progress and elapsed > 0 and not result.get("error"):
-        cost = _estimate_cost(provider, tool_name, elapsed)
-        if cost is not None:
-            progress.event("cost", f"Est. cost: ${cost:.4f} ({elapsed:.0f}s on {provider})",
+        if result.get("cost_usd"):
+            progress.event("cost", f"Cost: ${result['cost_usd']:.4f} (billed by {provider})",
                            level="dim")
+        elif "cost_usd" not in result:
+            # _estimate_cost prices GPU-seconds; a per-output provider sells none,
+            # and _TOOL_GPU has no entry for it, so this stays silent there.
+            cost = _estimate_cost(provider, tool_name, elapsed)
+            if cost is not None:
+                progress.event("cost", f"Est. cost: ${cost:.4f} ({elapsed:.0f}s on {provider})",
+                               level="dim")
 
     return result, elapsed
 
@@ -546,3 +580,159 @@ def _call_modal(
         elapsed = time.time() - start
         _emit("error", f"Modal request failed: {e}", level="error")
         return {"error": f"Modal request failed: {e}"}, elapsed
+
+
+# ---------------------------------------------------------------------------
+# ModelRunner implementation
+# ---------------------------------------------------------------------------
+
+MODELRUNNER_QUEUE = "https://queue.modelrunner.run"
+MODELRUNNER_CATALOG = "https://modelrunner.run"
+
+_MR_SCHEMA_CACHE: dict = {}
+
+
+def _modelrunner_fields(model: str) -> set:
+    """Input field names the model declares, from the PUBLIC catalog (no key).
+
+    Empty set means "schema unavailable" and is treated as "do not filter".
+    """
+    if model in _MR_SCHEMA_CACHE:
+        return _MR_SCHEMA_CACHE[model]
+    fields: set = set()
+    try:
+        r = requests.get(f"{MODELRUNNER_CATALOG}/models/{model}", timeout=20)
+        if r.status_code == 200:
+            schemas = ((r.json().get("schema") or {})
+                       .get("components") or {}).get("schemas") or {}
+            fields = set((schemas.get("Input") or {}).get("properties") or {})
+    except requests.exceptions.RequestException:
+        pass
+    _MR_SCHEMA_CACHE[model] = fields
+    return fields
+
+
+def _call_modelrunner(
+    payload: dict,
+    api_key: str | None,
+    model: str | None,
+    tool_name: str,
+    timeout: int = 600,
+    poll_interval: int = 5,
+    progress_label: str = "Processing",
+    progress: ProgressReporter | None = None,
+) -> tuple[dict, float]:
+    """Submit + poll a hosted catalog model.
+
+    Unlike RunPod and Modal there is no endpoint to deploy: the model id is the
+    address. Measured behaviours that shape this loop:
+      - a job reports IN_QUEUE for its whole cold start and may never report
+        IN_PROGRESS, so only COMPLETED/FAILED/CANCELLED are treated as terminal;
+      - the per-model /status url never carries the output, so the result is
+        read from GET /requests/{id}, which needs no model id;
+      - `output` is a list of urls for image models and a bare url string for
+        video models.
+    The returned dict uses the same keys the tools already read from the other
+    providers (output_url, inference_time_ms, error), plus cost_usd.
+    """
+    if not api_key:
+        return {"error": "MODELRUNNER_API_KEY not set. Add it to .env."}, 0
+    if not model:
+        return {"error": f"No ModelRunner model configured for '{tool_name}'. "
+                         f"Set MODELRUNNER_{tool_name.upper()}_MODEL."}, 0
+
+    def _emit(stage, msg, level="dim", pct=None):
+        if progress:
+            progress.event(stage, msg, pct=pct, level=level)
+
+    # Same unwrap Modal does — tools may use RunPod's {"input": ...} envelope.
+    body = payload.get("input", payload) if isinstance(payload, dict) else payload
+
+    declared = _modelrunner_fields(model)
+
+    # Image models in this catalog take one `image_size` object rather than a
+    # separate width and height. Translate rather than let the filter below drop
+    # them, or a 1920x1080 title background silently comes back at the model's
+    # own default size.
+    if (declared and isinstance(body, dict) and "image_size" in declared
+            and "image_size" not in body and body.get("width") and body.get("height")):
+        _w, _h = int(body["width"]), int(body["height"])
+        body = {k: v for k, v in body.items() if k not in ("width", "height")}
+        body["image_size"] = {"width": _w, "height": _h}
+
+    # Drop fields this model does not declare. Tool payloads are written for the
+    # container they ship, so an unknown field would otherwise fail a job that
+    # has already been submitted and billed.
+    if declared and isinstance(body, dict):
+        dropped = sorted(k for k in body if k not in declared)
+        if dropped:
+            _emit("submit", f"Dropping param(s) {model} does not accept: {', '.join(dropped)}")
+            body = {k: v for k, v in body.items() if k in declared}
+
+    headers = {"Authorization": f"Key {api_key}", "Content-Type": "application/json"}
+    start = time.time()
+    _emit("submit", f"{progress_label} via ModelRunner ({model})...", level="info")
+
+    try:
+        r = requests.post(f"{MODELRUNNER_QUEUE}/{model}", json=body,
+                          headers=headers, timeout=60)
+        if r.status_code not in (200, 201):
+            elapsed = time.time() - start
+            _emit("error", f"Submit failed: HTTP {r.status_code}", level="error")
+            return {"error": f"ModelRunner submit failed (HTTP {r.status_code}): {r.text[:300]}"}, elapsed
+        request_id = r.json().get("request_id")
+        if not request_id:
+            elapsed = time.time() - start
+            return {"error": f"ModelRunner submit returned no request_id: {r.text[:200]}"}, elapsed
+    except requests.exceptions.RequestException as e:
+        elapsed = time.time() - start
+        _emit("error", f"Submit failed: {e}", level="error")
+        return {"error": f"ModelRunner submit failed: {e}"}, elapsed
+
+    _emit("queued", f"Queued as {request_id}")
+
+    while time.time() - start < timeout:
+        time.sleep(poll_interval)
+        try:
+            r = requests.get(f"{MODELRUNNER_QUEUE}/requests/{request_id}",
+                             headers=headers, timeout=30)
+            if r.status_code != 200:
+                continue                       # transient; keep polling until timeout
+            rec = r.json()
+        except requests.exceptions.RequestException:
+            continue
+
+        status = rec.get("status")
+        elapsed = time.time() - start
+
+        if status == "COMPLETED":
+            out = rec.get("output")
+            url = out[0] if isinstance(out, list) and out else (out if isinstance(out, str) else None)
+            if not url:
+                _emit("error", "Completed with no output url", level="error")
+                return {"error": f"ModelRunner request {request_id} completed with no output"}, elapsed
+            _emit("complete", f"Completed in {elapsed:.1f}s", pct=100, level="success")
+            result = {"output_url": url, "request_id": request_id}
+            if rec.get("inferenceTime") is not None:
+                result["inference_time_ms"] = rec["inferenceTime"]
+            # Billing finalizes a moment after the job does, so the price read
+            # here is often still 0. Report it only once it is real — a
+            # confident "$0.0000" is worse than saying nothing.
+            try:
+                price = float(rec.get("totalPrice") or 0)
+            except (TypeError, ValueError):
+                price = 0.0
+            if price > 0:
+                result["cost_usd"] = price
+            return result, elapsed
+
+        if status in ("FAILED", "CANCELLED"):
+            err = rec.get("error") or status
+            _emit("error", f"Job {status.lower()}: {err}", level="error")
+            return {"error": f"ModelRunner request {request_id} {status.lower()}: {err}"}, elapsed
+
+        _emit("waiting", f"{progress_label}... ({elapsed:.0f}s, {status})")
+
+    elapsed = time.time() - start
+    _emit("error", f"Timed out after {elapsed:.0f}s", level="error")
+    return {"error": f"ModelRunner request {request_id} timed out after {elapsed:.0f}s"}, elapsed
