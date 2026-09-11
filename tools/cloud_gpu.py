@@ -639,6 +639,11 @@ def _call_modelrunner(
         video models.
     The returned dict uses the same keys the tools already read from the other
     providers (output_url, inference_time_ms, error), plus cost_usd.
+
+    Payload params are translated where the catalog spells a field differently
+    (width/height -> image_size), but never dropped: the published schema
+    under-reports what an endpoint accepts, and submit-time validation runs
+    before the request is created, so an invalid payload costs nothing.
     """
     if not api_key:
         return {"error": "MODELRUNNER_API_KEY not set. Add it to .env."}, 0
@@ -665,14 +670,18 @@ def _call_modelrunner(
         body = {k: v for k, v in body.items() if k not in ("width", "height")}
         body["image_size"] = {"width": _w, "height": _h}
 
-    # Drop fields this model does not declare. Tool payloads are written for the
-    # container they ship, so an unknown field would otherwise fail a job that
-    # has already been submitted and billed.
+    # Note fields the published schema does not declare, but still SEND them.
+    # The schema under-reports: measured 2026-09-11, a model whose schema lists
+    # only three fields accepted and honoured several more, and an undeclared
+    # field is tolerated rather than rejected. Dropping was therefore never a
+    # safety measure — it only silently discarded params the model would have
+    # used. And a payload that genuinely is invalid is rejected at submit,
+    # before the request is created, so it costs nothing to find out.
     if declared and isinstance(body, dict):
-        dropped = sorted(k for k in body if k not in declared)
-        if dropped:
-            _emit("submit", f"Dropping param(s) {model} does not accept: {', '.join(dropped)}")
-            body = {k: v for k, v in body.items() if k in declared}
+        undeclared = sorted(k for k in body if k not in declared)
+        if undeclared:
+            _emit("submit", f"Param(s) not in {model}'s published schema, sending anyway: "
+                            f"{', '.join(undeclared)}")
 
     headers = {"Authorization": f"Key {api_key}", "Content-Type": "application/json"}
     start = time.time()
