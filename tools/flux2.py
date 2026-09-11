@@ -856,8 +856,10 @@ Examples:
 
     # Cloud GPU
     cloud_group = parser.add_argument_group("Cloud GPU")
-    cloud_group.add_argument("--cloud", type=str, default="modal", choices=["runpod", "modal"],
-                             help="Cloud GPU provider (default: runpod)")
+    cloud_group.add_argument("--cloud", type=str, default="modal",
+                             choices=["runpod", "modal", "modelrunner"],
+                             help="Cloud GPU provider (default: runpod). "
+                                  "modelrunner is hosted — no --setup needed")
     cloud_group.add_argument("--setup", action="store_true", help="Set up cloud endpoint")
     cloud_group.add_argument("--setup-gpu", type=str, default="AMPERE_24,ADA_24",
                              help="GPU type(s) for RunPod endpoint (default: AMPERE_24,ADA_24)")
@@ -876,6 +878,14 @@ Examples:
         sys.exit(0)
 
     # Handle --setup
+    if args.setup and args.cloud == "modelrunner":
+        msg = "modelrunner is hosted — no endpoint to set up. Just set MODELRUNNER_API_KEY in .env."
+        if args.json:
+            print(json.dumps({"status": "no_setup_required", "message": msg}, indent=2))
+        else:
+            log(msg, "info")
+        sys.exit(0)
+
     if args.setup:
         result = setup_runpod(gpu_id=args.setup_gpu, verbose=not args.json)
         if args.json:
