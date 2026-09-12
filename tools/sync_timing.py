@@ -40,6 +40,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from win_encoding import ensure_utf8_output
 
 
 # ─── Audio Duration ──────────────────────────────────────────
@@ -822,6 +823,7 @@ def build_json_output(
 # ─── Main ────────────────────────────────────────────────────
 
 def main():
+    ensure_utf8_output()  # Windows: piped stdout defaults to cp1252
     parser = argparse.ArgumentParser(
         description="Sync scene timing with actual audio durations",
         formatter_class=argparse.RawDescriptionHelpFormatter,
