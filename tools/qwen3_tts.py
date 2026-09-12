@@ -50,6 +50,7 @@ import argparse
 import base64
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -57,6 +58,23 @@ from pathlib import Path
 import requests
 
 sys.path.insert(0, str(Path(__file__).parent))
+
+from win_encoding import utf8_env
+
+_MODAL_URL_RE = re.compile(r"https://[A-Za-z0-9._-]+\.modal\.run")
+
+
+def _find_modal_url(text: str) -> str | None:
+    """First Modal endpoint URL in `text`, tolerating terminal line-wrapping.
+
+    Modal hard-wraps long URLs to the terminal width, so a URL can arrive split
+    across lines. Collapsing whitespace first is what makes the match reliable;
+    a per-line search silently finds nothing on a wrapped URL.
+    """
+    if not text:
+        return None
+    m = _MODAL_URL_RE.search(re.sub(r"\s+", "", text))
+    return m.group(0) if m else None
 
 # Docker image for RunPod endpoint
 QWEN3_TTS_DOCKER_IMAGE = "ghcr.io/conalmullan/video-toolkit-qwen3-tts:latest"
@@ -756,6 +774,12 @@ def setup_modal(verbose: bool = True) -> dict:
             ["modal", "deploy", str(app_file)],
             capture_output=True,
             text=True,
+            # Modal's progress output is full of box-drawing characters. Without an
+            # explicit codec, Windows decodes the child with cp1252 and the deploy
+            # dies with "'charmap' codec can't encode characters" mid-build.
+            encoding="utf-8",
+            errors="replace",
+            env=utf8_env(),
             timeout=900,  # 15 min for first deploy with model download
         )
 
@@ -768,27 +792,15 @@ def setup_modal(verbose: bool = True) -> dict:
         if verbose:
             print(deploy_result.stdout)
 
-        # Parse endpoint URL from deploy output
-        # Modal prints lines like: Created web endpoint ... => https://workspace--app-name-fn.modal.run
-        endpoint_url = None
-        for line in deploy_result.stdout.splitlines():
-            if "modal.run" in line:
-                # Extract URL from the line
-                import re
-                urls = re.findall(r'https://[^\s"\']+modal\.run[^\s"\']*', line)
-                if urls:
-                    endpoint_url = urls[0]
-                    break
-
-        if not endpoint_url:
-            # Try stderr too (some modal versions output there)
-            for line in deploy_result.stderr.splitlines():
-                if "modal.run" in line:
-                    import re
-                    urls = re.findall(r'https://[^\s"\']+modal\.run[^\s"\']*', line)
-                    if urls:
-                        endpoint_url = urls[0]
-                        break
+        # Parse endpoint URL from deploy output.
+        # Modal prints: Created web endpoint ... => https://workspace--app-name-fn.modal.run
+        # but hard-wraps long URLs to the terminal width, so the URL arrives split
+        # across lines ("...qwen3tts-genera" / "te.modal.run"). Matching per line
+        # therefore finds nothing and the deploy looks like it failed when it did not.
+        # Collapse all whitespace first, then match.
+        endpoint_url = _find_modal_url(deploy_result.stdout) or _find_modal_url(
+            deploy_result.stderr
+        )
 
         if not endpoint_url:
             result["error"] = (

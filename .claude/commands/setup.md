@@ -83,6 +83,37 @@ Check and report. Don't install anything automatically — just tell the user wh
 - **Python deps**: `uv run python -c "import dotenv; import requests"`. If missing: run `uv sync` from the toolkit root (uv installs a compatible Python automatically if needed)
 - **FFmpeg**: `ffmpeg -version`. If missing: "Install with `brew install ffmpeg` (macOS) or see https://ffmpeg.org/ — needed for media conversion"
 
+### Windows only
+
+**Export `PYTHONIOENCODING=utf-8` before running any deploy command in this wizard.** On
+Windows, a piped/captured stdout defaults to the `cp1252` codec. Modal's deploy progress
+output contains box-drawing characters it cannot encode, so `modal deploy` aborts partway
+through the image build with:
+
+```
+'charmap' codec can't encode characters in position 3-42: character maps to <undefined>
+```
+
+The build itself is fine — only the *printing* fails, which makes this look like a broken
+deploy or a network problem rather than an encoding one. Every deploy in Phase 4 fails
+identically without it.
+
+Set it for the shell you run the deploys in:
+
+```bash
+export PYTHONIOENCODING=utf-8   # Git Bash
+$env:PYTHONIOENCODING = 'utf-8' # PowerShell
+```
+
+Offer to make it permanent so the user does not hit this again outside this wizard:
+
+```powershell
+[Environment]::SetEnvironmentVariable('PYTHONIOENCODING','utf-8','User')
+```
+
+See `docs/modal-setup.md` for the rest of the Windows prerequisites (notably the
+Microsoft Store `python3` stub).
+
 ### Output
 
 ```
@@ -277,6 +308,10 @@ Recommend "all" — with Modal's free tier, there's no cost to having them deplo
 For each selected tool, run `uv run modal deploy` and capture the endpoint URL:
 
 ```bash
+# Windows: required, or every deploy below dies with a 'charmap' codec error
+# mid-build. Harmless everywhere else.
+export PYTHONIOENCODING=utf-8
+
 # Deploy each app and capture the URL from output
 uv run modal deploy docker/modal-qwen3-tts/app.py
 uv run modal deploy docker/modal-flux2/app.py

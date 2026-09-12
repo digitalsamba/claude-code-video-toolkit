@@ -46,6 +46,7 @@ from config import (
     get_voice_id,
     load_brand_voice_config,
 )
+from win_encoding import ensure_utf8_output
 
 
 def _get_elevenlabs_imports():
@@ -735,6 +736,7 @@ def concat_audio_files(mp3_files: list[Path], output_path: Path) -> dict:
 
 
 def main():
+    ensure_utf8_output()  # Windows: piped stdout defaults to cp1252
     load_dotenv()
     args = parse_args()
 

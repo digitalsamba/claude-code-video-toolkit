@@ -58,6 +58,7 @@ from file_transfer import (
     upload_to_storage, download_from_r2, r2_cleanup,
     download_from_url, get_r2_payload_config,
 )
+from win_encoding import ensure_utf8_output
 
 # Default installation path
 PROPAINTER_HOME = Path.home() / ".video-toolkit" / "propainter"
@@ -1608,6 +1609,7 @@ def setup_runpod(gpu_id: str = "AMPERE_24", verbose: bool = True) -> dict:
 
 
 def main():
+    ensure_utf8_output()  # Windows: piped stdout defaults to cp1252
     args = parse_args()
     propainter_path = get_propainter_path(args.propainter_path)
     verbose = not args.json

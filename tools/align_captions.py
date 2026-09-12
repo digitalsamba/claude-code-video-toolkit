@@ -34,6 +34,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from win_encoding import ensure_utf8_output
 
 
 # ─── Caption parsing ────────────────────────────────────────
@@ -265,6 +266,7 @@ def apply_patches(config_text: str, scenes_aligned):
 # ─── Main ───────────────────────────────────────────────────
 
 def main():
+    ensure_utf8_output()  # Windows: piped stdout defaults to cp1252
     ap = argparse.ArgumentParser(
         description="Align caption timestamps to TTS audio via ElevenLabs Scribe.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
