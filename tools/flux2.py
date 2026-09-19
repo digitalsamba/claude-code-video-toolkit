@@ -24,6 +24,9 @@ Examples:
   # Image editing (pass reference image)
   uv run tools/flux2.py --input photo.jpg --prompt "Add a party hat"
 
+  # Hosted MuAPI generation (no GPU deployment; generation only)
+  uv run tools/flux2.py --cloud muapi --prompt "A sunset over mountains"
+
   # List available presets
   uv run tools/flux2.py --list-presets
 
@@ -417,6 +420,10 @@ def edit_image(
 
     Returns output path on success, None on failure.
     """
+    if cloud == "muapi":
+        log("MuAPI currently supports text-to-image generation only; image editing is unavailable.", "error")
+        return None
+
     for path in input_paths:
         if not Path(path).exists():
             log(f"File not found: {path}", "error")
@@ -856,8 +863,9 @@ Examples:
 
     # Cloud GPU
     cloud_group = parser.add_argument_group("Cloud GPU")
-    cloud_group.add_argument("--cloud", type=str, default="modal", choices=["runpod", "modal"],
-                             help="Cloud GPU provider (default: runpod)")
+    cloud_group.add_argument("--cloud", type=str, default="modal",
+                             choices=["runpod", "modal", "muapi"],
+                             help="Cloud provider (default: modal). MuAPI is hosted and generation-only")
     cloud_group.add_argument("--setup", action="store_true", help="Set up cloud endpoint")
     cloud_group.add_argument("--setup-gpu", type=str, default="AMPERE_24,ADA_24",
                              help="GPU type(s) for RunPod endpoint (default: AMPERE_24,ADA_24)")
@@ -876,6 +884,14 @@ Examples:
         sys.exit(0)
 
     # Handle --setup
+    if args.setup and args.cloud == "muapi":
+        msg = "muapi is hosted — no endpoint to set up. Set MUAPI_API_KEY in .env instead."
+        if args.json:
+            print(json.dumps({"status": "no_setup_required", "message": msg}, indent=2))
+        else:
+            log(msg, "info")
+        sys.exit(0)
+
     if args.setup:
         result = setup_runpod(gpu_id=args.setup_gpu, verbose=not args.json)
         if args.json:
@@ -906,7 +922,7 @@ Examples:
     reporter = ProgressReporter(mode=args.progress)
 
     print()
-    log("FLUX.2 Klein 4B", "info")
+    log("MuAPI flux-schnell" if args.cloud == "muapi" else "FLUX.2 Klein 4B", "info")
     log("=" * 40, "dim")
 
     if args.input:

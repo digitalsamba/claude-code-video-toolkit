@@ -130,7 +130,7 @@ This is especially critical for background commands where the working directory 
 |------|-------|-------------|
 | **Project tools** | voiceover, music, music_gen, sfx, sync_timing | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
-| **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
+| **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only); `flux2` also supports hosted MuAPI generation |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (use `/publish` for the guided workflow) |
 
 Utility tools work on any video file without requiring a project structure.
@@ -205,7 +205,7 @@ Temperature controls expressiveness: `--temperature 1.2` (more expressive) or `-
 
 ### Cloud GPU Providers
 
-All cloud GPU tools support two providers via `--cloud runpod|modal`. RunPod is the default. Modal was added as a reliability fallback after RunPod outages, and offers faster cold starts.
+The self-hosted cloud tools support `--cloud runpod|modal`; RunPod is the default and Modal is the reliability fallback. `flux2` also supports hosted MuAPI generation with `--cloud muapi` — no deployment or GPU account is needed, and image editing is intentionally rejected because MuAPI's current image surface is generation-only.
 
 ```bash
 # --- RunPod setup (automated, one-time per tool) ---
@@ -220,6 +220,10 @@ uv sync --extra modal && uv run modal setup
 uv run modal deploy docker/modal-upscale/app.py        # Then save URL to .env
 uv run modal deploy docker/modal-image-edit/app.py
 # See docs/modal-setup.md for full guide
+
+# --- MuAPI image generation (hosted; no setup) ---
+echo "MUAPI_API_KEY=your_key_here" >> .env
+uv run tools/flux2.py --cloud muapi --prompt "dark moody abstract background"
 ```
 
 ### AI Image Generation (FLUX.2 vs Ideogram 4)
@@ -231,6 +235,9 @@ The toolkit has **two** text-to-image generators. They barely overlap — the de
 # FLUX.2 — text-FREE backgrounds + image editing (self-hosted, free, Apache-2.0/commercial-OK)
 uv run tools/flux2.py --preset title-bg --brand digital-samba   # background for Remotion text overlay
 uv run tools/flux2.py --prompt "Abstract tech background, no text"
+
+# MuAPI — hosted FLUX generation; 1K only, 1:1/16:9/9:16, generation only
+uv run tools/flux2.py --cloud muapi --preset title-bg --brand digital-samba
 
 # Ideogram 4 — legible IN-IMAGE text + exact color/layout (hosted API, ~$0.03-0.09/img, commercial-OK)
 uv run tools/ideogram4.py --json caption.json --output title.png   # text baked into the image
