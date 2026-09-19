@@ -7,15 +7,18 @@ handles submission, polling, timeout, and cancellation for the chosen provider.
 Supported providers:
 - runpod: RunPod serverless endpoints (existing)
 - modal: Modal web endpoints (new)
+- muapi: hosted OpenAI-compatible image generation (no deployment)
 """
 from __future__ import annotations
 
+import base64
 import json as _json
 import os
 import sys
 import threading
 import time
 from contextlib import contextmanager
+from urllib.parse import urlparse
 
 import requests
 from dotenv import load_dotenv
@@ -47,6 +50,15 @@ _MODAL_ENV_VARS = {
     "ltx2": "MODAL_LTX2_ENDPOINT_URL",
     "soulx": "MODAL_SOULX_ENDPOINT_URL",
 }
+
+_MUAPI_IMAGE_ENDPOINT = "https://api.muapi.ai/v1/images/generations"
+_MUAPI_IMAGE_MODEL = "flux-schnell"
+_MUAPI_IMAGE_SIZES = {
+    "1:1": "1024x1024",
+    "16:9": "1792x1024",
+    "9:16": "1024x1792",
+}
+_MUAPI_MAX_IMAGE_BYTES = 32 * 1024 * 1024
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +232,7 @@ def get_provider_config(provider: str, tool_name: str) -> dict:
     Returns dict with provider-specific keys:
     - RunPod: {"api_key": str, "endpoint_id": str}
     - Modal: {"endpoint_url": str, "token_id": str, "token_secret": str}
+    - MuAPI: {"api_key": str}
     """
     if provider == "runpod":
         env_var = _RUNPOD_ENV_VARS.get(tool_name)
@@ -234,8 +247,10 @@ def get_provider_config(provider: str, tool_name: str) -> dict:
             "token_id": os.getenv("MODAL_TOKEN_ID"),
             "token_secret": os.getenv("MODAL_TOKEN_SECRET"),
         }
+    elif provider == "muapi":
+        return {"api_key": os.getenv("MUAPI_API_KEY")}
     else:
-        raise ValueError(f"Unknown provider: {provider}. Use 'runpod' or 'modal'.")
+        raise ValueError(f"Unknown provider: {provider}. Use 'runpod', 'modal' or 'muapi'.")
 
 
 # ---------------------------------------------------------------------------
@@ -256,7 +271,7 @@ def call_cloud_endpoint(
     """Submit a job to a cloud GPU endpoint and wait for the result.
 
     Args:
-        provider: "runpod" or "modal"
+        provider: "runpod", "modal", or "muapi"
         payload: The job payload ({"input": {...}} for RunPod, raw dict for Modal)
         tool_name: Config lookup key (e.g., "qwen3_tts", "flux2")
         timeout: Overall timeout in seconds
@@ -298,6 +313,20 @@ def call_cloud_endpoint(
             progress_label=progress_label,
             progress=progress,
         )
+    elif provider == "muapi":
+        if tool_name != "flux2":
+            result, elapsed = (
+                {"error": "MuAPI is currently supported only for flux2 image generation."},
+                0,
+            )
+        else:
+            result, elapsed = _call_muapi(
+                payload=payload,
+                api_key=config["api_key"],
+                timeout=timeout,
+                progress_label=progress_label,
+                progress=progress,
+            )
 
     else:
         raise ValueError(f"Unknown provider: {provider}")
@@ -546,3 +575,161 @@ def _call_modal(
         elapsed = time.time() - start
         _emit("error", f"Modal request failed: {e}", level="error")
         return {"error": f"Modal request failed: {e}"}, elapsed
+
+
+# ---------------------------------------------------------------------------
+# MuAPI implementation
+# ---------------------------------------------------------------------------
+
+def _muapi_size(width: object, height: object) -> str:
+    """Map toolkit dimensions to MuAPI's supported 1K aspect-ratio sizes."""
+    try:
+        requested_width = int(width)
+        requested_height = int(height)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("width and height must be positive integers") from exc
+    if requested_width <= 0 or requested_height <= 0:
+        raise ValueError("width and height must be positive integers")
+
+    ratio = requested_width / requested_height
+    candidates = []
+    for aspect, size in _MUAPI_IMAGE_SIZES.items():
+        aspect_width, aspect_height = (int(part) for part in aspect.split(":", 1))
+        candidates.append((abs(ratio - aspect_width / aspect_height), size))
+    distance, size = min(candidates)
+    if distance > 0.06:
+        raise ValueError("MuAPI supports only 1:1, 16:9, and 9:16 output")
+    return size
+
+
+def _call_muapi(
+    payload: dict,
+    api_key: str | None,
+    timeout: int = 600,
+    progress_label: str = "Processing",
+    progress: ProgressReporter | None = None,
+) -> tuple[dict, float]:
+    """Generate one image through MuAPI's OpenAI-compatible endpoint.
+
+    MuAPI is a hosted alternative to the toolkit's self-hosted FLUX.2 path. It
+    supports generation-only `flux-schnell` output at 1K in three aspect ratios,
+    returns one HTTPS image URL, and does not need an endpoint to deploy.
+    """
+    start = time.time()
+
+    def _emit(stage: str, message: str, level: str = "dim", pct: int | None = None) -> None:
+        if progress:
+            progress.event(stage, message, pct=pct, level=level)
+
+    def _error(message: str) -> tuple[dict, float]:
+        _emit("error", message, level="error")
+        return {"error": message}, time.time() - start
+
+    if not api_key:
+        return _error("MUAPI_API_KEY not set in .env")
+
+    body = payload.get("input", payload) if isinstance(payload, dict) else payload
+    if not isinstance(body, dict):
+        return _error("MuAPI image payload must be an object")
+    if body.get("operation", "generate") != "generate":
+        return _error("MuAPI currently supports text-to-image generation only; image editing is unavailable")
+
+    prompt = str(body.get("prompt") or "").strip()
+    if not prompt:
+        return _error("MuAPI image generation requires a non-empty prompt")
+    try:
+        size = _muapi_size(body.get("width", 1024), body.get("height", 1024))
+    except ValueError as exc:
+        return _error(str(exc))
+
+    unsupported = [
+        key for key in ("seed", "num_inference_steps", "guidance_scale") if key in body
+    ]
+    if unsupported:
+        return _error(
+            "MuAPI does not support these FLUX.2 options: " + ", ".join(unsupported)
+        )
+
+    request_body = {
+        "model": _MUAPI_IMAGE_MODEL,
+        "prompt": prompt,
+        "n": 1,
+        "size": size,
+    }
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    _emit("submit", f"{progress_label} via MuAPI ({_MUAPI_IMAGE_MODEL})...", level="info")
+
+    try:
+        response = requests.post(
+            _MUAPI_IMAGE_ENDPOINT,
+            json=request_body,
+            headers=headers,
+            timeout=max(1, timeout),
+        )
+        if not 200 <= response.status_code < 300:
+            return _error(
+                f"MuAPI image request failed (HTTP {response.status_code}): {response.text[:300]}"
+            )
+        response_payload = response.json()
+    except requests.exceptions.Timeout:
+        return _error("MuAPI image request timed out")
+    except requests.exceptions.RequestException as exc:
+        return _error(f"MuAPI image request failed: {exc}")
+    except (TypeError, ValueError):
+        return _error("MuAPI returned an invalid JSON response")
+
+    data = response_payload.get("data") if isinstance(response_payload, dict) else None
+    if not isinstance(data, list) or len(data) != 1 or not isinstance(data[0], dict):
+        return _error("MuAPI returned an invalid image response")
+    output_url = data[0].get("url")
+    if not isinstance(output_url, str):
+        return _error("MuAPI returned no image URL")
+
+    parsed_url = urlparse(output_url)
+    if parsed_url.scheme != "https" or not parsed_url.hostname or parsed_url.username or parsed_url.password:
+        return _error("MuAPI returned an unsafe image URL")
+
+    _emit("download", "Downloading MuAPI image result...")
+    try:
+        with requests.get(
+            output_url,
+            stream=True,
+            allow_redirects=False,
+            timeout=max(1, timeout),
+        ) as image_response:
+            if image_response.status_code != 200:
+                return _error(f"MuAPI image URL returned HTTP {image_response.status_code}")
+            content_length = image_response.headers.get("Content-Length", "")
+            if content_length.isdigit() and int(content_length) > _MUAPI_MAX_IMAGE_BYTES:
+                return _error("MuAPI image exceeded the 32 MiB download limit")
+            mime_type = image_response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+            if not mime_type.startswith("image/"):
+                return _error("MuAPI image URL did not return an image content type")
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in image_response.iter_content(chunk_size=64 * 1024):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > _MUAPI_MAX_IMAGE_BYTES:
+                    return _error("MuAPI image exceeded the 32 MiB download limit")
+                chunks.append(chunk)
+    except requests.exceptions.Timeout:
+        return _error("MuAPI image download timed out")
+    except requests.exceptions.RequestException as exc:
+        return _error(f"MuAPI image download failed: {exc}")
+
+    image_bytes = b"".join(chunks)
+    if not image_bytes:
+        return _error("MuAPI returned an empty image")
+
+    elapsed = time.time() - start
+    _emit("complete", f"Completed in {elapsed:.1f}s", pct=100, level="success")
+    return {
+        "image_base64": base64.b64encode(image_bytes).decode("ascii"),
+        "image_mime": mime_type,
+        "model": _MUAPI_IMAGE_MODEL,
+    }, elapsed

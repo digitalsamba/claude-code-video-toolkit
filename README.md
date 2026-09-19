@@ -61,7 +61,7 @@ Then in Claude Code:
 >
 > **If you're getting started**, run `/setup` then `/video` and let Claude Code guide you. Or start with `/template` to create a template for your own use case.
 >
-> **Cloud GPU** — I recommend [Modal](https://modal.com/) for running the toolkit's AI tools. The Starter plan gives you $30/month free compute, which is more than enough. [RunPod](https://runpod.io/) is also supported as an alternative. Run `/setup` to deploy the tools you need.
+> **Cloud GPU** — I recommend [Modal](https://modal.com/) for running the toolkit's AI tools. The Starter plan gives you $30/month free compute, which is more than enough. [RunPod](https://runpod.io/) is also supported as an alternative. For hosted image generation without a GPU deployment, `flux2` also supports [MuAPI](https://muapi.ai/docs/openai-compatible). Run `/setup` to deploy the self-hosted tools you need.
 >
 > My motto: **Be brave. Experiment.** And please share any videos you create or ideas you have back with the project — it helps me keep improving this toolkit for everyone.
 
@@ -84,6 +84,7 @@ Claude Code has deep knowledge in:
 | **ltx2** | AI video generation — text-to-video, image-to-video clips, prompting guide |
 | **moviepy** | Python video composition — overlay text on LTX-2/SadTalker output, build.py-style projects |
 | **runpod** | Cloud GPU — setup, Docker images, endpoint management, costs |
+| **muapi** | Hosted image generation through `flux2` — no deployment, API key required |
 
 > The always-current catalog of skills, commands, tools, and templates lives in [`_internal/toolkit-registry.json`](_internal/toolkit-registry.json).
 
@@ -201,6 +202,7 @@ uv run tools/music_gen.py --preset corporate-bg --duration 120 --output music.mp
 
 # AI image generation (FLUX.2) and editing (Qwen-Image-Edit)
 uv run tools/flux2.py --preset title-bg --brand digital-samba --cloud modal
+uv run tools/flux2.py --preset title-bg --brand digital-samba --cloud muapi  # hosted, generation-only
 uv run tools/image_edit.py --input photo.jpg --prompt "Add sunglasses" --cloud modal
 
 # AI video generation (LTX-2.3 — text-to-video, image-to-video)
@@ -282,9 +284,9 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
 
-### Cloud GPU (Modal + RunPod)
+### Cloud GPU (Modal + RunPod) and hosted MuAPI image generation
 
-8 AI tools run on cloud GPUs. Use `--cloud modal` (recommended) or `--cloud runpod` on any tool.
+8 AI tools run on cloud GPUs. Use `--cloud modal` (recommended) or `--cloud runpod` on any tool. `flux2` additionally accepts `--cloud muapi` for hosted `flux-schnell` generation; MuAPI supports 1K 1:1, 16:9, and 9:16 output and does not support image editing in this integration.
 
 | Tool | What It Does | Est. Cost |
 |------|--------------|-----------|
@@ -301,6 +303,8 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 **Modal (recommended):** Each tool deploys from `docker/modal-*/app.py` — Modal builds and hosts the containers. $30/month free compute on the Starter plan, typical usage is $1-2/month. Run `/setup` to deploy all tools automatically.
 
 **RunPod (alternative):** Uses pre-built Docker images from `ghcr.io/conalmullan/video-toolkit-*`. Pay-per-second, no minimums. Run `uv run tools/<tool>.py --setup` to create endpoints.
+
+**MuAPI (hosted image option):** Set `MUAPI_API_KEY` in `.env` and run `uv run tools/flux2.py --cloud muapi --prompt "..."`. It is useful for one-off renders, CI, or machines without a Modal/RunPod account; choose Modal/RunPod when you want self-hosted weights or broader FLUX.2 controls. MuAPI returns provider-hosted image URLs, which the toolkit downloads over HTTPS with a bounded response size.
 
 See [docs/modal-setup.md](docs/modal-setup.md) and [docs/runpod-setup.md](docs/runpod-setup.md) for details.
 
