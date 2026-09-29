@@ -151,7 +151,8 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 
 **Publishing:**
 - [x] YouTube upload (`tools/youtube_upload.py`, `/publish`) — OAuth, scheduling, thumbnails
-- [ ] Other destinations (LinkedIn, X, S3/R2 CDN)
+- [x] Social platforms via Upload-Post (`tools/upload_post.py`, `/publish`) — TikTok, Instagram, LinkedIn, X, Facebook, Threads, Pinterest, Bluesky, YouTube; scheduling
+- [ ] Other destinations (S3/R2 CDN)
 
 **Additional Templates (shipped):**
 - [x] `concept-explainer-short` — 9:16 vertical shorts, first Python/moviepy template
@@ -243,7 +244,7 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 | Templates | 4 | sprint-review, sprint-review-v2, product-demo, concept-explainer-short |
 | Brands | 2 | default, digital-samba |
 | Skills | 12 | remotion, remotion-official, elevenlabs, ffmpeg, playwright-recording, frontend-design, qwen-edit, runpod, acestep, ltx2, moviepy, ideogram4 |
-| Tools | 22 | voiceover, qwen3_tts, sixtydb_tts, music, music_gen, sfx, redub, addmusic, sync_timing, align_captions, dewatermark, locate_watermark, notebooklm_brand, image_edit, upscale, flux2, ideogram4, ltx2, chain_video, sadtalker, verify_setup, youtube_upload |
+| Tools | 23 | voiceover, qwen3_tts, sixtydb_tts, music, music_gen, sfx, redub, addmusic, sync_timing, align_captions, dewatermark, locate_watermark, notebooklm_brand, image_edit, upscale, flux2, ideogram4, ltx2, chain_video, sadtalker, verify_setup, youtube_upload, upload_post |
 | Commands | 14 | setup, video, brand, template, skills, contribute, record-demo, generate-voiceover, scene-review, design, versions, redub, voice-clone, publish |
 | Components | 11 | AnimatedBackground, SlideTransition, Label, Vignette, FilmGrain, LogoWatermark, SplitScreen, NarratorPiP, Envelope, PointingHand, MazeDecoration |
 | Transitions | 7 | glitch, rgbSplit, zoomBlur, lightLeak, clockWipe, pixelate, checkerboard |

@@ -191,10 +191,10 @@
     },
     "publish": {
       "path": ".claude/commands/publish.md",
-      "description": "Publish a finished video to YouTube - auto-fills metadata from project.json, then uploads",
+      "description": "Publish a finished video to YouTube, or to TikTok/Instagram/LinkedIn/X/Facebook/Threads/Pinterest/Bluesky via Upload-Post - auto-fills metadata from project.json, then uploads",
       "status": "beta",
       "created": "2026-06-09",
-      "updated": "2026-06-09"
+      "updated": "2026-09-29"
     }
   },
   "tools": {
@@ -777,6 +777,47 @@
       "documentation": "docs/youtube-upload.md",
       "created": "2026-06-09",
       "updated": "2026-06-09"
+    },
+    "upload_post": {
+      "path": "tools/upload_post.py",
+      "description": "Publish a rendered video to TikTok, Instagram (Reels/Stories), YouTube, LinkedIn, Facebook, X, Threads, Pinterest and Bluesky in one call via the Upload-Post API — now or scheduled, with per-platform results",
+      "usage": "uv run tools/upload_post.py --video out/short.mp4 --title \"My short\" --platforms tiktok,instagram,youtube --json-out",
+      "status": "beta",
+      "category": "publishing",
+      "backend": "Upload-Post API (hosted, API key)",
+      "requires": "Upload-Post account with social accounts connected to a profile; UPLOAD_POST_API_KEY, UPLOAD_POST_USER",
+      "options": {
+        "platforms": [
+          "tiktok",
+          "instagram",
+          "youtube",
+          "linkedin",
+          "facebook",
+          "x",
+          "threads",
+          "pinterest",
+          "bluesky"
+        ],
+        "schedule": "--schedule ISO8601 + --timezone IANA",
+        "extras": [
+          "--ai-generated",
+          "--first-comment",
+          "--thumbnail",
+          "--tiktok-draft",
+          "--instagram-story"
+        ],
+        "status": "--status REQUEST_OR_JOB_ID",
+        "dryRun": true,
+        "jsonOut": true
+      },
+      "envVars": [
+        "UPLOAD_POST_API_KEY",
+        "UPLOAD_POST_USER"
+      ],
+      "note": "Async upload + status polling; the tool's own request_id doubles as an Idempotency-Key so a dropped connection never double-posts. Free plan: 10 uploads/month, TikTok needs a paid plan. YouTube defaults to private.",
+      "documentation": "docs/upload-post.md",
+      "created": "2026-09-29",
+      "updated": "2026-09-29"
     }
   },
   "optionalComponents": {

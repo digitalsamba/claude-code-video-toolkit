@@ -8,6 +8,15 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+### Added
+- **Multi-platform publishing** — `tools/upload_post.py` publishes a render to TikTok,
+  Instagram (Reels/Stories), YouTube, LinkedIn, Facebook, X, Threads, Pinterest and Bluesky
+  in one call via the Upload-Post API, now or scheduled. `--dry-run` checks the key and which
+  requested platforms the profile has connected; uploads are async with status polling, and the
+  client-generated `request_id` is sent as an `Idempotency-Key` so a dropped connection never
+  double-posts. `/publish` gains a multi-platform flow alongside the YouTube one. Setup in
+  `docs/upload-post.md`.
+
 ---
 
 ## 2026-09-08 (v0.20.1)

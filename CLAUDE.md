@@ -131,7 +131,7 @@ This is especially critical for background commands where the working directory 
 | **Project tools** | voiceover, music, music_gen, sfx, sync_timing | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
-| **Publishing** | youtube_upload | Upload a finished render to YouTube (use `/publish` for the guided workflow) |
+| **Publishing** | youtube_upload, upload_post | Upload a finished render to YouTube, or to TikTok/Instagram/LinkedIn/X/Facebook/Threads/Pinterest/Bluesky (use `/publish` for the guided workflow) |
 
 Utility tools work on any video file without requiring a project structure.
 
@@ -450,6 +450,34 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --
   the actual returned privacy. "Testing"-mode refresh tokens expire after ~7 days (re-run `--auth`).
 - Cached tokens live in `_internal/.youtube/` (gitignored — they grant channel-upload access).
 
+### Publishing to Social Platforms (Upload-Post)
+
+Cross-post a finished render to TikTok, Instagram (Reels/Stories), YouTube, LinkedIn, Facebook,
+X, Threads, Pinterest and Bluesky in one call via the Upload-Post API. `/publish` uses it
+whenever the user wants anything beyond YouTube.
+
+```bash
+# Check key, profile and which platforms are connected (no upload)
+uv run tools/upload_post.py --video out/short.mp4 --title "My short" \
+    --platforms tiktok,instagram,youtube --dry-run --json-out
+
+# Publish now and wait for every platform's result
+uv run tools/upload_post.py --video out/short.mp4 --title "My short #ai" \
+    --platforms tiktok,instagram,youtube --ai-generated --json-out
+
+# Schedule, then check on it later
+uv run tools/upload_post.py --video out/video.mp4 --title "Launch" --platforms linkedin,x \
+    --schedule 2026-10-01T09:00:00 --timezone Europe/London --json-out
+uv run tools/upload_post.py --status <requestId-or-jobId> --json-out
+```
+
+**Setup is one API key** (`UPLOAD_POST_API_KEY`) plus the profile name (`UPLOAD_POST_USER`);
+accounts are connected once in the Upload-Post dashboard. See `docs/upload-post.md`. Key realities:
+- Publishing is public and hard to undo — always show the caption + platform list and dry-run first.
+- Never re-run an upload after a timeout or network error; check `--status` instead (the tool's
+  `request_id` is also its Idempotency-Key, but a second run generates a new one).
+- TikTok, Reels and Shorts want 9:16 renders. Platforms not connected to the profile come back `skipped`.
+
 ## Video Production Workflow
 
 1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing)
@@ -462,7 +490,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --
 8. **Preview** - `npm run studio` in project directory
 9. **Iterate** - Adjust timing, content, styling with Claude Code
 10. **Render** - `npm run render` for final MP4
-11. **Publish** - Run `/publish` to upload the render to YouTube (metadata auto-filled from `project.json`)
+11. **Publish** - Run `/publish` to upload the render to YouTube or cross-post it to social platforms (metadata auto-filled from `project.json`)
 
 ## Project Lifecycle
 

@@ -1,15 +1,24 @@
 ---
-description: Publish a finished video to YouTube
+description: Publish a finished video to YouTube, or to TikTok/Instagram/LinkedIn/X and more via Upload-Post
 ---
 
-# Publish to YouTube
+# Publish a Finished Video
 
-Upload a rendered project to YouTube, auto-filling the metadata from `project.json`.
-Wraps `tools/youtube_upload.py` (OAuth 2.0 + Data API v3, resumable upload).
+Upload a rendered project, auto-filling the metadata from `project.json`. Two destinations:
+
+| Destination | Tool | Setup |
+|-------------|------|-------|
+| **YouTube only** | `tools/youtube_upload.py` (OAuth 2.0 + Data API v3, resumable upload) | Google Cloud OAuth client — `docs/youtube-upload.md` |
+| **TikTok, Instagram, YouTube, LinkedIn, Facebook, X, Threads, Pinterest, Bluesky** | `tools/upload_post.py` (Upload-Post API) | One API key — `docs/upload-post.md` |
 
 ```
-project.json + rendered MP4 → metadata draft → dry-run → upload → write back videoId/URL
+project.json + rendered MP4 → metadata draft → dry-run → upload → write back IDs/URLs
 ```
+
+**Pick the destination first.** If the user named platforms other than YouTube (TikTok,
+Reels, LinkedIn, X…), or the project is a 9:16 short headed for several platforms, use the
+[multi-platform flow](#multi-platform-flow-upload-post). If they only want YouTube, follow
+the steps below. If unclear, ask.
 
 > **One-time setup required.** YouTube uploads need OAuth (not an API key). If the user
 > hasn't set this up, point them at `docs/youtube-upload.md` and stop until
@@ -104,15 +113,88 @@ until their Google Cloud OAuth app is verified. They can publish manually in You
 
 ---
 
+## Multi-platform Flow (Upload-Post)
+
+Publishes the same render to any mix of TikTok, Instagram (Reels/Stories), YouTube, LinkedIn,
+Facebook, X, Threads, Pinterest and Bluesky with `tools/upload_post.py`.
+
+> **One-time setup required.** If `UPLOAD_POST_API_KEY` / `UPLOAD_POST_USER` aren't in `.env`,
+> point the user at `docs/upload-post.md` (create an account, connect their accounts to a
+> profile, create an API key) and stop until they're set.
+
+### Step 1: Locate the project and its rendered video
+
+Same as the YouTube flow above. Note the aspect ratio: TikTok, Reels and Shorts want 9:16. If
+the render is landscape and the user picked those, say so before publishing.
+
+### Step 2: Assemble metadata
+
+| Field | How to derive |
+|-------|---------------|
+| `title` | Existing `publish.title`, else the hook/title scene. This is the caption on TikTok/Instagram/X/Threads — write it like a caption (hook + 2–4 hashtags), not like a YouTube title. ≤100 chars if YouTube is included. |
+| `description` | Longer text, used on YouTube, LinkedIn, Facebook and Pinterest. Write to `projects/NAME/.publish-description.txt`. |
+| `platforms` | What the user asked for. |
+| `schedule` | Optional ISO time + IANA `timezone`. |
+| `aiGenerated` | Ask whether to disclose AI-generated content (`--ai-generated`). Recommend yes when the visuals or voice are AI-generated — TikTok, Instagram and YouTube expect it for realistic synthetic media. |
+| per-platform | `--youtube-privacy` (default `private`), `--tiktok-privacy`, `--tiktok-draft`, `--instagram-story`, `--pinterest-board` (required for Pinterest). |
+
+**Show the assembled metadata and the platform list, and let the user edit before posting.**
+Publishing to social accounts is public and hard to undo — never skip this confirmation.
+
+### Step 3: Dry-run first (no upload)
+
+```bash
+cd /path/to/claude-code-video-toolkit && uv run tools/upload_post.py \
+  --video "projects/NAME/out/video.mp4" \
+  --title "CAPTION" \
+  --description-file "projects/NAME/.publish-description.txt" \
+  --platforms tiktok,instagram,youtube \
+  --ai-generated \
+  --dry-run --json-out
+```
+
+Confirm `authOk` is `true`. If `missingPlatforms` is non-empty, those accounts aren't connected
+to the profile and would be skipped — tell the user and let them connect them or drop them.
+
+### Step 4: Upload
+
+Re-run **without** `--dry-run`, keeping `--json-out`. The tool waits for every platform (up to
+10 min) and prints one result per platform. Don't re-run on a timeout or network error — that
+risks a double post. Use `uv run tools/upload_post.py --status <requestId> --json-out` instead.
+
+### Step 5: Write back and report
+
+Merge into the project's `publish` block (keep any existing YouTube fields):
+```json
+"publish": {
+  "uploadPost": {
+    "requestId": "<requestId or null>",
+    "jobId": "<jobId for scheduled posts, else null>",
+    "scheduledDate": "<or null>",
+    "results": [{"platform": "tiktok", "status": "completed", "url": "..."}],
+    "uploadedAt": "<today ISO date>"
+  }
+}
+```
+Append a `sessions[]` entry, then report one line per platform with its URL or error.
+`skipped` = no account connected; `inbox: true` on TikTok = delivered to drafts, publish from the
+TikTok app.
+
+---
+
 ## Quick Mode
 
 Direct invocation for experienced users:
 ```
 /publish ai-agent-short
 /publish ai-agent-short --privacy unlisted
+/publish ai-agent-short tiktok,instagram,youtube
 ```
-Parse the project name and any privacy/schedule overrides, still show the metadata and
-run a dry-run before the real upload.
+Parse the project name, any platform list and any privacy/schedule overrides, still show the
+metadata and run a dry-run before the real upload. A platform list other than just YouTube
+means the multi-platform flow.
+
+For `tools/upload_post.py` options, see `docs/upload-post.md`.
 
 ---
 

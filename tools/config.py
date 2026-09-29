@@ -124,6 +124,19 @@ def get_youtube_token_dir() -> Path:
     return find_workspace_root() / "_internal" / ".youtube"
 
 
+def get_upload_post_api_key() -> str | None:
+    """Upload-Post API key for tools/upload_post.py (multi-platform publishing).
+
+    Returns None if unset or still the placeholder — see docs/upload-post.md.
+    """
+    from dotenv import load_dotenv
+    load_dotenv()
+    key = os.getenv("UPLOAD_POST_API_KEY")
+    if key and key != "your_api_key_here":
+        return key
+    return None
+
+
 def get_runpod_api_key() -> str | None:
     """Get RunPod API key from environment."""
     from dotenv import load_dotenv

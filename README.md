@@ -103,7 +103,7 @@ Claude Code has deep knowledge in:
 | `/generate-voiceover` | Generate AI voiceover from a script |
 | `/redub` | Redub existing video with a different voice |
 | `/voice-clone` | Record, test, and save a cloned voice to a brand |
-| `/publish` | Publish a finished video to YouTube (metadata auto-filled from `project.json`) |
+| `/publish` | Publish a finished video to YouTube, or to TikTok, Instagram, LinkedIn, X and more via Upload-Post (metadata auto-filled from `project.json`) |
 | `/versions` | Check dependency versions and toolkit updates |
 
 > **Note:** After creating or modifying commands/skills, restart Claude Code to load changes.
@@ -269,6 +269,9 @@ uv run tools/ltx2.py --prompt "Gentle camera drift" --input photo.jpg --cloud mo
 # Publish a finished render to YouTube (OAuth 2.0 + Data API v3) — contributed by @dascope (#29)
 uv run tools/youtube_upload.py --auth                                   # one-time browser login
 uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privacy private --json-out
+
+# Publish to TikTok, Instagram Reels, YouTube Shorts, LinkedIn, X and more in one call (Upload-Post API key)
+uv run tools/upload_post.py --video out/short.mp4 --title "My short" --platforms tiktok,instagram,youtube --json-out
 ```
 </details>
 
@@ -280,7 +283,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | **Project** | voiceover, music, music_gen, sfx | Used during video creation workflow |
 | **Utility** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations, no project needed |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
-| **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
+| **Publishing** | youtube_upload, upload_post | Upload a finished render to YouTube, or cross-post to TikTok/Instagram/LinkedIn/X and more (or use `/publish`) |
 
 ### Cloud GPU (Modal + RunPod)
 
