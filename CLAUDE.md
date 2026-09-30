@@ -474,8 +474,9 @@ uv run tools/upload_post.py --status <requestId-or-jobId> --json-out
 **Setup is one API key** (`UPLOAD_POST_API_KEY`) plus the profile name (`UPLOAD_POST_USER`);
 accounts are connected once in the Upload-Post dashboard. See `docs/upload-post.md`. Key realities:
 - Publishing is public and hard to undo — always show the caption + platform list and dry-run first.
-- Never re-run an upload after a timeout or network error; check `--status` instead (the tool's
-  `request_id` is also its Idempotency-Key, but a second run generates a new one).
+- Never re-run an upload after a timeout, a network error or a `status: "unknown"` result; check
+  `--status` instead (the tool's `request_id` is also its Idempotency-Key, but a second run
+  generates a new one). Only a 4xx means the upload was refused.
 - TikTok, Reels and Shorts want 9:16 renders. Platforms not connected to the profile come back `skipped`.
 
 ## Video Production Workflow

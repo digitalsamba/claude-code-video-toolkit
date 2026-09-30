@@ -159,8 +159,9 @@ to the profile and would be skipped — tell the user and let them connect them 
 ### Step 4: Upload
 
 Re-run **without** `--dry-run`, keeping `--json-out`. The tool waits for every platform (up to
-10 min) and prints one result per platform. Don't re-run on a timeout or network error — that
-risks a double post. Use `uv run tools/upload_post.py --status <requestId> --json-out` instead.
+10 min) and prints one result per platform. Never re-run the upload after a timeout, a network
+error or a `status: "unknown"` result — a new run is a new post. Use
+`uv run tools/upload_post.py --status <requestId> --json-out` instead.
 
 ### Step 5: Write back and report
 

@@ -109,7 +109,8 @@ uv run tools/upload_post.py --status <id> --json-out
 
 Per-platform `status` is `completed`, `failed`, `retryable` (Upload-Post retries it), or
 `skipped` (the profile has no account for that platform — nothing was posted there).
-`success` is `false` if any platform failed. A private post has no public link: YouTube still
+`success` is `false` if any platform failed, or with `status: "unknown"` (`errorType:
+"unknown_acceptance"`) when the tool couldn't confirm the upload was received. A private post has no public link: YouTube still
 gets a `url` (visible to the channel owner), other platforms return `postId` and a `note`.
 Scheduled uploads return `{"status": "scheduled", "jobId": …, "requestId": …}` right away;
 `--status` accepts either id.
@@ -123,9 +124,12 @@ Scheduled uploads return `{"status": "scheduled", "jobId": …, "requestId": …
 - **Asynchronous with polling.** The API answers with a `request_id` as soon as the file is
   received; the tool polls the status endpoint every 10 s until all platforms finish or
   `--wait-timeout` passes. A timeout doesn't cancel anything — use `--status` later.
-- **No double posts.** The tool generates the `request_id` itself and sends it as an
-  `Idempotency-Key`. If the connection drops mid-upload it does **not** resend the file; it
-  polls that same id to find out whether the upload arrived.
+- **No re-sends within a run.** The tool generates the `request_id` itself and sends it as an
+  `Idempotency-Key`. Only a 4xx is treated as "the upload was refused". A 5xx, a dropped
+  connection or an unreadable response means the upload *may* have been accepted, so the tool
+  never re-sends the file: it looks that same id up for ~90 s. If the server still doesn't know
+  it, the result is `status: "unknown"` — check it later with `--status <requestId>` and do
+  **not** run the upload again, since a new run is a new post.
 - **Safe defaults.** YouTube uploads default to `private` like `youtube_upload.py`. TikTok uses
   the account's own default privacy unless you pass `--tiktok-privacy`.
 - **Aspect ratio matters.** TikTok, Reels and Shorts want vertical 9:16 — the
@@ -142,6 +146,7 @@ Scheduled uploads return `{"status": "scheduled", "jobId": …, "requestId": …
 | `validation` | A flag is wrong (missing title, unknown platform, past `--schedule`, Pinterest without `--pinterest-board`), or none of the requested platforms is connected to the profile. The message says which. |
 | `forbidden` | The plan doesn't allow it — e.g. TikTok on the Free plan. The message says why. |
 | `quota` | Rate or plan limit reached — the message says which; wait or upgrade. |
+| `unknown_acceptance` | The API errored (5xx) or the connection dropped, and the upload couldn't be confirmed. Don't re-run it — run `--status <requestId>` in a few minutes. |
 | Platform `skipped` | Connect that platform to the profile in the Upload-Post dashboard. |
 | TikTok `inbox: true` | TikTok delivered the video to the account's drafts instead of posting it live; open the TikTok app to publish. |
 | Platform `failed` | The `error` field carries the platform's own reason (e.g. an expired connection — reconnect it in the dashboard). |

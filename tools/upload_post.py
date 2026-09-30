@@ -100,6 +100,9 @@ FINAL_STATUSES = {"completed", "failed", "not_found"}
 
 POLL_INTERVAL_SECS = 10
 DEFAULT_WAIT_SECS = 600
+# After an ambiguous submit (5xx, dropped connection, unreadable 2xx), how long a
+# "not_found" from the status endpoint is treated as "not registered yet".
+AMBIGUOUS_GRACE_SECS = 90
 UPLOAD_TIMEOUT = (30, 900)  # (connect, read) — the read covers sending the file
 API_TIMEOUT = (15, 60)
 
@@ -296,7 +299,57 @@ def submit_upload(api_key: str, video: str, form: list, thumbnail: Optional[str]
             files=files,
             timeout=UPLOAD_TIMEOUT,
         )
+    if resp.ok:
+        try:
+            payload = resp.json()
+        except ValueError:
+            payload = None
+        # A 2xx means the upload was accepted even if the body can't be read.
+        return payload if isinstance(payload, dict) else {"request_id": request_id}
     return _check(resp)
+
+
+def is_definitive_rejection(status: Optional[int]) -> bool:
+    """True only when the API refused the upload before accepting it (4xx).
+
+    A 5xx, a dropped connection or a timeout says nothing about whether the
+    upload was created, so those are ambiguous and must never be re-sent.
+    """
+    return status is not None and 400 <= status < 500 and status != 408
+
+
+def resolve_ambiguous(api_key: str, request_id: str, grace_secs: int) -> Optional[dict]:
+    """After an ambiguous submit, look the same request_id up instead of re-sending.
+
+    Returns the status once the server knows the request, or None if it still
+    doesn't after grace_secs (acceptance unknown).
+    """
+    deadline = time.monotonic() + grace_secs
+    while True:
+        try:
+            status = get_status(api_key, request_id=request_id)
+            if status.get("status") != "not_found":
+                return status
+        except ApiError as e:
+            log(f"Status check failed ({e}); retrying...", "dim")
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(POLL_INTERVAL_SECS)
+
+
+def emit_unknown(request_id: str, reason: str, json_out: bool):
+    """Acceptance can't be determined: never tell the caller to retry the upload."""
+    log(
+        f"Could not confirm whether the upload was received ({reason}). Do NOT run the upload "
+        f"again — it may already be posting. Check it with: uv run tools/upload_post.py --status {request_id}",
+        "error",
+    )
+    if json_out:
+        emit_json({
+            "success": False, "status": "unknown", "errorType": "unknown_acceptance",
+            "error": reason, "requestId": request_id,
+        })
+    sys.exit(1)
 
 
 def wait_for_result(api_key: str, request_id: str, wait_secs: int) -> dict:
@@ -607,14 +660,24 @@ def main():
 
     # --- Upload ------------------------------------------------------------------
     log(f"Uploading '{Path(args.video).name}' to {', '.join(args.platforms)} as '{args.user}'...", "info")
+    ambiguous = None
     try:
         submitted = submit_upload(api_key, args.video, form, args.thumbnail, request_id)
     except ApiError as e:
-        fail(str(e), e.error_type, args.json_out, requestId=request_id)
+        if is_definitive_rejection(e.status):
+            fail(str(e), e.error_type, args.json_out, requestId=request_id)
+        ambiguous = str(e)
     except requests.RequestException as e:
-        # The server may have the file already. Don't resend — poll the same id.
-        log(f"Network error while uploading ({e}); checking whether it arrived...", "warn")
-        submitted = {"request_id": request_id}
+        ambiguous = f"network error: {e}"
+
+    if ambiguous:
+        # The server may have the upload already. Never re-send — look up the same id.
+        log(f"Upload outcome unclear ({ambiguous}); checking request {request_id} instead of re-sending...", "warn")
+        found = resolve_ambiguous(api_key, request_id, AMBIGUOUS_GRACE_SECS)
+        if found is None:
+            emit_unknown(request_id, ambiguous, args.json_out)
+        submitted = {"request_id": request_id, "job_id": found.get("job_id")}
+        log("The upload was received.", "success")
 
     # Scheduled posts return a job_id and run later.
     if args.schedule:
