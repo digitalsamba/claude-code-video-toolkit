@@ -660,6 +660,8 @@ def main():
 
     # --- Upload ------------------------------------------------------------------
     log(f"Uploading '{Path(args.video).name}' to {', '.join(args.platforms)} as '{args.user}'...", "info")
+    # Print the id before sending, so a run that dies mid-upload still leaves a way to check it.
+    log(f"Request ID: {request_id} (if this run is interrupted: uv run tools/upload_post.py --status {request_id})", "dim")
     ambiguous = None
     try:
         submitted = submit_upload(api_key, args.video, form, args.thumbnail, request_id)
@@ -683,7 +685,7 @@ def main():
     if args.schedule:
         job_id = submitted.get("job_id")
         log(f"Scheduled for {args.schedule}{' ' + args.timezone if args.timezone else ''} (job {job_id}).", "success")
-        log(f"Check it later: uv run tools/upload_post.py --status {request_id}", "dim")
+        log(f"Check it later: uv run tools/upload_post.py --status {job_id or request_id}", "dim")
         if args.json_out:
             emit_json({
                 "success": True, "status": "scheduled", "jobId": job_id,
