@@ -161,13 +161,14 @@ class ProgressReporter:
 
 # GPU hourly rates (approximate, as of March 2026)
 _GPU_HOURLY_RATES = {
-    "modal": {
+    "modal": {             # modal.com/pricing, 2026-10-02
         "A10G": 1.10,
-        "A100": 3.73,      # 40GB
-        "A100-80GB": 4.68,
+        "L40S": 1.95,
+        "A100": 2.10,      # 40GB
+        "A100-80GB": 2.50,
         "T4": 0.59,
         "L4": 0.80,
-        "H100": 8.10,
+        "H100": 3.95,
     },
     "runpod": {
         "ADA_24": 0.44,    # RTX 4090
@@ -181,10 +182,10 @@ _GPU_HOURLY_RATES = {
 _TOOL_GPU = {
     "modal": {
         "qwen3_tts": "A10G",
-        "flux2": "A10G",
+        "flux2": "A10G",       # L40S if deployed with FLUX2_MODEL=klein-9b
         "upscale": "A10G",
         "sadtalker": "A10G",
-        "image_edit": "A10G",
+        "image_edit": "A100-80GB",
         "music_gen": "A10G",
         "dewatermark": "A10G",
         "ltx2": "A100-80GB",

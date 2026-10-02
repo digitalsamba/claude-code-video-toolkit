@@ -9,6 +9,10 @@ when whisper mishears the TTS — never burn whisper's own transcription.
 Requires openai-whisper (not in the toolkit's base requirements — it pulls
 in torch):    uv sync --extra whisper
 
+Model: captions.whisperModel in config.json. "auto" (the default) picks
+`turbo` (large-v3-turbo, ~6GB VRAM) when CUDA is available and `base` on CPU;
+any other value is passed straight to whisper.load_model (e.g. "small").
+
 Run from this project directory after gen_vo.py:
     uv run gen_captions.py
 Writes captions/words_{id}.json — chunks with start/end seconds relative to
@@ -30,6 +34,14 @@ except ImportError:
     sys.exit("openai-whisper is required for captions:\n"
              "    uv sync --extra whisper\n"
              "(or set captions.enabled=false in config.json and skip this step)")
+
+
+def pick_model(requested: str | None) -> str:
+    """Resolve "auto"/unset to turbo on CUDA, base on CPU; explicit names pass through."""
+    if requested and requested != "auto":
+        return requested
+    import torch  # whisper already depends on it
+    return "turbo" if torch.cuda.is_available() else "base"
 
 
 def norm(w: str) -> str:
@@ -94,7 +106,9 @@ def main() -> None:
     out_dir = HERE / "captions"
     out_dir.mkdir(exist_ok=True)
 
-    model = whisper.load_model(cap.get("whisperModel", "base"))
+    model_name = pick_model(cap.get("whisperModel", "auto"))
+    print(f"whisper model: {model_name}")
+    model = whisper.load_model(model_name)
     for s in scenes:
         mp3 = HERE / "audio" / "scenes" / f"{s['id']}_{s['slug']}.mp3"
         if not mp3.exists():

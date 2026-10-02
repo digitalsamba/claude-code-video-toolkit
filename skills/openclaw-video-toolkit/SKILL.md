@@ -109,7 +109,7 @@ uv run modal deploy docker/modal-propainter/app.py
 uv run modal deploy docker/modal-ltx2/app.py      # Requires: uv run modal secret create huggingface-token HF_TOKEN=hf_...
 ```
 
-**LTX-2 prerequisite:** Before deploying LTX-2, create a HuggingFace secret and accept the [Gemma 3 license](https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized):
+**LTX-2 prerequisite:** Before deploying LTX-2, create a HuggingFace secret and accept the [LTX-2.5 terms](https://huggingface.co/Lightricks/LTX-2.5) (gated, auto-approved; the Gemma 4 text encoder is bundled):
 ```bash
 uv run modal secret create huggingface-token HF_TOKEN=hf_your_read_access_token
 ```
@@ -634,7 +634,7 @@ Default mode (`--progress human`) shows the same events as colored terminal outp
 | SadTalker | ~$0.05-0.20/scene | ~3-4 min per 10s audio |
 | Qwen-Edit | ~$0.03-0.15 | ~8 min cold start (25GB model) |
 | RealESRGAN | ~$0.005/image | Very fast |
-| LTX-2.3 | ~$0.20-0.25/clip | ~2.5 min per 5s clip, A100-80GB |
+| LTX-2.5 | ~$0.13 for a 1s 512x512 fast clip | ~3 min cold (≈2 min is weight loading), A100-80GB |
 
 **Total for a 60s video:** ~$1-3 depending on scenes and narrator clips.
 

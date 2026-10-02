@@ -32,6 +32,7 @@ Sync Mode:
     voice speaks at a different pace than the original. It uses:
     - ElevenLabs Scribe for word-level timestamps from original audio
     - ElevenLabs TTS with timestamps for character-level alignment
+      (Text to Dialogue with timestamps when --model eleven_v4)
     - FFmpeg filtergraph to apply variable speed per segment
 
     This ensures each word in the video aligns with its corresponding TTS audio,
@@ -59,6 +60,11 @@ from config import (
     get_sixtydb_api_key,
     get_sixtydb_voice_id,
     get_voice_id,
+)
+from voiceover import (
+    generate_dialogue_audio,
+    is_dialogue_model,
+    warn_dialogue_ignored_settings,
 )
 
 
@@ -123,15 +129,16 @@ Examples:
         "-m",
         type=str,
         default="eleven_multilingual_v2",
-        choices=["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5", "eleven_v3"],
-        help="ElevenLabs TTS model (default: eleven_multilingual_v2). eleven_v3 is alpha.",
+        choices=["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_v3", "eleven_v4"],
+        help="ElevenLabs TTS model (default: eleven_multilingual_v2). eleven_v4 is the most "
+             "expressive (Text to Dialogue API; stability + similarity only, no style/speed).",
     )
     parser.add_argument(
         "--stt-model",
         type=str,
-        default="scribe_v1",
-        choices=["scribe_v1", "scribe_v1_experimental"],
-        help="ElevenLabs STT model (default: scribe_v1)",
+        default="scribe_v2",
+        choices=["scribe_v2", "scribe_v1"],
+        help="ElevenLabs STT model (default: scribe_v2; scribe_v1 is deprecated)",
     )
     parser.add_argument(
         "--stability",
@@ -274,6 +281,19 @@ def generate_tts(
         print(f"Generating TTS with voice {voice_id}...", file=sys.stderr)
 
     try:
+        if is_dialogue_model(model_id):
+            warn_dialogue_ignored_settings(model_id, style, speed)
+            generate_dialogue_audio(
+                client,
+                text,
+                voice_id,
+                output_path,
+                model=model_id,
+                stability=stability,
+                similarity=similarity,
+            )
+            return True
+
         audio = client.text_to_speech.convert(
             text=text,
             voice_id=voice_id,
@@ -407,21 +427,36 @@ def generate_tts_with_timestamps(
         print(f"Generating TTS with timestamps...", file=sys.stderr)
 
     try:
-        result = client.text_to_speech.convert_with_timestamps(
-            text=text,
-            voice_id=voice_id,
-            model_id=model_id,
-        )
+        if is_dialogue_model(model_id):
+            # Eleven v4: Text to Dialogue with timestamps (chunked past ~2,000 chars)
+            alignment = generate_dialogue_audio(
+                client,
+                text,
+                voice_id,
+                output_path,
+                model=model_id,
+                with_timestamps=True,
+            )["alignment"]
+            chars = alignment["characters"]
+            starts = alignment["starts"]
+            ends = alignment["ends"]
+        else:
+            result = client.text_to_speech.convert_with_timestamps(
+                text=text,
+                voice_id=voice_id,
+                model_id=model_id,
+            )
 
-        # Save audio
-        audio_bytes = base64.b64decode(result.audio_base_64)
-        with open(output_path, "wb") as f:
-            f.write(audio_bytes)
+            # Save audio
+            audio_bytes = base64.b64decode(result.audio_base_64)
+            with open(output_path, "wb") as f:
+                f.write(audio_bytes)
+
+            chars = result.alignment.characters
+            starts = result.alignment.character_start_times_seconds
+            ends = result.alignment.character_end_times_seconds
 
         # Parse character timestamps into word timestamps
-        chars = result.alignment.characters
-        starts = result.alignment.character_start_times_seconds
-        ends = result.alignment.character_end_times_seconds
 
         words = []
         current_word = ""

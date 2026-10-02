@@ -23,6 +23,9 @@ Usage:
     # Exact dimensions instead of a long edge
     uv run tools/soulx.py -i p.png -a vo.mp3 --width 768 --height 432 -o n.mp4
 
+    # Fast draft with the Lite variant (sizes on a 32 grid: 512x288 is 16:9)
+    uv run tools/soulx.py -i p.png -a vo.mp3 --model lite -o draft.mp4
+
     # A/B against an existing SadTalker render of the same inputs
     uv run tools/soulx.py -i p.png -a vo.mp3 -o new.mp4 --compare old.mp4
 
@@ -60,11 +63,15 @@ from file_transfer import (
 PROCESSING_TIME_MULTIPLIER = 30
 PROCESSING_TIME_BUFFER = 900
 
-# Pixel dimensions must land on the model's latent grid: the Wan2.1 VAE has
-# spatial stride 8 and the transformer patchifies 2x2. Nothing upstream
-# validates this -- a bad size floors silently and desyncs the latent grid from
-# the pixel grid -- so it is checked here as well as server-side.
-GRID = 16
+# Pixel dimensions must land on the model's latent grid: VAE spatial stride x
+# transformer patch size. Pro is Wan2.1 (stride 8) with 2x2 patches; Lite is
+# LTX-Video (stride 32) unpatched. Nothing upstream validates this -- a bad size
+# floors silently and desyncs the latent grid from the pixel grid -- so it is
+# checked here as well as server-side.
+GRID = {"pro": 16, "lite": 32}
+# New frames per chunk: 33 minus the motion-frame overlap, which follows the
+# VAE's temporal stride (4 for Pro, 8 for Lite).
+FRAMES_PER_CHUNK = {"pro": 28, "lite": 24}
 
 
 def get_audio_duration(audio_path: str) -> float | None:
@@ -86,17 +93,19 @@ def calculate_timeout(audio_duration: float) -> int:
     return int(audio_duration * PROCESSING_TIME_MULTIPLIER + PROCESSING_TIME_BUFFER)
 
 
-def check_size(height: int, width: int) -> str | None:
+def check_size(height: int, width: int, model: str = "pro") -> str | None:
     """Return an error string if the requested size is off the latent grid."""
+    grid = GRID[model]
     for name, v in (("height", height), ("width", width)):
-        if v % GRID:
-            return (f"--{name} {v} must be a multiple of {GRID}. "
-                    f"Nearest: {v // GRID * GRID} or {(v // GRID + 1) * GRID}.")
+        if v % grid:
+            return (f"--{name} {v} must be a multiple of {grid} for --model {model}. "
+                    f"Nearest: {v // grid * grid} or {(v // grid + 1) * grid}.")
     return None
 
 
 def build_comparison(new_video: str, old_video: str, output_path: str,
-                     old_label: str = "previous", verbose: bool = True) -> str | None:
+                     old_label: str = "previous", verbose: bool = True,
+                     new_label: str = "SoulX-FlashHead") -> str | None:
     """Stack two talking head renders side by side for eyeballing.
 
     Labels each half so the pair stays readable once it is out of context.
@@ -109,7 +118,7 @@ def build_comparison(new_video: str, old_video: str, output_path: str,
         f"[0:v]scale=-2:720,pad=iw:ih+40:0:40:black,"
         f"drawtext=text='{old_label}':x=10:y=8:fontsize=24:fontcolor=white[a];"
         f"[1:v]scale=-2:720,pad=iw:ih+40:0:40:black,"
-        f"drawtext=text='SoulX-FlashHead':x=10:y=8:fontsize=24:fontcolor=white[b];"
+        f"drawtext=text='{new_label}':x=10:y=8:fontsize=24:fontcolor=white[b];"
         f"[a][b]hstack=inputs=2[v]"
     )
     # drawtext needs a fontconfig default that not every ffmpeg build ships, so
@@ -147,14 +156,17 @@ def process_with_cloud(
     verbose: bool = True,
     cloud: str = "modal",
     progress=None,
+    model: str = "pro",
 ) -> dict:
     """Generate a talking head via the SoulX-FlashHead cloud endpoint."""
     with r2_cleanup() as r2_keys_to_cleanup:
         if verbose:
-            print(f"Cloud provider: {cloud}", file=sys.stderr)
+            print(f"Cloud provider: {cloud}, model: {model}", file=sys.stderr)
 
+        if model not in GRID:
+            return {"error": f"model must be 'pro' or 'lite', got {model!r}"}
         if height and width:
-            err = check_size(height, width)
+            err = check_size(height, width, model)
             if err:
                 return {"error": err}
 
@@ -163,8 +175,8 @@ def process_with_cloud(
             timeout = calculate_timeout(audio_duration) if audio_duration else 2400
 
         if verbose and audio_duration:
-            # Pro emits 28 new frames per 33-frame chunk at 25fps.
-            chunks = max(1, -(-int(audio_duration * 25) // 28))
+            per_chunk = FRAMES_PER_CHUNK[model]
+            chunks = max(1, -(-int(audio_duration * 25) // per_chunk))
             print(f"Audio: {audio_duration:.1f}s -> ~{chunks} chunk"
                   f"{'s' if chunks > 1 else ''}, timeout {timeout}s", file=sys.stderr)
 
@@ -186,6 +198,7 @@ def process_with_cloud(
                 "audio_url": audio_url,
                 "seed": seed,
                 "use_face_crop": use_face_crop,
+                "model": model,
             }
         }
         if height and width:
@@ -242,6 +255,14 @@ def process_with_cloud(
             keys = list(result.keys()) if isinstance(result, dict) else result
             return {"error": f"No video in result: {keys}"}
 
+        # An endpoint deployed before Lite existed ignores the field and renders
+        # Pro. The video is already paid for, so warn rather than discard it.
+        served = result.get("model_type")
+        if served and served != model:
+            print(f"Warning: asked for model={model} but the endpoint rendered "
+                  f"{served}. Redeploy: modal deploy docker/modal-soulx/app.py",
+                  file=sys.stderr)
+
         if verbose:
             size_kb = Path(output_path).stat().st_size // 1024
             rtf = result.get("realtime_factor")
@@ -252,6 +273,7 @@ def process_with_cloud(
         return {
             "success": True,
             "output": output_path,
+            "model": served or model,
             "processing_time_seconds": round(elapsed, 2),
             "duration_seconds": result.get("duration_seconds"),
             "chunks": result.get("chunks"),
@@ -259,6 +281,7 @@ def process_with_cloud(
             "height": result.get("height"),
             "realtime_factor": result.get("realtime_factor"),
             "median_chunk_seconds": result.get("median_chunk_seconds"),
+            "peak_vram_gb": result.get("peak_vram_gb"),
         }
 
 
@@ -280,12 +303,18 @@ def main():
                           help="Label for the left half of --compare (default: previous)")
 
     gen_group = parser.add_argument_group("Generation")
+    gen_group.add_argument("--model", choices=["pro", "lite"], default="pro",
+                           help="pro: final quality (default). lite: fast draft "
+                                "variant -- cheaper takes to choose between, no "
+                                "compile wait; sizes on a 32 grid")
     gen_group.add_argument("--size", type=int, default=768,
                            help="Target long edge; aspect follows the image (default: 768)")
     gen_group.add_argument("--height", type=int, default=0,
-                           help=f"Exact height, multiple of {GRID}. Use with --width")
+                           help="Exact height, multiple of 16 (32 for --model lite). "
+                                "Use with --width")
     gen_group.add_argument("--width", type=int, default=0,
-                           help=f"Exact width, multiple of {GRID}. Use with --height")
+                           help="Exact width, multiple of 16 (32 for --model lite). "
+                                "Use with --height")
     gen_group.add_argument("--seed", type=int, default=42, help="Random seed")
     gen_group.add_argument("--face-crop", action="store_true",
                            help="Upstream face detect+crop. Square-only, so it "
@@ -325,6 +354,7 @@ def main():
         timeout=args.timeout,
         verbose=verbose,
         cloud=args.cloud,
+        model=args.model,
     )
 
     if result.get("success") and args.compare:
@@ -333,6 +363,7 @@ def main():
                 args.output, args.compare,
                 str(Path(args.output).with_name(Path(args.output).stem + "_compare.mp4")),
                 old_label=args.compare_label, verbose=verbose,
+                new_label=f"SoulX-FlashHead {args.model.title()}",
             )
             if comparison:
                 result["comparison"] = comparison

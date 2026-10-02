@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """
-AI image generation and editing using FLUX.2 Klein 4B.
+AI image generation and editing using FLUX.2 [klein].
+
+Providers:
+- Modal (default): the checkpoint is chosen when the app is deployed --
+  FLUX.2-klein-4B by default (Apache-2.0, commercial OK), or FLUX.2-klein-9B with
+  FLUX2_MODEL=klein-9b (FLUX Non-Commercial License -- personal/non-commercial use
+  only, outputs need filters or manual review). Both use the FLUX.2 small decoder.
+  See docker/modal-flux2.
+- RunPod: FLUX.2-klein-4B. Apache-2.0, commercial OK.
 
 Capabilities:
 - Text-to-image generation (--prompt)
@@ -26,6 +34,9 @@ Examples:
 
   # List available presets
   uv run tools/flux2.py --list-presets
+
+  # RunPod instead of Modal (always the Apache-2.0 4B model)
+  uv run tools/flux2.py --preset title-bg --cloud runpod
 
   # Setup RunPod endpoint (first-time)
   uv run tools/flux2.py --setup
@@ -389,6 +400,8 @@ def generate_image(
     output_size = result.get("image_size", [0, 0])
 
     log(f"Saved: {output_path}", "success")
+    if result.get("model"):
+        log(f"Model: {result['model']}", "dim")
     log(f"Time: {elapsed:.1f}s total, {inference_ms/1000:.1f}s inference", "dim")
     log(f"Output: {output_size[0]}x{output_size[1]}", "dim")
     log(f"Seed: {result.get('seed', 'unknown')}", "dim")
@@ -491,6 +504,8 @@ def edit_image(
     output_size = result.get("image_size", [0, 0])
 
     log(f"Saved: {output_path}", "success")
+    if result.get("model"):
+        log(f"Model: {result['model']}", "dim")
     log(f"Time: {elapsed:.1f}s total, {inference_ms/1000:.1f}s inference", "dim")
     log(f"Output: {output_size[0]}x{output_size[1]}", "dim")
     log(f"Seed: {result.get('seed', 'unknown')}", "dim")
@@ -811,7 +826,8 @@ def setup_runpod(gpu_id: str = "AMPERE_24,ADA_24", verbose: bool = True) -> dict
 
 def main():
     parser = argparse.ArgumentParser(
-        description="AI image generation and editing using FLUX.2 Klein 4B",
+        description="AI image generation and editing using FLUX.2 [klein] "
+                    "(klein-4B by default; klein-9B if the Modal app was deployed with FLUX2_MODEL=klein-9b)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -850,14 +866,17 @@ Examples:
     # Advanced options
     adv_group = parser.add_argument_group("Advanced")
     adv_group.add_argument("--seed", type=int, help="Random seed for reproducibility")
-    adv_group.add_argument("--steps", type=int, help="Inference steps (default: 4 for generate, 50 for edit)")
-    adv_group.add_argument("--guidance", "-g", type=float, help="Guidance scale (default: 1.0 for generate, 4.0 for edit)")
+    adv_group.add_argument("--steps", type=int,
+                           help="Inference steps (default: 4 -- klein is step-distilled to 4; "
+                                "the RunPod handler still defaults edits to 50)")
+    adv_group.add_argument("--guidance", "-g", type=float,
+                           help="Guidance scale (default: 1.0; ignored by the distilled klein checkpoints)")
     adv_group.add_argument("--verbose", action="store_true", help="Show detailed output")
 
     # Cloud GPU
     cloud_group = parser.add_argument_group("Cloud GPU")
     cloud_group.add_argument("--cloud", type=str, default="modal", choices=["runpod", "modal"],
-                             help="Cloud GPU provider (default: runpod)")
+                             help="Cloud GPU provider (default: modal)")
     cloud_group.add_argument("--setup", action="store_true", help="Set up cloud endpoint")
     cloud_group.add_argument("--setup-gpu", type=str, default="AMPERE_24,ADA_24",
                              help="GPU type(s) for RunPod endpoint (default: AMPERE_24,ADA_24)")
@@ -906,7 +925,7 @@ Examples:
     reporter = ProgressReporter(mode=args.progress)
 
     print()
-    log("FLUX.2 Klein 4B", "info")
+    log("FLUX.2 klein" if args.cloud == "modal" else "FLUX.2 klein 4B", "info")
     log("=" * 40, "dim")
 
     if args.input:

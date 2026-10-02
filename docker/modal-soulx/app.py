@@ -24,15 +24,21 @@ there is no short-render ceiling to design around. It is also ~3-6x faster in
 wall clock and ~3.7x cheaper per second of output. See docs/soulx.md.
 
 Two variants, differing in more than size:
-    Pro  -- Wan2.1 VAE, stride (4,8,8), 28 new frames per 33-frame chunk
-    Lite -- LTX-Video VAE, stride (8,32,32), 24 new frames per chunk
-The VAE stride decides which resolutions are legal (see _check_size): 768x432
-is fine for Pro and illegal for Lite. Pro is what this app deploys.
+    Pro  -- Wan2.1 VAE, stride (4,8,8), 2x2 patches, 28 new frames per 33-frame chunk
+    Lite -- LTX-Video VAE, stride (8,32,32), unpatched, 24 new frames per chunk
+Same 1.3B transformer; Lite's speed comes from seeing ~7x fewer tokens per
+chunk. Pro is loaded at container start and is the default. Lite is the draft
+mode: loaded into the same container on the first request that asks for it,
+run without torch.compile (see _load_lite), and evicted again before a Pro
+render so Pro keeps all its VRAM (see _evict_lite). Stride x patch decides which
+resolutions are legal (see _check_size): 768x432 is fine for Pro and illegal
+for Lite.
 
 Input format (POST JSON to the web endpoint):
 {
     "image_url" | "image_base64": str,
     "audio_url" | "audio_base64": str,
+    "model": str,           # "pro" (default) or "lite" -- the fast draft variant
     "height": int,          # optional, with "width"; else derived from "size"
     "width": int,
     "size": int,            # target long edge, default 768; aspect follows image
@@ -206,24 +212,39 @@ def _missing_weights():
     return None
 
 
-# Pixel dimensions must divide by the VAE's spatial stride, and the resulting
-# latent extent must be even because the transformer patchifies 2x2. Nothing
-# upstream validates this: target_size flows straight into
-# `lat_h = target_h // vae_stride[1]`, so a bad size floors silently and
-# desyncs the latent grid from the pixel grid rather than raising.
-_GRID = {"pro": 16, "lite": 64}   # stride * 2, for Wan2.1 and LTX-Video
+# Pixel dimensions must divide by the VAE's spatial stride times the
+# transformer's spatial patch size. Nothing upstream validates this:
+# target_size flows straight into `lat_h = target_h // vae_stride[1]`, so a bad
+# size floors silently and desyncs the latent grid from the pixel grid rather
+# than raising. From each variant's config.json at MODEL_REV:
+#   Pro:  Wan2.1 VAE stride 8     x patch_size 2x2 = 16
+#   Lite: LTX-Video VAE stride 32 x patch_size 1x1 = 32   (not 2x2 -- Lite
+#         does not patchify, so its grid is 32 and not the 64 once assumed)
+_GRID = {"pro": 16, "lite": 32}
+_GRID_WHY = {
+    "pro": "Wan2.1 VAE stride 8, 2x2 patches",
+    "lite": "LTX-Video VAE stride 32, no patching",
+}
 
 
 def _check_size(height, width, model_type):
     grid = _GRID[model_type]
     for name, v in (("height", height), ("width", width)):
         if v % grid:
-            vae = "Wan2.1" if model_type == "pro" else "LTX-Video"
             raise ValueError(
-                f"{name}={v} must be a multiple of {grid} for model_type="
-                f"{model_type!r} ({vae} VAE, stride {grid // 2}, 2x2 patches). "
+                f"{name}={v} must be a multiple of {grid} for model="
+                f"{model_type!r} ({_GRID_WHY[model_type]}). "
                 f"Nearest legal: {v // grid * grid} or {(v // grid + 1) * grid}."
             )
+
+
+# get_pipeline writes per-variant values into flash_head.inference's
+# module-global infer_params: motion_frames_num follows the VAE's temporal
+# stride (5 for Pro, 9 for Lite), which is why Pro emits 28 new frames a chunk
+# and Lite 24. With both variants in one process the last load would win and
+# the other would render with the wrong chunk overlap -- no error, just wrong
+# frames. So each load snapshots these and each render puts its own back.
+_PER_MODEL_PARAMS = ("motion_frames_num", "sample_steps")
 
 
 def _fit_size(img_w, img_h, target, model_type):
@@ -267,6 +288,8 @@ class SoulXFlashHead:
         # while the client sees only a hang until its timeout (#95). Start
         # anyway and let the request say what is wrong.
         self.pipeline = None
+        self.lite = None    # loaded on first use -- see _load_lite
+        self._infer_overrides = {}
         self.load_error = _missing_weights()
         if self.load_error:
             print(self.load_error)
@@ -304,28 +327,109 @@ class SoulXFlashHead:
             wav2vec_dir=f"{MODELS_DIR}/wav2vec2-base-960h",
             model_type=self.model_type,
         )
+        self._snapshot_infer_params("pro")
         self.load_seconds = time.time() - started
         print(f"pipeline loaded in {self.load_seconds:.1f}s "
               f"(model_type={self.model_type}, compile={self.use_compile})")
 
-    def _not_ready(self):
-        """Error string if the pipeline cannot serve, else None.
+    def _snapshot_infer_params(self, model_type):
+        import flash_head.inference as fh
+
+        self._infer_overrides[model_type] = {k: fh.infer_params[k] for k in _PER_MODEL_PARAMS}
+
+    def _load_lite(self):
+        """Load the Lite variant into this container, on first use.
+
+        Lazy, so a container that only ever serves Pro is exactly what it was
+        before Lite existed: same VRAM, same compiled graphs. Measured on A10G:
+        Pro loads in ~27s, Lite in ~12s, and Lite adds ~4.5GB resident.
+
+        Eager, not compiled. On Pro, torch.compile costs 10-20 minutes per
+        container per resolution and saves 7-40% a chunk. Lite's eager chunks
+        are 0.46s at 512x288 and 1.14s at 640x640, so compile would take hours
+        of output to pay back -- and a draft is a minute. It also keeps
+        Lite out of dynamo's cache: both variants are the same
+        WanModelAudioProject class, so a compiled Lite would share a code
+        object, and its guard and recompile bookkeeping, with the compiled Pro.
+        """
+        import time
+
+        import flash_head.src.pipeline.flash_head_pipeline as fhp
+        from flash_head.inference import get_pipeline
+
+        started = time.time()
+        # Read in FlashHeadPipeline.__init__, so only this construction sees it.
+        fhp.COMPILE_MODEL = fhp.COMPILE_VAE = False
+        try:
+            self.lite = get_pipeline(
+                world_size=1,
+                ckpt_dir=f"{MODELS_DIR}/SoulX-FlashHead-1_3B",
+                wav2vec_dir=f"{MODELS_DIR}/wav2vec2-base-960h",
+                model_type="lite",
+            )
+        finally:
+            fhp.COMPILE_MODEL = fhp.COMPILE_VAE = self.use_compile
+        self._snapshot_infer_params("lite")
+        print(f"lite pipeline loaded in {time.time() - started:.1f}s (compile=False)")
+
+    def _evict_lite(self):
+        """Free Lite before a Pro render.
+
+        Pro peaked at 17.5GB at 640x640 with Lite resident -- an estimated
+        ~13GB without it -- and 1280x720 already OOMs on the A10G with Pro alone. Kept
+        resident, Lite's ~4.5GB would turn sizes in between into OOMs that did
+        not happen before Lite existed. Reloading it costs ~12s and no compile,
+        so a draft after a final pays that rather than Pro paying in headroom.
+        """
+        if self.lite is None:
+            return
+        import gc
+
+        import torch
+
+        self.lite = None
+        gc.collect()
+        torch.cuda.empty_cache()
+        print("lite evicted to give pro its full VRAM")
+
+    def _not_ready(self, model_type="pro"):
+        """Make `model_type` ready to render; error string if it cannot, else None.
 
         Re-checks the volume first, so a container that started before
         populate_weights ran picks the weights up instead of refusing for the
-        rest of its warm window.
+        rest of its warm window. Pro always loads first: it is what the
+        container starts with, and Lite is added to it -- then evicted again
+        whenever Pro is asked for.
         """
-        if self.pipeline is not None:
-            return None
-        volume.reload()
-        self.load_error = _missing_weights()
-        if self.load_error is None:
-            self._load()
-        return self.load_error
+        if self.pipeline is None:
+            volume.reload()
+            self.load_error = _missing_weights()
+            if self.load_error is None:
+                self._load()
+            if self.load_error:
+                return self.load_error
+        if model_type == "pro":
+            self._evict_lite()
+        elif self.lite is None:
+            ckpt = f"{MODELS_DIR}/SoulX-FlashHead-1_3B"
+            missing = [d for d in ("Model_Lite", "VAE_LTX") if not os.path.isdir(f"{ckpt}/{d}")]
+            if missing:
+                return (f"Lite weights are missing from the soulx-weights volume "
+                        f"({', '.join(missing)}). Re-run: "
+                        "modal run docker/modal-soulx/app.py::populate_weights")
+            try:
+                self._load_lite()
+            except Exception as e:
+                import traceback
+
+                print(traceback.format_exc())
+                return f"Lite failed to load: {type(e).__name__}: {e}"
+        return None
 
     # -- core ---------------------------------------------------------------
 
-    def _render(self, image_path, audio_path, work, height, width, seed, use_face_crop):
+    def _render(self, image_path, audio_path, work, height, width, seed,
+                use_face_crop, model_type="pro"):
         """Upstream's `stream` chunk loop, inlined.
 
         Inlined rather than shelled out to generate_video.py so the pipeline
@@ -346,16 +450,19 @@ class SoulXFlashHead:
             get_audio_embedding, get_base_data, get_infer_params, run_pipeline,
         )
 
-        _check_size(height, width, self.model_type)
+        _check_size(height, width, model_type)
+        pipeline = self.lite if model_type == "lite" else self.pipeline
 
         # There is no resolution argument anywhere upstream -- generate_video.py
         # has no flag and get_base_data reads the module-global dict. Mutating
         # that global is the entire mechanism for non-square output.
         fh.infer_params["height"] = height
         fh.infer_params["width"] = width
+        fh.infer_params.update(self._infer_overrides[model_type])
 
+        torch.cuda.reset_peak_memory_stats()
         get_base_data(
-            self.pipeline,
+            pipeline,
             cond_image_path_or_dir=str(image_path),
             base_seed=seed,
             # Unconditionally square: facecrop.py sets new_height = new_width
@@ -389,8 +496,8 @@ class SoulXFlashHead:
             t0 = time.time()
 
             dq.extend(chunk.tolist())
-            emb = get_audio_embedding(self.pipeline, np.array(dq), start_idx, end_idx)
-            video = run_pipeline(self.pipeline, emb)
+            emb = get_audio_embedding(pipeline, np.array(dq), start_idx, end_idx)
+            video = run_pipeline(pipeline, emb)
             frames.append(video[motion:].cpu())
 
             torch.cuda.synchronize()
@@ -415,8 +522,8 @@ class SoulXFlashHead:
 
         n_frames = sum(f.shape[0] for f in frames)
         stats = {
-            "model_type": self.model_type,
-            "compile": self.use_compile,
+            "model_type": model_type,
+            "compile": self.use_compile and model_type == "pro",
             "width": width,
             "height": height,
             "chunks": len(slices),
@@ -428,10 +535,13 @@ class SoulXFlashHead:
             "realtime_factor": round(elapsed / (n_frames / fps), 1),
             "first_chunk_seconds": round(chunk_times[0], 1),
             "median_chunk_seconds": round(float(np.median(chunk_times)), 2),
+            # Everything resident (both variants, if Lite has been loaded) plus
+            # this render's activations: the headroom number behind any OOM.
+            "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 1e9, 1),
         }
         return out, stats
 
-    def _resolve_size(self, image_path, request):
+    def _resolve_size(self, image_path, request, model_type):
         from PIL import Image
 
         height, width = request.get("height"), request.get("width")
@@ -439,7 +549,14 @@ class SoulXFlashHead:
             return int(height), int(width)
         with Image.open(image_path) as im:
             iw, ih = im.size
-        return _fit_size(iw, ih, int(request.get("size", 768)), self.model_type)
+        return _fit_size(iw, ih, int(request.get("size", 768)), model_type)
+
+    @staticmethod
+    def _model_type(value):
+        model_type = str(value or "pro").lower()
+        if model_type not in _GRID:
+            raise ValueError(f"model={value!r}: must be 'pro' or 'lite'")
+        return model_type
 
     # -- entry points -------------------------------------------------------
 
@@ -454,6 +571,7 @@ class SoulXFlashHead:
         seed: int = 42,
         use_face_crop: bool = False,
         label: str = "render",
+        model: str = "pro",
     ) -> dict:
         """Direct call, used by tools/soulx.py's spawn path.
 
@@ -465,7 +583,8 @@ class SoulXFlashHead:
         import tempfile
         from pathlib import Path
 
-        err = self._not_ready()
+        model_type = self._model_type(model)
+        err = self._not_ready(model_type)
         if err:
             raise RuntimeError(err)
 
@@ -475,9 +594,10 @@ class SoulXFlashHead:
         aud_path.write_bytes(audio_bytes)
 
         h, w = self._resolve_size(
-            img_path, {"height": height, "width": width, "size": size}
+            img_path, {"height": height, "width": width, "size": size}, model_type
         )
-        out, stats = self._render(img_path, aud_path, work, h, w, seed, use_face_crop)
+        out, stats = self._render(img_path, aud_path, work, h, w, seed,
+                                  use_face_crop, model_type)
         video_bytes = out.read_bytes()
 
         os.makedirs(OUT_DIR, exist_ok=True)
@@ -495,6 +615,7 @@ class SoulXFlashHead:
             "ok": self.pipeline is not None,
             "error": self.load_error,
             "model_type": getattr(self, "model_type", "pro"),
+            "lite_loaded": getattr(self, "lite", None) is not None,
             "compile": getattr(self, "use_compile", USE_COMPILE),
             "load_seconds": round(getattr(self, "load_seconds", -1), 1),
         }
@@ -519,8 +640,14 @@ class SoulXFlashHead:
             return {"error": "Missing image_url or image_base64"}
         if not audio_url and not audio_base64:
             return {"error": "Missing audio_url or audio_base64"}
+        try:
+            # "model_type" too, as the stats call it: ignoring it would quietly
+            # render Pro for a caller who asked for Lite.
+            model_type = self._model_type(request.get("model") or request.get("model_type"))
+        except ValueError as e:
+            return {"error": str(e)}
 
-        err = self._not_ready()
+        err = self._not_ready(model_type)
         if err:
             return {"error": err}
 
@@ -540,11 +667,12 @@ class SoulXFlashHead:
             img_path = fetch(image_url, image_base64, work / "input_image.png")
             aud_path = fetch(audio_url, audio_base64, work / "input_audio.wav")
 
-            height, width = self._resolve_size(img_path, request)
+            height, width = self._resolve_size(img_path, request, model_type)
             out, stats = self._render(
                 img_path, aud_path, work, height, width,
                 int(request.get("seed", 42)),
                 bool(request.get("use_face_crop", False)),
+                model_type,
             )
 
             result = {"success": True, **stats}
@@ -608,6 +736,7 @@ def main(
     size: int = 768,
     seed: int = 42,
     label: str = "render",
+    model: str = "pro",
 ):
     import json
     from pathlib import Path
@@ -616,6 +745,7 @@ def main(
         image_bytes=Path(image).read_bytes(),
         audio_bytes=Path(audio).read_bytes(),
         height=height, width=width, size=size, seed=seed, label=label,
+        model=model,
     )
     Path(out).write_bytes(result["video"])
     print(json.dumps(result["stats"], indent=2))

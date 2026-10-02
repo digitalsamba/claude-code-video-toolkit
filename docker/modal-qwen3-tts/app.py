@@ -24,7 +24,8 @@ image = (
     .pip_install(
         "torch==2.4.0",
         "torchaudio==2.4.0",
-        "qwen-tts",
+        # Pinned for reproducible rebuilds (latest on PyPI; it pins transformers/accelerate)
+        "qwen-tts==0.1.1",
         "soundfile",
         "boto3",
         "requests",

@@ -34,12 +34,35 @@ save(audio, "voiceover.mp3")
 
 | Model | Quality | SSML Support | Notes |
 |-------|---------|--------------|-------|
-| `eleven_multilingual_v2` | Highest consistency | None | Stable, production-ready, 29 languages |
-| `eleven_flash_v2_5` | Good | `<break>`, `<phoneme>` | Fast, supports pause/pronunciation tags |
-| `eleven_turbo_v2_5` | Good | `<break>`, `<phoneme>` | Fastest latency |
-| `eleven_v3` | Most expressive | None | Alpha — unreliable, needs prompt engineering |
+| `eleven_multilingual_v2` | Highest consistency | None | Stable, production-ready, 29 languages. Toolkit default; supports style + speed |
+| `eleven_v4` | Most expressive | None (audio tags, IPA) | Newest (GA 2026-09-28), 90+ languages, best clone accuracy. Stability + similarity only — no style/speed |
+| `eleven_flash_v2_5` | Good | `<break>`, `<phoneme>` | Fastest, cheapest; supports pause/pronunciation tags |
+| `eleven_v3` | Expressive | None | Previous generation — prefer v4 |
 
-**Choose:** multilingual_v2 for reliability, flash/turbo for SSML control, v3 for maximum expressiveness (expect retakes).
+**Choose:** multilingual_v2 for reliability and speed/style control, v4 for maximum expressiveness and cloned voices (test a few takes), flash for SSML control.
+
+**Deprecated:** `eleven_turbo_v2_5` → use `eleven_flash_v2_5` (same quality, lower latency).
+
+### Eleven v4
+
+The toolkit calls v4 through the **Text to Dialogue** API with one input (the narrator voice), as ElevenLabs recommends for content creation and long-form audio:
+
+```python
+from elevenlabs import DialogueInput
+
+audio = client.text_to_dialogue.convert(
+    inputs=[DialogueInput(text="[warm] Welcome to my video!", voice_id="JBFqnCBsd6RMkjVDRZzb")],
+    model_id="eleven_v4",
+    settings={"stability": 0.5, "similarity": 0.75},  # the only two settings v4 takes
+)
+save(audio, "voiceover.mp3")
+```
+
+- `uv run tools/voiceover.py --model eleven_v4 ...` (and `redub.py --model eleven_v4`) do this for you, warn once that `--style`/`--speed` are ignored, and split text over ~2,000 chars per request (the reliable dialogue limit) at sentence boundaries. Pace with `--max-wpm` instead of `--speed`.
+- `client.text_to_dialogue.convert_with_timestamps(...)` returns the same character alignment as TTS `convert_with_timestamps`, so `redub.py --sync` works with v4.
+- Pass `settings` as a dict: SDK versions before 2.70 type it with a stability-only model. Text to Dialogue needs `elevenlabs>=2.21`.
+- Direct delivery with audio tags (`[whispering]`, `[warm]`, `[sigh]`) and punctuation. Write tags that clearly describe the voice, because v4 can also read a tag as a sound effect.
+- `eleven_v4_turbo` is the real-time variant, available only over the Text to Dialogue WebSocket. The toolkit doesn't use it, since offline renders don't benefit from low latency.
 
 ### Voice Settings by Style
 
@@ -51,14 +74,15 @@ save(audio, "voiceover.mp3")
 
 ### Pauses Between Sections
 
-**With flash/turbo models:** Use SSML break tags inline:
+**With flash models:** Use SSML break tags inline:
 ```
 ...end of section. <break time="1.5s" /> Start of next...
 ```
 Max 3 seconds per break. Excessive breaks can cause speed artifacts.
 
-**With multilingual_v2 / v3:** No SSML support. Options:
+**With multilingual_v2 / v3 / v4:** No SSML support. Options:
 - Paragraph breaks (blank lines) — creates ~0.3-0.5s natural pause
+- v3/v4: audio tags such as `[long pause]`
 - Post-process with ffmpeg: split audio and insert silence
 
 **WARNING:** `...` (ellipsis) is NOT a reliable pause — it can be vocalized as a word/sound. Do not use ellipsis as a pause mechanism.
@@ -70,9 +94,14 @@ Max 3 seconds per break. Excessive breaks can cause speed artifacts.
 - `nginx` → `engine-x`
 - Use dashes, capitals, apostrophes to guide pronunciation
 
-**SSML phoneme tags (flash/turbo only):**
+**SSML phoneme tags (flash only):**
 ```
 <phoneme alphabet="ipa" ph="ˈdʒeɪnəs">Janus</phoneme>
+```
+
+**IPA in v4:** no tags needed. Wrap the IPA in slashes and double quotes in place of the word:
+```
+The term "/ˌbaɪoʊˈkemɪstri/" refers to the study of chemical processes.
 ```
 
 ### Iterative Workflow
@@ -80,6 +109,16 @@ Max 3 seconds per break. Excessive breaks can cause speed artifacts.
 1. Generate → listen → identify pronunciation/pacing issues
 2. Adjust: phonetic spellings, break tags, voice settings
 3. Regenerate. If pauses aren't precise enough, add silence in post with ffmpeg rather than fighting the TTS engine.
+
+## Speech to Text (Scribe)
+
+```python
+with open("voiceover.mp3", "rb") as f:
+    result = client.speech_to_text.convert(file=f, model_id="scribe_v2", tag_audio_events=False)
+words = [w for w in result.words if w.type == "word"]  # .text, .start, .end (seconds)
+```
+
+`scribe_v2` is current. `scribe_v1` is deprecated but still accepted (`--stt-model scribe_v1` / `--model scribe_v1`). The toolkit uses Scribe in `redub.py` (transcribe + `--sync` word timing) and `align_captions.py`.
 
 ## Voice Cloning
 

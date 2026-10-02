@@ -62,7 +62,7 @@ voice_settings = {
 
 ### Model
 - Use `eleven_multilingual_v2` for natural prosody
-- Alternative: `eleven_turbo_v2_5` for faster generation
+- Alternative: `eleven_flash_v2_5` for faster generation
 
 ### Background Music
 Generate upbeat, energetic tech background music:

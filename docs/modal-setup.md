@@ -88,13 +88,36 @@ uv run modal deploy docker/modal-ltx2/app.py
 `App create rate limit exceeded`. Image builds happen server-side, so serial
 deploys cost you nothing extra in compute — only wall-clock.
 
-**GPU tier gates some tools.** Most apps request an `A10G`, which works on the free
-tier. Two request A100-class GPUs and fail at deploy time with
-`Please add a payment method to use A100-40GB GPU functions` until a card is on the
-account: `image-edit` (A100) and `ltx2` (A100-80GB). The image still gets built and
-cached before that error, so re-deploying after adding a payment method is fast.
-`ltx2` additionally needs a Modal secret named `huggingface-token` for its gated
-weights — it fails on the missing secret *before* it ever reaches the GPU check.
+**Every GPU app needs a payment method on the account.** On a new workspace even the
+`A10G` apps fail at deploy time with `Please add a payment method to use A10G GPU
+functions` (seen 2026-10-02), not just the bigger GPUs. The Starter plan's $30/month of
+included compute still covers typical use. The image still gets built and cached before
+that error, so re-deploying after adding a payment method is fast. `ltx2` additionally
+needs a Modal secret named `huggingface-token` (key `HF_TOKEN`) for its gated weights
+(Modal's Hugging Face secret template fills in `huggingface-secret` as the name — change it),
+and accepting the terms at https://huggingface.co/Lightricks/LTX-2.5 with the account
+that owns the token — it fails on the missing secret *before* it ever reaches the GPU
+check, and on unaccepted terms with a 401/403 mid-build.
+
+**Newer non-commercial models are opt-in.** `flux2` and `image-edit` deploy the
+Apache-2.0 FLUX.2-klein-4B and Qwen-Image-Edit-2511 by default. A deploy-time variable
+swaps in the newer models, which are licensed for non-commercial use only:
+
+```bash
+# FLUX.2-klein-9B: FLUX Non-Commercial License (outputs need filtering or manual
+# review). Gated -- needs the huggingface-token secret and the terms accepted at
+# https://huggingface.co/black-forest-labs/FLUX.2-klein-9B. Runs on an L40S.
+FLUX2_MODEL=klein-9b uv run modal deploy docker/modal-flux2/app.py
+
+# Qwen-Image-2.1: Qwen Research License ("research or evaluation purposes only").
+# Up to 10 input images, RGBA in/out.
+IMAGE_EDIT_MODEL=qwen-image-2.1 uv run modal deploy docker/modal-image-edit/app.py
+```
+
+The endpoint URL stays the same; deploy again without the variable to switch back.
+The response's `model` field (printed by the tools as `Model:`) says which one ran —
+check it right after switching: a container from the previous deploy stays warm for
+its 60s idle window and can serve the next request with the old model.
 
 Each deploy prints an endpoint URL like:
 ```
@@ -177,15 +200,17 @@ uv run tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output 
 | Tool | Backend | Use Case | Est. Cost |
 |------|---------|----------|-----------|
 | `qwen3_tts` | Qwen3-TTS | AI speech generation | ~$0.005-0.02 |
-| `flux2` | FLUX.2 Klein | AI image generation | ~$0.01-0.03 |
-| `image_edit` | Qwen-Image-Edit | AI image editing, style transfer | ~$0.02-0.05 |
+| `flux2` | FLUX.2 klein 4B (9B opt-in, non-commercial) | AI image generation | ~$0.01-0.03 |
+| `image_edit` | Qwen-Image-Edit-2511 (Qwen-Image-2.1 opt-in, non-commercial) | AI image editing, style transfer | ~$0.02-0.05 |
 | `upscale` | RealESRGAN | AI image upscaling (2x/4x) | ~$0.005-0.02 |
-| `music_gen` | ACE-Step 1.5 | AI music generation | Free (acemusic) / ~$0.02-0.10 (Modal) |
+| `music_gen` | ACE-Step 1.5 XL Turbo (4B) | AI music generation | Free (acemusic) / ~$0.02-0.10 (Modal) |
 | `sadtalker` | SadTalker | Talking head video | ~$0.05-0.30 |
-| `soulx` | SoulX-FlashHead 1.3B Pro | Talking head video, aspect-preserving | ~$0.0024 per second of output |
+| `soulx` | SoulX-FlashHead 1.3B Pro + Lite | Talking head video, aspect-preserving (`--model lite` for drafts) | Pro ~$0.0024 / Lite ~$0.0004 per second of output |
 | `dewatermark` | ProPainter | AI video inpainting | ~$0.05-0.50 |
 
-All apps use A10G GPUs (24GB VRAM) except `image_edit` which uses A100 for its 25GB model.
+Most apps use A10G GPUs (24GB VRAM). The exceptions: `flux2` moves to an L40S (48GB)
+when deployed with klein-9B, which is ~35GB resident in bf16; `image_edit` and `ltx2` run
+on an A100-80GB.
 
 ### Weight storage
 
@@ -213,11 +238,11 @@ First request after idle triggers a cold start while Modal loads the model:
 
 | Tool | Cold Start | Warm Request |
 |------|-----------|--------------|
-| `qwen3_tts` | ~60-90s | ~5-15s |
-| `flux2` | ~25-30s | ~1-3s |
-| `image_edit` | ~5-8min | ~15-20s |
+| `qwen3_tts` | ~50s (measured) | ~5-15s |
+| `flux2` | ~46s (measured, klein-4B); ~50s (klein-9B on L40S) | ~6-8s |
+| `image_edit` | ~2 min (measured, 2511); ~85s (Qwen-Image-2.1) | ~13s at 8 steps (2511); ~26s at 40 steps (2.1) |
 | `upscale` | ~25-30s | ~3-5s |
-| `music_gen` | ~60-90s | ~10-30s |
+| `music_gen` | ~50s (measured, XL Turbo) | ~4s per 10s of audio |
 | `sadtalker` | ~45-60s | ~30-60s |
 | `soulx` | ~15s + ~600s first-call torch.compile | 6.4-7.9x realtime |
 | `dewatermark` | ~60-70s | varies by video length |

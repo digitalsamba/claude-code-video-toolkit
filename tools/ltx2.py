@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AI video generation using LTX-2.3 (22B DiT model).
+AI video generation using LTX-2.5 (22B DiT model).
 
 Generates ~5 second video clips from text prompts or images via Modal cloud GPU.
 Supports text-to-video and image-to-video with joint audio generation.
@@ -220,7 +220,7 @@ def generate_video(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="AI video generation using LTX-2.3 (22B DiT model)",
+        description="AI video generation using LTX-2.5 (22B DiT model)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -252,8 +252,8 @@ Examples:
     # Style LoRA
     lora_group = parser.add_argument_group("Style LoRA")
     lora_group.add_argument("--lora", choices=list(LORA_PRESETS), default=None,
-                            help="Apply a style LoRA preset. First use after a LoRA change "
-                                 "incurs ~60s of pipeline reload on the server.")
+                            help="Apply a style LoRA preset. Presets were trained on LTX-2.3 "
+                                 "and are not yet validated on 2.5.")
 
     # Quality
     quality_group = parser.add_argument_group("Quality")
@@ -315,7 +315,7 @@ Examples:
         num_frames = 121
 
     print()
-    log("LTX-2.3 Video Generation (22B DiT)", "info")
+    log("LTX-2.5 Video Generation (22B DiT)", "info")
     log("=" * 45, "dim")
 
     result_path = generate_video(

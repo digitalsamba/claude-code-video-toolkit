@@ -22,7 +22,7 @@ description = "AI-native video production workspace: Remotion templates, AI voic
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "elevenlabs>=1.0.0",
+    "elevenlabs>=2.21.0",
     "python-dotenv>=1.0.0",
     "requests>=2.28.0",
     # Cloudflare R2 file transfer (S3-compatible)
@@ -42,7 +42,7 @@ dependencies = [
 # Burned karaoke captions in templates/concept-explainer-short
 # (word-level timing; heavy install, pulls in torch)
 whisper = [
-    "openai-whisper>=20231117",
+    "openai-whisper>=20240930",
 ]
 # Self-hosted cloud GPU fallback via Modal (see docs/modal-setup.md)
 modal = [

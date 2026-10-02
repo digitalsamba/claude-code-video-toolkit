@@ -15,7 +15,7 @@
     "maxWords": 3,
     "maxChars": 22,
     "fill": "#FFFFFF",
-    "whisperModel": "base"
+    "whisperModel": "auto"
   },
   "timing": {
     "startPad": 0.3,

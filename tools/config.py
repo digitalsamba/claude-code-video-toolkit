@@ -90,7 +90,7 @@ def get_acemusic_api_key() -> str | None:
 
 
 def get_ideogram_api_key() -> str | None:
-    """Get Ideogram (hosted v4 API) key from environment."""
+    """Get Ideogram (hosted v2 API) key from environment."""
     from dotenv import load_dotenv
     load_dotenv()
     return os.getenv("IDEOGRAM_API_KEY")

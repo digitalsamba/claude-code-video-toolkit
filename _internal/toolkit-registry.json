@@ -51,12 +51,12 @@
     },
     "qwen-edit": {
       "path": ".claude/skills/qwen-edit/",
-      "description": "AI image editing prompting patterns and best practices for Qwen-Image-Edit",
+      "description": "AI image editing prompting patterns and best practices for Qwen-Image (Edit-2511 by default, 2.1 as a non-commercial Modal opt-in)",
       "status": "stable",
       "category": "image-editing",
-      "backend": "qwen-image-edit-2511",
+      "backend": "qwen-image-edit-2511 (default) / qwen-image-2.1 (modal opt-in)",
       "created": "2026-01-03",
-      "updated": "2026-01-05"
+      "updated": "2026-10-02"
     },
     "runpod": {
       "path": ".claude/skills/runpod/",
@@ -70,14 +70,14 @@
       "description": "AI music generation — prompt engineering, scene presets, lyrics formatting, video production integration",
       "status": "beta",
       "created": "2026-03-22",
-      "updated": "2026-03-22"
+      "updated": "2026-10-02"
     },
     "ltx2": {
       "path": ".claude/skills/ltx2/",
       "description": "AI video generation — prompting guide, parameters, video production use cases (b-roll, animated slides, portraits)",
       "status": "beta",
       "created": "2026-03-25",
-      "updated": "2026-04-08"
+      "updated": "2026-10-02"
     },
     "moviepy": {
       "path": ".claude/skills/moviepy/",
@@ -88,13 +88,13 @@
     },
     "ideogram4": {
       "path": ".claude/skills/ideogram4/",
-      "description": "Prompting patterns for Ideogram 4 text-to-image — structured JSON captions for best-in-class in-image text, color-palette and bounding-box layout control (title cards, thumbnails, CTAs)",
+      "description": "Prompting patterns for Ideogram 4.5 / 4 text-to-image (plus 4.5 precise edit) — structured JSON captions for best-in-class in-image text, color-palette and bounding-box layout control (title cards, thumbnails, CTAs)",
       "status": "beta",
       "category": "image-generation",
-      "backend": "ideogram-4 hosted v4 API (json_prompt)",
-      "note": "Skill teaches the JSON caption format; Claude is the magic-prompt expander. Tool: tools/ideogram4.py. Hosted paid API (commercial license, ~$0.03–0.09/img); not self-hosted. Needs IDEOGRAM_API_KEY.",
+      "backend": "ideogram-4-5 / ideogram-4 hosted v2 API (prompt)",
+      "note": "Skill teaches the JSON caption format; Claude is the magic-prompt expander. Tool: tools/ideogram4.py. Hosted paid API (commercial license; 4.0 $0.03–0.10/img, 4.5 priced by quality x size — quote with --dry-run); not self-hosted. Needs IDEOGRAM_API_KEY.",
       "created": "2026-06-08",
-      "updated": "2026-06-08"
+      "updated": "2026-10-02"
     }
   },
   "commands": {
@@ -208,11 +208,12 @@
         "no-enhance": "Disable 60db audio enhancement (on by default)",
         "stability": "Voice stability 0-1 (unified scale; auto-converted to 0-100 for 60db)",
         "similarity": "Similarity 0-1 (unified scale; auto-converted to 0-100 for 60db)",
+        "model": "ElevenLabs: eleven_multilingual_v2 (default), eleven_flash_v2_5, eleven_v3, eleven_v4 (Text to Dialogue API; stability+similarity only, chunked >2,000 chars)",
         "pacingQC": "results include wpm + pacing label (fast/slow/ok); --max-wpm clamps fast takes with pitch-preserving atempo (floor 0.85x)"
       },
       "status": "stable",
       "created": "2025-12-08",
-      "updated": "2026-08-13"
+      "updated": "2026-10-02"
     },
     "music": {
       "path": "tools/music.py",
@@ -224,7 +225,7 @@
     },
     "music_gen": {
       "path": "tools/music_gen.py",
-      "description": "AI music generation using ACE-Step 1.5 (text-to-music, cover, stem extraction, repainting, continuation)",
+      "description": "AI music generation using ACE-Step 1.5 (text-to-music, cover, stem extraction, repainting, continuation). Modal: XL Turbo 4B (acestep-v15-xl-turbo, ACE-Step-1.5 v0.1.8); RunPod: 2B turbo",
       "usage": "uv run tools/music_gen.py --prompt 'Upbeat tech' --duration 60 --bpm 128 --output music.mp3",
       "status": "stable",
       "options": {
@@ -283,8 +284,12 @@
       "description": "Redub video with different voice (extract audio, transcribe, TTS, replace)",
       "usage": "uv run tools/redub.py --input video.mp4 --voice-id VOICE_ID --output dubbed.mp4",
       "status": "beta",
+      "options": {
+        "stt-model": "scribe_v2 (default), scribe_v1 (deprecated)",
+        "model": "eleven_multilingual_v2 (default), eleven_flash_v2_5, eleven_v3, eleven_v4"
+      },
       "created": "2025-12-28",
-      "updated": "2025-12-28"
+      "updated": "2026-10-02"
     },
     "addmusic": {
       "path": "tools/addmusic.py",
@@ -347,12 +352,12 @@
     },
     "image_edit": {
       "path": "tools/image_edit.py",
-      "description": "AI image editing using Qwen-Image-Edit - style transfer, backgrounds, prompts",
+      "description": "AI image editing using Qwen-Image (Edit-2511 by default, Apache-2.0; 2.1 as a non-commercial Modal opt-in) - style transfer, backgrounds, prompts",
       "usage": "uv run tools/image_edit.py --input photo.jpg --prompt 'Add sunglasses' --output edited.png",
       "status": "stable",
       "category": "image-editing",
-      "backend": "qwen-image-edit-2511",
-      "requires": "RunPod account",
+      "backend": "qwen-image-edit-2511 (default) / qwen-image-2.1 (IMAGE_EDIT_MODEL=qwen-image-2.1 at Modal deploy time)",
+      "requires": "Modal or RunPod account",
       "presets": {
         "background": [
           "office",
@@ -470,11 +475,12 @@
       "usage": "uv run tools/soulx.py --image presenter_16x9.png --audio voiceover.mp3 --size 768 --output narrator.mp4",
       "status": "beta",
       "category": "video-generation",
-      "backend": "soulx-flashhead-1.3b-pro",
+      "backend": "soulx-flashhead-1.3b-pro | soulx-flashhead-1.3b-lite",
       "requires": "Modal account",
       "options": {
+        "model": "pro (default) or lite — Lite is the draft mode: ~8x faster per chunk, no torch.compile, unloaded before any Pro render",
         "size": "target long edge, default 768; aspect ratio follows the input image",
-        "width/height": "exact dimensions instead of size; both must be multiples of 16",
+        "width/height": "exact dimensions instead of size; multiples of 16 (Pro) or 32 (Lite, so 768x432 is illegal; 512x288 / 1024x576 are exact 16:9)",
         "seed": true,
         "faceCrop": "upstream face detect+crop, square-only so it discards a 16:9 framing, default off",
         "compare": "also write a labelled side-by-side against an existing render",
@@ -483,10 +489,10 @@
       "envVars": [
         "MODAL_SOULX_ENDPOINT_URL"
       ],
-      "estimatedCost": "~$0.0024 per second of output (measured 6.4-7.9x realtime on A10G), plus a one-off ~600s torch.compile per container per resolution",
+      "estimatedCost": "Pro ~$0.0024 per second of output (measured 6.4-7.9x realtime on A10G), plus a one-off ~600s torch.compile per container per resolution; Lite ~$0.0004 per second of output",
       "documentation": "docs/soulx.md",
       "created": "2026-08-31",
-      "updated": "2026-10-01"
+      "updated": "2026-10-02"
     },
     "qwen3_tts": {
       "path": "tools/qwen3_tts.py",
@@ -594,20 +600,23 @@
       "status": "beta",
       "category": "project",
       "requires": "ElevenLabs API key (Scribe)",
+      "options": {
+        "model": "scribe_v2 (default), scribe_v1 (deprecated)"
+      },
       "envVars": [
         "ELEVENLABS_API_KEY"
       ],
       "created": "2026-05-07",
-      "updated": "2026-05-07"
+      "updated": "2026-10-02"
     },
     "flux2": {
       "path": "tools/flux2.py",
-      "description": "AI image generation and editing using FLUX.2 Klein 4B - text-to-image, image editing, and scene presets",
+      "description": "AI image generation and editing using FLUX.2 Klein (4B by default, Apache-2.0; 9B as a non-commercial Modal opt-in) - text-to-image, image editing, and scene presets",
       "usage": "uv run tools/flux2.py --preset title-bg --brand digital-samba",
       "status": "beta",
       "category": "image-generation",
-      "backend": "flux2-klein-4b",
-      "requires": "RunPod account",
+      "backend": "flux2-klein-4b (default) / flux2-klein-9b (FLUX2_MODEL=klein-9b at Modal deploy time); flux2-small-decoder on Modal",
+      "requires": "Modal or RunPod account (klein-9B also needs the huggingface-token secret)",
       "options": {
         "modes": [
           "generate",
@@ -647,41 +656,45 @@
         "RUNPOD_API_KEY",
         "RUNPOD_FLUX2_ENDPOINT_ID"
       ],
-      "estimatedCost": "$0.01-0.03 per image",
+      "estimatedCost": "$0.01-0.03 per image warm; ~$0.06 including a Modal cold start",
       "created": "2026-03-14",
-      "updated": "2026-03-15"
+      "updated": "2026-10-02"
     },
     "ideogram4": {
       "path": "tools/ideogram4.py",
-      "description": "Ideogram 4 text-to-image via hosted v4 API — best-in-class in-image text rendering and exact color/layout control through structured JSON captions",
+      "description": "Ideogram 4.5 (default) / 4 text-to-image and 4.5 precise edit via hosted v2 API — best-in-class in-image text rendering and exact color/layout control through structured JSON captions",
       "usage": "uv run tools/ideogram4.py --json caption.json --output title.png",
       "status": "beta",
       "category": "image-generation",
-      "backend": "ideogram-4 hosted v4 API",
+      "backend": "hosted v2 API (ideogram-4-5 default, ideogram-4 via --model 4)",
       "requires": "IDEOGRAM_API_KEY (developer.ideogram.ai)",
       "options": {
         "modes": [
-          "json_prompt (--json)",
-          "text_prompt (--prompt)"
+          "json caption (--json)",
+          "text prompt (--prompt)",
+          "precise edit (--edit, 4.5 only; optional --mask, --reference)"
         ],
-        "rendering_speed": [
-          "FLASH",
-          "TURBO",
-          "DEFAULT",
-          "QUALITY"
+        "model": [
+          "4.5",
+          "4"
         ],
+        "quality": "4.5 only: low, medium, high (very_low with --edit)",
+        "rendering_speed": "4 only: turbo, default, quality",
+        "seed": true,
+        "numImages": "1-8",
+        "dryRun": "price quote without generating (?dry_run=true)",
         "brand": true
       },
-      "note": "Commercial license via paid API. Skill `.claude/skills/ideogram4/` teaches the JSON caption format; Claude is the magic-prompt expander. Live-tested (json_prompt + text_prompt paths)."
+      "note": "Commercial license via paid API. Skill `.claude/skills/ideogram4/` teaches the JSON caption format; Claude is the magic-prompt expander. The v1 paths were live-tested; the v2 rewrite (2026-10-02) is verified against the docs and a mocked run only."
     },
     "ltx2": {
       "path": "tools/ltx2.py",
-      "description": "AI video generation using LTX-2.3 22B - text-to-video, image-to-video clips with synchronized audio",
+      "description": "AI video generation using LTX-2.5 22B - text-to-video, image-to-video clips with synchronized audio",
       "usage": "uv run tools/ltx2.py --prompt \"A sunset over the ocean\" --output sunset.mp4",
       "status": "beta",
       "category": "video-generation",
-      "backend": "ltx-2.3-22b",
-      "requires": "Modal account, HuggingFace token",
+      "backend": "ltx-2.5-22b",
+      "requires": "Modal account, huggingface-token Modal secret (gated Lightricks/LTX-2.5 terms accepted)",
       "options": {
         "modes": [
           "text-to-video",
@@ -712,9 +725,9 @@
       "envVars": [
         "MODAL_LTX2_ENDPOINT_URL"
       ],
-      "estimatedCost": "$0.20-0.25 per 5s clip",
+      "estimatedCost": "~$0.13 measured for a 25-frame 512x512 fast clip (~2 min of each request is weight loading); default 5s clip unmeasured",
       "created": "2026-03-25",
-      "updated": "2026-04-21"
+      "updated": "2026-10-02"
     },
     "chain_video": {
       "path": "tools/chain_video.py",
@@ -722,7 +735,7 @@
       "usage": "uv run tools/chain_video.py --scenes-dir images/ --output-dir videos/ --prompt \"Cinematic flow\"",
       "status": "beta",
       "category": "video-generation",
-      "backend": "ltx-2.3-22b (via ltx2.py)",
+      "backend": "ltx-2.5-22b (via ltx2.py)",
       "requires": "Modal account (same as ltx2)",
       "options": {
         "inputModes": [
@@ -896,8 +909,9 @@
           "operations": [
             "flux2"
           ],
-          "gpu": "A10G",
-          "estimatedCost": "$0.01-0.03 per image"
+          "gpu": "A10G (L40S with FLUX2_MODEL=klein-9b)",
+          "model": "FLUX.2-klein-4B, or klein-9B via FLUX2_MODEL=klein-9b; FLUX.2-small-decoder (diffusers 0.40.0)",
+          "estimatedCost": "~$0.003 per image warm, ~$0.06 with a cold start"
         },
         "upscale": {
           "appFile": "docker/modal-upscale/app.py",
@@ -914,8 +928,9 @@
           "operations": [
             "image_edit"
           ],
-          "gpu": "A100",
-          "estimatedCost": "$0.02-0.05 per image"
+          "gpu": "A100-80GB",
+          "model": "Qwen-Image-Edit-2511, or Qwen-Image-2.1 via IMAGE_EDIT_MODEL=qwen-image-2.1 (diffusers main @ c60830ee)",
+          "estimatedCost": "~$0.02 per image warm (40 steps), ~$0.12 with a cold start"
         },
         "music-gen": {
           "appFile": "docker/modal-music-gen/app.py",
@@ -924,6 +939,7 @@
             "music_gen"
           ],
           "gpu": "A10G",
+          "model": "ACE-Step 1.5 XL Turbo (acestep-v15-xl-turbo), ACE-Step-1.5 v0.1.8",
           "estimatedCost": "$0.02-0.10 per generation"
         },
         "sadtalker": {
@@ -944,7 +960,7 @@
           "gpu": "A10G",
           "gpuOverride": "SOULX_GPU at deploy time, e.g. L40S for 1280x720 (OOMs on A10G)",
           "weights": "modal-volume",
-          "estimatedCost": "~$0.0024 per second of output, plus a one-off ~600s torch.compile per container per resolution"
+          "estimatedCost": "Pro ~$0.0024 per second of output, plus a one-off ~600s torch.compile per container per resolution; Lite ~$0.0004 per second of output"
         },
         "dewatermark": {
           "appFile": "docker/modal-propainter/app.py",
@@ -963,11 +979,13 @@
             "image-to-video"
           ],
           "gpu": "A100-80GB",
-          "estimatedCost": "$0.20-0.25 per 5s clip"
+          "model": "LTX-2.5 22B dev + distilled LoRA (LTX-2 v1.4.2)",
+          "secret": "huggingface-token",
+          "estimatedCost": "~$0.13 for a 25-frame 512x512 fast clip; default 5s clip unmeasured"
         }
       },
       "created": "2026-03-23",
-      "updated": "2026-03-25"
+      "updated": "2026-10-02"
     }
   },
   "templates": {

@@ -8,6 +8,65 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+Model refresh. Every self-hosted and hosted model was checked against its upstream
+on 2026-10-02 and moved to the newest release where one exists under a licence the
+toolkit can default to; the newer non-commercial image models are a deploy-time
+opt-in. Each Modal app was redeployed and smoke-tested; endpoint URLs are unchanged.
+RunPod images are untouched.
+
+### Changed
+- **LTX-2.3 → LTX-2.5** (`modal-ltx2`). LTX-2 repo pinned to v1.4.2, split weights
+  from the gated `Lightricks/LTX-2.5` repo loaded via `ModelPaths.from_split`, Gemma 4
+  text encoder bundled (no separate Gemma licence), torch 2.13 / cu130, transformers
+  5.14.1. Still dev transformer + distilled LoRA, so `quality`, `steps` and negative
+  prompts keep working; the request contract is unchanged. Image is ~80GB. The
+  `crt-terminal` LoRA was trained on 2.3 and is unvalidated on 2.5.
+- **`modal-flux2`: FLUX.2-small-decoder** (Apache-2.0, ~1.4x faster decode) and
+  `diffusers==0.40.0` in place of the commit pin. klein-4B stays the default.
+- **`modal-image-edit`: diffusers pinned** to main @ `c60830ee` (was unpinned main),
+  with transformers 5.17 / torch 2.11. Qwen-Image-Edit-2511 stays the default, and
+  the Modal app now leaves steps and the image cap to the deployed model.
+- **ACE-Step 1.5 → 1.5 XL Turbo (4B)** (`modal-music-gen`). ACE-Step-1.5 pinned to
+  v0.1.8, weights baked into `checkpoints/` (v0.1.8 no longer reads the HF cache),
+  torch 2.10, `shift=3.0` default. Still fits the A10G.
+- **Ideogram 4 → 4.5 on the v2 API** (`tools/ideogram4.py`). 4.5 is the default and
+  `--model 4` keeps 4.0; new `--quality`, `--size`, `--seed`, `--num-images`,
+  `--magic-prompt`, `--dry-run` (price quote) and `--edit` (4.5 precise edit with
+  optional mask). Verified against the docs and a mocked run, not yet live.
+- **ElevenLabs:** `scribe_v2` is the STT default in `redub` and `align_captions`
+  (`scribe_v1` is deprecated, `scribe_v1_experimental` removed). `eleven_v4` added
+  to `voiceover` and `redub` via the Text to Dialogue API (stability + similarity
+  only, chunked above 2,000 characters). `eleven_turbo_v2_5` removed (deprecated).
+  Default stays `eleven_multilingual_v2`. `elevenlabs>=2.21.0`.
+- **Captions:** `concept-explainer-short` `whisperModel` now defaults to `"auto"` —
+  Whisper `turbo` on CUDA, `base` on CPU. `openai-whisper>=20240930`.
+- **Cost estimates** use Modal's current rates (A100-80GB $2.50/h, was $4.68; H100
+  $3.95/h; L40S added) and the GPU each Modal app actually runs on.
+
+### Added
+- **Opt-in non-commercial models, chosen at deploy time.** Licences differ, so the
+  Apache-2.0 models stay the default and the newer ones need an explicit switch:
+  - `FLUX2_MODEL=klein-9b` deploys FLUX.2-klein-9B (gated, FLUX Non-Commercial
+    licence, outputs need review) on an L40S.
+  - `IMAGE_EDIT_MODEL=qwen-image-2.1` deploys Qwen-Image-2.1 (`QwenImage21Pipeline`,
+    up to 10 input images, RGBA; Qwen Research licence, non-commercial).
+  The endpoint URL is unchanged either way, and the tools print the `Model:` that ran.
+- **SoulX-FlashHead Lite** (`soulx.py --model lite`): the draft mode, ~8x faster per
+  chunk than Pro at ~$0.0004 per second of output, no torch.compile. Sizes snap to a
+  32px grid. Lite is unloaded before any Pro render. Supersedes SadTalker for drafts.
+
+### Fixed
+- **Modal setup docs:** every GPU app needs a payment method on a new workspace, not
+  just the A100s (A10G deploys fail too). Also documented: Modal's Hugging Face secret
+  template defaults to the name `huggingface-secret`, and deploy output wraps long
+  endpoint URLs across lines.
+
+### Notes
+- `FLUX2_MODEL=klein-9b` needs the `huggingface-token` Modal secret too (gated
+  weights), like `modal-ltx2`.
+- `qwen-tts` pinned to 0.1.1 in `modal-qwen3-tts`; no newer Qwen TTS model exists.
+  SoulX-FlashHead, Real-ESRGAN and ProPainter are already on their latest releases.
+
 ---
 
 ## 2026-10-02 (v0.20.2)

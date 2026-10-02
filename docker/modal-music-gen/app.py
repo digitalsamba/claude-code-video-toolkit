@@ -1,73 +1,99 @@
 """
-Modal deployment for ACE-Step 1.5 music generation.
+Modal deployment for ACE-Step 1.5 XL Turbo music generation.
 
 Deploy:
     modal deploy docker/modal-music-gen/app.py
 
-Capabilities: text-to-music, vocal music with lyrics, cover/style transfer, stem extraction.
+Capabilities: text-to-music, vocal music with lyrics, cover/style transfer, stem extraction
+(extract needs a base DiT — turbo models don't support it upstream).
 
-Note: Uses A10G (24GB VRAM). Cold start ~60-90s (models are baked into image).
+Model: ACE-Step 1.5 XL Turbo (4B DiT, 8 steps, MIT) on ACE-Step-1.5 v0.1.8.
+The XL weights ship as fp32 (~20GB) and load as bf16 (~10GB VRAM), so XL turbo +
+VAE + text encoder fit an A10G (24GB) without offload. The 5Hz LM and the 2B turbo
+DiT are baked only because the handler's presence check requires them; neither is
+loaded (thinking mode is acemusic-only).
+
+Note: Uses A10G (24GB VRAM). Cold start ~50s (~37s of it model load; ~30GB of
+weights baked into image). Warm: ~4s for 10s of audio.
 """
 
 import modal
 
 app = modal.App("video-toolkit-music-gen")
 
-# Build image with ACE-Step repo and baked model weights (~10GB)
+# Upstream code pin. v0.1.8 is a lightweight tag, so the commit is checked too.
+ACESTEP_REPO = "https://github.com/ACE-Step/ACE-Step-1.5.git"
+ACESTEP_TAG = "v0.1.8"
+ACESTEP_COMMIT = "dce621408bee8c31b4fcf4811682eb9359e1bc94"
+
+# Weight pins (HF commit shas). The handler reads <project_root>/checkpoints/<name>,
+# not the HF cache, so weights are downloaded straight into that layout.
+MAIN_MODEL_REVISION = "19671f406d603126926c1b7e2adc169acbcade22"  # ACE-Step/Ace-Step1.5
+XL_TURBO_REVISION = "d4a0b288b83ebb7e25a8c0b32c573c22e134e8ee"  # ACE-Step/acestep-v15-xl-turbo
+CHECKPOINTS_DIR = "/app/acestep-repo/checkpoints"
+DIT_CONFIG = "acestep-v15-xl-turbo"
+
+# Build image with ACE-Step repo and baked model weights (~30GB)
 image = (
-    modal.Image.from_registry("nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04", add_python="3.11")
-    .apt_install("git", "git-lfs", "ffmpeg", "libsndfile1")
-    .run_commands("git lfs install")
+    modal.Image.from_registry("nvidia/cuda:12.8.1-cudnn-devel-ubuntu22.04", add_python="3.11")
+    .apt_install("git", "ffmpeg", "libsndfile1")
+    # Torch stack and core deps pinned to upstream v0.1.8's uv.lock (Linux x86_64, CUDA 12.8)
     .pip_install(
-        "torch==2.5.1",
-        "torchaudio==2.5.1",
-        "torchvision==0.20.1",
-        "transformers>=4.51.0,<4.58.0",
-        "diffusers",
-        "accelerate>=1.12.0",
-        "safetensors>=0.7.0",
-        "soundfile>=0.13.1",
-        "einops>=0.8.1",
-        "scipy>=1.10.1",
-        "vector-quantize-pytorch>=1.27.15",
-        "numba>=0.63.1",
-        "toml",
-        "loguru>=0.7.3",
-        "peft>=0.18.0",
+        "torch==2.10.0+cu128",
+        "torchaudio==2.10.0+cu128",
+        "torchvision==0.25.0+cu128",
+        extra_index_url="https://download.pytorch.org/whl/cu128",
+    )
+    .pip_install(
+        "transformers==4.57.6",
+        "diffusers==0.37.1",
+        "accelerate==1.12.0",
+        "safetensors==0.7.0",
+        "soundfile==0.13.1",
+        "einops==0.8.2",
+        "numpy==2.3.5",
+        "scipy==1.17.0",
+        "vector-quantize-pytorch==1.27.20",
+        "numba==0.63.1",
+        "toml==0.10.2",
+        "loguru==0.7.3",
+        "peft==0.18.1",
+        "diskcache==5.6.3",
+        # torchaudio>=2.9 routes save/load through torchcodec
+        "torchcodec==0.10.0",
+        # DCW sampler correction (on by default since v0.1.7); a no-op without these
+        "pytorch-wavelets==1.3.0",
+        "PyWavelets==1.9.0",
+        "xxhash==3.6.0",
         "boto3",
         "requests",
         "fastapi[standard]",
-        "huggingface_hub>=0.25.0",
+        "huggingface_hub==0.36.0",
     )
-    # Clone ACE-Step repo and install
+    # Clone ACE-Step repo at the pinned tag and install
     .run_commands(
-        "git clone --depth 1 https://github.com/ACE-Step/ACE-Step-1.5.git /app/acestep-repo",
+        f"git clone --depth 1 --branch {ACESTEP_TAG} {ACESTEP_REPO} /app/acestep-repo",
+        f'test "$(git -C /app/acestep-repo rev-parse HEAD)" = "{ACESTEP_COMMIT}"',
         "cd /app/acestep-repo/acestep/third_parts/nano-vllm && pip install --no-deps -e .",
         "cd /app/acestep-repo && pip install --no-deps -e .",
     )
-    # Bake model weights into image
+    # Bake model weights into image: main repo (VAE, Qwen3 text encoder, 5Hz LM, 2B turbo)...
     .run_commands(
         'python -c "'
         "from huggingface_hub import snapshot_download; "
-        "snapshot_download('ACE-Step/Ace-Step1.5', "
-        "allow_patterns=['acestep-v15-turbo/*', 'vae/*', 'config.json'])"
+        f"snapshot_download('ACE-Step/Ace-Step1.5', revision='{MAIN_MODEL_REVISION}', "
+        f"local_dir='{CHECKPOINTS_DIR}')"
         '"'
     )
+    # ...then the XL turbo DiT (4 x 5GB fp32 shards) as its own layer
     .run_commands(
         'python -c "'
         "from huggingface_hub import snapshot_download; "
-        "snapshot_download('ACE-Step/Ace-Step1.5', "
-        "allow_patterns=['acestep-5Hz-lm-1.7B/*'])"
+        f"snapshot_download('ACE-Step/acestep-v15-xl-turbo', revision='{XL_TURBO_REVISION}', "
+        f"local_dir='{CHECKPOINTS_DIR}/{DIT_CONFIG}')"
         '"'
     )
-    .run_commands(
-        'python -c "'
-        "from huggingface_hub import snapshot_download; "
-        "snapshot_download('ACE-Step/Ace-Step1.5', "
-        "allow_patterns=['Qwen3-Embedding-0.6B/*'])"
-        '"'
-    )
-    .env({"ACESTEP_CONFIG_PATH": "acestep-v15-turbo", "ACESTEP_DEVICE": "cuda"})
+    .env({"ACESTEP_CONFIG_PATH": DIT_CONFIG, "ACESTEP_DEVICE": "cuda"})
 )
 
 
@@ -94,11 +120,16 @@ class MusicGen:
         from acestep.handler import AceStepHandler
 
         self.dit_handler = AceStepHandler()
-        self.dit_handler.initialize_service(
+        # Returns (status, ok) instead of raising; fail the container loudly
+        # rather than serving requests with no model loaded.
+        status, ok = self.dit_handler.initialize_service(
             project_root="/app/acestep-repo",
-            config_path=os.environ.get("ACESTEP_CONFIG_PATH", "acestep-v15-turbo"),
+            config_path=os.environ.get("ACESTEP_CONFIG_PATH", DIT_CONFIG),
             device=os.environ.get("ACESTEP_DEVICE", "cuda"),
         )
+        if not ok:
+            raise RuntimeError(f"ACE-Step init failed: {status}")
+        print(status)
         print(f"DiT model loaded in {time.time() - t0:.1f}s")
 
     @modal.fastapi_endpoint(method="POST")
@@ -118,6 +149,10 @@ class MusicGen:
         lyrics = request.get("lyrics", "")
         duration = float(request.get("audio_duration", 30))
         steps = int(request.get("inference_steps", 8))
+        # Upstream-recommended turbo shift. Since v0.1.7 explicit steps build a
+        # shifted schedule (8 steps @ 3.0 == the distilled shift-3 table); the
+        # GenerationParams default of 1.0 would give a plain linear schedule.
+        shift = float(request.get("shift", 3.0))
         audio_format = request.get("audio_format", "mp3")
         seed = request.get("seed")
         r2_config = request.get("r2")
@@ -135,6 +170,7 @@ class MusicGen:
                 lyrics=lyrics,
                 duration=duration,
                 inference_steps=steps,
+                shift=shift,
                 seed=seed,
                 vocal_language=request.get("vocal_language", "unknown"),
             )
@@ -177,7 +213,7 @@ class MusicGen:
 
             save_dir = tempfile.mkdtemp(prefix="acestep_")
 
-            print(f"Generating: {task_type}, {duration}s, {steps} steps, seed={seed}")
+            print(f"Generating: {task_type}, {duration}s, {steps} steps, shift={shift}, seed={seed}")
             result = generate_music(
                 dit_handler=self.dit_handler,
                 llm_handler=None,
@@ -206,12 +242,11 @@ class MusicGen:
             if not output_path or not Path(output_path).exists():
                 return {"error": "No output audio file produced"}
 
-            # Get actual duration
+            # Get actual duration (torchaudio.info is gone since 2.9; libsndfile reads mp3)
             actual_duration = None
             try:
-                import torchaudio
-                info = torchaudio.info(output_path)
-                actual_duration = round(info.num_frames / info.sample_rate, 2)
+                import soundfile as sf
+                actual_duration = round(sf.info(output_path).duration, 2)
             except Exception:
                 pass
 

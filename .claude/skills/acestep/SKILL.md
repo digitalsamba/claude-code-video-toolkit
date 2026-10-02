@@ -9,7 +9,7 @@ Open-source music generation via `tools/music_gen.py`.
 
 **Cloud providers:**
 - **acemusic** (default) — Official ACE-Step cloud API with XL Turbo (4B) model + 5Hz LM thinking mode. Free API key from [acemusic.ai/api-key](https://acemusic.ai/api-key). No GPU required.
-- **modal** — Self-hosted ACE-Step 2B Turbo on Modal. Requires `MODAL_MUSIC_GEN_ENDPOINT_URL`.
+- **modal** — Self-hosted ACE-Step 1.5 XL Turbo (4B DiT, no LM) on Modal A10G. Requires `MODAL_MUSIC_GEN_ENDPOINT_URL`.
 - **runpod** — Self-hosted ACE-Step 2B Turbo on RunPod. Requires `RUNPOD_ACESTEP_ENDPOINT_ID`.
 
 ## Setup
@@ -67,7 +67,7 @@ uv run tools/music_gen.py --cloud modal --prompt "Background music" --duration 6
 
 If generated music sounds repetitive or lacks variety, try these in order:
 
-1. **Use acemusic cloud** (default) — the XL Turbo 4B model is significantly more capable than the 2B model on Modal/RunPod
+1. **Use acemusic cloud** (default) — XL Turbo 4B *plus* the 5Hz LM; Modal runs the same XL Turbo DiT but without the LM, RunPod is still 2B
 2. **Keep thinking mode on** (default for acemusic) — the 5Hz LM enriches sparse prompts into detailed musical descriptions
 3. **Generate variations** — `--variations 4` generates 4 takes, pick the best
 4. **Use stochastic inference** — `--infer-method sde` adds randomness (same seed gives different results)
@@ -212,6 +212,10 @@ Style transfer from reference audio. Control blend with `--cover-strength` (0.0-
 Stem separation — isolate individual tracks from mixed audio.
 Tracks: `vocals`, `drums`, `bass`, `guitar`, `piano`, `keyboard`, `strings`, `brass`, `woodwinds`, `other`
 
+> Upstream lists extract as a **base-model** task (`acestep-v15-base` / `-xl-base`). The turbo DiTs
+> the self-hosted endpoints serve (XL Turbo on Modal, 2B Turbo on RunPod) don't support it, so
+> expect weak stems there.
+
 ### repainting (acemusic only)
 Regenerate a specific time segment within existing audio while preserving the rest.
 ```bash
@@ -333,7 +337,8 @@ For consistent sound across a project: fix the seed (`--seed 42`) and vary only 
 ## Technical Details
 
 - **acemusic cloud**: XL Turbo 4B DiT + 4B LM, best quality, ~5-15s per generation
-- **Modal/RunPod**: Standard Turbo 2B DiT, no LM, ~2-3s per generation
+- **Modal**: XL Turbo 4B DiT (ACE-Step-1.5 v0.1.8), no LM, 8 steps at shift 3.0 (upstream's turbo recommendation; override with `shift` in the request), DCW sampler on. ~4s warm for 10s of audio, ~50s cold
+- **RunPod**: Standard Turbo 2B DiT, no LM, ~2-3s per generation
 - **Output**: 48kHz MP3/WAV/FLAC
 - **Duration range**: 10-600 seconds
 - **BPM range**: 30-300

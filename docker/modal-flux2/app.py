@@ -1,11 +1,20 @@
 """
-Modal deployment for FLUX.2 Klein 4B.
+Modal deployment for FLUX.2 [klein].
 
 Text-to-image generation and image editing.
 Equivalent to docker/runpod-flux2/handler.py but deployed on Modal.
 
-Deploy:
-    modal deploy docker/modal-flux2/app.py
+Deploy (the checkpoint is a deploy-time choice):
+    modal deploy docker/modal-flux2/app.py                       # klein-4B
+    FLUX2_MODEL=klein-9b modal deploy docker/modal-flux2/app.py  # klein-9B
+
+LICENSES -- they differ, which is why 4B stays the default:
+- klein-4B: Apache-2.0, commercial OK, ungated, fits an A10G.
+- klein-9B: FLUX Non-Commercial License, which also requires filters or manual
+  review of outputs. Sharper, but opt in only for personal/non-commercial work.
+  Gated on Hugging Face: accept the terms at
+  https://huggingface.co/black-forest-labs/FLUX.2-klein-9B and put a token in the
+  `huggingface-token` Modal secret (key HF_TOKEN) before deploying. Needs an L40S.
 
 Input format (POST JSON to web endpoint):
 {
@@ -15,63 +24,107 @@ Input format (POST JSON to web endpoint):
     "images_base64": [str],        # Optional additional reference images
     "width": int,                  # Default: 1024
     "height": int,                 # Default: 1024
-    "num_inference_steps": int,    # Default: 4 (generate), 50 (edit)
-    "guidance_scale": float,       # Default: 1.0 (generate), 4.0 (edit)
+    "num_inference_steps": int,    # Default: 4 (klein is step-distilled to 4)
+    "guidance_scale": float,       # Default: 1.0 (ignored by distilled klein)
     "seed": int,
     "r2": dict                     # Optional R2 upload config
 }
 """
 
+import os
+
 import modal
 
 app = modal.App("video-toolkit-flux2")
 
-MODEL_ID = "black-forest-labs/FLUX.2-klein-4B"
+# 9B is plain 9B, not FLUX.2-klein-9b-kv. The kv variant caches reference-image
+# keys/values after step 0, which only pays off for multi-reference *edits*;
+# this endpoint is mostly text-to-image, where it gains nothing, and its
+# pipeline (Flux2KleinKVPipeline) has a different call signature.
+VARIANTS = {
+    "klein-4b": {
+        "repo": "black-forest-labs/FLUX.2-klein-4B",
+        "single_file": "flux-2-klein-4b.safetensors",
+        "gated": False,
+        "gpu": "A10G",
+    },
+    "klein-9b": {
+        "repo": "black-forest-labs/FLUX.2-klein-9B",
+        "single_file": "flux-2-klein-9b.safetensors",
+        "gated": True,
+        # The 9B transformer (18.2GB) + Qwen3-8B text encoder (16.4GB) sit at
+        # ~35GB resident in bf16 -- past the A10G's 24GB.
+        "gpu": "L40S",
+    },
+}
 
-# Container image — mirrors docker/runpod-flux2/Dockerfile
+# Read at deploy time, and again inside the container when it re-imports this
+# file -- the image env below carries the deploy-time value into the container.
+FLUX2_MODEL = os.environ.get("FLUX2_MODEL", "klein-4b")
+if FLUX2_MODEL not in VARIANTS:
+    raise ValueError(f"FLUX2_MODEL must be one of {sorted(VARIANTS)}, got {FLUX2_MODEL!r}")
+VARIANT = VARIANTS[FLUX2_MODEL]
+MODEL_ID = VARIANT["repo"]
+
+# Distilled VAE decoder (Apache-2.0): ~1.4x faster decode and ~1.4x less decode
+# VRAM, encoder unchanged. A drop-in for every open FLUX.2 model. Needs
+# AutoencoderKLFlux2's decoder_block_out_channels, i.e. diffusers>=0.38.
+VAE_ID = "black-forest-labs/FLUX.2-small-decoder"
+
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("git")
+    # cu128 is the newest CUDA line that doesn't need a CUDA 13 driver on the host.
     .pip_install(
-        "torch==2.5.1",
-        "torchvision==0.20.1",
-        # Flux2KleinPipeline (diffusers git main) imports Qwen3ForCausalLM,
-        # which landed in transformers 4.51. The old >=4.45 floor let a
-        # cached pre-Qwen3 layer sit under a fresh diffusers, crash-looping
-        # the container at load_pipeline with ModuleNotFoundError.
-        "transformers>=4.51.0",
-        "accelerate>=0.30.0",
+        "torch==2.11.0",
+        "torchvision==0.26.0",
+        index_url="https://download.pytorch.org/whl/cu128",
+    )
+    .pip_install(
+        # A tagged release at last: Flux2KleinPipeline landed in 0.37.0. Pinned
+        # exactly so a rebuild can't drift onto a release the cached layers
+        # below don't satisfy (#71, #74). Bump deliberately, smoke-test after.
+        "diffusers==0.40.0",
+        # diffusers 0.40 needs huggingface_hub>=1.23, which transformers 4.x
+        # can't share (it caps hub <1.0) -- so transformers 5.
+        "transformers==5.17.0",
+        "huggingface_hub>=1.32.0,<2.0",
+        "accelerate>=1.1.0",
+        "safetensors>=0.8.0",
         "sentencepiece",
         "protobuf",
         "Pillow",
         "boto3",
         "requests",
         "fastapi[standard]",
-        "huggingface_hub>=0.25.0",
     )
-    # Flux2KleinPipeline is not in any tagged diffusers release yet, so this has
-    # to come from git. Pin the commit: an unpinned ref silently re-resolves on
-    # every rebuild, and when the new main needs a dependency the cached layer
-    # below it does not satisfy, the container dies in @modal.enter() -- which
-    # reads as a slow cold start rather than an error (#71, #74).
-    # Bump deliberately, and smoke-test the endpoint after.
-    .run_commands(
-        "pip install --no-cache-dir "
-        "git+https://github.com/huggingface/diffusers@119c339551f68ea523b9f204120b929e56342421"
-    )
-    # Bake model weights into the image
+    # Bake model weights into the image. The 9B repo is gated, so its download
+    # needs HF_TOKEN. Skip the single-file checkpoint at the repo root --
+    # from_pretrained reads the diffusers-format subfolders.
     .run_commands(
         'python -c "'
         "from huggingface_hub import snapshot_download; "
-        f"snapshot_download('{MODEL_ID}')"
+        f"snapshot_download('{MODEL_ID}', "
+        f"ignore_patterns=['{VARIANT['single_file']}', '*.jpg'])"
+        '"',
+        secrets=[modal.Secret.from_name("huggingface-token")] if VARIANT["gated"] else [],
+    )
+    .run_commands(
+        'python -c "'
+        "from huggingface_hub import snapshot_download; "
+        f"snapshot_download('{VAE_ID}', "
+        "allow_patterns=['config.json', 'diffusion_pytorch_model.safetensors'])"
         '"'
     )
+    # Everything is baked in, so never call the Hub at load time -- a gated
+    # repo would otherwise need the token in the running container too.
+    .env({"HF_HUB_OFFLINE": "1", "FLUX2_MODEL": FLUX2_MODEL})
 )
 
 
 @app.cls(
     image=image,
-    gpu="A10G",
+    gpu=VARIANT["gpu"],
     timeout=600,
     scaledown_window=60,
 )
@@ -90,13 +143,15 @@ class Flux2:
             props = torch.cuda.get_device_properties(0)
             print(f"GPU: {props.name}, VRAM: {props.total_memory // (1024**3)}GB")
 
-        print(f"Loading Flux2 Klein pipeline from {MODEL_ID}...")
+        print(f"Loading Flux2 Klein pipeline from {MODEL_ID} (VAE: {VAE_ID})...")
         start = time.time()
 
-        from diffusers import Flux2KleinPipeline
+        from diffusers import AutoencoderKLFlux2, Flux2KleinPipeline
 
+        vae = AutoencoderKLFlux2.from_pretrained(VAE_ID, torch_dtype=torch.bfloat16)
         self.pipeline = Flux2KleinPipeline.from_pretrained(
             MODEL_ID,
+            vae=vae,
             torch_dtype=torch.bfloat16,
         )
         self.pipeline.to("cuda")
@@ -128,6 +183,11 @@ class Flux2:
         r2_config = request.get("r2")
         start_time = time.time()
 
+        # klein is step-distilled to 4 steps for both generation and editing,
+        # and the pipeline ignores guidance_scale for distilled checkpoints.
+        num_inference_steps = request.get("num_inference_steps", 4)
+        guidance_scale = request.get("guidance_scale", 1.0)
+
         try:
             generator = torch.Generator(device="cuda").manual_seed(seed)
 
@@ -149,9 +209,6 @@ class Flux2:
 
                 image_input = all_images if len(all_images) > 1 else all_images[0]
 
-                num_inference_steps = request.get("num_inference_steps", 50)
-                guidance_scale = request.get("guidance_scale", 4.0)
-
                 output = self.pipeline(
                     prompt=prompt,
                     image=image_input,
@@ -163,8 +220,6 @@ class Flux2:
                 # Text-to-image generation
                 width = request.get("width", 1024)
                 height = request.get("height", 1024)
-                num_inference_steps = request.get("num_inference_steps", 4)
-                guidance_scale = request.get("guidance_scale", 1.0)
 
                 output = self.pipeline(
                     prompt=prompt,
@@ -192,6 +247,7 @@ class Flux2:
                 "image_size": list(output_image.size),
                 "num_inference_steps": num_inference_steps,
                 "guidance_scale": guidance_scale,
+                "model": MODEL_ID,
             }
 
             # Upload to R2 if configured

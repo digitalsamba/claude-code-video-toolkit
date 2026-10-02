@@ -11,12 +11,24 @@ client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 
 ## Text-to-Speech Models
 
-| Model ID | Description | Languages | Latency |
-|----------|-------------|-----------|---------|
-| `eleven_flash_v2_5` | Ultra-low latency streaming | 32 | ~75ms |
-| `eleven_multilingual_v2` | Highest quality | 32 | Standard |
-| `eleven_turbo_v2_5` | Fast, good quality | 32 | Low |
-| `eleven_v3` | Best emotional range (alpha) | 32+ | Higher |
+| Model ID | Description | Languages | Latency | Max chars/request |
+|----------|-------------|-----------|---------|-------------------|
+| `eleven_v4` | Most expressive, best clone accuracy | 90+ | Higher | ~2,000 via Text to Dialogue (10,000 via TTS) |
+| `eleven_v4_turbo` | Real-time v4 (Text to Dialogue WebSocket only) | 90+ | ~100ms | — |
+| `eleven_multilingual_v2` | Highest consistency | 29 | Standard | 10,000 |
+| `eleven_flash_v2_5` | Ultra-low latency streaming | 32 | ~75ms | 40,000 |
+| `eleven_v3` | Expressive, previous generation | 70+ | Higher | 5,000 |
+
+Deprecated: `eleven_turbo_v2_5` (→ `eleven_flash_v2_5`), `eleven_turbo_v2` (→ `eleven_flash_v2`).
+
+## Speech-to-Text Models
+
+| Model ID | Use |
+|----------|-----|
+| `scribe_v2` | Batch transcription with word timestamps, diarization, 90+ languages (current) |
+| `scribe_v2_realtime` | Live streaming transcription (~150ms) |
+| `scribe_v2_medical` | Clinical audio; same API as `scribe_v2` |
+| `scribe_v1` | Deprecated → `scribe_v2` |
 
 ## Voice Settings
 
@@ -25,7 +37,9 @@ client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 | `stability` | 0.0-1.0 | 0.5 | Lower = more expressive/variable |
 | `similarity_boost` | 0.0-1.0 | 0.75 | Higher = closer to original voice |
 | `style` | 0.0-1.0 | 0.0 | Style exaggeration (v2 models) |
-| `speed` | 0.5-2.0 | 1.0 | Playback speed multiplier |
+| `speed` | 0.7-1.2 | 1.0 | Speech speed multiplier |
+
+**Eleven v4** takes only stability and similarity: no style, no speed, no SSML. On Text to Dialogue they go in `settings={"stability": ..., "similarity": ...}`, and similarity defaults to 0.75.
 
 ## Output Formats
 

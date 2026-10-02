@@ -116,6 +116,12 @@ Karaoke pills, 1–3 words at a time, timed from whisper word timestamps but
 size, and chunking in `config.json → captions`; defaults clear platform UI and
 the bottom rows of Ideogram list cards. Set `enabled: false` to skip.
 
+`whisperModel: "auto"` (the default) uses whisper's `turbo` (large-v3-turbo,
+~6GB VRAM; needs openai-whisper ≥ 20240930) when CUDA is available and `base`
+on CPU. Set an explicit name (`"base"`, `"small"`, `"turbo"`, …) to override —
+e.g. `"base"` on a GPU with less than ~6GB. Only timing comes from whisper, so
+a bigger model buys tighter word boundaries, not different caption text.
+
 ## Re-rendering
 
 Everything is idempotent and cached. Re-run `gen_vo.py --force` after script

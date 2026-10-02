@@ -4,8 +4,46 @@ Documented from session on 2026-01-01. Milestone 1.2 of video generation pipelin
 
 ## Model Overview
 
+> **2026-10 update:** the Modal deployment (`docker/modal-image-edit/`) can also run
+> **Qwen/Qwen-Image-2.1** as a non-commercial opt-in -- see the next section. 2511 stays
+> the default on Modal and RunPod, and everything after that section was learned on 2511.
+
+### Qwen-Image-2.1 (Modal opt-in)
+
+Deploy with `IMAGE_EDIT_MODEL=qwen-image-2.1 uv run modal deploy docker/modal-image-edit/app.py`.
+
+
+**Model:** Qwen/Qwen-Image-2.1 (released 2026-09-14)
+**Pipeline:** `QwenImage21Pipeline` -- only on diffusers main so far; the app pins commit
+`c60830ee365d520ab52b110dda562dd26f7b4d7f` (2026-09-30) and `transformers==5.17.0`
+**License:** Qwen Research License -- **non-commercial** ("research or evaluation purposes
+only"). Deploy without `IMAGE_EDIT_MODEL` to go back to the Apache-2.0 2511.
+**Task:** Unified text-to-image + editing (the endpoint exposes editing only)
+
+- 7B single-stream DiT (32 layers) + Qwen3-VL text encoder; ~33GB bf16 weights, run on
+  an A100-80GB
+- Up to 10 reference images; local edits via circles, painted annotations or separate masks
+- Native RGBA: edit transparent layers, extract subjects onto transparency
+- 40 steps, no guidance (`true_cfg_scale=1.0`) are the model card defaults; output ~1MP
+  following the input's aspect ratio (native up to 2K via `output_resolution`)
+- Prefix KV cache: text + condition-image tokens are computed on step 0 and reused, so extra
+  references cost far less than a full re-encode per step
+
+```python
+pipe = QwenImage21Pipeline.from_pretrained("Qwen/Qwen-Image-2.1", torch_dtype=torch.bfloat16).to("cuda")
+image = pipe(
+    prompt="Change the background to a sunset beach",
+    image=input_image,              # or a list of up to 10
+    num_inference_steps=40,
+    generator=torch.Generator("cuda").manual_seed(42),
+).images[0]
+```
+
+### Qwen-Image-Edit-2511 (default)
+
 **Model:** Qwen/Qwen-Image-Edit-2511
 **Pipeline:** QwenImageEditPlusPipeline (diffusers)
+**License:** Apache-2.0 (commercial OK)
 **Task:** Identity-preserving image editing
 
 ## GPU Requirements

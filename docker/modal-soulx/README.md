@@ -17,6 +17,15 @@ uv run modal deploy docker/modal-soulx/app.py
 Endpoints: `generate_web` (POST) and `health` (GET). `SOULX_COMPILE=0` at
 deploy time disables `torch.compile` for one-off renders at unusual sizes.
 
+One class serves both variants. **Pro** loads at container start, exactly as
+before. **Lite** (`"model": "lite"` in the request) is loaded into the same
+container on the first request that asks for it (~12s), and always runs
+eager — compile costs Pro 10-20 minutes per resolution, and Lite's 0.5-1.1s
+chunks would never pay that back. Lite is **evicted before every Pro render**,
+so Pro keeps the VRAM headroom it had before Lite existed (Pro peaked at
+17.5GB at 640x640 with Lite resident). A container that only serves Pro never
+loads it.
+
 ## Why this model
 
 It replaced EchoMimicV3, which was never released. Identity drift made that one
@@ -55,8 +64,15 @@ second of output. **A floor, not a ceiling:** upstream's quoted 10.8 FPS on a
   `target_size` flows into `lat_h = target_h // vae_stride[1]`, so a
   non-divisible size floors silently and desyncs the latent grid from the pixel
   grid — a wrong render rather than an error. Pro uses the **Wan2.1** VAE
-  (stride 8, grid 16); Lite uses the **LTX-Video** VAE (stride 32, grid 64).
-  768x432 is legal for Pro and illegal for Lite. `_check_size` raises instead.
+  (stride 8) with 2x2 patches: grid 16. Lite uses the **LTX-Video** VAE
+  (stride 32) and does not patchify (`Model_Lite/config.json`:
+  `patch_size [1,1,1]`): grid **32**, not the 64 this file once said. 768x432
+  is legal for Pro and illegal for Lite. `_check_size` raises instead.
+- **Both variants write the same module-global.** `get_pipeline` stores
+  `motion_frames_num` (5 for Pro, 9 for Lite — it follows the VAE's temporal
+  stride) into `flash_head.inference.infer_params`, so with both loaded the
+  last load would win and the other variant would render with the wrong chunk
+  overlap. Each load snapshots its values and each render restores them.
 - **`--use_face_crop` is square-only** whatever the config says:
   `utils/facecrop.py` sets `new_height = new_width` unconditionally. Off for
   16:9 work.

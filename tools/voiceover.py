@@ -12,6 +12,9 @@ Usage:
     # With custom voice
     uv run tools/voiceover.py --script script.txt --voice-id ABC123 --output out.mp3
 
+    # Eleven v4 (most expressive; Text to Dialogue API, stability + similarity only)
+    uv run tools/voiceover.py --model eleven_v4 --scene-dir public/audio/scenes --json
+
     # JSON output for machine parsing
     uv run tools/voiceover.py --script script.txt --output out.mp3 --json
 
@@ -84,6 +87,7 @@ Examples:
   # ElevenLabs (default)
   uv run tools/voiceover.py --script VOICEOVER-SCRIPT.md --output public/audio/voiceover.mp3
   uv run tools/voiceover.py --scene-dir public/audio/scenes --json
+  uv run tools/voiceover.py --model eleven_v4 --scene-dir public/audio/scenes --json
 
   # Qwen3-TTS
   uv run tools/voiceover.py --provider qwen3 --speaker Ryan --scene-dir public/audio/scenes --json
@@ -135,8 +139,9 @@ Examples:
         "-m",
         type=str,
         default="eleven_multilingual_v2",
-        choices=["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5", "eleven_v3"],
-        help="ElevenLabs model (default: eleven_multilingual_v2). eleven_v3 is alpha.",
+        choices=["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_v3", "eleven_v4"],
+        help="ElevenLabs model (default: eleven_multilingual_v2). eleven_v4 is the most "
+             "expressive (Text to Dialogue API; stability + similarity only, no style/speed/SSML).",
     )
     parser.add_argument(
         "--stability",
@@ -299,6 +304,150 @@ def get_audio_duration(file_path: str) -> float | None:
     return None
 
 
+# Eleven v4 is generated through the Text to Dialogue API (one input, the chosen
+# voice). It takes only stability + similarity — no style, speed or SSML — and is
+# reliable up to ~2,000 chars per request, so longer text is chunked.
+DIALOGUE_MAX_CHARS = 2000
+_dialogue_settings_warned = False
+
+
+def is_dialogue_model(model: str) -> bool:
+    """True for ElevenLabs models generated via Text to Dialogue, not Text to Speech."""
+    return model.startswith("eleven_v4")
+
+
+def warn_dialogue_ignored_settings(model: str, style: float, speed: float) -> None:
+    """Warn once (stderr) when style/speed are set for a model that ignores them."""
+    global _dialogue_settings_warned
+    ignored = []
+    if style:
+        ignored.append(f"style={style}")
+    if speed != 1.0:
+        ignored.append(f"speed={speed}")
+    if ignored and not _dialogue_settings_warned:
+        print(
+            f"Note: {model} uses only stability + similarity; ignoring {', '.join(ignored)}.",
+            file=sys.stderr,
+        )
+        _dialogue_settings_warned = True
+
+
+def split_dialogue_text(text: str, limit: int = DIALOGUE_MAX_CHARS) -> list[str]:
+    """Split text into chunks of at most `limit` chars, on sentence boundaries where possible."""
+    import re
+
+    text = text.strip()
+    if len(text) <= limit:
+        return [text]
+
+    # (sentence, whitespace that followed it) — keeps paragraph breaks inside a chunk
+    units = []
+    parts = re.split(r"(?<=[.!?])(\s+)", text)
+    for sentence, sep in zip(parts[0::2], parts[1::2] + [""]):
+        while len(sentence) > limit:  # a single over-long sentence: break at a space
+            cut = sentence.rfind(" ", 0, limit + 1)
+            if cut <= 0:
+                cut = limit
+            units.append((sentence[:cut], " "))
+            sentence = sentence[cut:].lstrip()
+        if sentence:
+            units.append((sentence, sep))
+
+    chunks, current, pending_sep = [], "", ""
+    for sentence, sep in units:
+        candidate = current + pending_sep + sentence if current else sentence
+        if len(candidate) > limit:
+            chunks.append(current)
+            candidate = sentence
+        current, pending_sep = candidate, sep
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def generate_dialogue_audio(
+    client,
+    text: str,
+    voice_id: str,
+    output_path: str,
+    model: str = "eleven_v4",
+    stability: float | None = None,
+    similarity: float | None = None,
+    with_timestamps: bool = False,
+) -> dict:
+    """Generate single-speaker audio via the ElevenLabs Text to Dialogue API.
+
+    Text over DIALOGUE_MAX_CHARS is generated per chunk and joined with ffmpeg.
+    Returns {"chunks": n}; with with_timestamps=True it also carries
+    "alignment": {"characters", "starts", "ends"} (seconds) re-based onto the
+    joined audio, with a space inserted between chunks so word splitting holds.
+    Settings left as None fall back to the voice's stored settings.
+    """
+    import base64
+    import shutil
+    import tempfile
+
+    from elevenlabs import DialogueInput
+
+    _, _, save = _get_elevenlabs_imports()
+
+    settings = {}
+    if stability is not None:
+        settings["stability"] = stability
+    if similarity is not None:
+        settings["similarity"] = similarity
+
+    chunks = split_dialogue_text(text)
+    tmp_dir = Path(tempfile.mkdtemp(prefix="el_dialogue_")) if len(chunks) > 1 else None
+    chunk_paths: list[Path] = []
+    chars: list[str] = []
+    starts: list[float] = []
+    ends: list[float] = []
+    offset = 0.0
+
+    try:
+        for i, chunk in enumerate(chunks):
+            path = Path(output_path) if tmp_dir is None else tmp_dir / f"chunk_{i:03d}.mp3"
+            request = {
+                "inputs": [DialogueInput(text=chunk, voice_id=voice_id)],
+                "model_id": model,
+            }
+            if settings:
+                request["settings"] = settings
+
+            if with_timestamps:
+                res = client.text_to_dialogue.convert_with_timestamps(**request)
+                path.write_bytes(base64.b64decode(res.audio_base_64))
+                align = res.alignment or res.normalized_alignment
+                if align is None:
+                    raise RuntimeError("Text to Dialogue returned no character alignment")
+                if chars:
+                    chars.append(" ")
+                    starts.append(offset)
+                    ends.append(offset)
+                chars.extend(align.characters)
+                starts.extend(offset + t for t in align.character_start_times_seconds)
+                ends.extend(offset + t for t in align.character_end_times_seconds)
+                chunk_end = align.character_end_times_seconds[-1] if align.character_end_times_seconds else 0.0
+                offset += get_audio_duration(str(path)) or chunk_end
+            else:
+                save(client.text_to_dialogue.convert(**request), str(path))
+            chunk_paths.append(path)
+
+        if tmp_dir is not None:
+            joined = concat_audio_files(chunk_paths, Path(output_path))
+            if not joined.get("success"):
+                raise RuntimeError(f"Failed to join {len(chunks)} dialogue chunks: {joined.get('error')}")
+    finally:
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    result = {"chunks": len(chunks)}
+    if with_timestamps:
+        result["alignment"] = {"characters": chars, "starts": starts, "ends": ends}
+    return result
+
+
 def generate_single_audio(
     client,
     script: str,
@@ -316,19 +465,31 @@ def generate_single_audio(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    audio = client.text_to_speech.convert(
-        text=script,
-        voice_id=voice_id,
-        model_id=model,
-        voice_settings=VoiceSettings(
+    dialogue_chunks = None
+    if is_dialogue_model(model):
+        warn_dialogue_ignored_settings(model, style, speed)
+        dialogue_chunks = generate_dialogue_audio(
+            client,
+            script,
+            voice_id,
+            str(output_path),
+            model=model,
             stability=stability,
-            similarity_boost=similarity,
-            style=style,
-            speed=speed,
-        ),
-    )
-
-    save(audio, str(output_path))
+            similarity=similarity,
+        )["chunks"]
+    else:
+        audio = client.text_to_speech.convert(
+            text=script,
+            voice_id=voice_id,
+            model_id=model,
+            voice_settings=VoiceSettings(
+                stability=stability,
+                similarity_boost=similarity,
+                style=style,
+                speed=speed,
+            ),
+        )
+        save(audio, str(output_path))
 
     duration = get_audio_duration(str(output_path))
 
@@ -337,6 +498,8 @@ def generate_single_audio(
         "output": str(output_path),
         "script_chars": len(script),
     }
+    if dialogue_chunks and dialogue_chunks > 1:
+        result["dialogue_chunks"] = dialogue_chunks
     if duration:
         result["duration_seconds"] = round(duration, 2)
         result["duration_frames_30fps"] = int(duration * 30)

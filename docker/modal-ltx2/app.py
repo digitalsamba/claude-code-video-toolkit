@@ -1,7 +1,7 @@
 """
-Modal deployment for LTX-2.3 video generation.
+Modal deployment for LTX-2.5 video generation.
 
-Text-to-video and image-to-video generation using LTX-2.3 22B DiT model.
+Text-to-video and image-to-video generation using LTX-2.5 22B DiT model.
 Generates ~5s video clips at up to 1024x1536 resolution with audio.
 
 Deploy:
@@ -45,23 +45,38 @@ import modal
 app = modal.App("video-toolkit-ltx2")
 
 LTX2_REPO_URL = "https://github.com/Lightricks/LTX-2.git"
-# Pinned: upstream main (Aug 2026+) calls torch.compiler.nested_compile_region
-# and pins torch 2.13, so an unpinned clone crashes on import against the
-# torch 2.7 installed below (#94). This is the commit the pipeline code here
-# was written against. Bump deliberately, together with torch, then re-run a
-# smoke render.
-LTX2_REPO_REF = "a2c3f24078eb918171967f74b6f66b756b29ee45"
+# Pinned to the v1.4.2 release (2026-10-02). LTX-2.5 support landed in v1.2.0,
+# along with Gemma 4, split checkpoints and transformers 5.x. Upstream tests on
+# torch 2.13 (its natten extra pins it), which is what the image installs
+# below. An unpinned clone broke this app once already (#94). Bump
+# deliberately, together with torch, then re-run a smoke render.
+LTX2_REPO_REF = "9ec55f9f22798a3198d9c923856824821bc3317e"
 
-# HuggingFace model repos (2.3 weights are split across repos)
-HF_REPO = "Lightricks/LTX-2.3"
-HF_REPO_FP8 = "Lightricks/LTX-2.3-fp8"
-# Local path inside the container where weights are stored
+# HuggingFace model repo. 2.5 ships as a split pack, one file per component,
+# and bundles its own Gemma 4 text encoder (no separate Gemma repo).
+HF_REPO = "Lightricks/LTX-2.5"
+# Local path inside the container where weights are stored. Files keep the
+# repo's folder layout under it.
 MODEL_DIR = "/models/ltx2"
-# Gemma 3 text encoder (quantized variant — smaller, faster)
-GEMMA_REPO = "google/gemma-3-12b-it-qat-q4_0-unquantized"
-GEMMA_DIR = "/models/gemma3"
+# The dev transformer + distilled LoRA keeps the guided two-stage pipeline
+# (CFG/STG, negative prompt, adjustable steps) that "quality" and
+# "num_inference_steps" control. The distilled transformer would be faster but
+# runs a fixed 8+3 step schedule with no guidance, so those options would do
+# nothing.
+TRANSFORMER_FILE = "diffusion_models/ltx-2.5-22b-dev-transformer-bf16.safetensors"
+DISTILLED_LORA_FILE = "loras/ltx-2.5-22b-distilled-lora-450-bf16.safetensors"
+SPATIAL_UPSAMPLER_FILE = (
+    "latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors"
+)
+# Diffusion video decoder (DiffVAE), not the lighter -conv- variant: it's the
+# 2.5 decoder upgrade (sharper faces/textures), and NATTEN makes it fast.
+VIDEO_VAE_FILE = "vae/ltx-2.5-video-vae-bf16.safetensors"
+AUDIO_VAE_FILE = "vae/ltx-2.5-audio-vae-bf16.safetensors"
+TEXT_ENCODER_FILE = "text_encoders/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors"
 # Style LoRAs baked into the image. Map of CLI key → {repo, filename, strength}.
-# Add new LoRAs here to ship them in the container.
+# Add new LoRAs here to ship them in the container. Lightricks reports most
+# 2.3 LoRAs run on 2.5 unchanged, with a few exceptions; crt-terminal was
+# trained on 2.3 and hasn't been validated on 2.5 yet.
 LORA_DIR = "/models/loras"
 AVAILABLE_LORAS = {
     "crt-terminal": {
@@ -75,33 +90,40 @@ AVAILABLE_LORAS = {
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .apt_install("git", "ffmpeg")
-    # PyTorch with CUDA 12.6 (separate index)
+    # PyTorch 2.13 with CUDA 13.0 (separate index). Upstream uses cu132; cu130
+    # matches the driver on Modal hosts (580 / CUDA 13.0). torchaudio stopped
+    # at 2.11, which is what upstream pairs with torch 2.13 too.
     .pip_install(
-        "torch==2.7.0",
-        "torchaudio==2.7.0",
-        index_url="https://download.pytorch.org/whl/cu126",
+        "torch==2.13.0",
+        "torchvision==0.28.0",
+        "torchaudio==2.11.0",
+        index_url="https://download.pytorch.org/whl/cu130",
     )
-    # Other dependencies (from PyPI)
+    # Other dependencies (from PyPI). ltx-core needs transformers >=5.8,<5.15
+    # for Gemma 4; 5.14.1 is the newest it documents as verified.
     .pip_install(
         "einops",
         "numpy>=1.26",
-        "transformers==4.57.6",
+        "transformers==5.14.1",
         "safetensors",
         "accelerate",
         "scipy>=1.14",
         "av",
         "tqdm",
         "Pillow",
+        "colour-science",
+        "openimageio",
+        "cloudpickle>=3.1",
         "boto3",
         "requests",
         "fastapi[standard]",
-        "huggingface_hub>=0.25.0",
+        "huggingface_hub[hf_xet]",
     )
-    # Install flash-attn for optimized attention (optional, best-effort)
-    .pip_install("packaging")
-    .run_commands(
-        "pip install --no-cache-dir flash-attn --no-build-isolation "
-        "|| echo 'flash-attn not available, using SDPA fallback'"
+    # NATTEN accelerates the diffusion video decoder (falls back to Triton
+    # without it). Same version upstream's natten extra pins, cu130 build.
+    .pip_install(
+        "https://github.com/SHI-Labs/NATTEN/releases/download/v0.21.7/"
+        "natten-0.21.7%2Btorch2130cu130-cp312-cp312-linux_x86_64.whl"
     )
     # Fetch LTX-2 at the pinned ref and install its packages. Fetch-by-SHA
     # rather than `clone --branch`, which only takes a ref name.
@@ -113,25 +135,38 @@ image = (
         "pip install -e /app/ltx2/packages/ltx-core",
         "pip install -e /app/ltx2/packages/ltx-pipelines",
     )
-    # Bake LTX-2.3 model weights — full quality bf16 dev checkpoint + distilled LoRA + upsampler
-    # Dev checkpoint (46.1GB) + distilled LoRA (7.6GB) + spatial upsampler (1GB) = ~55GB
+    # torch 2.13 pins cuDNN 9.20, which lacks libcudnn_engines_tensor_ir.
+    # Upstream overrides it to 9.24.0.43 (see LTX-2's root pyproject.toml).
+    # Last pip step so nothing downgrades it again.
+    .run_commands("pip install nvidia-cudnn-cu13==9.24.0.43")
+    # Bake LTX-2.5 weights — gated repo, needs HF_TOKEN at build time.
+    # One layer per large component so a failed download doesn't redo the rest.
+    # Dev transformer (42GB)
     .run_commands(
         "python -c \""
         "from huggingface_hub import snapshot_download; "
         f"snapshot_download('{HF_REPO}', local_dir='{MODEL_DIR}', "
-        "allow_patterns=['ltx-2.3-22b-dev.safetensors', "
-        "'ltx-2.3-22b-distilled-lora-384.safetensors', "
-        "'ltx-2.3-spatial-upscaler-x2-1.1.safetensors'])"
+        f"allow_patterns=['{TRANSFORMER_FILE}'])"
         "\"",
         secrets=[modal.Secret.from_name("huggingface-token")],
     )
-    # Bake Gemma 3 12B text encoder (~7GB quantized)
-    # Gemma is a gated model — needs HF_TOKEN at build time
+    # Gemma 4 12B text encoder + projections (26GB). Tokenizer and config are
+    # embedded in the safetensors file.
     .run_commands(
         "python -c \""
         "from huggingface_hub import snapshot_download; "
-        f"snapshot_download('{GEMMA_REPO}', local_dir='{GEMMA_DIR}', "
-        ")"
+        f"snapshot_download('{HF_REPO}', local_dir='{MODEL_DIR}', "
+        f"allow_patterns=['{TEXT_ENCODER_FILE}'])"
+        "\"",
+        secrets=[modal.Secret.from_name("huggingface-token")],
+    )
+    # Distilled LoRA (8.9GB) + spatial upsampler (1GB) + video/audio VAEs (1.8GB)
+    .run_commands(
+        "python -c \""
+        "from huggingface_hub import snapshot_download; "
+        f"snapshot_download('{HF_REPO}', local_dir='{MODEL_DIR}', "
+        f"allow_patterns=['{DISTILLED_LORA_FILE}', '{SPATIAL_UPSAMPLER_FILE}', "
+        f"'{VIDEO_VAE_FILE}', '{AUDIO_VAE_FILE}'])"
         "\"",
         secrets=[modal.Secret.from_name("huggingface-token")],
     )
@@ -160,39 +195,53 @@ image = (
 )
 @modal.concurrent(max_inputs=1)
 class LTX2:
-    """LTX-2.3 video generation."""
+    """LTX-2.5 video generation."""
 
     @modal.enter()
     def load_pipeline(self):
         """Load the base LTX-2 pipeline when the container starts."""
-        import glob
         import os
 
         import torch
+
+        from ltx_pipelines.utils.constants import detect_params
+        from ltx_pipelines.utils.model_paths import ModelPaths
 
         print(f"CUDA available: {torch.cuda.is_available()}")
         if torch.cuda.is_available():
             props = torch.cuda.get_device_properties(0)
             print(f"GPU: {props.name}, VRAM: {props.total_memory // (1024**3)}GB")
 
-        def find_file(pattern):
-            matches = glob.glob(os.path.join(MODEL_DIR, pattern))
-            return matches[0] if matches else None
+        paths = {
+            name: os.path.join(MODEL_DIR, rel)
+            for name, rel in {
+                "transformer": TRANSFORMER_FILE,
+                "distilled_lora": DISTILLED_LORA_FILE,
+                "spatial_upsampler": SPATIAL_UPSAMPLER_FILE,
+                "video_vae": VIDEO_VAE_FILE,
+                "audio_vae": AUDIO_VAE_FILE,
+                "text_encoder": TEXT_ENCODER_FILE,
+            }.items()
+        }
+        missing = [p for p in paths.values() if not os.path.exists(p)]
+        if missing:
+            raise RuntimeError(f"LTX-2.5 weights missing from {MODEL_DIR}: {missing}")
 
-        self._checkpoint = find_file("ltx-2.3-22b-dev.safetensors")
-        self._distilled_lora_path = find_file("ltx-2.3-22b-distilled-lora-*.safetensors")
-        self._spatial_upsampler = find_file("ltx-2.3-spatial-upscaler-x2-1.1.safetensors")
+        for name, path in paths.items():
+            print(f"  {name}: {path}")
 
-        if not self._checkpoint:
-            raise RuntimeError(
-                f"LTX-2.3 checkpoint not found in {MODEL_DIR}. "
-                f"Files: {os.listdir(MODEL_DIR)}"
-            )
-
-        print(f"  Checkpoint: {self._checkpoint}")
-        print(f"  Distilled LoRA: {self._distilled_lora_path}")
-        print(f"  Spatial upsampler: {self._spatial_upsampler}")
-        print(f"  Gemma: {GEMMA_DIR}")
+        # No duration head: requests always pass num_frames explicitly.
+        self._model_paths = ModelPaths.from_split(
+            transformer_path=paths["transformer"],
+            text_encoder_path=paths["text_encoder"],
+            video_vae_path=paths["video_vae"],
+            audio_vae_path=paths["audio_vae"],
+        )
+        self._distilled_lora_path = paths["distilled_lora"]
+        self._spatial_upsampler = paths["spatial_upsampler"]
+        # Guidance defaults for this checkpoint's generation (CFG/STG scales,
+        # STG block), read from its metadata the same way the upstream CLI does.
+        self._params = detect_params(paths["transformer"])
 
         self.pipeline = None
         self._current_style_lora = None
@@ -202,8 +251,8 @@ class LTX2:
         """Construct the pipeline with an optional style LoRA key.
 
         Called at cold start (no style LoRA) and on per-request style swaps.
-        Rebuilding costs ~30–60s of weight loading; frees the previous
-        pipeline's VRAM first to avoid OOM on A100-80GB.
+        Construction is cheap: weights load per stage during each request and
+        are freed after it, so a rebuild just swaps the LoRA set.
         """
         import gc
         import os
@@ -222,13 +271,11 @@ class LTX2:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
-        distilled = []
-        if self._distilled_lora_path:
-            distilled = [
-                LoraPathStrengthAndSDOps(
-                    self._distilled_lora_path, 0.8, LTXV_LORA_COMFY_RENAMING_MAP
-                )
-            ]
+        distilled = [
+            LoraPathStrengthAndSDOps(
+                self._distilled_lora_path, 0.8, LTXV_LORA_COMFY_RENAMING_MAP
+            )
+        ]
 
         style_loras = []
         if style_lora:
@@ -245,15 +292,17 @@ class LTX2:
 
         print(f"Building pipeline (style_lora={style_lora})...")
         start = time.time()
+        # bf16 weights, no offload: on A100-80GB the stages load one at a time
+        # (Gemma 4 ~26GB, then the 42GB transformer per stage), so peak VRAM
+        # is one transformer plus activations, not the sum of the components.
         self.pipeline = TI2VidTwoStagesPipeline(
-            checkpoint_path=self._checkpoint,
+            model_paths=self._model_paths,
             distilled_lora=distilled,
             spatial_upsampler_path=self._spatial_upsampler,
-            gemma_root=GEMMA_DIR,
             loras=style_loras,
         )
         self._current_style_lora = style_lora
-        print(f"Pipeline loaded in {time.time() - start:.1f}s")
+        print(f"Pipeline built in {time.time() - start:.1f}s")
 
     @modal.fastapi_endpoint(method="POST")
     def generate(self, request: dict) -> dict:
@@ -290,8 +339,7 @@ class LTX2:
         r2_config = request.get("r2")
 
         # Optional style LoRA. Rebuild the pipeline only when the requested
-        # LoRA differs from what's currently loaded — same-LoRA back-to-back
-        # calls skip the ~60s reload.
+        # LoRA differs from what's currently loaded.
         style_lora = request.get("lora")
         if style_lora and style_lora not in AVAILABLE_LORAS:
             return {
@@ -301,9 +349,12 @@ class LTX2:
         if style_lora != self._current_style_lora:
             self._build_pipeline(style_lora=style_lora)
 
-        # Enforce dimension constraints
+        # Enforce dimension constraints. The two-stage pipeline generates at
+        # half size first, so both sides must be multiples of 64.
         width = (width // 64) * 64
         height = (height // 64) * 64
+        if width < 64 or height < 64:
+            return {"error": "width and height must each be at least 64"}
 
         # Enforce frame count constraint: (num_frames - 1) % 8 == 0
         if (num_frames - 1) % 8 != 0:
@@ -344,14 +395,15 @@ class LTX2:
                 img_path = os.path.join(work_dir, "input.png")
                 img.save(img_path)
 
-                from ltx_pipelines.utils.args import ImageConditioningInput
+                from ltx_pipelines.utils.types import ImageConditioningInput
 
+                # crf left unset: the pipeline re-compresses the image at the
+                # CRF this checkpoint was trained with (from its metadata).
                 images = [
                     ImageConditioningInput(
                         path=img_path,
                         frame_idx=0,
                         strength=0.8,
-                        crf=0,  # lossless — no H.264 preprocessing
                     )
                 ]
             except Exception as e:
@@ -359,43 +411,27 @@ class LTX2:
         start_time = time.time()
 
         try:
-            from ltx_core.components.guiders import MultiModalGuiderParams
-
-            video_guider = MultiModalGuiderParams(
-                cfg_scale=3.0,
-                stg_scale=1.0,
-                rescale_scale=0.7,
-                modality_scale=3.0,
-                stg_blocks=[28],
-            )
-            audio_guider = MultiModalGuiderParams(
-                cfg_scale=7.0,
-                stg_scale=1.0,
-                rescale_scale=0.7,
-                modality_scale=3.0,
-                stg_blocks=[28],
-            )
-
             print(
                 f"Generating: {width}x{height}, {num_frames} frames, "
                 f"{num_inference_steps} steps, seed={seed}"
             )
 
             # CRITICAL: torch.inference_mode() prevents PyTorch from retaining
-            # the autograd graph. Without it, the Gemma text encoder's ~37GB of
-            # activations stay in VRAM even after del, causing OOM when the
-            # transformer loads. This is a known issue (GitHub #152) — the
-            # pipeline's __call__ doesn't set inference_mode, but the CLI does.
+            # the autograd graph. Without it, the text encoder's activations
+            # stay in VRAM even after del, causing OOM when the transformer
+            # loads (GitHub #152). The pipeline's __call__ doesn't set
+            # inference_mode; the upstream CLI wraps main() in it.
             # The scope must include encode_video() because the pipeline returns
             # a lazy iterator — frames are decoded when the iterator is consumed.
             import os
 
             output_path = os.path.join(work_dir, "output.mp4")
 
+            from ltx_core.model.video_vae import get_video_chunks_number
             from ltx_pipelines.utils.media_io import encode_video
 
             with torch.inference_mode():
-                video_iter, audio = self.pipeline(
+                result = self.pipeline(
                     prompt=prompt,
                     negative_prompt=negative_prompt,
                     seed=seed,
@@ -404,20 +440,23 @@ class LTX2:
                     num_frames=num_frames,
                     frame_rate=float(fps),
                     num_inference_steps=num_inference_steps,
-                    video_guider_params=video_guider,
-                    audio_guider_params=audio_guider,
-                    images=images if images else [],
+                    video_guider_params=self._params.video_guider_params,
+                    audio_guider_params=self._params.audio_guider_params,
+                    images=images,
                 )
 
                 encode_video(
-                    video=video_iter,
+                    video=result.video,
                     fps=fps,
-                    audio=audio,
+                    audio=result.audio,
                     output_path=output_path,
-                    video_chunks_number=1,
+                    video_chunks_number=get_video_chunks_number(
+                        result.num_frames, result.tiling_config
+                    ),
                 )
 
             elapsed_ms = int((time.time() - start_time) * 1000)
+            num_frames = result.num_frames
             duration = num_frames / fps
 
             result = {

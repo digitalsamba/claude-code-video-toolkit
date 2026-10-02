@@ -17,7 +17,7 @@ Capabilities:
 
 Cloud providers:
   acemusic (default) — Official ACE-Step cloud API (free key from acemusic.ai/api-key)
-  modal              — Self-hosted via Modal (ACE-Step 2B Turbo)
+  modal              — Self-hosted via Modal (ACE-Step 1.5 XL Turbo 4B, no LM)
   runpod             — Self-hosted via RunPod (ACE-Step 2B Turbo)
 
 Examples:

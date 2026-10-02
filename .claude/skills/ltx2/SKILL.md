@@ -1,11 +1,11 @@
 ---
 name: ltx2
-description: AI video generation with LTX-2.3 22B — text-to-video, image-to-video clips for video production. Use when generating video clips, animating images, creating b-roll, animated backgrounds, or motion content. Triggers include video generation, animate image, b-roll, motion, video clip, text-to-video, image-to-video.
+description: AI video generation with LTX-2.5 22B — text-to-video, image-to-video clips for video production. Use when generating video clips, animating images, creating b-roll, animated backgrounds, or motion content. Triggers include video generation, animate image, b-roll, motion, video clip, text-to-video, image-to-video.
 ---
 
-# LTX-2.3 Video Generation
+# LTX-2.5 Video Generation
 
-Generate ~5 second video clips from text prompts or images using the LTX-2.3 22B DiT model.
+Generate ~5 second video clips from text prompts or images using the LTX-2.5 22B DiT model.
 Runs on Modal (A100-80GB). Requires `MODAL_LTX2_ENDPOINT_URL` in `.env`.
 
 ## Quick Reference
@@ -46,11 +46,13 @@ uv run tools/ltx2.py --prompt "..." --seed 42 --output reproducible.mp4
 
 ## Style LoRAs
 
-Style LoRAs bias the output toward a specific visual aesthetic. They're baked into the Modal image and selected per-request; switching LoRAs forces a pipeline rebuild (~60s one-time cost per container lifetime per switch).
+Style LoRAs bias the output toward a specific visual aesthetic. They're baked into the Modal image and selected per-request; switching LoRAs rebuilds the server pipeline.
+
+**Compatibility:** the presets below were trained on LTX-2.3. Lightricks says most 2.3 LoRAs run on 2.5 unchanged, with some exceptions. These haven't been checked on 2.5 yet, so render a test clip before relying on one.
 
 ### `crt-terminal` — CRT / pixel-art terminals
 
-Base: LTX-2.3 22B, trained by [@lovis93](https://huggingface.co/lovis93/crt-animation-terminal-ltx-2.3-lora) (Apache 2.0).
+Base: LTX-2.3 22B (unvalidated on 2.5), trained by [@lovis93](https://huggingface.co/lovis93/crt-animation-terminal-ltx-2.3-lora) (Apache 2.0).
 
 ```bash
 # Trigger word is auto-prepended — write the prompt normally
@@ -187,11 +189,11 @@ LTX-2 generates raw clips. Combine with the rest of the toolkit:
 
 ## Technical Details
 
-- **Model:** LTX-2.3 22B DiT (Lightricks), bf16
-- **GPU:** A100-80GB on Modal (~$4.68/hr)
-- **Inference:** ~2.5 min per clip (768x512, 121 frames, 30 steps)
-- **Cost:** ~$0.20-0.25 per 5s clip
-- **Cold start:** ~60-90s (loading ~55GB weights)
+- **Model:** LTX-2.5 22B DiT (Lightricks), bf16 dev transformer + distilled LoRA, Gemma 4 text encoder, diffusion video decoder
+- **GPU:** A100-80GB on Modal (~$2.50/hr)
+- **Inference:** measured 153s for 512x512, 25 frames, `--quality fast`. About 2 min of every request is weight loading (Gemma 4 + the transformer once per stage), so short clips don't get much cheaper. Default 768x512/121 frames/30 steps isn't benchmarked on 2.5 yet
+- **Cost:** ~$0.13 for that 1s fast clip; budget more for default 5s clips
+- **Cold start:** ~25-30s container boot (weights load per request, not at startup)
 - **Output:** H.264 MP4 with synchronized ambient audio (24fps)
 - **Max duration:** ~8s (193 frames) per clip
 
@@ -201,7 +203,7 @@ LTX-2 generates raw clips. Combine with the rest of the toolkit:
 - **Text rendering:** Cannot reliably generate readable text in video. Use Remotion overlays instead.
 - **Max duration:** ~8s per clip. Longer content needs stitching.
 - **Audio:** Generated audio is ambient/environmental only. Use voiceover/music tools for speech and music.
-- **License:** Community License — free under $10M revenue, commercial license needed above that.
+- **License:** LTX-2.x Community License — free (commercial use included) under $10M annual revenue, paid license above that. Don't remove watermark/provenance features.
 
 ## Setup
 
@@ -209,7 +211,7 @@ LTX-2 generates raw clips. Combine with the rest of the toolkit:
 # 1. Create Modal secret for HuggingFace (one-time)
 uv run modal secret create huggingface-token HF_TOKEN=hf_your_token
 
-# 2. Deploy (downloads ~55GB of weights, takes ~10 min)
+# 2. Deploy (downloads ~80GB of weights, takes ~15-20 min)
 uv run modal deploy docker/modal-ltx2/app.py
 
 # 3. Save endpoint URL to .env
@@ -219,4 +221,4 @@ echo "MODAL_LTX2_ENDPOINT_URL=https://yourname--video-toolkit-ltx2-ltx2-generate
 uv run tools/ltx2.py --prompt "A candle flickering on a dark table, cinematic" --output test.mp4
 ```
 
-**Important:** HuggingFace token needs read-access scope. Accept the [Gemma 3 license](https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized) before deploying. Unauthenticated downloads are severely rate-limited.
+**Important:** HuggingFace token needs read access (fine-grained tokens: gated-repos read). `Lightricks/LTX-2.5` is gated: accept its [terms](https://huggingface.co/Lightricks/LTX-2.5) with the token's account before deploying, or the build fails with 401/403. The Gemma 4 text encoder is bundled in that repo, so no separate Gemma license step.

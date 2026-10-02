@@ -274,13 +274,15 @@ Which AI tools would you like to set up?
      Free AI voiceovers — 9 speakers, voice cloning, tone presets
      This is the most-used tool in the toolkit.
 
-  2. [recommended] Images (FLUX.2 Klein)
+  2. [recommended] Images (FLUX.2 klein)
      Generate title backgrounds, scene illustrations, thumbnails
      Fast: ~3s per image on warm GPU
+     Default klein-4B (Apache-2.0); klein-9B is a non-commercial opt-in
 
-  3. Image Editing (Qwen-Image-Edit)
+  3. Image Editing (Qwen-Image-Edit-2511)
      Transform photos — add/remove objects, change style, backgrounds
-     Note: Large model, ~8 min cold start on first use
+     Note: Large model, ~1.5 min cold start
+     Qwen-Image-2.1 is a non-commercial opt-in (up to 10 input images)
 
   4. Upscaling (RealESRGAN)
      Enhance image quality 2x or 4x with AI
@@ -316,8 +318,8 @@ export PYTHONIOENCODING=utf-8
 
 # Deploy each app and capture the URL from output
 uv run modal deploy docker/modal-qwen3-tts/app.py
-uv run modal deploy docker/modal-flux2/app.py
-uv run modal deploy docker/modal-image-edit/app.py
+uv run modal deploy docker/modal-flux2/app.py        # klein-4B, Apache-2.0
+uv run modal deploy docker/modal-image-edit/app.py   # Qwen-Image-Edit-2511, Apache-2.0
 uv run modal deploy docker/modal-upscale/app.py
 uv run modal deploy docker/modal-music-gen/app.py
 uv run modal deploy docker/modal-sadtalker/app.py
@@ -343,6 +345,11 @@ follows, not by the URL text.
 
 **Important**: The deploy output contains the URL. Look for lines containing `.modal.run` in the output. The URL format is typically:
 `https://{username}--{app-name}-{class}-{method}.modal.run`
+
+Modal wraps long URLs onto the next line, sometimes mid-word (`...generate-web.moda` /
+`l.run`), and appends `(label truncated)` when it shortens a label. Join the lines after
+the `=>` and drop that suffix before saving — a search for `.modal.run` on one line misses
+a wrapped URL.
 
 ### RunPod Deployment Flow
 

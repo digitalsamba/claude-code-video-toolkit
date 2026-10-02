@@ -1,17 +1,22 @@
 # Qwen-Edit Parameters
 
+> **Which model?** Modal runs **Qwen-Image-Edit-2511** unless the app was deployed with
+> `IMAGE_EDIT_MODEL=qwen-image-2.1`; `--cloud runpod` runs **Qwen-Image-Edit-2511 +
+> Lightning LoRA**. The tables below the first one were measured on 2511. See
+> "Qwen-Image-2.1 (Modal opt-in)" at the end for how 2.1 differs.
+
 ## Available Parameters
 
 | Parameter | CLI Flag | Default | Range | Notes |
 |-----------|----------|---------|-------|-------|
-| `num_inference_steps` | `--steps` | 8 | 4-50 | More = higher quality, slower |
-| `guidance_scale` | `--guidance` | 1.0 | 1.0-7.0 | Higher = follows prompt more strictly |
+| `num_inference_steps` | `--steps` | 40 (modal) / 8 (runpod) | 4-50 | More = higher quality, slower |
+| `guidance_scale` | `--guidance` | 1.0 | 1.0-7.0 | Higher = follows prompt more strictly. On 2.1 this is true CFG, off at 1.0 |
 | `negative_prompt` | `--negative` | "" | text | Things to avoid |
 | `seed` | `--seed` | random | int | For reproducibility |
 
 ## Steps (`--steps`)
 
-Controls number of denoising passes.
+Controls number of denoising passes. (2511 / RunPod figures -- 2.1 defaults to 40.)
 
 | Value | Use Case | Inference Time |
 |-------|----------|----------------|
@@ -98,3 +103,19 @@ These are supported by the handler but not yet exposed in the CLI:
 | `true_cfg_scale` | 4.0 | Internal CFG scale |
 
 To expose these, edit `tools/image_edit.py`.
+
+## Qwen-Image-2.1 (Modal opt-in)
+
+| Parameter | Default | Notes |
+|-----------|---------|-------|
+| `--steps` | 40 | Model card default. 2.1 is not step-distilled and there is no Lightning LoRA for it here, so low step counts degrade faster than on 2511 |
+| `--guidance` | 1.0 | Maps to the pipeline's `true_cfg_scale`. 2.1 is meant to be sampled **without** guidance; `>1` enables true CFG (the endpoint supplies a blank negative prompt if `--negative` is missing) and doubles per-step cost |
+| `--negative` | none | Only used when `--guidance > 1` |
+| inputs | 1-10 | First is edited, the rest are references or masks |
+
+Endpoint-only extras (not exposed in the CLI): `output_resolution` (default 1024,
+output area ~= its square; the model is native up to 2K) and explicit `width`/`height`.
+
+Measured on the Modal A100-80GB ($0.000694/s), 640x640 input -> 1024x1024 output:
+27s inference at 40 steps (~$0.02 warm). A cold call took 111s end to end (~85s of it
+loading ~33GB of weights), plus the 60s scaledown window -- ~$0.12 for a one-off edit.

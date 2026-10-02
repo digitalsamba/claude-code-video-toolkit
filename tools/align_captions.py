@@ -124,7 +124,7 @@ def parse_scenes(config_text: str):
 
 # ─── Scribe transcription ───────────────────────────────────
 
-def transcribe_words(audio_path: str, api_key: str, model_id: str = "scribe_v1"):
+def transcribe_words(audio_path: str, api_key: str, model_id: str = "scribe_v2"):
     """Return list of word dicts: {text, start, end}."""
     from elevenlabs.client import ElevenLabs
 
@@ -284,9 +284,9 @@ def main():
     )
     ap.add_argument(
         "--model",
-        default="scribe_v1",
-        choices=["scribe_v1", "scribe_v1_experimental"],
-        help="Scribe STT model",
+        default="scribe_v2",
+        choices=["scribe_v2", "scribe_v1"],
+        help="Scribe STT model (default: scribe_v2; scribe_v1 is deprecated)",
     )
     args = ap.parse_args()
 
