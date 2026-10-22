@@ -221,6 +221,11 @@ import { Audio, Sequence } from 'remotion';
 </Sequence>
 ```
 
+**Keep `<Audio>` outside the `TransitionSeries`.** Several presentations render the scene more
+than once while the effect runs (`glitch` draws 8 slices plus 2 RGB copies, `checkerboard` one copy
+per cell, `rgbSplit` two ghosts), so an `<Audio>` inside a sequence plays several times over during
+the transition. Place voiceover and SFX in top-level `<Sequence>`s at absolute frames instead.
+
 ## Transition Gallery
 
 ### Standalone Showcase
@@ -278,3 +283,9 @@ const { presentation, duration } = transitionMap.lightLeak;
 3. **Performance**: Complex transitions (glitch, pixelate) use SVG filters which may impact preview performance. Final renders are unaffected.
 
 4. **Browser compatibility**: All transitions use standard CSS/SVG features. Tested in Chrome (Remotion's render target).
+
+5. **Writing a presentation**: `TransitionSeries` keeps a scene wrapped in its presentation for the
+   whole sequence, not just the transition: progress sits at `0` on the exiting side until the
+   transition starts, and at `1` on the entering side after it ends. A presentation must therefore
+   render `children` once and untouched at those values. Slicing, tiling or filtering an idle scene
+   shows up as artifacts across the entire scene (this was the cause of seams every 135 px with `glitch`).

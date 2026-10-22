@@ -150,6 +150,12 @@ const CheckerboardPresentation: React.FC<
   // Calculate cell size as percentage
   const cellSize = 100 / gridSize;
 
+  // TransitionSeries keeps the presentation mounted after the entry finishes
+  // (progress stays at 1), so show the scene whole instead of as gridSize² clipped copies.
+  if (isEntering && progress >= 1) {
+    return <AbsoluteFill>{children}</AbsoluteFill>;
+  }
+
   return (
     <AbsoluteFill>
       {/* Base layer - for exiting scene or background */}

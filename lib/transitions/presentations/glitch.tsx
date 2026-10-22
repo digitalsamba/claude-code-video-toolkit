@@ -83,34 +83,25 @@ const GlitchPresentation: React.FC<
     <AbsoluteFill style={{ overflow: 'hidden' }}>
       {/* Main content with slice displacement */}
       <AbsoluteFill style={{ opacity }}>
-        {sliceOffsets.map((offset, i) => (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              top: `${i * sliceHeight}%`,
-              left: 0,
-              width: '100%',
-              height: `${sliceHeight + 0.5}%`,
-              overflow: 'hidden',
-              transform: `translateX(${offset}px)`,
-            }}
-          >
-            {/* Position the full content, offset so this slice shows the right portion */}
-            <div
+        {glitchIntensity < 0.01 ? (
+          // TransitionSeries keeps the presentation mounted for the whole sequence
+          // (progress 0 before an exit, 1 after an entry), so pass the scene through
+          // untouched whenever the effect is idle.
+          children
+        ) : (
+          // Full-size copies clipped to exact bands, so the slices line up without seams.
+          sliceOffsets.map((offset, i) => (
+            <AbsoluteFill
+              key={i}
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: `${slices * 100}%`,
-                transform: `translateY(-${i * (100 / slices)}%)`,
+                clipPath: `inset(${i * sliceHeight}% 0 ${Math.max(0, 100 - (i + 1) * sliceHeight)}% 0)`,
+                transform: `translateX(${offset}px)`,
               }}
             >
               {children}
-            </div>
-          </div>
-        ))}
+            </AbsoluteFill>
+          ))
+        )}
       </AbsoluteFill>
 
       {/* RGB channel separation overlay */}

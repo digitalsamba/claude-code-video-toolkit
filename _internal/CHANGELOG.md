@@ -12,6 +12,10 @@ All notable changes to claude-code-video-toolkit.
 
 - **Synthetic UI demos as a toolkit feature**: shared `Stage` and `Cursor` components in `lib/components` (a browser window with camera zoom/pan keyframes and a scripted cursor), and a `synthetic-ui-demo` skill. The skill covers rebuilding an app's screens from its source, a frame-based timeline anchored to the voice lines, measuring click targets from stills, and labelling AI-generated people. `examples/ds-release-649` and `examples/ds-free-schedule-demo` are the reference builds.
 
+### Fixed
+
+- **Seams across whole scenes with the `glitch` transition**: `TransitionSeries` keeps a scene inside its presentation for the entire sequence, and `glitch` sliced the scene into 8 strips even when idle. The strips were also mis-sized (each was 0.5% too tall, so content drifted a few pixels per strip), which clipped text and image rows every ~135 px for the whole scene before the transition and after it. The idle scene now passes through untouched, and the active slices use exact `clip-path` bands. `checkerboard` had the same idle problem on the entering side (64 clipped copies of the scene after the transition) and now shows the scene whole. `lib/transitions/README.md` notes that presentations must pass idle scenes through, and that `<Audio>` belongs outside the `TransitionSeries` because transitions render a scene several times.
+
 ---
 
 ## 2026-10-21 (v0.21.1)
