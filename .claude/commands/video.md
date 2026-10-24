@@ -44,6 +44,7 @@ Which template would you like to use?
   1. Sprint Review - internal demos, release videos
   2. Product Demo - marketing, launches, features
   3. Concept Explainer Short - vertical TikTok/Reels/Shorts explainers
+  4. Math Story Short - vertical animated data stories (Max, chart panels)
 ```
 → Proceed to New Project Flow
 
@@ -162,6 +163,7 @@ Which template would you like to use?
 | Sprint Review | Internal demos, release videos | title, overview, demo, split-demo, summary, credits |
 | Product Demo | Marketing, launches, features | title, problem, solution, demo, feature, stats, cta |
 | Concept Explainer Short | Vertical 9:16 TikTok/Reels/Shorts explainers | hook, concept cards (Ideogram), b-roll (LTX), recap, cta |
+| Math Story Short | Vertical 9:16 animated math/data stories (Remotion) | chapters of scenes; visuals are code: editor-panel charts, equations, stats, Max mascot |
 ```
 
 > **Concept Explainer Short is Python-based** (moviepy, no Remotion/npm). Its

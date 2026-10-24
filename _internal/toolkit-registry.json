@@ -1098,6 +1098,13 @@
       "status": "beta",
       "created": "2026-06-09",
       "updated": "2026-10-12"
+    },
+    "math-story-short": {
+      "path": "templates/math-story-short/",
+      "description": "9:16 animated math-story shorts (Remotion): chapters of scenes, Max mascot with moods, code-editor chart panels, equation cards, typewriter captions, seeded simulations so charts match the narration",
+      "status": "beta",
+      "created": "2026-10-24",
+      "updated": "2026-10-24"
     }
   },
   "transitions": {

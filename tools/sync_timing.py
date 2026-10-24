@@ -159,6 +159,7 @@ def detect_config_file(project_dir: Path) -> Path | None:
     candidates = [
         project_dir / "src" / "config" / "sprint-config.ts",
         project_dir / "src" / "config" / "demo-config.ts",
+        project_dir / "src" / "config" / "story-config.ts",
     ]
     for c in candidates:
         if c.exists():

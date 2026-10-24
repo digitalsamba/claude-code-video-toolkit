@@ -1,0 +1,75 @@
+{
+  "name": "MaxLearnsMath",
+  "description": "Math stories in 2 minutes 🧮 Follow Max as he figures it out ✨",
+  "version": "1.0.0",
+  "website": "",
+  "colors": {
+    "primary": "#c1121f",
+    "primaryLight": "#cd414c",
+    "primaryDark": "#780000",
+    "accent": "#669bbc",
+    "accentGreen": "#2a9d8f",
+    "cream": "#fdf0d5",
+    "ink": "#131315",
+    "textDark": "#003049",
+    "textMedium": "#2f4f63",
+    "textLight": "#5c7a8c",
+    "textOnDark": "#fdf0d5",
+    "bgLight": "#fdf0d5",
+    "bgDark": "#003049",
+    "bgDarkAlt": "#00243a",
+    "panel": "#0b3c5c",
+    "bgOverlay": "rgba(0, 48, 73, 0.92)",
+    "divider": "#e9dcc0",
+    "shadow": "rgba(0, 24, 37, 0.35)"
+  },
+  "fonts": {
+    "primary": "Inter, system-ui, sans-serif",
+    "display": "Inter, system-ui, sans-serif",
+    "mono": "JetBrains Mono, ui-monospace, monospace",
+    "math": "STIX Two Text, Times New Roman, serif"
+  },
+  "spacing": {
+    "xs": 8,
+    "sm": 16,
+    "md": 24,
+    "lg": 48,
+    "xl": 80,
+    "xxl": 120
+  },
+  "borderRadius": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20
+  },
+  "typography": {
+    "h1": {
+      "size": 96,
+      "weight": 800
+    },
+    "h2": {
+      "size": 72,
+      "weight": 700
+    },
+    "h3": {
+      "size": 48,
+      "weight": 600
+    },
+    "body": {
+      "size": 44,
+      "weight": 400
+    },
+    "label": {
+      "size": 32,
+      "weight": 600,
+      "letterSpacing": 2
+    }
+  },
+  "assets": {
+    "logo": "assets/logo.png",
+    "logoLight": "assets/logo-light.png"
+  },
+  "notes": "Extracted from the original casino reel and upgraded. Navy #003049 backdrop (animated aurora + dot grid in the template). Charts live in code-editor panels (#0b3c5c, filename tab like bankroll.plot). Crimson #c1121f = Max, losses, key results; maroon #780000 = shading/hair; steel blue #669bbc = axes, labels, other players; cream #fdf0d5 = text; ink #131315 = roulette black; teal #2a9d8f = rare accent (the zero). Type roles: JetBrains Mono for labels/numbers/chapter badges, Inter for narration and titles, STIX Two for equations. Narration renders as a terminal typewriter line (crimson prompt, block cursor). Mascot: Max - curly maroon hair, round glasses, crimson hoodie with a pi badge. Logo pending: drop it in assets/logo.png.",
+  "handle": "@maxlearnsmath",
+  "template": "math-story-short"
+}

@@ -1,0 +1,20 @@
+{
+  "provider": "qwen3",
+  "voiceId": "YOUR_VOICE_ID_HERE",
+  "description": "Max — friendly, curious narrator for short math stories",
+  "settings": {
+    "stability": 0.75,
+    "similarityBoost": 0.9,
+    "style": 0.2,
+    "useSpeakerBoost": true
+  },
+  "model": "eleven_multilingual_v2",
+  "qwen3": {
+    "speaker": "Ryan",
+    "language": "English",
+    "tone": "warm",
+    "instruct": "",
+    "clone": null
+  },
+  "notes": "Qwen3-TTS built-in speaker Ryan with the warm tone for now. Swap to an ElevenLabs voice ID or a clone (/voice-clone) later. voiceId is an ElevenLabs placeholder only."
+}

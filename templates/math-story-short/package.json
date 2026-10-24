@@ -1,0 +1,24 @@
+{
+  "name": "math-story-short",
+  "version": "1.0.0",
+  "description": "9:16 animated math-story shorts: Max, code-editor chart panels, typewriter captions (MaxLearnsMath)",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render MathStory out/video.mp4",
+    "render:preview": "remotion render MathStory out/preview.mp4 --scale=0.5",
+    "still": "remotion still MathStory out/still.png",
+    "scripts": "node scripts/export-scripts.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.529",
+    "@remotion/google-fonts": "4.0.529",
+    "@remotion/paths": "4.0.529",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "4.0.529"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}
