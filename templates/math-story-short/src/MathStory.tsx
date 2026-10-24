@@ -25,13 +25,13 @@ const GroupExit: React.FC<{ frames: number; children: React.ReactNode }> = ({ fr
 };
 
 const Music: React.FC<{ src: string }> = ({ src }) => {
-  const vol = story.musicVolume ?? 0.12;
+  const vol = story.musicVolume ?? 0.028;
   return (
     <Audio
       src={staticFile(src)}
       loop
       volume={(f) =>
-        interpolate(f, [0, 20, totalFrames - 45, totalFrames], [0, vol, vol, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) *
+        interpolate(f, [0, 3, totalFrames - 45, totalFrames], [0, vol, vol, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) *
         (f >= scenesFrames ? 1.6 : 1)
       }
     />

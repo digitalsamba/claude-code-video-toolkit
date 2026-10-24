@@ -24,6 +24,9 @@ Usage:
     # With concat for SadTalker narrator
     uv run tools/voiceover.py --scene-dir public/audio/scenes --concat public/audio/voiceover-concat.mp3
 
+    # ElevenLabs voices via fal.ai (FAL_KEY, no ElevenLabs key needed)
+    uv run tools/voiceover.py --provider fal --voice-id <id> --speed 1.1 --scene-dir public/audio/scenes --json
+
     # Using Qwen3-TTS provider
     uv run tools/voiceover.py --provider qwen3 --speaker Ryan --scene-dir public/audio/scenes --json
     uv run tools/voiceover.py --provider qwen3 --tone warm --scene-dir public/audio/scenes --json
@@ -184,16 +187,18 @@ Examples:
         "--provider",
         type=str,
         default="elevenlabs",
-        choices=["elevenlabs", "qwen3", "60db"],
-        help="TTS provider (default: elevenlabs)",
+        choices=["elevenlabs", "qwen3", "60db", "fal"],
+        help="TTS provider (default: elevenlabs). 'fal' runs ElevenLabs voices through fal.ai "
+             "(needs FAL_KEY, no ElevenLabs key)",
     )
 
-    # ElevenLabs-specific options
+    # ElevenLabs-specific options (also used by --provider fal)
     parser.add_argument(
         "--voice-id",
         "-v",
         type=str,
-        help="ElevenLabs voice ID (uses default from toolkit-registry.json if not provided)",
+        help="ElevenLabs voice ID (uses default from toolkit-registry.json if not provided; "
+             "for fal: FAL_VOICE_ID or the brand's `fal` block)",
     )
     parser.add_argument(
         "--model",
@@ -644,6 +649,38 @@ def generate_single_audio_60db(
     _apply_pacing_qc(result, script, max_wpm)
     return result
 
+
+def generate_single_audio_fal(
+    script: str,
+    output_path: Path,
+    voice_id: str | None,
+    model: str,
+    stability: float,
+    similarity: float,
+    style: float,
+    speed: float,
+    api_key: str | None,
+    max_wpm: float | None = None,
+) -> dict:
+    """Generate a single audio file with an ElevenLabs voice via fal.ai. Returns result dict."""
+    from fal_tts import generate_audio
+
+    result = generate_audio(
+        text=script,
+        output_path=str(output_path),
+        voice_id=voice_id,
+        stability=stability,
+        similarity=similarity,
+        style=style,
+        speed=speed,
+        model=model,
+        api_key=api_key,
+        verbose=False,
+    )
+    _apply_pacing_qc(result, script, max_wpm)
+    return result
+
+
 def generate_single_audio_qwen3(
     script: str,
     output_path: Path,
@@ -748,6 +785,8 @@ def process_scene_directory(
     enhance: bool = True,
     transport: str = "synthesize",
     sixtydb_api_key: str | None = None,
+    # fal params
+    fal_api_key: str | None = None,
     # Qwen3 params
     speaker: str = "Ryan",
     language: str = "Auto",
@@ -891,6 +930,19 @@ def process_scene_directory(
                 enhance=enhance,
                 transport=transport,
                 api_key=sixtydb_api_key,
+                max_wpm=max_wpm,
+            )
+        elif provider == "fal":
+            result = generate_single_audio_fal(
+                script=s["script"],
+                output_path=s["mp3_file"],
+                voice_id=voice_id or None,
+                model=model,
+                stability=stability,
+                similarity=similarity,
+                style=style,
+                speed=speed,
+                api_key=fal_api_key,
                 max_wpm=max_wpm,
             )
         else:
@@ -1102,6 +1154,21 @@ def main():
                 args.speed = sixtydb_settings["speed"]
             if "enhance" in sixtydb_settings and args.enhance is True:
                 args.enhance = sixtydb_settings["enhance"]
+        elif provider == "fal":
+            # Apply voice ID + settings from the brand's `fal` block
+            fal_cfg = voice_config.get("fal", {})
+            if not args.voice_id and fal_cfg.get("voiceId") and fal_cfg["voiceId"] != "YOUR_VOICE_ID_HERE":
+                args.voice_id = fal_cfg["voiceId"]
+            fal_settings = fal_cfg.get("settings", {})
+            # Brand settings fill in only when the CLI left a default in place.
+            if "stability" in fal_settings and args.stability == 0.85:
+                args.stability = fal_settings["stability"]
+            if "similarity" in fal_settings and args.similarity == 0.95:
+                args.similarity = fal_settings["similarity"]
+            if "style" in fal_settings and args.style == 0.0:
+                args.style = fal_settings["style"]
+            if "speed" in fal_settings and args.speed == 1.0:
+                args.speed = fal_settings["speed"]
 
     # Resolve tone preset → instruct text for Qwen3
     if provider == "qwen3" and (args.tone or args.instruct):
@@ -1147,6 +1214,31 @@ def main():
         from sixtydb_tts import DEFAULT_VOICE_ID as _SIXTYDB_DEFAULT_VOICE
         voice_id = args.voice_id or get_sixtydb_voice_id() or _SIXTYDB_DEFAULT_VOICE
 
+    fal_api_key = None
+    if provider == "fal":
+        from fal_tts import DEFAULT_VOICE as _FAL_DEFAULT_VOICE, FAL_ENDPOINTS, get_fal_api_key, get_fal_voice_id
+        fal_api_key = get_fal_api_key()
+        if not fal_api_key:
+            print(
+                "Error: No fal.ai key found.\n"
+                "\n"
+                "  Add one (fal.ai dashboard -> Keys):\n"
+                "     echo \"FAL_KEY=your_key\" >> .env\n"
+                "\n"
+                "  Or use another provider:\n"
+                "     uv run tools/voiceover.py --provider qwen3 --scene-dir public/audio/scenes --json",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if args.model not in FAL_ENDPOINTS:
+            print(
+                f"Error: --model {args.model} is not available via fal.ai here "
+                f"(supported: {', '.join(FAL_ENDPOINTS)})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        voice_id = args.voice_id or get_fal_voice_id() or _FAL_DEFAULT_VOICE
+
     if provider == "elevenlabs":
         api_key = get_elevenlabs_api_key()
         if not api_key:
@@ -1188,7 +1280,7 @@ def main():
 
         if not args.json:
             txt_count = len(list(scene_dir.glob("*.txt")))
-            provider_label = {"qwen3": "Qwen3-TTS", "60db": "60db"}.get(provider, "ElevenLabs")
+            provider_label = {"qwen3": "Qwen3-TTS", "60db": "60db", "fal": "ElevenLabs via fal.ai"}.get(provider, "ElevenLabs")
             print(f"Processing {txt_count} scene scripts in {scene_dir} ({provider_label})...", file=sys.stderr)
 
         if args.dry_run:
@@ -1209,6 +1301,7 @@ def main():
                 enhance=args.enhance,
                 transport=args.transport,
                 sixtydb_api_key=sixtydb_api_key,
+                fal_api_key=fal_api_key,
                 speaker=args.speaker,
                 language=args.language,
                 instruct=args.instruct,
@@ -1226,7 +1319,7 @@ def main():
                 "total_chars": total_chars,
                 "scenes": results,
             }
-            if provider == "elevenlabs":
+            if provider in ("elevenlabs", "fal"):
                 result["voice_id"] = voice_id
                 result["model"] = args.model
                 result["settings"] = {
@@ -1275,6 +1368,7 @@ def main():
             enhance=args.enhance,
             transport=args.transport,
             sixtydb_api_key=sixtydb_api_key,
+            fal_api_key=fal_api_key,
             speaker=args.speaker,
             language=args.language,
             instruct=args.instruct,
@@ -1297,7 +1391,7 @@ def main():
             "total_duration_frames_30fps": int(total_duration * 30),
             "scenes": results,
         }
-        if provider == "elevenlabs":
+        if provider in ("elevenlabs", "fal"):
             result["voice_id"] = voice_id
             result["model"] = args.model
         elif provider == "60db":
@@ -1340,7 +1434,7 @@ def main():
             "script_chars": len(script),
             "output": str(output_path),
         }
-        if provider == "elevenlabs":
+        if provider in ("elevenlabs", "fal"):
             result["voice_id"] = voice_id
             result["model"] = args.model
             result["settings"] = {
@@ -1371,7 +1465,7 @@ def main():
             print(json.dumps(result, indent=2))
         else:
             print(f"Would generate voiceover:")
-            if provider == "elevenlabs":
+            if provider in ("elevenlabs", "fal"):
                 print(f"  Voice ID: {voice_id}")
                 print(f"  Model: {args.model}")
             elif provider == "60db":
@@ -1386,7 +1480,7 @@ def main():
 
     # Generate voiceover
     if not args.json:
-        provider_label = {"qwen3": "Qwen3-TTS", "60db": "60db"}.get(provider, "ElevenLabs")
+        provider_label = {"qwen3": "Qwen3-TTS", "60db": "60db", "fal": "ElevenLabs via fal.ai"}.get(provider, "ElevenLabs")
         print(f"Generating voiceover ({len(script)} chars, {provider_label})...", file=sys.stderr)
 
     if provider == "qwen3":
@@ -1416,6 +1510,19 @@ def main():
             api_key=sixtydb_api_key,
             max_wpm=args.max_wpm,
         )
+    elif provider == "fal":
+        result = generate_single_audio_fal(
+            script=script,
+            output_path=output_path,
+            voice_id=voice_id,
+            model=args.model,
+            stability=args.stability,
+            similarity=args.similarity,
+            style=args.style,
+            speed=args.speed,
+            api_key=fal_api_key,
+            max_wpm=args.max_wpm,
+        )
     else:
         result = generate_single_audio(
             client=client,
@@ -1432,7 +1539,7 @@ def main():
 
     result["mode"] = "single"
     result["provider"] = provider
-    if provider == "elevenlabs":
+    if provider in ("elevenlabs", "fal"):
         result["voice_id"] = voice_id
         result["model"] = args.model
     elif provider == "60db":

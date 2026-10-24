@@ -147,10 +147,17 @@ Utility tools work on any video file without requiring a project structure.
 
 ### Voiceover Generation
 
-Three TTS providers share one `voiceover.py` interface (`--provider`):
-**elevenlabs** (default), **qwen3** (self-hosted, free), and **60db** (premium cloud).
+Four TTS providers share one `voiceover.py` interface (`--provider`):
+**elevenlabs** (default), **qwen3** (self-hosted, free), **60db** (premium cloud), and
+**fal** (ElevenLabs voices billed through fal.ai: needs `FAL_KEY`, no ElevenLabs key).
 Voice settings (`--stability`, `--similarity`, `--speed`) use a **unified 0-1 scale**
 across all providers — for 60db they are auto-converted to its native 0-100 scale.
+
+`--provider fal` (`tools/fal_tts.py`) takes an ElevenLabs voice ID or library name in
+`--voice-id` (or `FAL_VOICE_ID`, or a brand's `fal` block in `voice.json`). Only
+`eleven_multilingual_v2` is wired up. fal clamps `--speed` to 0.7-1.2. ElevenLabs voices
+run fast (175+ wpm on short lines even at speed 1.0), so pair it with `--max-wpm`.
+Captions still need `ELEVENLABS_API_KEY` for Scribe; with only `FAL_KEY` use `--engine whisper`.
 
 ```bash
 # Per-scene generation (recommended, ElevenLabs default)
@@ -194,7 +201,22 @@ uv run tools/sync_timing.py --apply                  # Update config (1s default
 uv run tools/sync_timing.py --apply --padding 1.5    # Custom padding
 uv run tools/sync_timing.py --voiceover-json vo.json # Use voiceover.py output
 uv run tools/sync_timing.py --json                   # Machine-readable output
+uv run tools/sync_timing.py --apply --padding 0.35 --round 0.1   # Tight shorts: 0.1s steps, not whole seconds
 ```
+
+Durations round **up to whole seconds** by default, which leaves ~0.5s of extra dead air per scene.
+For shorts use `--round 0.1`.
+
+### Tightening Audio (after voiceover, before captions)
+
+```bash
+uv run tools/tighten_audio.py --scene-dir public/audio/scenes --max-pause 0.22 --max-wpm 180
+uv run tools/tighten_audio.py --input public/audio/music.mp3 --trim-lead   # bed starts on frame 0
+```
+
+TTS leaves 0.4-0.9s pauses between sentences, and generated music often opens with ~0.6s of
+near-silence. `tighten_audio.py` caps pauses inside each clip, clamps fast lines (pitch-preserving),
+and trims silent intros. Originals go to `.tighten-backup/`. Re-run `captions.py` afterwards.
 
 Knows sprint-review v1/v2 and product-demo configs, and falls back to a **generic mode** for any
 config that pairs `*AudioFile` with `*DurationSeconds` fields (e.g. `tickets[]` with intro/outro

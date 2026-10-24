@@ -18,6 +18,8 @@
 - **Type size floor:** about 40px for anything the viewer must read. Chart ticks use 40px Inter.
 - `LineChart` uses fixed SVG ids (`plot-clip`, `glow`): one chart per visual.
 - Run tools from the toolkit root (`uv run tools/...`), not from this directory.
+- **Follow the production defaults in README.md** (voice, brisk pace, 0.35s scene gaps, quiet music from
+  frame 0, deliver `video.loudnorm.mp4`). They are the user's agreed house style for every episode.
 
 ## Visual language (the brand's DNA, upgraded)
 

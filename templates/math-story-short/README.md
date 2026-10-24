@@ -9,9 +9,9 @@ The example episode is **"Why the casino always wins"** (roulette and the house 
 about 2:00.
 
 ```
-story-config.ts ──► npm run scripts ──► voiceover.py ──► captions.py ──► sync_timing.py ──► npm run render
-  (scenes +             (scene .txt)       (scene .mp3)    (word timing)    (real durations)
-   narration)
+story-config.ts ──► npm run scripts ──► voiceover.py ──► tighten_audio.py ──► captions.py ──► sync_timing.py ──► npm run render
+  (scenes +             (scene .txt)       (scene .mp3)     (short pauses,       (word timing)    (real durations,
+   narration)                                                 pace clamp)                          0.1s steps)
 ```
 
 ## Quick start
@@ -27,13 +27,36 @@ From the **toolkit root**:
 ```bash
 P=projects/my-episode
 (cd $P && npm run scripts)                                            # narration -> public/audio/scenes/*.txt
-uv run tools/voiceover.py --provider qwen3 --tone warm --scene-dir $P/public/audio/scenes --json
-uv run tools/captions.py $P/public/audio/scenes                       # word timing for the typewriter
-uv run tools/sync_timing.py --config $P/src/config/story-config.ts --apply --padding 0.6
-uv run tools/qc.py --project $P
+uv run tools/voiceover.py --provider fal --brand maxlearnsmath --speed 1.1 \
+    --scene-dir $P/public/audio/scenes --json                          # brand voice via fal.ai (FAL_KEY)
+uv run tools/tighten_audio.py --scene-dir $P/public/audio/scenes --max-pause 0.22 --max-wpm 180
+uv run tools/captions.py $P/public/audio/scenes --engine whisper --language en   # word timing for the typewriter
+uv run tools/sync_timing.py --config $P/src/config/story-config.ts --audio-dir $P/public/audio/scenes \
+    --apply --padding 0.35 --round 0.1                                 # then give the last scene ~0.8s by hand
+uv run tools/music_gen.py --cloud modal --prompt "<style>, instrumental, no vocals, background for narration" \
+    --duration <video length + 10> --output $P/public/audio/music.mp3
+uv run tools/tighten_audio.py --input $P/public/audio/music.mp3 --trim-lead   # music starts on frame 0
+uv run tools/qc.py --project $P --fix                                 # scene VO to -16 LUFS
 (cd $P && npm run render)                                             # out/video.mp4
 uv run tools/qc.py --render $P/out/video.mp4 --fix                    # -14 LUFS for Reels/Shorts
 ```
+
+### Production defaults (agreed on the casino episode)
+
+These are the house style. Change them per episode only when asked.
+
+- **Voice:** the brand's `fal` block in `brands/maxlearnsmath/voice.json` (ElevenLabs voice via fal.ai), at `--speed 1.1`.
+  The `qwen3` block is the free fallback.
+- **Pace:** brisk. Pauses inside a line are at most 0.22s, and lines are clamped to 180 wpm. Most lines land at 145-180 wpm.
+- **Scene gaps:** each scene is its audio + 0.35s, rounded up to 0.1s. Whole-second rounding (the `sync_timing` default)
+  leaves about 1s of dead air at every cut. The last line gets about 0.8s before the outro.
+- **Music:** always add a generated bed. It must start on frame 0 (`--trim-lead`, and a 3-frame fade-in in
+  `MathStory.tsx`) and sit low: `musicVolume: 0.028`, about 25 LU under the voice. Generated tracks are mastered hot,
+  so 0.12 is far too loud.
+- **Check the words, not just the timing:** transcribe each take without the script (`captions.py --no-script` on a
+  copy) and compare. TTS sometimes adds noises or laughter, and the aligned captions would hide that.
+  Number-heavy lines score low on the caption match ("272" vs "two hundred and seventy-two"), which is expected.
+- **Deliver `out/video.loudnorm.mp4`** (-14 LUFS), not the raw `out/video.mp4`.
 
 ## How an episode is built
 

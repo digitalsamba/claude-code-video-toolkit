@@ -172,6 +172,13 @@ Which template would you like to use?
 > `build.py`. See `templates/concept-explainer-short/README.md`. Skip the
 > npm-install and brand.ts steps below; preview = open `out/short.mp4`.
 
+> **Math Story Short has an agreed audio pipeline.** Copy the template without
+> `node_modules/`, `build/` and `out/`. After scene planning, follow the
+> "Production defaults" in `templates/math-story-short/README.md` exactly:
+> brand voice via `--provider fal`, `tighten_audio.py` (short pauses, 180 wpm),
+> `sync_timing.py --padding 0.35 --round 0.1`, a generated music bed trimmed to
+> start on frame 0 at `musicVolume: 0.028`, and deliver `out/video.loudnorm.mp4`.
+
 **Brand Selection:**
 
 List available brands from `brands/` directory:

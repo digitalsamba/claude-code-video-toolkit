@@ -634,6 +634,30 @@
       "created": "2026-06-08",
       "updated": "2026-06-08"
     },
+    "fal_tts": {
+      "path": "tools/fal_tts.py",
+      "description": "ElevenLabs TTS via fal.ai (fal-ai/elevenlabs/tts/multilingual-v2), billed to the fal account",
+      "usage": "uv run tools/fal_tts.py --text \"Hello\" --voice-id <id> --output hello.mp3",
+      "status": "beta",
+      "category": "audio-generation",
+      "backend": "fal.ai",
+      "requires": "fal.ai API key (FAL_KEY)",
+      "options": {
+        "voice-id": "ElevenLabs voice ID or library name (defaults to FAL_VOICE_ID or Rachel)",
+        "model": "eleven_multilingual_v2 (only endpoint wired up)",
+        "stability": "Voice stability 0-1",
+        "similarity": "Similarity boost 0-1",
+        "style": "Style exaggeration 0-1",
+        "speed": "Speech speed 0.7-1.2 (clamped)",
+        "language-code": "ISO 639-1 language code"
+      },
+      "env": [
+        "FAL_KEY",
+        "FAL_VOICE_ID"
+      ],
+      "created": "2026-10-24",
+      "updated": "2026-10-24"
+    },
     "sync_timing": {
       "path": "tools/sync_timing.py",
       "description": "Sync scene durationSeconds in Remotion config with actual audio durations",
@@ -642,7 +666,31 @@
       "category": "project",
       "requires": "ffprobe (from ffmpeg)",
       "created": "2026-02-24",
-      "updated": "2026-02-24"
+      "updated": "2026-10-24",
+      "options": {
+        "padding": "Seconds after audio ends (default 1.0)",
+        "round": "Round durations up to a multiple of this (default 1.0; 0.1 for tight shorts)",
+        "audio-dir": "Per-scene audio directory",
+        "apply": "Write the config (.bak backup)"
+      }
+    },
+    "tighten_audio": {
+      "path": "tools/tighten_audio.py",
+      "description": "Shorten pauses inside scene VO clips, clamp fast lines (pitch-preserving), trim silent music intros",
+      "usage": "uv run tools/tighten_audio.py --scene-dir public/audio/scenes --max-pause 0.22 --max-wpm 180",
+      "status": "beta",
+      "category": "project",
+      "requires": "ffmpeg",
+      "options": {
+        "scene-dir": "Directory of scene MP3s (+ sibling .txt for pace)",
+        "input": "Single audio file",
+        "max-pause": "Longest pause kept inside a clip (default 0.22s)",
+        "max-wpm": "Clamp lines faster than this",
+        "min-tempo": "Slowest atempo (default 0.8)",
+        "trim-lead": "With --input: only cut the silent opening (music)"
+      },
+      "created": "2026-10-24",
+      "updated": "2026-10-24"
     },
     "qc": {
       "path": "tools/qc.py",

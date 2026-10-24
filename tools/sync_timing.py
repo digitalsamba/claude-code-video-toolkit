@@ -20,6 +20,9 @@ Usage:
     # Custom padding
     uv run tools/sync_timing.py --apply --padding 1.5
 
+    # Tight shorts: 0.35s gap, durations to the nearest 0.1s instead of whole seconds
+    uv run tools/sync_timing.py --apply --padding 0.35 --round 0.1
+
     # Accept voiceover.py JSON output (skip re-measuring)
     uv run tools/sync_timing.py --voiceover-json /tmp/vo.json --apply
 
@@ -559,6 +562,13 @@ def match_audio_to_scenes(
 # ─── Output ──────────────────────────────────────────────────
 
 DELTA_THRESHOLD = 0.3  # Changes smaller than this are marked "OK"
+ROUND_STEP = 1.0  # --round: durations are rounded UP to a multiple of this
+
+
+def ceil_step(seconds: float):
+    """Round up to a multiple of ROUND_STEP; whole seconds come back as int."""
+    v = round(math.ceil(seconds / ROUND_STEP - 1e-9) * ROUND_STEP, 3)
+    return int(v) if v == int(v) else v
 
 
 def format_comparison_table(
@@ -620,7 +630,7 @@ def format_comparison_table(
         if audio and audio["duration_seconds"]:
             audio_dur = audio["duration_seconds"]
             audio_str = f"{audio_dur:.1f}s"
-            proposed = math.ceil(audio_dur + padding)
+            proposed = ceil_step(audio_dur + padding)
             proposed_str = f"{proposed}s"
 
             if config_dur is not None:
@@ -724,7 +734,7 @@ def apply_timing_updates(
             continue
 
         audio_dur = audio["duration_seconds"]
-        proposed = math.ceil(audio_dur + padding)
+        proposed = ceil_step(audio_dur + padding)
         config_dur = scene.get("durationSeconds", 0)
 
         # Skip small deltas
@@ -785,7 +795,7 @@ def build_json_output(
         if audio and audio["duration_seconds"]:
             audio_dur = audio["duration_seconds"]
             proposed = round(audio_dur + padding, 2)
-            proposed_ceil = math.ceil(audio_dur + padding)
+            proposed_ceil = ceil_step(audio_dur + padding)
             entry["audio_seconds"] = audio_dur
             entry["audio_file"] = audio["filename"]
             entry["proposed_seconds"] = proposed_ceil
@@ -856,6 +866,13 @@ Examples:
         help="Seconds of padding after audio ends (default: 1.0)",
     )
     parser.add_argument(
+        "--round",
+        type=float,
+        default=1.0,
+        help="Round durations up to a multiple of this many seconds (default: 1.0). "
+             "Use 0.1 for tight shorts: whole seconds add ~0.5s of dead air per scene",
+    )
+    parser.add_argument(
         "--apply",
         action="store_true",
         help="Apply timing updates to config file (creates .bak backup)",
@@ -867,6 +884,11 @@ Examples:
     )
 
     args = parser.parse_args()
+    global ROUND_STEP, DELTA_THRESHOLD
+    if args.round <= 0:
+        parser.error("--round must be positive")
+    ROUND_STEP = args.round
+    DELTA_THRESHOLD = min(DELTA_THRESHOLD, args.round / 2)
 
     # Determine project directory
     project_dir = Path.cwd()
@@ -968,7 +990,7 @@ Examples:
         has_updates = any(
             m["audio"] and m["audio"]["duration_seconds"]
             and m["scene"].get("durationSeconds") is not None
-            and abs(math.ceil(m["audio"]["duration_seconds"] + args.padding) - m["scene"]["durationSeconds"]) >= DELTA_THRESHOLD
+            and abs(ceil_step(m["audio"]["duration_seconds"] + args.padding) - m["scene"]["durationSeconds"]) >= DELTA_THRESHOLD
             for m in matches
         )
         if has_updates:

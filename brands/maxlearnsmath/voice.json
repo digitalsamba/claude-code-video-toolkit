@@ -1,7 +1,7 @@
 {
   "provider": "qwen3",
   "voiceId": "YOUR_VOICE_ID_HERE",
-  "description": "Max — friendly, curious narrator for short math stories",
+  "description": "Max \u2014 friendly, curious narrator for short math stories",
   "settings": {
     "stability": 0.75,
     "similarityBoost": 0.9,
@@ -16,5 +16,15 @@
     "instruct": "",
     "clone": null
   },
-  "notes": "Qwen3-TTS built-in speaker Ryan with the warm tone for now. Swap to an ElevenLabs voice ID or a clone (/voice-clone) later. voiceId is an ElevenLabs placeholder only."
+  "notes": "Main voice: ElevenLabs voice GzE4TcXfh9rYCU9gVgPp via fal.ai (voiceover.py --provider fal --brand maxlearnsmath, needs FAL_KEY). The qwen3 block (Ryan, warm) is the free fallback. voiceId at the top level is an ElevenLabs-direct placeholder only.",
+  "fal": {
+    "voiceId": "GzE4TcXfh9rYCU9gVgPp",
+    "model": "eleven_multilingual_v2",
+    "settings": {
+      "stability": 0.5,
+      "similarity": 0.75,
+      "style": 0.2,
+      "speed": 1.1
+    }
+  }
 }

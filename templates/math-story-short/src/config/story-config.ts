@@ -7,9 +7,10 @@
  *
  * Workflow:
  *   npm run scripts                                   # narration -> public/audio/scenes/*.txt
- *   uv run tools/voiceover.py --provider qwen3 --tone warm --scene-dir <project>/public/audio/scenes --json
- *   uv run tools/captions.py <project>/public/audio/scenes      # word timing for the captions
- *   uv run tools/sync_timing.py --config <project>/src/config/story-config.ts --apply
+ *   uv run tools/voiceover.py --provider fal --brand maxlearnsmath --speed 1.1 --scene-dir <project>/public/audio/scenes --json
+ *   uv run tools/tighten_audio.py --scene-dir <project>/public/audio/scenes --max-pause 0.22 --max-wpm 180
+ *   uv run tools/captions.py <project>/public/audio/scenes --engine whisper --language en
+ *   uv run tools/sync_timing.py --config <project>/src/config/story-config.ts --audio-dir <project>/public/audio/scenes --apply --padding 0.35 --round 0.1
  */
 
 import type { Story } from './types';
@@ -21,7 +22,8 @@ export const story: Story = {
   height: 1920,
   outroSeconds: 3,
   backgroundMusicFile: 'audio/music.mp3',
-  musicVolume: 0.12,
+  // Generated beds are mastered hot (~-12 LUFS vs -16 for the VO): 0.028 keeps the music ~25 LU under the voice.
+  musicVolume: 0.028,
 
   chapters: [
     { title: 'Max at the casino' },
