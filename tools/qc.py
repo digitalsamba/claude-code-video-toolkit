@@ -253,14 +253,19 @@ def load_remotion(project: Path, report: Report, config_override: str | None):
 
 
 def load_scenes_json(project: Path, report: Report):
-    """concept-explainer-short: scenes.json + config.json, audio-anchored (no timing check).
+    """concept-explainer-short / youtube-longform: scenes.json + config.json, audio-anchored
+    (no timing check).
 
     Returns (audio_dir, timed, narration) where narration maps each scene's mp3 to its text.
     """
     data = json.loads((project / "scenes.json").read_text(encoding="utf-8"))
     report.data["config"] = str(project / "scenes.json")
-    report.data["template_type"] = "concept-explainer-short"
-    refs = [s["asset"] for s in data.get("scenes", []) if s.get("asset")]
+    chaptered = any(s.get("chapter") for s in data.get("scenes", []))
+    report.data["template_type"] = "youtube-longform" if chaptered else "concept-explainer-short"
+    refs = []
+    for s in data.get("scenes", []):
+        asset = s.get("asset")  # youtube-longform allows a list of assets per scene
+        refs += asset if isinstance(asset, list) else [asset] if asset else []
     cfg_path = project / "config.json"
     if cfg_path.exists():
         music = json.loads(cfg_path.read_text(encoding="utf-8")).get("music", {}).get("file")

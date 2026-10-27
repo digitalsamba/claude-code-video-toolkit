@@ -1,0 +1,188 @@
+{
+  "title": "My Gas Station Night Shift Came With 10 Rules. I Broke Rule 7.",
+  "description": "Sam took a night shift at a gas station on Route 9 for almost double the pay. Taped under the till was a list of rules in three different handwritings. Rule seven: never serve the man who pays in wet coins.\nAn original animated horror story (fiction).",
+  "descriptionFooter": "Narration and images are AI-generated (ElevenLabs).\n#animatedhorror #horrorstories #scarystories #nightshift #creepypasta",
+  "styleNote": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters",
+  "scenes": [
+    {
+      "id": "01",
+      "slug": "listing-again",
+      "chapter": "The Listing",
+      "visual": "image",
+      "asset": "images/01_listing-again.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. A lonely Route 9 gas station at night in winter, glowing canopy lights, a 'help wanted' paper sign taped to the door glass, empty highway into black fog",
+      "text": "My name is Sam, and for three weeks last winter I worked the night shift at a gas station on Route 9. I'm only telling this because the listing is up again. Same pay. Same words. No experience needed."
+    },
+    {
+      "id": "02",
+      "slug": "owner",
+      "chapter": "The Listing",
+      "visual": "image",
+      "asset": "images/02_owner.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. a young night-shift clerk in a dark green vest, seen from behind or in silhouette, face hidden receiving a ring of keys from a nervous older owner in a heavy coat who is already turning to leave, gas station doorway at night",
+      "text": "The pay was almost double anything else in town, and I was two months behind on rent. The owner, Mr. Hale, met me at ten at night, handed me the keys, and said the regulars were quiet. Then he left, fast, without checking a single thing I did."
+    },
+    {
+      "id": "03",
+      "slug": "sheet",
+      "chapter": "The Listing",
+      "visual": "image",
+      "asset": "images/03_sheet.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. Close-up under a cash register counter: a yellowed sheet of paper taped to old wood, ten scrawled lines in different handwriting, harsh fluorescent glow, a hand reaching toward it",
+      "text": "Under the till, taped to the wood, was a sheet of paper. Ten rules. Three different handwritings, like three different people had added to it over the years."
+    },
+    {
+      "id": "04",
+      "slug": "rules",
+      "chapter": "The Listing",
+      "visual": "image",
+      "asset": "images/04_rules.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. Extreme close-up of the rules sheet, one line underlined twice in red ink, the rest in shadow, a single drop of water on the paper",
+      "text": "Rule one: if a car pulls up with no headlights, do not look at the driver. Rule two: if anyone asks for the bathroom key, say it's broken. Rule seven was underlined twice. Never serve the man who pays in wet coins."
+    },
+    {
+      "id": "05",
+      "slug": "two-am",
+      "chapter": "The Listing",
+      "visual": "image",
+      "asset": "images/05_two-am.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. a young night-shift clerk in a dark green vest, seen from behind or in silhouette, face hidden slouched behind the counter at 2 a.m. scrolling a phone, a wall clock reading two, the store empty and humming, dark windows",
+      "text": "I laughed. I thought it was a prank for the new kid. I put the sheet back and didn't think about it again. Until two in the morning."
+    },
+    {
+      "id": "06",
+      "slug": "no-headlights",
+      "chapter": "Rule One",
+      "visual": "image",
+      "asset": "images/06_no-headlights.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. A black sedan with its headlights off rolling silently up to pump four under flickering canopy lights, the driver's seat a void of shadow",
+      "text": "The lights over the pumps flickered, all at once, and a black car rolled up to pump four. No headlights. I never heard an engine."
+    },
+    {
+      "id": "07",
+      "slug": "dont-look",
+      "chapter": "Rule One",
+      "visual": "image",
+      "asset": "images/07_dont-look.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. a young night-shift clerk in a dark green vest, seen from behind or in silhouette, face hidden staring rigidly at a cigarette rack behind the counter, shoulders tense, while in the window reflection a dark car waits at the pump",
+      "text": "I didn't look. I stared at the cigarette rack so hard my eyes watered, and I listened to the pump click and hum, click and hum, for almost ten minutes."
+    },
+    {
+      "id": "08",
+      "slug": "nozzle",
+      "chapter": "Rule One",
+      "visual": "image",
+      "asset": "images/08_nozzle.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. Close-up of a gas pump nozzle hanging in its holster, dripping thick dark red-black liquid onto wet concrete, empty pump bay, sodium light",
+      "text": "When it stopped, the car was gone. The register showed no sale. But the nozzle was hanging back in its holster, dripping, and what dripped from it wasn't gas."
+    },
+    {
+      "id": "09",
+      "slug": "bathroom-key",
+      "chapter": "Rule One",
+      "visual": "image",
+      "asset": "images/09_bathroom-key.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. A pale barefoot woman in a thin faded summer dress standing at the counter in winter, snow on the window behind her, holding out her hand, smiling far too wide",
+      "text": "The next night, a woman in a thin summer dress asked for the bathroom key. It was January. Her feet were bare. I said it was broken. She smiled, too wide, and said: that's alright. I'll wait for the next one."
+    },
+    {
+      "id": "10",
+      "slug": "reading",
+      "chapter": "Rule Seven",
+      "visual": "image",
+      "asset": "images/10_reading.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. a young night-shift clerk in a dark green vest, seen from behind or in silhouette, face hidden hunched over the counter at night re-reading the rules sheet under a single flickering tube light, store aisles fading into darkness",
+      "text": "For two weeks, I followed every rule. I stopped laughing at them. And every night, I read rule seven. Because it was the only one that didn't say what would happen."
+    },
+    {
+      "id": "11",
+      "slug": "wet-man",
+      "chapter": "Rule Seven",
+      "visual": "image",
+      "asset": "images/11_wet-man.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. a very tall gaunt man in a long black soaked coat, face shadowed by a wide brim hat standing just inside the gas station door, water streaming off him and pooling on the tile floor, dry night outside, fluorescent light buzzing",
+      "text": "He came in on a Thursday, at three fifteen. Tall, long coat, soaked through, though it hadn't rained in a month. Water ran off him and pooled on the floor, and he didn't seem to notice."
+    },
+    {
+      "id": "12",
+      "slug": "coins",
+      "chapter": "Rule Seven",
+      "visual": "image",
+      "asset": "images/12_coins.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. Close-up on a glass counter: a can of coffee and a row of old green rust-crusted coins, each leaving a ring of water, a long pale dripping hand placing one more",
+      "text": "He put a can of coffee on the counter. Then, one by one, he laid down coins. Old ones. Green with rust. Each one left a ring of water on the glass."
+    },
+    {
+      "id": "13",
+      "slug": "serve",
+      "chapter": "Rule Seven",
+      "visual": "image",
+      "asset": "images/13_serve.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. Close-up of a clerk's hands sliding dripping rusty coins into an open cash drawer, frost spreading across the metal, visible cold breath",
+      "text": "I should have said no. But he looked so tired. His hands were shaking. And it was only coffee. So I took the coins. They were cold, colder than ice, and they kept dripping in the drawer."
+    },
+    {
+      "id": "14",
+      "slug": "smile",
+      "chapter": "Rule Seven",
+      "visual": "image",
+      "asset": "images/14_smile.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. Close-up of a very tall gaunt man in a long black soaked coat, face shadowed by a wide brim hat tilting his head up to reveal a gaunt grey face smiling, mouth full of black water spilling over his lip, hollow dark eyes",
+      "text": "For the first time, he looked up at me. He smiled, and his mouth was full of black water. Thank you, he said. I've been waiting so long for someone new."
+    },
+    {
+      "id": "15",
+      "slug": "rule-eleven",
+      "chapter": "The Last Clerk",
+      "visual": "image",
+      "asset": "images/15_rule-eleven.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. Trembling hands holding the rules sheet flipped over, one fresh line of glistening wet black ink on the back, the empty store blurred behind",
+      "text": "When he left, I turned the sheet of rules over. There was an eleventh rule on the back that I'd never seen. The ink was still wet. If you served him, you are the night shift now."
+    },
+    {
+      "id": "16",
+      "slug": "phone",
+      "chapter": "The Last Clerk",
+      "visual": "image",
+      "asset": "images/16_phone.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. An old beige corded wall phone under the counter ringing, its cord cut cleanly and dangling, a lit mobile phone held up in the foreground",
+      "text": "I called Mr. Hale. Somewhere behind me, a phone started ringing. It was the old phone under the counter. The one with its cord cut clean through."
+    },
+    {
+      "id": "17",
+      "slug": "loop",
+      "chapter": "The Last Clerk",
+      "visual": "image",
+      "asset": "images/17_loop.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. a young night-shift clerk in a dark green vest, seen from behind or in silhouette, face hidden walking along a foggy highway at grey dawn toward a gas station that sits directly ahead, the same station visible again behind them, impossible loop",
+      "text": "At dawn, I grabbed my coat and pushed through the doors. I walked past pump four, toward the highway. And walked. And the gas station was in front of me again."
+    },
+    {
+      "id": "18",
+      "slug": "still-here",
+      "chapter": "The Last Clerk",
+      "visual": "image",
+      "asset": "images/18_still-here.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. The gas station interior frozen in endless pre-dawn blue light, cobwebs on the shelves, a cash drawer half open with wet coins glinting inside",
+      "text": "I don't know how long I've been here. The sun comes up, but it never quite reaches the store. The coins in the drawer are still wet."
+    },
+    {
+      "id": "19",
+      "slug": "new-rules",
+      "chapter": "The Last Clerk",
+      "visual": "image",
+      "asset": "images/19_new-rules.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. a young night-shift clerk in a dark green vest, seen from behind or in silhouette, face hidden writing on a fresh sheet of paper at the counter under one flickering light, their reflection in the dark window is a tall figure in a soaked coat",
+      "text": "So I wrote a new sheet of rules, for whoever answers the listing next. It's in my handwriting now. I added one at the bottom."
+    },
+    {
+      "id": "20",
+      "slug": "rule-twelve",
+      "chapter": "The Last Clerk",
+      "visual": "image",
+      "asset": "images/20_rule-twelve.png",
+      "prompt": "dark 2D animated horror illustration, flat cel shading, muted desaturated palette of sodium orange, sickly green and deep blue-black, heavy black shadows, thick clean outlines, film grain, cinematic 16:9 wide shot, no text, no words, no letters. The gas station seen from the dark highway, a black car with no headlights waiting at pump four, a faint pale figure in the driver's seat staring straight out at the viewer",
+      "text": "Rule twelve. If a car rolls up with no headlights, don't look at the driver. It might be me. And I've been waiting so long for someone new."
+    }
+  ]
+}

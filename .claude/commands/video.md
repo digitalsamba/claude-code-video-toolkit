@@ -44,6 +44,7 @@ Which template would you like to use?
   1. Sprint Review - internal demos, release videos
   2. Product Demo - marketing, launches, features
   3. Concept Explainer Short - vertical TikTok/Reels/Shorts explainers
+  4. YouTube Long-form - 16:9 chaptered videos, 8–60 min
 ```
 → Proceed to New Project Flow
 
@@ -162,6 +163,7 @@ Which template would you like to use?
 | Sprint Review | Internal demos, release videos | title, overview, demo, split-demo, summary, credits |
 | Product Demo | Marketing, launches, features | title, problem, solution, demo, feature, stats, cta |
 | Concept Explainer Short | Vertical 9:16 TikTok/Reels/Shorts explainers | hook, concept cards (Ideogram), b-roll (LTX), recap, cta |
+| YouTube Long-form | 16:9 explainers, video essays, tutorials (8–60 min) | cold open, promise, chapters of cards/stills/b-roll, payoff, outro |
 ```
 
 > **Concept Explainer Short is Python-based** (moviepy, no Remotion/npm). Its
@@ -169,6 +171,12 @@ Which template would you like to use?
 > (ideogram4/ltx2 from toolkit root) → `gen_vo.py` → `gen_captions.py` →
 > `build.py`. See `templates/concept-explainer-short/README.md`. Skip the
 > npm-install and brand.ts steps below; preview = open `out/short.mp4`.
+
+> **YouTube Long-form is also Python-based** and follows the same flow, with
+> chapters: agree a chapter outline first, then author `scenes.json` (a
+> `chapter` field per scene). Load the `youtube-longform` skill for outline,
+> script and cost guidance. Preview with `uv run build.py --preview`; output
+> is `out/video.mp4` plus `out/youtube-description.txt` and `out/captions.srt`.
 
 **Brand Selection:**
 
@@ -302,7 +310,7 @@ Help refine:
    ```bash
    cd projects/{name} && npm install
    ```
-   (Skip for concept-explainer-short — Python template, no npm.)
+   (Skip for concept-explainer-short and youtube-longform — Python templates, no npm.)
 
 ### Phase 5: Asset Guidance
 
@@ -372,7 +380,8 @@ npm run render    # Final render
 ```
 
 (For concept-explainer-short use instead: `uv run gen_vo.py`,
-`uv run gen_captions.py`, `uv run build.py` — output: `out/short.mp4`.)
+`uv run gen_captions.py`, `uv run build.py` — output: `out/short.mp4`.
+youtube-longform is the same, with output `out/video.mp4`.)
 
 ## Session History
 

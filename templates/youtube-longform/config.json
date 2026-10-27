@@ -1,0 +1,57 @@
+{
+  "format": { "width": 1920, "height": 1080, "fps": 30 },
+  "palette": {
+    "ink": "#0A0A14",
+    "accent1": "#7C5CFF",
+    "accent2": "#00E0C6",
+    "warn": "#FF4D5E",
+    "white": "#FFFFFF",
+    "slate": "#8B91A3"
+  },
+  "captions": {
+    "burn": false,
+    "y": 930,
+    "size": 52,
+    "maxWords": 6,
+    "maxChars": 40,
+    "fill": "#FFFFFF",
+    "language": "en",
+    "whisperModel": "auto"
+  },
+  "srt": { "maxWords": 12, "maxChars": 84 },
+  "chapterCard": {
+    "enabled": true,
+    "numbered": true,
+    "seconds": 3.5,
+    "size": 44,
+    "x": 72,
+    "y": 64
+  },
+  "timing": {
+    "startPad": 0.3,
+    "lead": 0.4,
+    "tail": 0.8,
+    "xfade": 0.45,
+    "endPad": 1.5
+  },
+  "voice": {
+    "provider": "qwen3",
+    "cloud": "modal",
+    "maxWpm": 160,
+    "refAudio": "",
+    "refText": "",
+    "speaker": "Ryan",
+    "tone": "",
+    "brand": ""
+  },
+  "music": {
+    "file": "audio/music.mp3",
+    "volume": 0.18,
+    "duck": true
+  },
+  "audio": {
+    "normalize": true,
+    "lufs": -14.0,
+    "truePeak": -1.0
+  }
+}

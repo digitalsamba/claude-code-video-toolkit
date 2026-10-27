@@ -1,0 +1,58 @@
+{
+  "format": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30
+  },
+  "palette": {
+    "ink": "#07080B",
+    "accent1": "#7A1C1C",
+    "accent2": "#2F4A3A",
+    "warn": "#C23B22",
+    "white": "#E8E2D0",
+    "slate": "#7D7F86"
+  },
+  "captions": {
+    "burn": false,
+    "y": 930,
+    "size": 52,
+    "maxWords": 6,
+    "maxChars": 40,
+    "fill": "#FFFFFF",
+    "language": "en",
+    "whisperModel": "auto"
+  },
+  "srt": {
+    "maxWords": 12,
+    "maxChars": 84
+  },
+  "chapterCard": {
+    "enabled": true,
+    "numbered": true,
+    "seconds": 3.5,
+    "size": 44,
+    "x": 72,
+    "y": 64
+  },
+  "timing": {
+    "startPad": 0.3,
+    "lead": 0.6,
+    "tail": 1.0,
+    "xfade": 0.6,
+    "endPad": 3.0
+  },
+  "voice": {
+    "provider": "elevenlabs",
+    "note": "generated via the ElevenLabs connector, voice Cedric M (BQOei2tk6QCBMHQWPhbj)"
+  },
+  "music": {
+    "file": "audio/music.mp3",
+    "volume": 0.22,
+    "duck": true
+  },
+  "audio": {
+    "normalize": true,
+    "lufs": -14.0,
+    "truePeak": -1.0
+  }
+}

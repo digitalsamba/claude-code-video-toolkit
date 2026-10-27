@@ -87,6 +87,7 @@ Claude Code has deep knowledge in:
 | **ideogram4** | AI image generation with best-in-class in-image text — title cards, thumbnails, exact brand colors |
 | **acestep** | AI music generation — prompts, lyrics, scene presets, video integration |
 | **ltx2** | AI video generation — text-to-video, image-to-video clips, prompting guide |
+| **youtube-longform** | Long-form YouTube — retention-first outlines, chaptered scripts, visual/cost planning, chapters + SRT |
 | **moviepy** | Python video composition — overlay text on LTX-2/SadTalker output, build.py-style projects |
 | **runpod** | Cloud GPU — setup, Docker images, endpoint management, costs |
 
@@ -122,6 +123,7 @@ Pre-built video structures in `templates/`:
 - **sprint-review-v2** — Composable scene-based sprint review with modular architecture
 - **product-demo** — Marketing videos with dark tech aesthetic, stats, CTA
 - **concept-explainer-short** — 9:16 vertical TikTok/Reels/Shorts explainers (Python/moviepy, no Remotion)
+- **youtube-longform** — 16:9 chaptered long-form YouTube videos (8–60 min) with cached chapter renders, YouTube chapters, SRT and -14 LUFS master (Python, no Remotion)
 
 See `examples/` for finished projects you can learn from (newest first — scroll down to watch the toolkit evolve in reverse):
 

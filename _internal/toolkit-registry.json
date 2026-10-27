@@ -79,6 +79,13 @@
       "created": "2026-03-25",
       "updated": "2026-10-12"
     },
+    "youtube-longform": {
+      "path": ".claude/skills/youtube-longform/",
+      "description": "Long-form 16:9 YouTube production — retention-first outlines, chaptered scripts, visual density and cost planning, chapter timestamps, SRT captions, -14 LUFS masters (drives the youtube-longform template)",
+      "status": "beta",
+      "created": "2026-10-26",
+      "updated": "2026-10-26"
+    },
     "moviepy": {
       "path": ".claude/skills/moviepy/",
       "description": "Python video composition with moviepy 2.x — overlaying text on LTX-2/SadTalker output, single-file build.py video projects",
@@ -1098,6 +1105,14 @@
       "status": "beta",
       "created": "2026-06-09",
       "updated": "2026-10-12"
+    },
+    "youtube-longform": {
+      "path": "templates/youtube-longform/",
+      "description": "16:9 long-form YouTube videos (8–60 min) — Python build driven by chaptered scenes.json: cached chapter-by-chapter rendering with a numpy compositor, continuous ducked music, -14 LUFS master, YouTube chapter timestamps, uploadable SRT",
+      "stack": "python-moviepy",
+      "status": "beta",
+      "created": "2026-10-26",
+      "updated": "2026-10-26"
     }
   },
   "transitions": {

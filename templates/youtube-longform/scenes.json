@@ -1,0 +1,42 @@
+{
+  "title": "How GPS Actually Works",
+  "description": "Your phone finds you to within a few metres using clocks in space. Here's the physics, the maths and the surprising role of Einstein.",
+  "descriptionFooter": "#gps #science #explained",
+  "scenes": [
+    {
+      "id": "01", "slug": "hook", "chapter": "Intro", "visual": "ltx",
+      "asset": "clips/01_hook.mp4",
+      "text": "Right now, about thirty satellites are shouting the time at you from twenty thousand kilometres up. Your phone listens to four of them, and from nothing but the time, it works out exactly where you are standing."
+    },
+    {
+      "id": "02", "slug": "promise", "chapter": "Intro", "visual": "ideogram",
+      "asset": "images/02_promise.png",
+      "text": "In this video we will build GPS from scratch: why time equals distance, why you need four satellites and not three, and why the whole system would drift off by kilometres a day without Einstein."
+    },
+    {
+      "id": "03", "slug": "time-is-distance", "chapter": "Time Is Distance", "visual": "ideogram",
+      "asset": ["images/03_signal.png", "clips/03_wave.mp4"],
+      "text": "Start with one idea. A radio signal travels at the speed of light, about three hundred thousand kilometres every second. If a satellite tells you when it sent a message, and you know when it arrived, the gap is a distance. Seventy milliseconds of delay means you are about twenty one thousand kilometres away."
+    },
+    {
+      "id": "04", "slug": "spheres", "chapter": "Why Four Satellites", "visual": "ideogram",
+      "asset": "images/04_spheres.png",
+      "text": "One distance puts you somewhere on a giant sphere around that satellite. A second satellite gives a second sphere, and the two intersect in a circle. A third narrows it down to two points, and one of them is usually deep in space."
+    },
+    {
+      "id": "05", "slug": "clock-error", "chapter": "Why Four Satellites", "visual": "ltx",
+      "asset": "clips/05_clock.mp4",
+      "text": "So why four? Because your phone's clock is cheap. A one microsecond error is three hundred metres of error. The fourth satellite lets the receiver solve for its own clock mistake as a fourth unknown, alongside latitude, longitude and altitude."
+    },
+    {
+      "id": "06", "slug": "relativity", "chapter": "Einstein's Correction", "visual": "ideogram",
+      "asset": "images/06_relativity.png",
+      "text": "Now the strange part. Satellite clocks move fast, which slows them down, and they sit higher in Earth's gravity, which speeds them up. The net effect is about thirty eight microseconds per day. Uncorrected, that is more than ten kilometres of drift every single day."
+    },
+    {
+      "id": "07", "slug": "recap", "chapter": "Recap", "visual": "ideogram",
+      "asset": "images/07_recap.png",
+      "text": "So: time is distance, four satellites solve for position and your own clock, and relativity keeps it honest. If you enjoyed building it from scratch, subscribe for the next one."
+    }
+  ]
+}

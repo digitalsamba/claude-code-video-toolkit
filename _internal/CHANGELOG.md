@@ -10,6 +10,9 @@ All notable changes to claude-code-video-toolkit.
 
 ### Added
 
+- **`youtube-longform` template** — 16:9 long-form YouTube videos (8–60 min), Python like concept-explainer-short. Scenes carry a `chapter` and may list several assets. `build.py` renders chapter by chapter with a content-hash cache and a numpy compositor (~4x faster than `CompositeVideoClip`), mixes one continuous VO track with music looped and sidechain-ducked across the video, masters to -14 LUFS / -1 dBTP, and writes YouTube chapter timestamps (`youtube-description.txt`), `captions.srt` and `timeline.json`. `--preview` and `--chapter N` for iteration. `qc.py` recognises it and accepts list assets.
+- **`youtube-longform` skill** — editorial guidance for long-form: retention-first outlines, chaptered scripting, visual density and cost planning, publishing.
+
 - **Synthetic UI demos as a toolkit feature**: shared `Stage` and `Cursor` components in `lib/components` (a browser window with camera zoom/pan keyframes and a scripted cursor), and a `synthetic-ui-demo` skill. The skill covers rebuilding an app's screens from its source, a frame-based timeline anchored to the voice lines, measuring click targets from stills, and labelling AI-generated people. `examples/ds-release-649` and `examples/ds-free-schedule-demo` are the reference builds.
 
 ---
