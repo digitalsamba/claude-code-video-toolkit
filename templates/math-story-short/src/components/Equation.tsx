@@ -1,7 +1,20 @@
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { theme } from '../config/theme';
 
-/** Stacked fraction in the math serif. */
+/**
+ * Render a LaTeX string via KaTeX. Use inside EquationCard lines.
+ * Handles fractions, superscripts, and spacing automatically.
+ *
+ * Usage: <Tex>{`\\frac{72}{10} = 7.2`}</Tex>
+ */
+export const Tex: React.FC<{ children: string; display?: boolean }> = ({ children, display }) => {
+  const html = katex.renderToString(children, { throwOnError: false, displayMode: display ?? false });
+  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+};
+
+/** @deprecated Use <Tex>{`\\frac{n}{d}`}</Tex> instead. Kept for backward compatibility. */
 export const Frac: React.FC<{ n: React.ReactNode; d: React.ReactNode }> = ({ n, d }) => (
   <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', verticalAlign: 'middle', margin: '0 10px' }}>
     <span style={{ padding: '0 10px 4px' }}>{n}</span>
@@ -78,7 +91,7 @@ export const EquationCard: React.FC<{ lines: EquationLine[]; width?: number; del
               fontFamily: theme.fonts.math,
               fontSize: l.size ?? 54,
               color: theme.text,
-              lineHeight: 1.25,
+              lineHeight: 1.4,
               margin: '10px 0',
               opacity: s * (isLast ? 1 : 0.62),
               filter: `blur(${interpolate(s, [0, 1], [8, 0])}px)`,

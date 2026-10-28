@@ -65,7 +65,7 @@ These are the house style. Change them per episode only when asked.
 | Story | `src/config/story-config.ts` | Chapters, then scenes: narration, audio, duration, Max's mood/layout/thought, visual key |
 | Visuals | `src/episode/visuals.tsx` | One component per visual key. Consecutive scenes with the same key share one mounted visual and get the scene boundaries as **beats**, so a chart keeps drawing across scenes |
 | Data | `src/episode/data.ts` | Seeded simulation behind the charts. `scripts/seed-search.mjs` finds a seed whose results hit the story beats |
-| Brand | `src/config/brand.ts`, `theme.ts` | Colours, fonts (Inter / JetBrains Mono / STIX Two), layout zones |
+| Brand | `src/config/brand.ts`, `theme.ts` | Colours, fonts (Inter / JetBrains Mono / STIX Two / Fraunces display), layout zones |
 
 Persistent layers (backdrop, chapter header with story-style progress, Max, captions, grain)
 live outside the scene sequences, so they never jump at a cut: Max glides between layouts and
@@ -77,7 +77,8 @@ hops when his mood changes.
 |---|---|
 | `EditorPanel` | The brand's signature code-editor window: file tab, traffic-light dots, live status |
 | `LineChart` | Animated SVG chart: linear or log x, animated domains (zoom-outs), glow, area fill, pulsing end marker |
-| `StatRow` | Glass tiles with label + big tabular number; `tone: 'bad'` goes crimson |
+| `StatRow` | Glass tiles with label + big tabular number; `tone: 'bad'` goes crimson. Only for values that change during the scene |
+| `Die` | The subject as a physical object: gradient body, thick edge, gloss, domed pips; tones `ivory` / `crimson` / `navy`. Copy its structure for cards, coins, chips |
 | `EquationCard`, `Frac`, `Hl` | A derivation that builds line by line in a maths serif, with a highlighted result |
 | `Max` / `MaxLayer` | The mascot: moods `happy thinking smug shocked confused sad`, layouts `hero side hidden`, thought bubbles |
 | `TypewriterCaptions` | `›` prompt, text typed in sync with the voice, block cursor |
@@ -88,20 +89,29 @@ hops when his mood changes.
 Max directions per scene: `mood`, `layout` (`hero` / `side` / `hidden`), `pose: 'point'` (arm toward the
 stage), `emote: '?' | '!'`, and `thought` (hero layout only).
 
-**Zones in a visual:** `<Stage>` is the main picture. `<Aside>` is the strip right of Max in side layout,
-for live readouts (`StatRow column`). Leaving it empty wastes a third of the screen.
+**Zones in a visual:** `<Stage>` (y 300–1090) and `<Aside>` (right of Max) are helpers for the *presenter*
+archetype. *Showcase* visuals (grids, charts, proofs) hide Max and take y 300–1480 at absolute coordinates.
+An empty aside is fine; a StatRow that repeats what the stage shows is not. See CLAUDE.md "Layout".
+
+**Stills while iterating:** `npm run stills` renders one PNG per scene end into `out/stills/`
+(`--at 0.5` for mid-scene, `--frames 72,150` for exact frames, `--scale 0.5` for a quick look).
+Build a contact sheet and check it before showing the user; render video only once the visuals are approved.
 
 ## A new episode
 
 1. Write the story beats first: **hook (payoff first) → setup → wrong intuition → surprise → rule out luck → reveal → scale → punchline**.
    The `hook: true` scene is a cold open: show the shocking result in the first second, then rewind.
+   It is a *set piece*: one prop the narration is literally about (an exam sheet, a chip stack), not labelled pills.
 2. Replace `chapters` and `scenes` in `story-config.ts`. Budget about 2.4 words/second plus about 1s per scene.
 3. Write the simulation in `data.ts`, search a seed, and put the numbers it prints into the narration.
-4. Add a visual component per group in `visuals.tsx` and register it in `visuals`.
+4. Add a visual component per group in `visuals.tsx` and register it in `visuals`. Choose each group's
+   layout archetype (showcase / presenter / set piece) and draw the subject as an object (`Die.tsx` pattern).
 5. Time reveals by **fraction of the beat** (`at(beats, 1, 0.4)`), so they survive `sync_timing --apply`.
    After the voiceover, nudge the fractions so the reveals land on the words.
 
 ## Layout (1080×1920)
 
-Header 92–250 · stage 300–1090 · Max (side) 1125–1515 with the aside to his right (x ≥ 410) · captions from 1540. The bottom ~260px stays
-clear for the platform's own UI.
+Header 92–250 · captions from 1540 · the bottom ~260px stays clear for the platform's own UI.
+Between those, the content decides: **showcase** (Max hidden, visual y 300–1480), **presenter**
+(stage 300–1090, Max side 1125–1515, aside x ≥ 410 only for live numbers) or **set piece** (Max hero,
+one prop). Type scale and the full rules are in CLAUDE.md.

@@ -1,7 +1,7 @@
 {
   "name": "MaxLearnsMath",
   "description": "Math stories in 2 minutes 🧮 Follow Max as he figures it out ✨",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "website": "",
   "colors": {
     "primary": "#c1121f",
@@ -25,7 +25,7 @@
   },
   "fonts": {
     "primary": "Inter, system-ui, sans-serif",
-    "display": "Inter, system-ui, sans-serif",
+    "display": "Fraunces, Georgia, serif",
     "mono": "JetBrains Mono, ui-monospace, monospace",
     "math": "STIX Two Text, Times New Roman, serif"
   },
@@ -43,33 +43,44 @@
     "lg": 20
   },
   "typography": {
+    "hero": {
+      "size": 240,
+      "weight": 900,
+      "font": "display",
+      "note": "the episode's number or verdict, 200-330px"
+    },
     "h1": {
-      "size": 96,
-      "weight": 800
+      "size": 110,
+      "weight": 900,
+      "font": "display",
+      "note": "key phrase / punchline, 100-120px"
     },
     "h2": {
       "size": 72,
-      "weight": 700
+      "weight": 800
     },
     "h3": {
-      "size": 48,
-      "weight": 600
+      "size": 50,
+      "weight": 700
     },
     "body": {
-      "size": 44,
-      "weight": 400
+      "size": 46,
+      "weight": 600,
+      "note": "nothing readable under 44px on a phone"
     },
     "label": {
-      "size": 32,
-      "weight": 600,
-      "letterSpacing": 2
+      "size": 30,
+      "weight": 500,
+      "letterSpacing": 3,
+      "font": "mono",
+      "note": "uppercase eyebrow labels and object tags"
     }
   },
   "assets": {
     "logo": "assets/logo.png",
     "logoLight": "assets/logo-light.png"
   },
-  "notes": "Extracted from the original casino reel and upgraded. Navy #003049 backdrop (animated aurora + dot grid in the template). Charts live in code-editor panels (#0b3c5c, filename tab like bankroll.plot). Crimson #c1121f = Max, losses, key results; maroon #780000 = shading/hair; steel blue #669bbc = axes, labels, other players; cream #fdf0d5 = text; ink #131315 = roulette black; teal #2a9d8f = rare accent (the zero). Type roles: JetBrains Mono for labels/numbers/chapter badges, Inter for narration and titles, STIX Two for equations. Narration renders as a terminal typewriter line (crimson prompt, block cursor). Mascot: Max - curly maroon hair, round glasses, crimson hoodie with a pi badge. Logo pending: drop it in assets/logo.png.",
+  "notes": "Extracted from the original casino reel and upgraded. Navy #003049 backdrop (animated aurora + dot grid in the template). Charts live in code-editor panels (#0b3c5c, filename tab like bankroll.plot). Crimson #c1121f = Max, losses, key results; maroon #780000 = shading/hair; steel blue #669bbc = axes, labels, other players; cream #fdf0d5 = text; ink #131315 = roulette black; teal #2a9d8f = rare accent (the zero). Type roles: JetBrains Mono for labels/numbers/chapter badges, Inter for narration and titles, STIX Two for equations, Fraunces 900 (display) for hero numerals and punchlines only. Objects (dice, cards, coins) are drawn as physical things in three tones: ivory = neutral, crimson = the special case / answer, navy = unknown or dimmed. Layouts vary per scene (showcase / presenter / set piece, see the template's CLAUDE.md); stat tiles only for values that change on screen. Narration renders as a terminal typewriter line (crimson prompt, block cursor). Mascot: Max - curly maroon hair, round glasses, crimson hoodie with a pi badge. Logo pending: drop it in assets/logo.png.",
   "handle": "@maxlearnsmath",
   "template": "math-story-short"
 }

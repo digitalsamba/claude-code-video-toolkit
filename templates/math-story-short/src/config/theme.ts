@@ -1,12 +1,14 @@
 import { loadFont as loadInter } from '@remotion/google-fonts/Inter';
 import { loadFont as loadMono } from '@remotion/google-fonts/JetBrainsMono';
 import { loadFont as loadMath } from '@remotion/google-fonts/STIXTwoText';
+import { loadFont as loadDisplay } from '@remotion/google-fonts/Fraunces';
 import { brand } from './brand';
 
 const inter = loadInter('normal', { weights: ['400', '500', '600', '700', '800', '900'], subsets: ['latin'] });
 const mono = loadMono('normal', { weights: ['400', '500', '700'], subsets: ['latin'] });
 const math = loadMath('normal', { weights: ['400', '500', '600'], subsets: ['latin'] });
 loadMath('italic', { weights: ['400'], subsets: ['latin'] });
+const display = loadDisplay('normal', { weights: ['700', '900'], subsets: ['latin'] });
 
 const c = brand.colors;
 
@@ -30,6 +32,8 @@ export const theme = {
     sans: `${inter.fontFamily}, system-ui, sans-serif`,
     mono: `${mono.fontFamily}, ui-monospace, monospace`,
     math: `${math.fontFamily}, 'Times New Roman', serif`,
+    /** Hero numerals and punchlines (1/11, 'Hand them two dice.') */
+    display: `${display.fontFamily}, Georgia, serif`,
   },
   /** 1080x1920 layout zones (px). Reels/Shorts UI covers the bottom ~260px. */
   layout: {

@@ -37,6 +37,14 @@ First, find and understand the current project:
    - Identify which are slide-type (designable) vs demo-type (video playback)
    - Note each scene's purpose from config content
 
+**math-story-short projects are different.** Scenes live in `src/config/story-config.ts` and are
+grouped by `visual` key; one component per group in `src/episode/visuals.tsx` receives the scene
+boundaries as beats. Design there means: read the template's `CLAUDE.md` (layout archetypes
+showcase / presenter / set piece, type scale, "objects, not icons", scene recipes), pick the
+archetype per group, and check the result with `npm run stills` (one PNG per scene end, plus
+`--frames` for mid-animation moments) rather than a video render. Brand fonts for it include a
+display serif (Fraunces 900) for the hero numeral of each scene.
+
 ---
 
 ## Step 2: Identify Target Scene
@@ -198,11 +206,14 @@ Add session entry:
 
 When working with frontend-design skill on video scenes:
 
-1. **Video scale** - Everything needs to be larger than web UI (viewers are farther from screen)
-2. **Motion matters** - Static designs that work on web may feel dead on video
-3. **Time constraints** - Each scene has limited duration; don't over-animate
-4. **Narrative arc** - Consider how visual intensity builds across scenes
-5. **Contrast creates impact** - A calm scene makes the next dramatic scene hit harder
+1. **Video scale** - Everything needs to be larger than web UI (viewers are farther from screen). On 9:16
+   shorts nothing readable goes under ~44px and each scene has one huge hero element (200px+)
+2. **One layout per scene, not one layout per video** - vary full-bleed showcases, presenter scenes and
+   set pieces; a stat tile only earns its place when its value changes on screen
+3. **Motion matters** - Static designs that work on web may feel dead on video
+4. **Time constraints** - Each scene has limited duration; don't over-animate
+5. **Narrative arc** - Consider how visual intensity builds across scenes
+6. **Contrast creates impact** - A calm scene makes the next dramatic scene hit harder
 
 ---
 

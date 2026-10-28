@@ -36,5 +36,6 @@ export const brand = {
     primary: 'Inter',
     mono: 'JetBrains Mono',
     math: 'STIX Two Text',
+    display: 'Fraunces',
   },
 };

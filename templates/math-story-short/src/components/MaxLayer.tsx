@@ -13,7 +13,7 @@ interface Placement {
 const PLACE: Record<MaxLayout | 'outro', Placement> = {
   hero: { x: 240, feet: 1510, height: 470 },
   side: { x: 200, feet: 1515, height: 390 },
-  hidden: { x: 200, feet: 2200, height: 390 },
+  hidden: { x: 200, feet: 2500, height: 390 },
   outro: { x: 540, feet: 1220, height: 560 },
 };
 
