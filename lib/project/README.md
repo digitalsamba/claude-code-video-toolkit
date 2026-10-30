@@ -2,6 +2,12 @@
 
 This directory contains the schema and documentation for multi-session video project tracking.
 
+Runtime validation now lives in `schema.json` and `tools/project_manifest.py`.
+Run `uv run tools/project.py validate projects/my-video` before updating a manifest.
+See [Validated project manifests](../../docs/project-manifest.md) for the versioned
+format, legacy compatibility, CLI and Python API. The lifecycle examples below
+describe the complete workflow; early planning manifests can omit optional metadata.
+
 ## Overview
 
 Video projects span multiple Claude Code sessions. The project system provides:

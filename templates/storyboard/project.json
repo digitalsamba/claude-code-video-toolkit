@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "name": "One story, every screen",
+  "template": "storyboard",
+  "format": "landscape",
+  "palette": {"background": "#13251F", "foreground": "#FFF8E9", "accent": "#E1C16D"},
+  "scenes": [
+    {"id": "title", "type": "title", "title": "A story that fits.", "onScreenText": "Create once. Compose for every screen.", "durationSeconds": 3, "narration": null},
+    {"id": "demo", "type": "demo", "title": "Give the product room.", "onScreenText": "Portrait stacks the picture and text. Landscape places them side by side.", "durationSeconds": 4, "narration": null},
+    {"id": "cta", "type": "cta", "title": "Ready for your next cut?", "onScreenText": "Replace these scenes with your own project manifest.", "durationSeconds": 3, "narration": null}
+  ]
+}

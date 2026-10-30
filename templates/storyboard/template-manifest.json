@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "storyboard",
+  "engine": "remotion",
+  "entry": "src/index.ts",
+  "composition": "Storyboard",
+  "formats": ["landscape", "portrait", "square"],
+  "description": "Manifest-driven scenes with responsive media, narration and captions"
+}

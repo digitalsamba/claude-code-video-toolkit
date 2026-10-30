@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "script",
+      "command": ["{python}", "-c", "from pathlib import Path; Path('script.txt').write_text('A local production example.', encoding='utf-8')"],
+      "inputs": [],
+      "outputs": ["script.txt"],
+      "estimatedCostUsd": 0
+    },
+    {
+      "id": "review",
+      "command": ["{python}", "-c", "import json; from pathlib import Path; print(json.dumps({'text': Path('script.txt').read_text(encoding='utf-8'), 'approved': True}))"],
+      "dependsOn": ["script"],
+      "inputs": ["script.txt"],
+      "outputs": [],
+      "stdoutFile": "out/review.json",
+      "estimatedCostUsd": 0
+    }
+  ]
+}

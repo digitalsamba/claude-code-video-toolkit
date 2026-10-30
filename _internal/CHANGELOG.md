@@ -8,6 +8,20 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+### Added
+
+- Runtime-validated project manifests and compatibility-preserving migration.
+- Checkpointed build graphs, content-aware selective regeneration, cost forecasts,
+  estimate caps, and named draft/final execution profiles.
+- Local visual storyboard review with notes and content-bound approvals.
+- Immutable searchable asset versions and checksum-verified restore.
+- Named narration cues for cursor/camera timing and a runnable synthetic demo.
+- Adaptive storyboard compositions for landscape, portrait and square output.
+- Reusable browser action recording/replay with secret references and target events.
+- Language/campaign variants, audio retiming plans and SRT/WebVTT export.
+- Validated local provider/template contracts and an offline template scaffold.
+- Windows/Linux workflow verification with actual video and browser checks.
+
 ### Fixed
 
 - **product-demo template text is readable on a phone and passes WCAG AA**: every slide's text is at least 28px at 1080p (it was down to 12px), the problem badges use dark text on the coral (2.8:1 → 6.5:1), and the CTA tagline uses `textMedium` instead of `textLight` (2.6:1 → 5.4:1). The demo window is marked `data-qc="product"`. `qc.py --layout` on the template now reports no text findings.

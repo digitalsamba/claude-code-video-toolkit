@@ -13,12 +13,17 @@ On invocation, scan templates and present options:
 ### Step 1: Scan Templates
 
 ```
-1. Glob templates/*/package.json
+1. Read _internal/toolkit-registry.json templates and inspect templates/*/template-manifest.json.
+   Include Python templates such as concept-explainer-short, which have no package.json.
+   Use tools/extensions.py list for templates that expose a validated local contract.
 2. For each template:
-   - Read package.json for name/description
+   - Read template manifest, registry entry or package.json for name/description and engine
    - Check for src/config/*-config.ts
    - Count available scene types
    - Check for README or docs
+   - Include storyboard for manifest-driven landscape/portrait/square compositions;
+     see docs/multi-format.md. Use its project.json and props, rather than creating
+     a TS config file it does not consume.
 ```
 
 ### Step 2: Present Templates

@@ -1,0 +1,59 @@
+name: Production features
+
+on:
+  pull_request:
+    paths: ['tools/**', 'lib/**', 'tests/**', 'playwright/**', 'templates/storyboard/**', 'examples/narration-cues/**', 'examples/providers/**', 'scripts/verify_features.py', '.github/workflows/production-features.yml']
+  push:
+    branches: [main]
+    paths: ['tools/**', 'lib/**', 'tests/**', 'playwright/**', 'templates/storyboard/**', 'examples/narration-cues/**', 'examples/providers/**', 'scripts/verify_features.py', '.github/workflows/production-features.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Match the Linux image supported by the pinned Playwright release.
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Python dependencies for media QC
+        run: python -m pip install numpy python-dotenv requests pillow
+      - name: Install FFmpeg on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install FFmpeg on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install ffmpeg --yes --no-progress
+      - name: Install browser and template dependencies
+        shell: bash
+        run: |
+          npm ci --prefix playwright --ignore-scripts --no-audit --no-fund
+          npm ci --prefix templates/storyboard --ignore-scripts --no-audit --no-fund
+          npm ci --prefix examples/narration-cues --ignore-scripts --no-audit --no-fund
+          cd playwright
+          npx playwright install --with-deps chromium
+      - name: Verify CLI, workflow, real renders and review UI
+        run: python scripts/verify_features.py --media --browser
+      - name: Save verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-verification-${{ matrix.os }}
+          path: |
+            scratch/feature-verification.json
+            scratch/review-*.png
+            templates/storyboard/out/verified-*.mp4
+            examples/narration-cues/out/verified.png

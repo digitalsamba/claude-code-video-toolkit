@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/digitalsamba/claude-code-video-toolkit/project.schema.json",
+  "title": "Video project manifest",
+  "description": "Version 1 project.json. Unknown fields are preserved for templates and future tools.",
+  "type": "object",
+  "required": ["name", "template", "scenes"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"type": "integer", "enum": [1], "default": 1},
+    "name": {"$ref": "#/$defs/text"},
+    "template": {"$ref": "#/$defs/text"},
+    "brand": {"$ref": "#/$defs/text"},
+    "description": {"type": "string"},
+    "created": {"type": "string", "format": "date-time"},
+    "updated": {"type": "string", "format": "date-time"},
+    "phase": {"enum": ["planning", "assets", "review", "audio", "editing", "rendering", "complete"]},
+    "engine": {"$ref": "#/$defs/text"},
+    "composition": {"$ref": "#/$defs/text"},
+    "output": {"type": "string", "format": "project-output"},
+    "scenes": {"type": "array", "items": {"$ref": "#/$defs/scene"}},
+    "audio": {
+      "type": "object",
+      "properties": {
+        "voiceover": {"$ref": "#/$defs/audio"},
+        "music": {"$ref": "#/$defs/audio"},
+        "sfx": {"type": "array", "items": {"$ref": "#/$defs/audio"}}
+      }
+    },
+    "format": {
+      "anyOf": [
+        {"$ref": "#/$defs/text"},
+        {
+          "type": "object",
+          "properties": {
+            "width": {"type": "integer", "exclusiveMinimum": 0},
+            "height": {"type": "integer", "exclusiveMinimum": 0},
+            "fps": {"type": "number", "exclusiveMinimum": 0},
+            "aspectRatio": {"$ref": "#/$defs/text"}
+          }
+        }
+      ]
+    },
+    "render": {
+      "type": "object",
+      "properties": {
+        "engine": {"$ref": "#/$defs/text"},
+        "entry": {"type": "string", "format": "project-path"},
+        "composition": {"$ref": "#/$defs/text"},
+        "file": {"type": "string", "format": "project-output"},
+        "durationSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "fps": {"type": "number", "exclusiveMinimum": 0},
+        "width": {"type": "integer", "exclusiveMinimum": 0},
+        "height": {"type": "integer", "exclusiveMinimum": 0}
+      }
+    },
+    "publish": {
+      "type": "object",
+      "properties": {
+        "platform": {"$ref": "#/$defs/text"},
+        "title": {"type": "string", "maxLength": 100},
+        "description": {"type": "string", "maxLength": 5000},
+        "tags": {"type": "array", "items": {"type": "string"}},
+        "category": {"type": "string"},
+        "thumbnail": {"type": "string", "format": "project-path"},
+        "captions": {"type": "string", "format": "project-path"},
+        "privacy": {"enum": ["private", "unlisted", "public"]},
+        "privacyStatus": {"enum": ["private", "unlisted", "public"]},
+        "publishAt": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+        "uploadedAt": {"type": "string"},
+        "videoId": {"$ref": "#/$defs/text"},
+        "url": {"type": "string"},
+        "playlist": {"type": "string"}
+      }
+    },
+    "estimates": {
+      "type": "object",
+      "properties": {
+        "totalDurationSeconds": {"type": "number", "minimum": 0},
+        "voiceoverMinutes": {"type": "number", "minimum": 0}
+      }
+    },
+    "sessions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["date", "summary"],
+        "properties": {
+          "date": {"type": "string", "format": "date"},
+          "summary": {"type": "string"}
+        }
+      }
+    },
+    "production": {
+      "type": "object",
+      "required": ["version", "tasks"],
+      "properties": {
+        "version": {"type": "integer", "enum": [1]},
+        "budgetUsd": {"type": "number", "minimum": 0},
+        "tasks": {"type": "array", "items": {"$ref": "#/$defs/task"}}
+      }
+    }
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "taskId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "audio": {
+      "type": "object",
+      "properties": {
+        "file": {"type": "string", "format": "project-path"},
+        "status": {"enum": ["needed", "present", "verified", "optional"]},
+        "mode": {"enum": ["per_scene", "single"]},
+        "provider": {"$ref": "#/$defs/text"},
+        "voiceId": {"$ref": "#/$defs/text"},
+        "scriptWordCount": {"type": "integer", "minimum": 0},
+        "durationSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "captions": {"type": "string", "format": "project-path"}
+      }
+    },
+    "scene": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"},
+        "type": {"$ref": "#/$defs/text"},
+        "title": {"type": ["string", "null"]},
+        "durationSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "startSeconds": {"type": "number", "minimum": 0},
+        "narration": {"type": ["string", "null"]},
+        "scriptFile": {"type": "string", "format": "project-path"},
+        "audioFile": {"type": "string", "format": "project-path"},
+        "captionsFile": {"type": "string", "format": "project-path"},
+        "audio": {"$ref": "#/$defs/audio"},
+        "visual": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {"$ref": "#/$defs/text"},
+            "asset": {"type": "string", "format": "project-path"},
+            "assets": {"type": "array", "items": {"type": "string", "format": "project-path"}},
+            "instructions": {"type": "string"}
+          }
+        },
+        "status": {"enum": ["ready", "asset-needed", "asset-present", "asset-missing"]},
+        "reviewStatus": {"type": "string"}
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": ["id", "command", "outputs"],
+      "properties": {
+        "id": {"$ref": "#/$defs/taskId"},
+        "label": {"$ref": "#/$defs/text"},
+        "command": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+        "dependsOn": {"type": "array", "items": {"$ref": "#/$defs/taskId"}},
+        "inputs": {"type": "array", "items": {"type": "string", "format": "project-input"}},
+        "toolkitInputs": {"type": "array", "items": {"type": "string", "format": "project-input"}},
+        "environmentInputs": {"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"}},
+        "outputs": {"type": "array", "items": {"type": "string", "format": "project-output"}},
+        "stdoutFile": {"type": "string", "format": "project-output"},
+        "cwd": {"type": "string", "format": "project-directory"},
+        "timeoutSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "estimatedCostUsd": {"type": "number", "minimum": 0}
+      }
+    }
+  }
+}

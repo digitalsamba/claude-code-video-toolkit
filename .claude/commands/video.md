@@ -150,6 +150,13 @@ Update the project's CLAUDE.md with current state (see CLAUDE.md Generation belo
 
 ## New Project Flow
 
+Before creating or resuming a project, consult `docs/production-features.md` when
+the request includes repeatable builds, variants, multi-format output or visual
+approval. Run `tools/project.py validate PROJECT --json` on existing manifests.
+Offer the `storyboard` template for a data-driven responsive composition. Its
+project.json is the render input, so skip legacy TS config generation. Existing
+templates continue to use their documented configuration.
+
 When creating a new project:
 
 ### Phase 1: Setup

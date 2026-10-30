@@ -1,0 +1,22 @@
+{
+  "name": "narration-cues-example",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render NarrationCues out/narration-cues.mp4",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.529",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "4.0.529"
+  },
+  "devDependencies": {
+    "@types/eslint": "9.6.1",
+    "@types/node": "24.19.2",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}

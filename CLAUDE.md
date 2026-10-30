@@ -606,6 +606,18 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --
 
 ## Video Production Workflow
 
+For executable builds, selective regeneration, estimate budgets or draft/final
+profiles, use `/build-video` and read `docs/build.md` plus `docs/budgets.md`.
+For local storyboard notes and version-bound approvals, use `/review-video` and
+read `docs/review.md`. Validate project files with `tools/project.py` before
+passing them between tools. Other new production tools and their trigger cases
+are indexed in `docs/production-features.md`.
+
+The `storyboard` template consumes project manifests and provides landscape,
+portrait and square compositions. Read `docs/multi-format.md` when composing for
+multiple aspect ratios, and `docs/variants.md` for language or campaign props.
+The older templates retain their existing configuration shapes.
+
 1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing)
 2. **Review script** - Edit `VOICEOVER-SCRIPT.md` to plan content
 3. **Gather assets** - Record demos with `/record-demo` or add external videos

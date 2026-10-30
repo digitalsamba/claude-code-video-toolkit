@@ -4,12 +4,16 @@
   "description": "Playwright video recording scripts for Remotion projects",
   "type": "module",
   "scripts": {
+    "flow": "tsx scripts/flow.ts",
+    "test:flows": "tsx --test tests/flow.test.ts",
+    "check:flows": "tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --esModuleInterop --skipLibCheck scripts/flow.ts tests/flow.test.ts",
     "record": "tsx scripts/record-demo.ts",
     "record:interactive": "tsx scripts/record-interactive.ts",
     "install-browsers": "npx playwright install chromium"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
+    "@types/node": "24.19.2",
     "playwright": "^1.40.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.0"

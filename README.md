@@ -72,6 +72,15 @@ Then in Claude Code:
 
 ## Features
 
+### Production workflow
+
+Validate projects, run resumable builds, regenerate only changed work, forecast
+costs and review scenes in a local storyboard. New responsive scenes, narration
+cues, replayable browser flows and project variants support repeated production.
+See the [production feature guide](docs/production-features.md) for commands and
+examples. Start with `/build-video` to preview a build or `/review-video` to
+inspect an existing project's scenes.
+
 ### Skills
 
 Claude Code has deep knowledge in:
@@ -99,6 +108,8 @@ Claude Code has deep knowledge in:
 | `/setup` | First-time setup — cloud GPU, file transfer, voice, prerequisites |
 | `/video` | Video projects — list, resume, or create new |
 | `/scene-review` | Scene-by-scene review in Remotion Studio |
+| `/build-video` | Preview, execute or resume a production build with change tracking and budgets |
+| `/review-video` | Local storyboard with media previews, notes and version-bound approvals |
 | `/design` | Focused design refinement session for a scene |
 | `/brand` | Brand profiles — list, edit, or create new |
 | `/template` | List available templates or create new ones |
@@ -115,6 +126,8 @@ Claude Code has deep knowledge in:
 > **Note:** After creating or modifying commands/skills, restart Claude Code to load changes.
 
 ### Templates
+
+- **storyboard** — manifest-driven scenes with landscape, portrait and square layouts, narration, captions and variant props. See [the template](templates/storyboard/README.md).
 
 Pre-built video structures in `templates/`:
 

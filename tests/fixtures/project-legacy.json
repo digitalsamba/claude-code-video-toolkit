@@ -1,0 +1,25 @@
+{
+  "name": "legacy-release",
+  "template": "sprint-review",
+  "brand": "default",
+  "created": "2026-01-12T09:00:00Z",
+  "updated": "2026-01-12T10:00:00Z",
+  "phase": "review",
+  "scenes": [
+    {
+      "id": "intro",
+      "type": "title",
+      "durationSeconds": 4,
+      "visual": {"type": "slide"},
+      "narration": "Welcome to the release.",
+      "status": "ready",
+      "designNotes": {"mood": "calm", "custom": [1, 2]}
+    }
+  ],
+  "audio": {"voiceover": {"file": "audio/voiceover.mp3", "status": "needed"}},
+  "estimates": {"totalDurationSeconds": 4},
+  "sessions": [{"date": "2026-01-12", "summary": "Created project"}],
+  "render": {"file": "out/video.mp4", "composition": "Release", "customCodec": "h264"},
+  "publish": {"platform": "youtube", "title": "A release", "thumbnail": "out/thumbnail.png"},
+  "customMetadata": {"campaign": "launch", "notes": null}
+}
