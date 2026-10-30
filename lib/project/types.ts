@@ -2,7 +2,8 @@
  * Video Project Schema
  *
  * Defines the structure of project.json for multi-session video production.
- * This schema is the source of intent - filesystem is source of truth for assets.
+ * Runtime validation is defined by schema.json and tools/project_manifest.py.
+ * Optional workflow fields allow partial legacy projects and early planning.
  */
 
 // ============================================================================
@@ -15,6 +16,7 @@
 export type ProjectPhase =
   | 'planning'   // Scenes being defined, script being written
   | 'assets'     // Recording demos, gathering materials
+  | 'review'     // Scene-by-scene visual approval
   | 'audio'      // Generating voiceover, music
   | 'editing'    // Adjusting timing, config, previewing
   | 'rendering'  // Final output in progress
@@ -26,6 +28,7 @@ export type ProjectPhase =
 export const PHASE_DESCRIPTIONS: Record<ProjectPhase, string> = {
   planning: 'Planning scenes and writing script',
   assets: 'Recording demos and gathering assets',
+  review: 'Reviewing scenes before generating audio',
   audio: 'Generating voiceover and music',
   editing: 'Adjusting timing and previewing',
   rendering: 'Rendering final video',
@@ -39,29 +42,12 @@ export const PHASE_DESCRIPTIONS: Record<ProjectPhase, string> = {
 /**
  * Visual types for scenes
  */
-export type VisualType =
-  | 'slide'       // Template-generated slide (no asset needed)
-  | 'playwright'  // Browser recording via Playwright
-  | 'external'    // User-provided video file
-  | 'screenshot'; // Static image capture
+export type VisualType = string;
 
 /**
  * Scene types available across templates
  */
-export type SceneType =
-  // Common
-  | 'title'
-  | 'overview'
-  | 'demo'
-  | 'split-demo'
-  | 'summary'
-  | 'credits'
-  // Product demo specific
-  | 'problem'
-  | 'solution'
-  | 'feature'
-  | 'stats'
-  | 'cta';
+export type SceneType = string;
 
 /**
  * Asset status for tracking progress
@@ -79,8 +65,10 @@ export interface SceneVisual {
   type: VisualType;
   /** Relative path from public/, e.g., "demos/dark-mode.mp4" */
   asset?: string;
+  assets?: string[];
   /** Recording instructions for Playwright demos */
   instructions?: string;
+  [extension: string]: unknown;
 }
 
 /**
@@ -92,13 +80,23 @@ export interface Scene {
   /** Scene type determines component used */
   type: SceneType;
   /** Estimated duration in seconds */
-  durationSeconds: number;
+  durationSeconds?: number;
+  startSeconds?: number;
+  title?: string | null;
   /** Visual configuration */
-  visual: SceneVisual;
+  visual?: SceneVisual;
   /** Voiceover text for this scene, null if no narration */
-  narration: string | null;
+  narration?: string | null;
+  /** Script path relative to the project directory. */
+  scriptFile?: string;
+  /** Audio and captions paths relative to public/, matching existing templates. */
+  audioFile?: string;
+  captionsFile?: string;
+  audio?: VoiceoverAsset;
   /** Current status */
-  status: AssetStatus;
+  status?: AssetStatus;
+  reviewStatus?: string;
+  [extension: string]: unknown;
 }
 
 // ============================================================================
@@ -109,20 +107,27 @@ export type AudioStatus = 'needed' | 'present' | 'verified' | 'optional';
 
 export interface AudioAsset {
   /** Relative path from public/, e.g., "audio/voiceover.mp3" */
-  file: string;
+  file?: string;
   /** Current status */
-  status: AudioStatus;
+  status?: AudioStatus;
+  durationSeconds?: number;
+  captions?: string;
+  provider?: string;
+  voiceId?: string;
+  [extension: string]: unknown;
 }
 
 export interface VoiceoverAsset extends AudioAsset {
+  mode?: 'per_scene' | 'single';
   /** Word count from script for timing estimates */
   scriptWordCount?: number;
 }
 
 export interface AudioConfig {
-  voiceover: VoiceoverAsset;
+  voiceover?: VoiceoverAsset;
   music?: AudioAsset;
   sfx?: AudioAsset[];
+  [extension: string]: unknown;
 }
 
 // ============================================================================
@@ -147,34 +152,102 @@ export interface SessionEntry {
  * Complete project configuration stored in project.json
  */
 export interface VideoProject {
+  /** Absent in legacy input; the runtime loader returns 1. */
+  schemaVersion?: 1;
   /** Project name (also folder name) */
   name: string;
   /** Template used: sprint-review, product-demo, etc. */
   template: string;
   /** Brand profile name from brands/ */
-  brand: string;
+  brand?: string;
   /** ISO timestamp of creation */
-  created: string;
+  created?: string;
   /** ISO timestamp of last update */
-  updated: string;
+  updated?: string;
   /** Current phase */
-  phase: ProjectPhase;
+  phase?: ProjectPhase;
+  engine?: string;
+  composition?: string;
+  output?: string;
+  description?: string;
+  format?: string | VideoFormat;
+  render?: RenderConfig;
+  publish?: PublishConfig;
+  production?: ProductionConfig;
 
   /** Scene list with status */
   scenes: Scene[];
 
   /** Audio configuration */
-  audio: AudioConfig;
+  audio?: AudioConfig;
 
   /** Timing estimates */
-  estimates: {
-    totalDurationSeconds: number;
+  estimates?: {
+    totalDurationSeconds?: number;
     /** Estimated voiceover duration in minutes */
     voiceoverMinutes?: number;
   };
 
   /** Session history for context */
-  sessions: SessionEntry[];
+  sessions?: SessionEntry[];
+  [extension: string]: unknown;
+}
+
+export interface VideoFormat {
+  width?: number;
+  height?: number;
+  fps?: number;
+  aspectRatio?: string;
+  [extension: string]: unknown;
+}
+
+export interface RenderConfig extends VideoFormat {
+  engine?: string;
+  entry?: string;
+  composition?: string;
+  file?: string;
+  durationSeconds?: number;
+}
+
+export interface PublishConfig {
+  platform?: string;
+  title?: string;
+  description?: string;
+  tags?: string[];
+  category?: string;
+  thumbnail?: string;
+  captions?: string;
+  privacy?: 'private' | 'unlisted' | 'public';
+  privacyStatus?: 'private' | 'unlisted' | 'public';
+  publishAt?: string | null;
+  uploadedAt?: string;
+  videoId?: string;
+  url?: string;
+  playlist?: string;
+  [extension: string]: unknown;
+}
+
+export interface ProductionTask {
+  id: string;
+  command: string[];
+  outputs: string[];
+  dependsOn?: string[];
+  inputs?: string[];
+  toolkitInputs?: string[];
+  environmentInputs?: string[];
+  cwd?: string;
+  stdoutFile?: string;
+  timeoutSeconds?: number;
+  estimatedCostUsd?: number;
+  label?: string;
+  [extension: string]: unknown;
+}
+
+export interface ProductionConfig {
+  version: 1;
+  tasks: ProductionTask[];
+  budgetUsd?: number;
+  [extension: string]: unknown;
 }
 
 // ============================================================================
@@ -237,6 +310,7 @@ export function createProject(
 ): VideoProject {
   const now = new Date().toISOString();
   return {
+    schemaVersion: 1,
     name,
     template,
     brand,
@@ -270,15 +344,17 @@ export function addSession(
   summary: string,
 ): VideoProject {
   const today = new Date().toISOString().split('T')[0];
-  const lastSession = project.sessions[project.sessions.length - 1];
+  const sessions = project.sessions ?? [];
+  const lastSession = sessions[sessions.length - 1];
 
   // Update existing entry if same day, otherwise add new
   if (lastSession && lastSession.date === today) {
     lastSession.summary = summary;
   } else {
-    project.sessions.push({ date: today, summary });
+    sessions.push({ date: today, summary });
   }
 
+  project.sessions = sessions;
   project.updated = new Date().toISOString();
   return project;
 }

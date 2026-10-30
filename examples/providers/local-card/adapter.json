@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "name": "local-card",
+  "capabilities": ["image"],
+  "requiredEnv": [],
+  "command": ["{python}", "{adapter}/generate.py", "--input", "{input}", "--output", "{output}"],
+  "timeoutSeconds": 30
+}

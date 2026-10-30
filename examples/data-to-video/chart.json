@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "type": "line",
+  "dataset": "data.csv",
+  "title": "Example active accounts",
+  "unit": "accounts",
+  "durationSeconds": 5,
+  "fps": 24,
+  "width": 1280,
+  "height": 720
+}

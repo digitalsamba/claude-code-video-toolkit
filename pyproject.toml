@@ -41,6 +41,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Optional local tracking and frame-based compositing. Use contrib, not the
+# conflicting opencv-python wheel, for the CSRT tracker.
+vision = ["opencv-contrib-python-headless>=4.10,<5"]
+# User-supplied RVM ONNX model; model weights are not installed by this extra.
+matting = ["onnxruntime>=1.20,<2"]
 # Burned karaoke captions in templates/concept-explainer-short
 # (word-level timing; heavy install, pulls in torch)
 whisper = [

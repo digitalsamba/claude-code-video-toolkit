@@ -1,0 +1,8 @@
+[
+  { "text": "Open", "startMs": 800, "endMs": 1100, "timestampMs": 950, "confidence": null },
+  { "text": " settings.", "startMs": 1200, "endMs": 1800, "timestampMs": 1500, "confidence": null },
+  { "text": " Choose", "startMs": 4000, "endMs": 4300, "timestampMs": 4150, "confidence": null },
+  { "text": " captions.", "startMs": 4400, "endMs": 5100, "timestampMs": 4750, "confidence": null },
+  { "text": " Apply", "startMs": 7200, "endMs": 7500, "timestampMs": 7350, "confidence": null },
+  { "text": " changes.", "startMs": 7600, "endMs": 8200, "timestampMs": 7900, "confidence": null }
+]

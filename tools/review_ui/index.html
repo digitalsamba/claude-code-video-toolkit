@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scene review · Video toolkit</title>
+  <link rel="stylesheet" href="/ui/review.css">
+  <script src="/ui/review.js" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <div><p class="eyebrow">VIDEO TOOLKIT / THE CUTTING ROOM</p><h1 id="project-name">Scene review</h1></div>
+    <div class="session-tools"><span id="progress" class="progress">Loading project…</span><button id="refresh" class="quiet">Refresh project</button></div>
+  </header>
+  <div id="error" class="error" role="alert" hidden></div>
+  <main class="workspace">
+    <aside class="scene-rail" aria-label="Storyboard">
+      <div class="rail-heading"><h2>Storyboard</h2><span id="scene-count"></span></div>
+      <nav id="scenes" aria-label="Select a scene"></nav>
+    </aside>
+    <section class="screen-room" aria-labelledby="scene-title">
+      <div class="scene-heading"><p id="scene-position" class="eyebrow"></p><h2 id="scene-title">Your scenes, ready to review.</h2><p id="scene-meta" class="muted"></p></div>
+      <div id="preview" class="preview"><p>Select a scene to start.</p></div>
+      <div class="screen-caption"><span>SCENE PREVIEW</span><span id="preview-name"></span></div>
+      <div id="issues" class="issues" aria-live="polite"></div>
+      <section class="script"><div class="section-label"><h3>Narration</h3><span id="audio-label"></span></div><p id="narration"></p><div id="audio"></div></section>
+      <details id="qc" class="qc" hidden><summary>Quality checks <span id="qc-count"></span></summary><ul id="qc-list"></ul></details>
+    </section>
+    <aside class="review-panel" aria-label="Review notes">
+      <p class="eyebrow">YOUR CALL</p><h2 id="review-title">Ready for a look?</h2><p id="review-description" class="muted">Review the picture and narration, then leave a note or approve this scene.</p>
+      <button id="approve" class="primary" disabled>Approve scene</button><button id="reopen" class="quiet" hidden>Reopen review</button>
+      <div class="notes-heading"><h3>Notes</h3><span id="notes-count">0</span></div>
+      <div id="comments" class="comments"><p class="muted">No notes yet.</p></div>
+      <form id="comment-form"><label for="comment">Add a note</label><textarea id="comment" rows="4" maxlength="4000" placeholder="What should change in this scene?" required></textarea><button id="save-comment" type="submit" class="secondary" disabled>Save note</button></form>
+      <p class="local-note">Saved on this computer.<br>Approvals expire when the scene or its assets change.</p>
+    </aside>
+  </main>
+  <footer><span>Made for the next good cut.</span><span id="project-meta"></span></footer>
+</body>
+</html>

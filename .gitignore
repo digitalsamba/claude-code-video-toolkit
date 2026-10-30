@@ -46,6 +46,7 @@ out/
 
 # Remotion
 .remotion/
+.video-toolkit/
 
 # IDE
 .idea/

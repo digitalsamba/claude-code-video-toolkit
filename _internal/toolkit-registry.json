@@ -210,6 +210,18 @@
       "status": "beta",
       "created": "2026-06-09",
       "updated": "2026-10-12"
+    },
+    "build-video": {
+      "path": ".claude/commands/build-video.md",
+      "description": "Preview, execute or resume a production build with selective regeneration and cost limits",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "review-video": {
+      "path": ".claude/commands/review-video.md",
+      "description": "Review a local storyboard with media previews, QC findings and version-bound approvals",
+      "status": "beta",
+      "created": "2026-10-31"
     }
   },
   "tools": {
@@ -902,6 +914,132 @@
       },
       "created": "2026-10-28",
       "updated": "2026-10-28"
+    },
+    "project": {
+      "path": "tools/project.py",
+      "description": "Validate and migrate versioned project manifests",
+      "usage": "uv run tools/project.py validate PROJECT --json",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "build": {
+      "path": "tools/build.py",
+      "description": "Preview or run checkpointed content-aware video builds with cost limits",
+      "usage": "uv run tools/build.py --project PROJECT --json",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "budget": {
+      "path": "tools/budget.py",
+      "description": "Inspect estimated spending and reconcile provider charges",
+      "usage": "uv run tools/budget.py --project PROJECT",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "review": {
+      "path": "tools/review.py",
+      "description": "Local storyboard, narration previews, QC findings, notes and approvals",
+      "usage": "uv run tools/review.py PROJECT",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "asset_history": {
+      "path": "tools/asset_history.py",
+      "description": "Record, search and restore immutable asset versions",
+      "usage": "uv run tools/asset_history.py --project PROJECT list",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "cues": {
+      "path": "tools/cues.py",
+      "description": "Resolve named narration phrases to motion timestamps",
+      "usage": "uv run tools/cues.py --help",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "variants": {
+      "path": "tools/variants.py",
+      "description": "Validate and materialize language and campaign video variants",
+      "usage": "uv run tools/variants.py --project PROJECT --spec variants.json",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "subtitles": {
+      "path": "tools/subtitles.py",
+      "description": "Export word captions to downloadable SRT/WebVTT",
+      "usage": "uv run tools/subtitles.py WORDS.json --output out/captions.srt",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "provider": {
+      "path": "tools/provider.py",
+      "description": "Preview or run a trusted local JSON provider adapter",
+      "usage": "uv run tools/provider.py --help",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "extensions": {
+      "path": "tools/extensions.py",
+      "description": "Discover, validate and scaffold local template/provider contracts",
+      "usage": "uv run tools/extensions.py list",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "audio_mix": {
+      "path": "tools/audio_mix.py",
+      "description": "Duck music under speech and place timestamped sound effects",
+      "usage": "uv run tools/audio_mix.py --help",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "highlights": {
+      "path": "tools/highlights.py",
+      "description": "Assemble sentence-aware transcript highlights and shorten internal pauses",
+      "usage": "uv run tools/highlights.py --help",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "reframe": {
+      "path": "tools/reframe.py",
+      "description": "Track a selected subject or detected face and render a smoothed crop",
+      "usage": "uv run tools/reframe.py --help",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "dubbing": {
+      "path": "tools/dubbing.py",
+      "description": "Import diarized speakers, synchronize replacement voices and preserve background stems",
+      "usage": "uv run tools/dubbing.py --help",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "characters": {
+      "path": "tools/characters.py",
+      "description": "Lock character references and build FLUX still / LTX motion shot plans",
+      "usage": "uv run tools/characters.py --help",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "data_video": {
+      "path": "tools/data_video.py",
+      "description": "Animate CSV/JSON charts with narration and source provenance",
+      "usage": "uv run tools/data_video.py --help",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "evidence": {
+      "path": "tools/evidence.py",
+      "description": "Check script and displayed scene claims against locked source quotes and data cells",
+      "usage": "uv run tools/evidence.py --help",
+      "status": "beta",
+      "created": "2026-10-31"
+    },
+    "composite": {
+      "path": "tools/composite.py",
+      "description": "Composite presenters with chroma key, supplied alpha or optional recurrent ONNX matting",
+      "usage": "uv run tools/composite.py --help",
+      "status": "beta",
+      "created": "2026-10-31"
     }
   },
   "optionalComponents": {
@@ -1137,6 +1275,18 @@
       "created": "2026-10-28",
       "updated": "2026-10-28",
       "skill": "synthetic-ui-demo"
+    },
+    "storyboard": {
+      "path": "templates/storyboard/",
+      "description": "Manifest-driven responsive scenes for landscape, portrait and square; supports language/campaign props",
+      "status": "beta",
+      "engine": "remotion",
+      "formats": [
+        "16:9",
+        "9:16",
+        "1:1"
+      ],
+      "created": "2026-10-31"
     }
   },
   "transitions": {
@@ -1416,6 +1566,21 @@
       "contributor": "Digital Samba",
       "demo": "https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4",
       "created": "2026-10-21"
+    },
+    "narration-cues": {
+      "path": "examples/narration-cues/",
+      "description": "Speech-linked Stage cursor/camera motion using generated word cues",
+      "created": "2026-10-31"
+    },
+    "data-to-video": {
+      "path": "examples/data-to-video/",
+      "description": "Reusable CSV-to-animated-chart specification with fictional example data",
+      "created": "2026-10-31"
+    },
+    "production-capabilities": {
+      "path": "examples/production-capabilities/",
+      "description": "Offline eleven-task production graph exercising capability tools and checkpoint resume",
+      "created": "2026-10-31"
     }
   },
   "config": {
