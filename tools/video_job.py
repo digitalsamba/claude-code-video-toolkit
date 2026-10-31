@@ -543,6 +543,50 @@ def parse_spec_text(text: str) -> dict:
                     "--spec-json @path/to/spec.json")
 
 
+def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str) -> dict:
+    """The flat form, for callers that can't reliably write nested JSON (an open model
+    with no editor). One string per scene:
+
+        "narration text"                                  -> placeholder card
+        "narration text :: ltx: slow pan over a harbour"   -> motion clip
+        "narration text :: card: ONE EXTRA DAY ; an amber calendar icon showing 29"
+                                                          -> ideogram card (headline ; object)
+        "narration text :: flux: soft navy gradient"       -> text-free still
+
+    The separator is ' :: ' and the kind is the word before the first colon after it."""
+    out_scenes = []
+    for i, raw in enumerate(scenes):
+        text, _, vis = raw.partition(" :: ")
+        text = text.strip()
+        vis = vis.strip()
+        if not text:
+            raise SpecError(f"--scene {i + 1}: narration text is empty")
+        visual: dict = {"kind": "none"}
+        if vis:
+            kind, _, rest = vis.partition(":")
+            kind = kind.strip().lower()
+            rest = rest.strip()
+            if kind in ("card", "ideogram"):
+                headline, _, obj = rest.partition(";")
+                headline = headline.strip().strip('"').upper()
+                if not headline:
+                    raise SpecError(f"--scene {i + 1}: card needs a headline, e.g. 'card: ONE EXTRA DAY ; an amber calendar'")
+                visual = {"kind": "ideogram", "caption": {"headline": headline,
+                                                          "object": obj.strip() or "a single simple icon, centered"}}
+            elif kind in ("ltx", "clip", "video"):
+                visual = {"kind": "ltx", "prompt": rest}
+            elif kind in ("flux", "still", "background"):
+                visual = {"kind": "flux", "prompt": rest}
+            elif kind in ("none", "placeholder"):
+                visual = {"kind": "none"}
+            else:
+                raise SpecError(f"--scene {i + 1}: unknown visual '{kind}' (use ltx:, card:, flux: or none)")
+            if visual["kind"] in ("ltx", "flux") and not visual.get("prompt"):
+                raise SpecError(f"--scene {i + 1}: {kind} needs a prompt after the colon")
+        out_scenes.append({"text": text, "visual": visual})
+    return {"title": title or out_scenes[0]["text"][:60], "format": fmt, "scenes": out_scenes}
+
+
 def resolve_spec(brief: str | None, spec_path: str | None, fmt: str, duration_s: int,
                  allow_skeleton: bool) -> tuple[dict, str]:
     """Returns (spec, source) where source is 'spec', 'expander' or 'skeleton'."""
@@ -1303,6 +1347,10 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--spec", help="Finished spec JSON file ('-' for stdin)")
         p.add_argument("--spec-json", help="The spec as a JSON string, or @path/to/spec.json (relative to the "
                                            "agent workspace when LONGARM_WORKSPACE is set)")
+        p.add_argument("--scene", action="append", default=[], metavar="TEXT[ :: KIND: PROMPT]",
+                       help="Flat form, repeatable, one per scene: narration, then optionally ' :: ltx: motion "
+                            "prompt', ' :: card: HEADLINE ; object', ' :: flux: prompt'. No JSON needed")
+        p.add_argument("--title", help="Video title (flat form; default: the first scene's text)")
         p.add_argument("--format", choices=list(FORMATS), default=None, help="Output format (default 9:16)")
         p.add_argument("--duration", type=int, default=45, help="Target seconds, for --brief (default 45)")
         if with_max:
@@ -1331,7 +1379,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.cmd in ("estimate", "submit", "spec"):
             fmt = args.format or "9:16"
-            if args.spec_json:
+            if args.scene:
+                spec, source = normalize_spec(spec_from_scene_args(args.title, args.scene, fmt)), "scenes"
+            elif args.spec_json:
                 spec, source = normalize_spec(parse_spec_text(args.spec_json)), "spec"
             else:
                 spec, source = resolve_spec(args.brief, args.spec, fmt, args.duration,

@@ -108,6 +108,30 @@ class TestAgentSeams(Isolated):
         finally:
             os.environ.pop("LONGARM_WORKSPACE", None)
 
+    def test_flat_scene_form_builds_a_spec(self):
+        sp = vj.spec_from_scene_args("Leap years", [
+            "Every four years February gets an extra day. :: ltx: slow orbital shot of Earth turning",
+            "Earth takes 365 and a quarter days to orbit the sun. :: card: 365 AND A QUARTER ; an amber sun with a blue orbit ring",
+            "So every fourth year we add one day back.",
+        ], "16:9")
+        n = vj.normalize_spec(sp)
+        self.assertEqual(n["title"], "Leap years")
+        self.assertEqual([s["visual"]["kind"] for s in n["scenes"]], ["ltx", "ideogram", "none"])
+        self.assertEqual(n["scenes"][0]["visual"]["prompt"], "slow orbital shot of Earth turning")
+        els = n["scenes"][1]["visual"]["caption"]["compositional_deconstruction"]["elements"]
+        self.assertEqual(els[0]["text"], "365 AND A QUARTER")
+        self.assertIn("amber sun", els[1]["desc"])
+        with self.assertRaises(vj.SpecError):
+            vj.spec_from_scene_args(None, ["text :: hologram: x"], "9:16")
+        with self.assertRaises(vj.SpecError):
+            vj.spec_from_scene_args(None, ["text :: card: "], "9:16")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = vj.main(["estimate", "--format", "16:9", "--title", "T", "--json",
+                          "--scene", "one two three :: ltx: pan", "--scene", "four five :: card: HI ; a dot"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(json.loads(out.getvalue())["spec_source"], "scenes")
+
     def test_eta_counts_down_through_the_phases(self):
         job = vj.submit(spec(), max_usd=5, start_worker=False)
         queued = vj.eta_seconds(job)
