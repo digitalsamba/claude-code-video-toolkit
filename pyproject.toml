@@ -6,6 +6,7 @@
 #   uv sync --extra whisper      # + openai-whisper for burned karaoke captions (heavy, pulls in torch)
 #   uv sync --extra modal        # + Modal CLI for self-hosted cloud GPU fallback
 #   uv sync --extra youtube      # + Google API client for tools/youtube_upload.py / /publish
+#   uv sync --extra mcp          # + FastMCP for tools/video_mcp.py (agents without a shell)
 #   uv sync --all-extras         # everything
 #
 # Then run any tool through the project environment:
@@ -55,6 +56,11 @@ prosody = [
 # Self-hosted cloud GPU fallback via Modal (see docs/modal-setup.md)
 modal = [
     "modal>=0.64",
+]
+# MCP server for agents without a shell (tools/video_mcp.py): FastMCP over stdio,
+# wrapping tools/video_job.py. See docs/agent-video-jobs.md.
+mcp = [
+    "mcp>=1.2",
 ]
 # YouTube upload (tools/youtube_upload.py, /publish) — OAuth 2.0 + Data API v3.
 # Only needed if you publish to YouTube. See docs/youtube-upload.md.
