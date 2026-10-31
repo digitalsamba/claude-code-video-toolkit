@@ -491,13 +491,63 @@ def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300) -> d
     return normalize_spec(spec)
 
 
+def _workspace_paths(rel: str) -> list[Path]:
+    """Where a relative spec path may live: the agent workspace first, then cwd, then here."""
+    out = []
+    if os.environ.get("LONGARM_WORKSPACE"):
+        out.append(Path(os.environ["LONGARM_WORKSPACE"]) / rel)
+    out += [Path.cwd() / rel, ROOT / rel]
+    return out
+
+
+def read_spec_file(path: str) -> dict:
+    if path == "-":
+        return parse_spec_text(sys.stdin.read())
+    p = Path(path)
+    candidates = [p] if p.is_absolute() else _workspace_paths(path)
+    for c in candidates:
+        if c.exists():
+            return parse_spec_text(c.read_text(encoding="utf-8"))
+    raise FileNotFoundError(f"spec file not found: {path} (looked in "
+                            f"{', '.join(str(c.parent) for c in candidates)})")
+
+
+def parse_spec_text(text: str) -> dict:
+    """JSON, with the slips language models make repaired before giving up: code fences,
+    a \\' escape (not valid JSON), trailing commas, and Python-literal dicts (single
+    quotes, True/None). A string starting with @ names a file instead."""
+    t = text.strip()
+    if t.startswith("@"):
+        return read_spec_file(t[1:])
+    m = re.search(r"\{.*\}", t, re.S)
+    if m:
+        t = m.group(0)
+    attempts = [t, t.replace("\\'", "'"),
+                re.sub(r",\s*([}\]])", r"\1", t.replace("\\'", "'"))]
+    last: Exception | None = None
+    for cand in attempts:
+        try:
+            return json.loads(cand)
+        except ValueError as e:
+            last = e
+    try:
+        import ast
+        obj = ast.literal_eval(t)
+        if isinstance(obj, dict):
+            return obj
+    except (ValueError, SyntaxError):
+        pass
+    pos = getattr(last, "pos", None)
+    snippet = f" near: ...{t[max(0, pos - 40):pos + 20]}..." if isinstance(pos, int) else ""
+    raise SpecError(f"spec is not valid JSON ({last}){snippet}. Tip: write it to a file and pass "
+                    "--spec-json @path/to/spec.json")
+
+
 def resolve_spec(brief: str | None, spec_path: str | None, fmt: str, duration_s: int,
                  allow_skeleton: bool) -> tuple[dict, str]:
     """Returns (spec, source) where source is 'spec', 'expander' or 'skeleton'."""
     if spec_path:
-        raw = json.loads(Path(spec_path).read_text(encoding="utf-8")) if spec_path != "-" \
-            else json.load(sys.stdin)
-        return normalize_spec(raw), "spec"
+        return normalize_spec(read_spec_file(spec_path)), "spec"
     if not brief:
         raise SpecError("pass --brief or --spec")
     try:
@@ -1251,7 +1301,8 @@ def main(argv: list[str] | None = None) -> int:
     def add_spec_args(p, with_max=False):
         p.add_argument("--brief", help="One-paragraph description of the video")
         p.add_argument("--spec", help="Finished spec JSON file ('-' for stdin)")
-        p.add_argument("--spec-json", help="The spec as a JSON string (for callers that can't write files)")
+        p.add_argument("--spec-json", help="The spec as a JSON string, or @path/to/spec.json (relative to the "
+                                           "agent workspace when LONGARM_WORKSPACE is set)")
         p.add_argument("--format", choices=list(FORMATS), default=None, help="Output format (default 9:16)")
         p.add_argument("--duration", type=int, default=45, help="Target seconds, for --brief (default 45)")
         if with_max:
@@ -1281,7 +1332,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd in ("estimate", "submit", "spec"):
             fmt = args.format or "9:16"
             if args.spec_json:
-                spec, source = normalize_spec(json.loads(args.spec_json)), "spec"
+                spec, source = normalize_spec(parse_spec_text(args.spec_json)), "spec"
             else:
                 spec, source = resolve_spec(args.brief, args.spec, fmt, args.duration,
                                             allow_skeleton=(args.cmd == "estimate"))

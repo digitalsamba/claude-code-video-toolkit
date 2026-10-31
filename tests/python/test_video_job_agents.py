@@ -78,6 +78,36 @@ class TestAgentSeams(Isolated):
         finally:
             os.environ.pop("LONGARM_WORKSPACE", None)
 
+    def test_spec_text_repairs_llm_json_slips(self):
+        good = json.dumps(spec())
+        self.assertEqual(vj.parse_spec_text(good)["title"], "Why is the sky blue?")
+        self.assertEqual(vj.parse_spec_text("```json\n" + good + "\n```")["scenes"][0]["slug"], "hook")
+        bad_escape = good.replace("isn't", "isn\\'t")       # the \' an open model wrote on 2026-10-31
+        self.assertIn("isn't", vj.parse_spec_text(bad_escape)["scenes"][2]["text"])
+        trailing = good[:-1] + ",}"
+        self.assertEqual(len(vj.parse_spec_text(trailing)["scenes"]), 3)
+        pyish = "{'title': 'T', 'scenes': [{'text': 'one', 'visual': None}]}"
+        self.assertEqual(vj.parse_spec_text(pyish)["title"], "T")
+        with self.assertRaises(vj.SpecError) as ctx:
+            vj.parse_spec_text('{"title": "x", "scenes": [}')
+        self.assertIn("not valid JSON", str(ctx.exception))
+
+    def test_spec_json_at_path_resolves_against_the_workspace(self):
+        ws = self.tmp / "ws"
+        (ws / "memory").mkdir(parents=True)
+        (ws / "memory" / "video-spec.json").write_text(json.dumps(spec()))
+        os.environ["LONGARM_WORKSPACE"] = str(ws)
+        try:
+            self.assertEqual(vj.parse_spec_text("@memory/video-spec.json")["scenes"][1]["slug"], "scattering")
+            out = io.StringIO()
+            with redirect_stdout(out):
+                rc = vj.main(["estimate", "--spec-json", "@memory/video-spec.json", "--json"])
+            self.assertEqual(rc, 0)
+            with self.assertRaises(FileNotFoundError):
+                vj.parse_spec_text("@memory/missing.json")
+        finally:
+            os.environ.pop("LONGARM_WORKSPACE", None)
+
     def test_eta_counts_down_through_the_phases(self):
         job = vj.submit(spec(), max_usd=5, start_worker=False)
         queued = vj.eta_seconds(job)
