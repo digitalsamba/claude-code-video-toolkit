@@ -63,7 +63,7 @@ Exit codes: 0 ok, 1 bad request, 2 refused or not ready (`budget_exceeded`, `no_
 | `format` | `9:16` (1080x1920) or `16:9` (1920x1080). Default 9:16. |
 | `scenes[].text` | Narration, verbatim. Captions burn this text. ~2.4 words a second. |
 | `scenes[].visual.kind` | `ltx` (5 s motion clip), `ideogram` (designed card with legible text), `flux` (text-free still), `none` (placeholder card). A scene with no `visual` gets `none`. |
-| `scenes[].visual.prompt` / `caption` | `prompt` for every kind; `ideogram` also takes a full JSON `caption` (see `.claude/skills/ideogram4/`). Optional per-scene `speed`, `numFrames`, `negativePrompt`, `seed`. |
+| `scenes[].visual.prompt` / `caption` | `prompt` for `ltx` and `flux`. For `ideogram`, always a JSON `caption`: `presets --json` prints `ideogram_caption_template` to fill in (a plain `prompt` works but adds filler text to the card). Optional per-scene `speed`, `numFrames`, `negativePrompt` (LTX gets a text-and-logo-excluding default), `seed`. |
 | `voice` | Merged over the template's voice block: `provider` (qwen3, elevenlabs, 60db), `speaker`, `tone`, `refAudio` + `refText` for a clone, `maxWpm`, `brand`, `voiceId`. |
 | `captions` | `{"enabled": true, "engine": "auto"}`. `auto` is Scribe when `ELEVENLABS_API_KEY` is set, else local whisper; neither available means the job renders without captions and says so. |
 | `music` | `{"enabled": false}` by default. `{"enabled": true, "prompt": "...", "provider": "acemusic"}` adds a ducked, looped bed. |
@@ -79,8 +79,8 @@ That step needs an LLM, and the toolkit doesn't hardwire one. Two ways:
 1. **The agent writes the spec** (preferred: the agent is the LLM, and it can show the user the scenes
    before spending anything). `presets` prints the shape and prices.
 2. **An expander command.** Set `VIDEO_JOB_EXPANDER` to any command that reads a JSON request on stdin
-   (`brief`, `format`, `duration_s`, `words_budget`, `spec_example`, `instructions`) and prints a spec JSON on
-   stdout. Code fences are tolerated. For example, with the Claude Code CLI installed:
+   (`brief`, `format`, `duration_s`, `words_budget`, `spec_example`, `ideogram_caption_template`,
+   `instructions`) and prints a spec JSON on stdout. Code fences are tolerated. For example, with the Claude Code CLI installed:
 
    ```bash
    export VIDEO_JOB_EXPANDER='claude -p --output-format text'

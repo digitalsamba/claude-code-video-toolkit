@@ -117,6 +117,43 @@ PHASES = ("queued", "voiceover", "visuals", "captions", "music", "build", "qc", 
 TERMINAL = ("done", "failed", "cancelled")
 TOOL_TIMEOUT = 1500             # per tool call (LTX cold start ~3 min, VO batch longer)
 
+# Ideogram renders text reliably only from a structured JSON caption; a plain prompt adds
+# small filler text ("A REMINDER") to the card. Agents fill this template per ideogram scene.
+# The bbox is [top, left, bottom, right] on a 0-1000 grid of the output image, so the same
+# numbers work at 1440x2560 and 1280x720. Keep the headline under 6 words, all caps.
+IDEOGRAM_CAPTION_TEMPLATE = {
+    "high_level_description": "A <dark-navy poster> with the headline <HEADLINE>, showing <one simple "
+                              "diagram or icon>, with clear space in the bottom fifth of the frame.",
+    "style_description": {
+        "aesthetics": "clean, diagrammatic, modern explainer",
+        "lighting": "flat even lighting, soft glow on the main object",
+        "medium": "flat vector graphic design",
+        "art_style": "minimalist infographic poster, generous negative space",
+        "color_palette": ["#0A1428", "#4DA8FF", "#FFB347", "#FFFFFF"],
+    },
+    "compositional_deconstruction": {
+        "background": "Deep navy gradient, faint tiny stars.",
+        "elements": [
+            {"type": "text", "bbox": [80, 80, 200, 920], "text": "<HEADLINE>",
+             "desc": "Bold condensed sans-serif headline, all caps, white, centered at the top.",
+             "color_palette": ["#FFFFFF"]},
+            {"type": "obj", "bbox": [280, 150, 760, 850],
+             "desc": "<One object: what it is, its shape, its colour. No text on it.>",
+             "color_palette": ["#4DA8FF", "#FFB347"]},
+        ],
+    },
+}
+
+
+def _caption(headline: str, obj: str, description: str) -> dict:
+    """Fill IDEOGRAM_CAPTION_TEMPLATE (used by SPEC_EXAMPLE)."""
+    cap = json.loads(json.dumps(IDEOGRAM_CAPTION_TEMPLATE))
+    cap["high_level_description"] = description
+    cap["compositional_deconstruction"]["elements"][0]["text"] = headline
+    cap["compositional_deconstruction"]["elements"][1]["desc"] = obj
+    return cap
+
+
 SPEC_EXAMPLE = {
     "title": "Why is the sky blue?",
     "format": "9:16",
@@ -129,12 +166,22 @@ SPEC_EXAMPLE = {
         {"slug": "scattering",
          "text": "Air molecules scatter short blue wavelengths far more than long red ones.",
          "visual": {"kind": "ideogram",
-                    "prompt": "Clean science poster, headline SHORT WAVES SCATTER MOST, white sunlight "
-                              "splitting, blue zigzags bouncing off molecules, navy background"}},
+                    "caption": _caption(
+                        "SHORT WAVES SCATTER MOST",
+                        "A beam of white sunlight entering from the upper left and splitting; short "
+                        "blue zigzag waves bouncing off a cluster of small glowing spheres in every "
+                        "direction, one long smooth red wave passing straight through.",
+                        "A vertical dark-navy science poster with the headline SHORT WAVES SCATTER "
+                        "MOST, showing white sunlight splitting and blue waves scattering off air "
+                        "molecules while a red wave passes through, with clear space in the bottom fifth.")}},
         {"slug": "cta",
          "text": "So the sky isn't blue. It's blue light, scattered. Follow for one concept a week.",
          "visual": {"kind": "ideogram",
-                    "prompt": "Bold card, headline ONE CONCEPT A WEEK, navy and electric blue"}},
+                    "caption": _caption(
+                        "ONE CONCEPT A WEEK",
+                        "A small amber circle with a white play-button triangle inside it, centered.",
+                        "A vertical dark-navy card with the headline ONE CONCEPT A WEEK above a small "
+                        "amber play button, nothing else, with clear space in the bottom fifth.")}},
     ],
 }
 
@@ -387,11 +434,14 @@ def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300) -> d
         "brief": brief, "format": fmt, "duration_s": duration_s,
         "words_budget": round(duration_s * WORDS_PER_SECOND),
         "spec_example": SPEC_EXAMPLE,
+        "ideogram_caption_template": IDEOGRAM_CAPTION_TEMPLATE,
         "instructions": (
             "Write a spec JSON for a short explainer video. Keep total narration near "
             "words_budget. Alternate visual kinds: 'ltx' (motion b-roll; prompt describes motion "
-            "and atmosphere, never on-screen text) and 'ideogram' (a designed card; prompt names the "
-            "headline text, palette and layout). Scene 1 must hook in one sentence. Output only JSON."),
+            "and atmosphere, never on-screen text) and 'ideogram' (a designed card). Every ideogram "
+            "scene carries a 'caption' object filled from ideogram_caption_template (replace the "
+            "<...> placeholders, keep the headline under 6 words, all caps); never a plain prompt, "
+            "which adds filler text to the card. Scene 1 must hook in one sentence. Output only JSON."),
     }
     args = shlex.split(cmd, posix=(os.name != "nt"))
     r = subprocess.run(args, input=json.dumps(request), capture_output=True, text=True,
@@ -1067,7 +1117,8 @@ def presets() -> dict:
         "formats": {k: {"width": v["width"], "height": v["height"]} for k, v in FORMATS.items()},
         "visual_kinds": {
             "ltx": "5 s motion b-roll from a prompt (LTX-2.3 on Modal); describe motion and atmosphere, no text",
-            "ideogram": "designed still with legible text (Ideogram 4); prompt names the headline, palette, layout",
+            "ideogram": "designed still with legible text (Ideogram 4); fill ideogram_caption_template into "
+                        "visual.caption (a plain prompt works but adds filler text to the card)",
             "flux": "text-free still background (FLUX.2 Klein on Modal, cheapest)",
             "none": "gradient placeholder card with the scene slug",
         },
@@ -1076,6 +1127,7 @@ def presets() -> dict:
         "defaults": {"max_usd": DEFAULT_MAX_USD, "duration_s": 45, "format": "9:16",
                      "words_per_second": WORDS_PER_SECOND},
         "spec_example": SPEC_EXAMPLE,
+        "ideogram_caption_template": IDEOGRAM_CAPTION_TEMPLATE,
         "expander_env": "VIDEO_JOB_EXPANDER",
         "jobs_dir": str(jobs_dir()),
     }

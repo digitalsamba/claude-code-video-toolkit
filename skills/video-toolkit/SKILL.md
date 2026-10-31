@@ -59,24 +59,61 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
      "visual": {"kind": "ltx", "prompt": "Slow orbital shot of Earth turning in space, sunlight sweeping the oceans, cinematic, no text"}},
     {"slug": "quarter",
      "text": "Earth takes about 365 and a quarter days to orbit the sun. Ignore the quarter and the calendar drifts.",
-     "visual": {"kind": "ideogram", "prompt": "Vertical science poster, headline 365 AND A QUARTER DAYS, sun with an orbital ring, navy and amber"}},
+     "visual": {"kind": "ideogram", "caption": { "...filled from the caption template below..." }}},
     {"slug": "cta",
      "text": "So every fourth year we add one day back. Follow for one concept a week.",
-     "visual": {"kind": "ideogram", "prompt": "Bold card, headline ONE EXTRA DAY, deep navy, clean poster, nothing else"}}
+     "visual": {"kind": "ideogram", "caption": { "...filled from the caption template below..." }}}
   ]
 }
 ```
 
 - `format`: `9:16` (Shorts, Reels, TikTok) or `16:9` (YouTube, decks).
 - `visual.kind`: `ltx` (5 s motion b-roll, prompt the motion and atmosphere, never on-screen text),
-  `ideogram` (a designed card with legible text; name the headline, palette and layout, or pass a full
-  `caption` object in the Ideogram JSON format), `flux` (text-free still background, cheapest), `none`
-  (gradient placeholder card, free). Alternate motion and cards so there is a pattern interrupt every ~15 s.
+  `ideogram` (a designed card with legible text: **always a `caption` object**, filled from the template
+  below), `flux` (text-free still background, cheapest), `none` (gradient placeholder card, free).
+  Alternate motion and cards so there is a pattern interrupt every ~15 s.
 - Scene 1 must hook in one sentence. Scene N is the call to action. Captions are burned from the script text,
   so write every scene exactly as it should appear.
 - Optional: `"music": {"enabled": true, "prompt": "..."}` (off by default), `"brand": "digital-samba"`,
   `"ideogram": {"speed": "TURBO"}` to halve image cost, `"captions": {"enabled": false}`.
 - `uv run tools/video_job.py presets` prints the full price table, formats and an example spec.
+
+#### The caption template (every `ideogram` scene)
+
+Ideogram renders text reliably only from a structured JSON caption. A plain `prompt` works but adds small
+filler text to the card ("A REMINDER", a fake tagline), so fill this in instead. Replace the `<...>`
+placeholders and leave everything else. The headline is under 6 words, all caps. `bbox` is
+`[top, left, bottom, right]` on a 0 to 1000 grid, so the same numbers work for 9:16 and 16:9.
+`uv run tools/video_job.py presets --json` prints it as `ideogram_caption_template`.
+
+```json
+{
+  "high_level_description": "A <dark-navy poster> with the headline <HEADLINE>, showing <one simple diagram or icon>, with clear space in the bottom fifth of the frame.",
+  "style_description": {
+    "aesthetics": "clean, diagrammatic, modern explainer",
+    "lighting": "flat even lighting, soft glow on the main object",
+    "medium": "flat vector graphic design",
+    "art_style": "minimalist infographic poster, generous negative space",
+    "color_palette": ["#0A1428", "#4DA8FF", "#FFB347", "#FFFFFF"]
+  },
+  "compositional_deconstruction": {
+    "background": "Deep navy gradient, faint tiny stars.",
+    "elements": [
+      {"type": "text", "bbox": [80, 80, 200, 920], "text": "<HEADLINE>",
+       "desc": "Bold condensed sans-serif headline, all caps, white, centered at the top.",
+       "color_palette": ["#FFFFFF"]},
+      {"type": "obj", "bbox": [280, 150, 760, 850],
+       "desc": "<One object: what it is, its shape, its colour. No text on it.>",
+       "color_palette": ["#4DA8FF", "#FFB347"]}
+    ]
+  }
+}
+```
+
+Rules of thumb: one headline and one object per card; describe the object as shapes and colours, not as a
+concept; keep the bottom fifth empty because the burned captions sit there; change `color_palette` only
+when the brand asks for it. The full caption format, for cards with more elements, is in the toolkit's
+`.claude/skills/ideogram4/`.
 
 Have only a brief and want the toolkit to write the spec? Set `VIDEO_JOB_EXPANDER` to any command that reads
 `{"brief","format","duration_s",...}` on stdin and prints a spec JSON (`claude -p`, a curl to any model, your own
