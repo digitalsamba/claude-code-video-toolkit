@@ -1,641 +1,270 @@
 ---
 name: video_toolkit
-description: Create professional videos autonomously using claude-code-video-toolkit — AI voiceovers, image generation, music, talking heads, and Remotion rendering.
+description: Make short explainer videos from a brief with claude-code-video-toolkit — submit a scene spec, poll a job, get a QC-checked MP4. Also covers the individual tools (AI voiceover, images, clips, music, talking heads) for custom work.
 metadata:
   openclaw:
     emoji: "🎬"
     skillKey: "video-toolkit"
-    os: ["darwin", "linux"]
+    os: ["darwin", "linux", "win32"]
     requires:
-      bins: ["node", "python3", "ffmpeg", "npm"]
+      bins: ["uv", "ffmpeg"]
 ---
 
 # Video Toolkit
 
-Create professional explainer videos from a text brief. The toolkit uses open-source AI models on cloud GPUs (Modal or RunPod) for voiceover, image generation, music, and talking head animation. Remotion (React) handles composition and rendering.
+Turn a brief into a finished MP4 with [claude-code-video-toolkit](https://github.com/digitalsamba/claude-code-video-toolkit).
+This skill is written for **any agent runtime**: Claude Code, OpenClaw, Codex, Hermes, a bare API loop with a
+`run_tool` call, or an MCP client. Nothing here depends on how your runtime backgrounds work, because the long
+work runs in a detached job you poll.
 
-## CRITICAL: Toolkit Path
+## Where the toolkit is
 
-The toolkit lives at a fixed path. **ALWAYS `cd` here before running any tool command.**
+Every command below runs **from the toolkit root**. Find it, in this order:
+
+1. `$VIDEO_TOOLKIT_ROOT` if set (also honoured by the toolkit's own scripts);
+2. `$VIDEO_TOOLKIT_DIR` (the name longarm uses);
+3. a `claude-code-video-toolkit/` directory under your workspace or home.
 
 ```bash
-TOOLKIT=~/.openclaw/workspace/claude-code-video-toolkit
-cd $TOOLKIT
+cd "${VIDEO_TOOLKIT_ROOT:-${VIDEO_TOOLKIT_DIR:-$HOME/claude-code-video-toolkit}}"
+uv run tools/verify_setup.py --json     # prerequisites, keys and endpoints; [x] means ready
 ```
 
-**NEVER run tool commands from inside a project directory.** Tools resolve paths relative to the toolkit root.
+Never run a tool from inside a project directory: tools resolve paths relative to the toolkit root. If your
+runtime can't `cd`, pass `--directory`: `uv run --directory /path/to/toolkit tools/video_job.py ...`.
 
-## CRITICAL: Progress Reporting
+**No shell at all?** Use the MCP server instead: `uv run --directory /path/to/toolkit --extra mcp tools/video_mcp.py`
+exposes `video_estimate`, `video_submit`, `video_status`, `video_result` and `video_list_presets` over stdio.
+Same flow as below, same JSON.
 
-**ALWAYS add `--progress json` to every cloud GPU tool command.** This gives you structured JSON Lines on stderr so you can monitor job status, detect stuck jobs, and report progress to the user in real-time.
+## The quick path: estimate → submit → poll → result
+
+`tools/video_job.py` is one async entrypoint. `submit` returns in seconds with a job id; a detached worker runs
+the whole pipeline (voiceover → visuals → captions → build → QC); every later call is short and reads state
+from disk. That is how it fits a per-call time limit, and it survives you going away between turns.
+
+### 1. Write the spec (you are the LLM)
+
+A spec is a list of scenes, each with narration text and one visual. Budget about 2.4 words a second of
+narration; a 45 s video is ~100 words in 3 to 5 scenes.
+
+```json
+{
+  "title": "Why do we have leap years?",
+  "format": "9:16",
+  "voice": {"provider": "qwen3", "speaker": "Ryan", "tone": "warm", "maxWpm": 165},
+  "scenes": [
+    {"slug": "hook",
+     "text": "Every four years, February gets an extra day. Why? Because a year isn't 365 days long.",
+     "visual": {"kind": "ltx", "prompt": "Slow orbital shot of Earth turning in space, sunlight sweeping the oceans, cinematic, no text"}},
+    {"slug": "quarter",
+     "text": "Earth takes about 365 and a quarter days to orbit the sun. Ignore the quarter and the calendar drifts.",
+     "visual": {"kind": "ideogram", "prompt": "Vertical science poster, headline 365 AND A QUARTER DAYS, sun with an orbital ring, navy and amber"}},
+    {"slug": "cta",
+     "text": "So every fourth year we add one day back. Follow for one concept a week.",
+     "visual": {"kind": "ideogram", "prompt": "Bold card, headline ONE EXTRA DAY, deep navy, clean poster, nothing else"}}
+  ]
+}
+```
+
+- `format`: `9:16` (Shorts, Reels, TikTok) or `16:9` (YouTube, decks).
+- `visual.kind`: `ltx` (5 s motion b-roll, prompt the motion and atmosphere, never on-screen text),
+  `ideogram` (a designed card with legible text; name the headline, palette and layout, or pass a full
+  `caption` object in the Ideogram JSON format), `flux` (text-free still background, cheapest), `none`
+  (gradient placeholder card, free). Alternate motion and cards so there is a pattern interrupt every ~15 s.
+- Scene 1 must hook in one sentence. Scene N is the call to action. Captions are burned from the script text,
+  so write every scene exactly as it should appear.
+- Optional: `"music": {"enabled": true, "prompt": "..."}` (off by default), `"brand": "digital-samba"`,
+  `"ideogram": {"speed": "TURBO"}` to halve image cost, `"captions": {"enabled": false}`.
+- `uv run tools/video_job.py presets` prints the full price table, formats and an example spec.
+
+Have only a brief and want the toolkit to write the spec? Set `VIDEO_JOB_EXPANDER` to any command that reads
+`{"brief","format","duration_s",...}` on stdin and prints a spec JSON (`claude -p`, a curl to any model, your own
+script). Then `--brief "..."` works everywhere `--spec` does. Without it, `estimate --brief` still answers with a
+skeleton estimate; `submit --brief` is refused.
+
+### 2. Estimate, then submit under a cap
 
 ```bash
-# CORRECT — always include --progress json
+uv run tools/video_job.py estimate --spec spec.json --json
+# {"estimate_usd": 0.35, "breakdown": [...], "scenes": 3, "video_s_approx": 31.0, ...}
+
+uv run tools/video_job.py submit --spec spec.json --max-usd 1.00 --json
+# {"id": "20261031-230304-f34a", "phase": "queued", "estimate_usd": 0.353, "poll": "..."}
+```
+
+`submit` is refused (exit 2, `error_code: budget_exceeded`) when the estimate is over `--max-usd`, before any
+spend. Only one job runs at a time: a second `submit` while one is running exits 3 with `error_code: lock_held`
+and the running job's id. The worker also stops itself before the next paid step if actual spend would pass the
+cap.
+
+### 3. Poll status
+
+```bash
+uv run tools/video_job.py status JOB_ID --json
+```
+
+Poll every 20 to 30 s. `phase` walks `queued → voiceover → visuals → captions → build → qc → publish → done`,
+or ends in `failed` (with `error` and `error_code`) or `cancelled`. `progress` is 0 to 100, `actual_usd` is spend
+so far, `step_detail` names the asset being generated, `log_tail` is the last few log lines. A typical 30 s video
+takes 5 to 10 minutes; the LTX clip is the slow step (2 to 4 minutes each, more on a cold start).
+
+Tell the user the id and the estimate as soon as `submit` returns. Do not promise to keep watching from inside
+one turn: the job carries on without you, and `status` works from any fresh process. If your runtime has a
+scheduler or a poller, point it at `status`; otherwise check when you are next invoked.
+
+### 4. Collect the result
+
+```bash
+uv run tools/video_job.py result JOB_ID --json
+# {"ready": true, "mp4": "/.../jobs/20261031-230304-f34a/why-do-we-have-leap-years-9x16.mp4",
+#  "url": "https://...r2...", "duration_s": 31.4, "qc": {"passed": true, "errors": 0, "warnings": 1}, "actual_usd": 0.39}
+```
+
+`url` is a 2 h presigned download link when Cloudflare R2 is configured, otherwise null and you deliver the
+file. `qc` is `tools/qc.py --render`: loudness was normalised to -14 LUFS, and it reports still stretches,
+black gaps and a silent track. Pass `qc.warnings` on to the user in a line; `qc.errors > 0` means look before
+you ship. Exit 2 means not ready yet.
+
+Also: `list --json` (recent jobs), `cancel JOB_ID`, and every job keeps `jobs/<id>/job.log`, `receipts.jsonl`
+(one JSON line per paid call: `ts, tool, cost_usd, elapsed_s, exit, args, job_id`) and the project copy it
+rendered from, so a human can open `jobs/<id>/project/` and re-render after edits.
+
+### Spend
+
+Receipts also append to `MEDIA_SPEND_LOG` (default `logs/media-spend.log` in the toolkit) in the same shape
+longarm's `video-spend.py` writes, so one ledger covers single assets and jobs. Prices (`presets`): LTX clip
+~$0.20, Ideogram image $0.03 to $0.10, FLUX image ~$0.01, Qwen3 voice ~$0.01 a scene, captions ~$0.0001 a
+second. A 3-scene, 30 s video with one LTX clip is about $0.35; the first clip after idle pays a Modal cold
+start on top.
+
+---
+
+## Deeper: the individual tools
+
+Everything below is what `video_job.py` drives for you. Reach for it directly when the user wants one asset
+(an image, a clip, a song), a different template, or a talking head. Add `--progress json` to any cloud tool
+for JSON-lines progress on stderr, and `--json` for a machine-readable result on stdout.
+
+### Defaults that are current (2026-10-31)
+
+| Need | Use | Not |
+|---|---|---|
+| Legible text in an image (title card, thumbnail, quote card) | `ideogram4.py --json caption.json` | FLUX or LTX (both garble text) |
+| Text-free background for an overlay | `flux2.py --preset title-bg` | |
+| Motion b-roll, animate a still | `ltx2.py` (`--input` for image-to-video) | |
+| Voiceover | `voiceover.py --provider qwen3 --cloud modal --max-wpm 165` (free, self-hosted) or `--provider elevenlabs` | |
+| Talking head anyone will watch | `soulx.py` (SoulX-FlashHead Pro, Modal only) | `sadtalker.py` is drafts, or when Modal is down |
+| Music | `music_gen.py --preset corporate-bg` (acemusic key, free) | |
+| Before delivering any render | `qc.py --render out.mp4 --fix` | shipping unchecked |
+| Captions for a Remotion template | `captions.py public/audio/scenes` | burning the recogniser's own transcript |
+| Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` | |
+
+### Voiceover
+
+```bash
+uv run tools/voiceover.py --provider qwen3 --cloud modal --scene-dir public/audio/scenes --max-wpm 165 --json
+uv run tools/qwen3_tts.py --text "Hello" --speaker Ryan --tone warm --output hello.mp3 --cloud modal
+uv run tools/qwen3_tts.py --text "Hello" --ref-audio ref.wav --ref-text "exact transcript" --output clone.mp3 --cloud modal
+```
+
+One `.txt` per scene in `--scene-dir`, one MP3 back per scene with `duration_seconds`, `wpm` and a `pacing`
+label. `--max-wpm 165` slows rushed takes with pitch-preserving atempo; a cloned voice copies its reference
+clip's pace, so a flat or fast clone needs a better reference (`voice_prosody.py expand`), not a higher
+temperature. Speakers: Ryan, Aiden, Vivian, Serena, Uncle_Fu, Dylan, Eric, Ono_Anna, Sohee. Tones: neutral,
+warm, professional, excited, calm, serious, storyteller, tutorial.
+
+### Images
+
+```bash
+# Text in the image: author the caption JSON yourself (see .claude/skills/ideogram4/), 9:16 = 1440x2560, 16:9 = 1280x720
+uv run tools/ideogram4.py --json caption.json --resolution 1440x2560 --output card.png
+# Text-free background
+uv run tools/flux2.py --preset title-bg --brand digital-samba --output bg.png --cloud modal --progress json
+# Edit a photo, upscale
+uv run tools/image_edit.py --input photo.jpg --prompt "Add sunglasses" --cloud modal
+uv run tools/upscale.py --input small.png --scale 4 --cloud modal
+```
+
+### Video clips
+
+```bash
+uv run tools/ltx2.py --prompt "Aerial over a city at golden hour, cinematic" --width 1024 --height 576 \
+    --num-frames 121 --output broll.mp4 --no-open --progress json --json
+uv run tools/ltx2.py --prompt "Gentle camera drift, soft light shifts" --input still.png --output animated.mp4 --no-open
+```
+
+Sides must be multiples of 64; frames satisfy (n-1) % 8 == 0 (121 ≈ 5 s, 161 ≈ 7 s). About $0.07 to $0.20 a
+clip and 2 to 4 minutes; the first clip after idle adds a cold start. Prompt motion and atmosphere, never text.
+Add `--negative-prompt "anime, cartoon, watermark, text, logo"` when style drifts. `chain_video.py` chains
+clips for continuity (one command, per-scene prompts in a JSON file).
+
+### Talking heads
+
+```bash
+uv run tools/soulx.py --image presenter_16x9.png --audio scene01.mp3 --size 768 --output narrator01.mp4
+uv run tools/soulx.py --image presenter_16x9.png --audio scene01.mp3 --model lite --width 512 --height 288 --output draft.mp4
+```
+
+SoulX follows the image's aspect ratio and holds identity over long takes (97% of frame-zero sharpness at
+70 s). Pick one resolution per project: `torch.compile` recompiles on every size change (~10 min cold). Pro
+sides are multiples of 16, Lite multiples of 32. SadTalker (`--preprocess full --still --expression-scale 0.8`)
+is the RunPod fallback and square by default. Don't grade talking heads with a similarity metric; look at a
+contact sheet.
+
+### Music
+
+```bash
 uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3 --progress json
-
-# WRONG — no visibility into job status
-uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3
+uv run tools/music_gen.py --prompt "lofi, warm keys, no vocals" --duration 45 --variations 3 --output bg.mp3
 ```
 
-Tools that support `--progress json`: `music_gen.py`, `qwen3_tts.py`, `flux2.py`, `upscale.py`, `sadtalker.py`, `image_edit.py`, `dewatermark.py`, `ltx2.py`, `chain_video.py`.
+Presets: corporate-bg, upbeat-tech, ambient, dramatic, tension, hopeful, cta, lofi. Default provider is the
+acemusic API (free key); `--cloud modal` is the self-hosted fallback.
 
-See the **Progress Reporting** section below for output format and stage definitions.
-
-## CRITICAL: Long-Running Tasks — Use yieldMs, Not background:true
-
-**Any tool command that takes more than 30 seconds MUST use `exec` with `yieldMs` so you can report progress to the user live.** This includes: batch FLUX generation, chain_video, SadTalker, music generation, and any multi-scene pipeline.
-
-```
-exec command:"cd ~/.openclaw/workspace/claude-code-video-toolkit && uv run tools/chain_video.py --output-dir /path/ --progress json ..." yieldMs:10000
-```
-
-**The polling loop:**
-1. `exec` with `yieldMs:10000` starts the command and returns control to you every 10 seconds
-2. Read the `--progress json` output — look for `"stage":"item"` (scene complete) or `"stage":"complete"` (all done)
-3. Report progress to the user ("Scene 05/30 complete, 17%")
-4. Poll again: `process action:poll sessionId:<id>`
-5. Repeat until `"stage":"complete"`
-
-**Why:** Your agent run ends when you finish responding. If you use `bash background:true`, you lose the ability to report progress — the user sees silence until they nudge you. With `yieldMs`, you stay in the loop.
-
-**NEVER do this:**
-- `bash background:true command:"long running thing"` then promise to "monitor" — you can't, your run ends
-- Break a batch into individual tool calls across separate messages — your run ends between each one
-- Promise to "continue autonomously" — you literally cannot without an external trigger
-
-## Setup
-
-### Step 1: Check Current State
+### QC, captions, cut-downs
 
 ```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-uv run tools/verify_setup.py
+uv run tools/qc.py --project projects/my-video                  # assets, timing, pacing, loudness
+uv run tools/qc.py --render out/video.mp4 --fix                  # -14 LUFS, writes video.loudnorm.mp4; frame checks
+uv run tools/captions.py projects/my-video/public/audio/scenes  # word captions aligned to the script .txt
+uv run tools/cutdown.py --input out/video.mp4 --platform shorts  # 16:9 -> 9:16, blur-fit
 ```
 
-If everything shows `[x]`, skip to "Quick Test" below. Otherwise continue setup.
-
-### Step 2: Install Python Dependencies
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-uv sync
-```
-
-Note: `uv sync` creates its own `.venv/` from the lockfile, so it sidesteps Debian/Ubuntu's managed-Python restrictions (PEP 668) — no `--break-system-packages` needed. If `uv` is missing, install it first: `curl -LsSf https://astral.sh/uv/install.sh | sh`.
-
-### Step 3: Configure Cloud GPU Endpoints
-
-The toolkit needs cloud GPU endpoint URLs in `.env`. Check if `.env` exists and has Modal endpoints:
-
-```bash
-cat ~/.openclaw/workspace/claude-code-video-toolkit/.env | grep MODAL
-```
-
-If Modal endpoints are configured, you're ready. If not, **ask the user to provide Modal endpoint URLs** or set up Modal:
-
-```bash
-uv sync --extra modal
-uv run modal setup   # Opens browser for authentication
-
-# Deploy each tool — capture the endpoint URL from output
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-uv run modal deploy docker/modal-qwen3-tts/app.py
-uv run modal deploy docker/modal-flux2/app.py
-uv run modal deploy docker/modal-music-gen/app.py
-uv run modal deploy docker/modal-sadtalker/app.py
-uv run modal deploy docker/modal-image-edit/app.py
-uv run modal deploy docker/modal-upscale/app.py
-uv run modal deploy docker/modal-propainter/app.py
-uv run modal deploy docker/modal-ltx2/app.py      # Requires: uv run modal secret create huggingface-token HF_TOKEN=hf_...
-```
-
-**LTX-2 prerequisite:** Before deploying LTX-2, create a HuggingFace secret and accept the [Gemma 3 license](https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized):
-```bash
-uv run modal secret create huggingface-token HF_TOKEN=hf_your_read_access_token
-```
-
-Add each URL to `.env`:
-```
-ACEMUSIC_API_KEY=...                          # Free key from acemusic.ai/api-key (best music quality)
-MODAL_QWEN3_TTS_ENDPOINT_URL=https://...modal.run
-MODAL_FLUX2_ENDPOINT_URL=https://...modal.run
-MODAL_MUSIC_GEN_ENDPOINT_URL=https://...modal.run
-MODAL_SADTALKER_ENDPOINT_URL=https://...modal.run
-MODAL_IMAGE_EDIT_ENDPOINT_URL=https://...modal.run
-MODAL_UPSCALE_ENDPOINT_URL=https://...modal.run
-MODAL_DEWATERMARK_ENDPOINT_URL=https://...modal.run
-MODAL_LTX2_ENDPOINT_URL=https://...modal.run
-```
-
-Optional but recommended — Cloudflare R2 for reliable file transfer:
-```
-R2_ACCOUNT_ID=...
-R2_ACCESS_KEY_ID=...
-R2_SECRET_ACCESS_KEY=...
-R2_BUCKET_NAME=video-toolkit
-```
-
-### Step 4: Verify and Quick Test
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-uv run tools/verify_setup.py
-```
-
-All tools should show `[x]`. Then run a quick test to confirm the GPU pipeline works:
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-uv run tools/qwen3_tts.py --text "Hello, this is a test." --speaker Ryan --tone warm --output /tmp/video-toolkit-test.mp3 --cloud modal
-```
-
-If you get a valid .mp3 file, setup is complete. If it fails, check:
-- `.env` has the correct `MODAL_QWEN3_TTS_ENDPOINT_URL`
-- Run `uv run tools/verify_setup.py --json` and check `modal_tools` for which endpoints are missing
-
-**Cost:** Modal includes $30/month free compute. A typical 60s video costs $1-3.
-
----
-
-## Creating a Video
-
-### Step 1: Create Project
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-cp -r templates/product-demo projects/PROJECT_NAME
-cd projects/PROJECT_NAME
-npm install
-```
-
-Templates: `product-demo` (marketing/explainer), `sprint-review`, `sprint-review-v2` (composable scenes).
-
-### Step 2: Write Config
-
-Edit `projects/PROJECT_NAME/src/config/demo-config.ts`:
-
-```typescript
-export const demoConfig: ProductDemoConfig = {
-  product: {
-    name: 'My Product',
-    tagline: 'What it does in one line',
-    website: 'example.com',
-  },
-  scenes: [
-    { type: 'title', durationSeconds: 9, content: { headline: '...', subheadline: '...' } },
-    { type: 'problem', durationSeconds: 14, content: { headline: '...', problems: ['...', '...'] } },
-    { type: 'solution', durationSeconds: 13, content: { headline: '...', highlights: ['...', '...'] } },
-    { type: 'stats', durationSeconds: 12, content: { stats: [{value: '99%', label: '...'}, ...] } },
-    { type: 'cta', durationSeconds: 10, content: { headline: '...', links: ['...'] } },
-  ],
-  audio: {
-    backgroundMusicFile: 'audio/bg-music.mp3',
-    backgroundMusicVolume: 0.12,
-  },
-};
-```
-
-Scene types: `title`, `problem`, `solution`, `demo`, `feature`, `stats`, `cta`.
-
-**Duration rule:** Estimate `durationSeconds` as `ceil(word_count / 2.5) + 2`. You will adjust this after generating audio in Step 4.
-
-### Step 3: Write Voiceover Script
-
-Create `projects/PROJECT_NAME/VOICEOVER-SCRIPT.md`:
-
-```markdown
-## Scene 1: Title (9s, ~17 words)
-Build videos with AI. The product name toolkit makes it easy.
-
-## Scene 2: Problem (14s, ~30 words)
-The problem statement goes here. Keep it punchy and relatable.
-```
-
-**Word budget per scene:** `(durationSeconds - 2) * 2.5` words. The -2 accounts for 1s audio delay + 1s padding.
-
-### Step 4: Generate Assets
-
-**CRITICAL: All commands below MUST be run from the toolkit root, not the project directory.**
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-```
-
-#### 4a. Background Music
-
-Default provider is **acemusic** (official cloud API, free key). No GPU required. Falls back to Modal/RunPod for self-hosted.
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-
-# Using acemusic cloud API (default — best quality, XL Turbo 4B model)
-uv run tools/music_gen.py \
-  --preset corporate-bg \
-  --duration 90 \
-  --output projects/PROJECT_NAME/public/audio/bg-music.mp3 \
-  --progress json
-
-# Or with custom prompt and thinking mode
-uv run tools/music_gen.py \
-  --prompt "Subtle ambient tech, soft synth pads" \
-  --duration 90 \
-  --output projects/PROJECT_NAME/public/audio/bg-music.mp3 \
-  --progress json
-
-# Fall back to self-hosted Modal if no acemusic key
-uv run tools/music_gen.py \
-  --preset corporate-bg \
-  --duration 90 \
-  --output projects/PROJECT_NAME/public/audio/bg-music.mp3 \
-  --cloud modal --progress json
-```
-
-Presets: `corporate-bg`, `upbeat-tech`, `ambient`, `dramatic`, `tension`, `hopeful`, `cta`, `lofi`.
-
-Setup: `echo "ACEMUSIC_API_KEY=your_key" >> .env` (get free key at acemusic.ai/api-key).
-
-#### 4b. Voiceover (per-scene)
-
-Generate ONE .mp3 file PER SCENE. Do NOT generate a single voiceover file.
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-
-# Scene 01
-uv run tools/qwen3_tts.py \
-  --text "The voiceover text for scene one." \
-  --speaker Ryan --tone warm \
-  --output projects/PROJECT_NAME/public/audio/scenes/01.mp3 \
-  --cloud modal --progress json
-
-# Scene 02
-uv run tools/qwen3_tts.py \
-  --text "The voiceover text for scene two." \
-  --speaker Ryan --tone warm \
-  --output projects/PROJECT_NAME/public/audio/scenes/02.mp3 \
-  --cloud modal --progress json
-
-# ... repeat for each scene
-```
-
-**Speakers:** `Ryan`, `Aiden`, `Vivian`, `Serena`, `Uncle_Fu`, `Dylan`, `Eric`, `Ono_Anna`, `Sohee`
-**Tones:** `neutral`, `warm`, `professional`, `excited`, `calm`, `serious`, `storyteller`, `tutorial`
-
-For voice cloning (needs a reference recording):
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-uv run tools/qwen3_tts.py \
-  --text "Text to speak" \
-  --ref-audio assets/voices/reference.m4a \
-  --ref-text "Exact transcript of the reference audio" \
-  --output projects/PROJECT_NAME/public/audio/scenes/01.mp3 \
-  --cloud modal --progress json
-```
-
-#### 4c. Scene Images
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-uv run tools/flux2.py \
-  --prompt "Dark tech background with blue geometric grid, cinematic lighting" \
-  --width 1920 --height 1080 \
-  --output projects/PROJECT_NAME/public/images/title-bg.png \
-  --cloud modal --progress json
-```
-
-Image presets (use `--preset` instead of `--prompt --width --height`):
-`title-bg`, `problem`, `solution`, `demo-bg`, `stats-bg`, `cta`, `thumbnail`, `portrait-bg`
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-uv run tools/flux2.py \
-  --preset title-bg \
-  --output projects/PROJECT_NAME/public/images/title-bg.png \
-  --cloud modal --progress json
-```
-
-#### 4d. Video Clips — B-Roll & Animated Backgrounds (optional)
-
-Generate AI video clips for b-roll cutaways, animated slide backgrounds, or intro/outro sequences:
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-
-# B-roll clip from text
-uv run tools/ltx2.py \
-  --prompt "Aerial drone shot over a European city at golden hour, cinematic wide angle" \
-  --output projects/PROJECT_NAME/public/videos/broll-europe.mp4 \
-  --cloud modal --progress json
-
-# Animate a slide/screenshot (image-to-video)
-uv run tools/ltx2.py \
-  --prompt "Gentle particle effects, soft ambient light shifts, very slight camera drift" \
-  --input projects/PROJECT_NAME/public/images/title-bg.png \
-  --output projects/PROJECT_NAME/public/videos/animated-title.mp4 \
-  --cloud modal --progress json
-
-# Abstract intro/outro background
-uv run tools/ltx2.py \
-  --prompt "Dark moody abstract background with flowing blue light streaks, bokeh particles, cinematic" \
-  --output projects/PROJECT_NAME/public/videos/intro-bg.mp4 \
-  --cloud modal --progress json
-```
-
-Use in Remotion compositions with `<OffthreadVideo>`:
-```tsx
-<OffthreadVideo src={staticFile('videos/broll-europe.mp4')} />
-```
-
-**LTX-2 rules:**
-- Max ~8 seconds per clip (193 frames at 24fps). Default is ~5s (121 frames).
-- Width/height must be divisible by 64. Default: 768x512.
-- ~$0.20-0.25 per clip, ~2.5 min generation time.
-- Cold start ~60-90s. Subsequent clips on warm GPU are faster.
-- Generated audio is ambient only — use voiceover/music tools for speech and music.
-- ~30% of generations may have training data artifacts (logos/text). Re-run with `--seed` to vary.
-
-#### 4d-chain. Chained Video Sequences (visual continuity)
-
-Generate a sequence of video clips where each scene flows from the last frame of the previous one. **This runs as a single command** — no manual nudging between scenes.
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-
-# Chain scenes 1-30 from a directory of FLUX images
-uv run tools/chain_video.py \
-  --scenes-dir projects/PROJECT_NAME/public/images/scenes/ \
-  --output-dir projects/PROJECT_NAME/public/videos/chain/ \
-  --prompt "Cinematic continuation, flowing transition" \
-  --start 1 --end 30 \
-  --progress json
-
-# Resume from scene 10 (skips existing files automatically)
-uv run tools/chain_video.py \
-  --scenes-dir projects/PROJECT_NAME/public/images/scenes/ \
-  --output-dir projects/PROJECT_NAME/public/videos/chain/ \
-  --start 10 --end 30 \
-  --progress json
-
-# Per-scene prompts from JSON file
-uv run tools/chain_video.py \
-  --scenes-dir projects/PROJECT_NAME/public/images/scenes/ \
-  --output-dir projects/PROJECT_NAME/public/videos/chain/ \
-  --prompts-file projects/PROJECT_NAME/scenes.json \
-  --progress json
-
-# Chain from an existing clip (no scene images needed)
-uv run tools/chain_video.py \
-  --first-clip output/chain-04.mp4 \
-  --output-dir output/ \
-  --start 5 --end 30 \
-  --prompt "Celtic mythology, flowing transition" \
-  --progress json
-```
-
-**Prompts file format** (`scenes.json`):
-```json
-{"1": "Ancient stone circle at dawn", "2": "Celtic spirals emerge from stone", "3": "Portal opens with golden light"}
-```
-
-**Chain rules:**
-- Extracts last frame from scene N, feeds as `--input` to scene N+1 via LTX-2
-- Skips scenes that already exist on disk (safe to resume)
-- Falls back to scene images from `--scenes-dir` if chaining fails
-- Use `--prefix` to set output filename prefix (default: `chain`)
-- ~2.5 min per scene, ~$0.20-0.25 per clip
-- Extra args (e.g. `--negative-prompt`, `--seed`) are passed through to ltx2.py
-
-**CRITICAL: Style drift in chained sequences.** LTX-2 has ~30% training data contamination (anime/Asian content). Generic prompts like "cinematic transition" will drift toward anime aesthetics within 5-10 chained scenes. To prevent this:
-
-1. **ALWAYS use `--prompts-file`** with specific per-scene prompts — never a single generic prompt for the whole chain
-2. **ALWAYS add `--negative-prompt`** to exclude unwanted styles:
-   ```
-   --negative-prompt "anime, manga, asian, cartoon, illustration, watermark, text, logo"
-   ```
-3. Each per-scene prompt should include **strong style anchors** (e.g. "Irish landscape, Celtic knotwork, oil painting style") not just subject descriptions
-
-**CRITICAL: Run with `yieldMs` for live progress reporting.** Don't break it into per-scene tool calls — OpenClaw's agent run ends between calls, causing the sequence to stall. Instead, use `exec` with `yieldMs` so you stay in the loop and can relay progress to the user:
-
-```
-exec command:"cd ~/.openclaw/workspace/claude-code-video-toolkit && uv run tools/chain_video.py --scenes-dir /path/to/images/ --output-dir /path/to/output/ --prompts-file scenes.json --progress json" yieldMs:10000
-```
-
-**How this works:**
-- `yieldMs:10000` returns control to you every 10 seconds
-- You read the `--progress json` output (JSON Lines on stderr with stage/pct/msg)
-- Report progress to the user ("Scene 05/30 complete, 17%")
-- Then poll again: `process action:poll sessionId:<id>`
-- Repeat until `"stage":"complete"` appears
-
-**This is the correct pattern for ALL long-running tool commands** (chain_video, batch flux, batch sadtalker, etc.). Never use `bash background:true` and forget about it — use `exec` + `yieldMs` + `process poll` loop so you can report progress live.
-
-#### 4e. Talking Head Narrator (optional)
-
-Generate a presenter portrait, then animate per-scene clips:
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-
-# 1. Generate portrait
-uv run tools/flux2.py \
-  --prompt "Professional presenter portrait, clean style, dark background, facing camera, upper body" \
-  --width 1024 --height 576 \
-  --output projects/PROJECT_NAME/public/images/presenter.png \
-  --cloud modal --progress json
-
-# 2. Generate per-scene narrator clips (one per scene, NOT one long video)
-uv run tools/sadtalker.py \
-  --image projects/PROJECT_NAME/public/images/presenter.png \
-  --audio projects/PROJECT_NAME/public/audio/scenes/01.mp3 \
-  --preprocess full --still --expression-scale 0.8 \
-  --output projects/PROJECT_NAME/public/narrator-01.mp4 \
-  --cloud modal --progress json
-
-# Repeat for each scene that needs a narrator
-```
-
-**SadTalker rules — follow these exactly:**
-- **ALWAYS** use `--preprocess full` (default `crop` outputs a square, wrong aspect ratio)
-- **ALWAYS** use `--still` (reduces head movement, looks professional)
-- **ALWAYS** generate per-scene clips (6-15s each), NEVER one long video
-- Processing: ~3-4 min per 10s of audio on Modal A10G
-- `--expression-scale 0.8` keeps expressions subtle (range 0.0-1.5)
-
-#### 4e. Image Editing (optional)
-
-Create scene variants from existing images:
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-uv run tools/image_edit.py \
-  --input projects/PROJECT_NAME/public/images/title-bg.png \
-  --prompt "Make it darker with red tones, more ominous" \
-  --output projects/PROJECT_NAME/public/images/problem-bg.png \
-  --cloud modal --progress json
-```
-
-#### 4f. Upscaling (optional)
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-uv run tools/upscale.py \
-  --input projects/PROJECT_NAME/public/images/some-image.png \
-  --output projects/PROJECT_NAME/public/images/some-image-4x.png \
-  --scale 4 --cloud modal --progress json
-```
-
-### Step 5: Sync Timing
-
-**ALWAYS do this after generating voiceover.** Audio duration differs from estimates.
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-for f in projects/PROJECT_NAME/public/audio/scenes/*.mp3; do
-  echo "$(basename $f): $(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f")s"
-done
-```
-
-Update each scene's `durationSeconds` in `demo-config.ts` to: `ceil(actual_audio_duration + 2)`.
-
-Example: if `01.mp3` is 6.8s, set scene 1 `durationSeconds` to `9` (ceil(6.8 + 2) = 9).
-
-### Step 6: Review Still Frames
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit/projects/PROJECT_NAME
-npx remotion still src/index.ts ProductDemo --frame=100 --output=/tmp/review-scene1.png
-npx remotion still src/index.ts ProductDemo --frame=400 --output=/tmp/review-scene2.png
-```
-
-Check: text truncation, animation timing, narrator PiP positioning, background contrast.
-
-### Step 7: Render
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit/projects/PROJECT_NAME
-npm run render
-```
-
-**Output:** `out/ProductDemo.mp4`
-
----
-
-## Composition Patterns
-
-### Per-Scene Audio
-
-Use per-scene audio with a 1-second delay (`from={30}` = 30 frames = 1s at 30fps):
-
-```tsx
-<Sequence from={30}>
-  <Audio src={staticFile('audio/scenes/01.mp3')} volume={1} />
-</Sequence>
-```
-
-### Per-Scene Narrator PiP
-
-```tsx
-<Sequence from={30}>
-  <OffthreadVideo
-    src={staticFile('narrator-01.mp4')}
-    style={{ width: 320, height: 180, objectFit: 'cover' }}
-    muted
-  />
-</Sequence>
-```
-
-**ALWAYS use `<OffthreadVideo>`, NEVER `<video>`.** Remotion requires its own component for frame-accurate rendering.
-
-### Transitions
-
-```tsx
-import { TransitionSeries, linearTiming } from '@remotion/transitions';
-import { fade } from '@remotion/transitions/fade';
-import { glitch } from '../../../lib/transitions/presentations/glitch';
-import { lightLeak } from '../../../lib/transitions/presentations/light-leak';
-```
-
-**NEVER import from `lib/transitions` barrel** — import custom transitions from `lib/transitions/presentations/` directly.
-
----
-
-## Progress Reporting
-
-All cloud GPU tools support structured progress output for automated monitoring.
-
-### Usage
-
-Add `--progress json` to any tool command to get JSON Lines on stderr:
-
-```bash
-cd ~/.openclaw/workspace/claude-code-video-toolkit
-uv run tools/music_gen.py \
-  --preset corporate-bg --duration 60 \
-  --output projects/PROJECT_NAME/public/audio/bg-music.mp3 \
-  --progress json
-```
-
-### Output Format
-
-Each line on stderr is a JSON object:
+Run `qc.py --render` before every delivery: the templates mix voice and music without normalising, and
+YouTube turns quiet audio down, never up. It exits 1 on errors (cut-off narration, silent track).
+
+### Remotion templates (when a job's compositor isn't enough)
+
+`templates/product-demo` (marketing), `templates/sprint-review` and `sprint-review-v2`,
+`templates/ds-release-notes` (synthetic UI demos). Copy to `projects/<name>`, `npm install`, write the config,
+generate per-scene audio, update each scene's `durationSeconds` to `ceil(audio + 2)` (or run
+`uv run tools/sync_timing.py --apply`), `npm run render` from the project directory, then `qc.py --render`.
+Always `<OffthreadVideo>` and `<Audio>` from `remotion`, never a raw `<video>` tag. The toolkit's CLAUDE.md
+holds the full workflow.
+
+### Progress JSON (stderr, one object per line)
 
 ```json
-{"ts":"14:23:15","stage":"submit","msg":"Sending to acemusic.ai (XL Turbo 4B, thinking: on)...","pct":null,"elapsed":0.0}
-{"ts":"14:23:30","stage":"waiting","msg":"Waiting for acemusic.ai response... (15s)","pct":null,"elapsed":15.0}
-{"ts":"14:23:45","stage":"waiting","msg":"Waiting for acemusic.ai response... (30s)","pct":null,"elapsed":30.0}
-{"ts":"14:24:02","stage":"complete","msg":"Saved: bg-music.mp3 (245 KB, 60.1s)","pct":100,"elapsed":47.3}
+{"ts":"14:23:15","stage":"submit","msg":"Sending to Modal...","pct":null,"elapsed":0.0}
+{"ts":"14:24:02","stage":"complete","msg":"Saved: clip.mp4","pct":100,"elapsed":47.3}
+{"ts":"14:24:02","stage":"cost","msg":"Est. cost: $0.0712 (103s on modal)","pct":null,"elapsed":103.0}
 ```
 
-### Stages
+Stages: `submit`, `queue`, `processing`, `waiting`, `item` (n of m, `pct` set), `cost`, `complete`, `error`.
+`video_job.py` reads the `cost` events for its receipts; longarm's `video-spend.py` wrapper does the same for
+single tool runs.
 
-| Stage | Meaning |
-|-------|---------|
-| `submit` | Job sent to provider |
-| `queue` | RunPod: waiting for GPU |
-| `processing` | RunPod: GPU processing |
-| `waiting` | Heartbeat during synchronous calls (acemusic, Modal) |
-| `complete` | Job finished successfully |
-| `error` | Something failed — check `msg` for details |
-| `item` | Multi-item progress (e.g., scene 3/7) — `pct` is populated |
-| `cost` | Estimated cost for the operation |
+## Error recovery
 
-### Behaviour by Provider
-
-- **acemusic**: Emits `submit` → periodic `waiting` heartbeats (every 15s) → `complete`
-- **RunPod**: Emits `submit` → `queue` → `processing` → `complete` (on each poll)
-- **Modal**: Emits `submit` → periodic `waiting` heartbeats → `complete`
-
-Default mode (`--progress human`) shows the same events as colored terminal output — no change to existing behaviour.
-
----
-
-## Error Recovery
-
-| Problem | Solution |
-|---------|----------|
-| Tool command fails with "No module named..." | Run `uv sync` from toolkit root and invoke tools via `uv run` |
-| "MODAL_*_ENDPOINT_URL not configured" | Check `.env` has the endpoint URL. Run `uv run tools/verify_setup.py` |
-| SadTalker output is square/cropped | You forgot `--preprocess full`. Re-run with that flag |
-| Audio too short/long for scene | Re-run Step 5 (sync timing) and update config |
-| `npm run render` fails | Make sure you're in the project dir, not toolkit root. Run `npm install` first |
-| "Cannot find module" in Remotion | Check import paths. Custom components use `../../../lib/` relative paths |
-| Cold start timeout on Modal | First call after idle takes 30-120s. Retry once — second call uses warm GPU |
-| SadTalker client timeout (long audio) | The client HTTP request can time out before Modal finishes. **Modal still uploads the result to R2.** Check `sadtalker/results/` in the `video-toolkit` R2 bucket for the output. Use `uv run python -c "import boto3; ..."` with the R2 creds from `.env` to list and generate a presigned URL |
-
----
-
-## Cost Estimates (Modal)
-
-| Tool | Typical Cost | Notes |
-|------|-------------|-------|
-| Qwen3-TTS | ~$0.01/scene | ~20s per scene on warm GPU |
-| FLUX.2 | ~$0.01/image | ~3s warm, ~30s cold |
-| ACE-Step | ~$0.02-0.05 | Depends on duration |
-| SadTalker | ~$0.05-0.20/scene | ~3-4 min per 10s audio |
-| Qwen-Edit | ~$0.03-0.15 | ~8 min cold start (25GB model) |
-| RealESRGAN | ~$0.005/image | Very fast |
-| LTX-2.3 | ~$0.20-0.25/clip | ~2.5 min per 5s clip, A100-80GB |
-
-**Total for a 60s video:** ~$1-3 depending on scenes and narrator clips.
-
-Modal Starter plan: $30/month free compute. Apps scale to zero when idle.
+| Problem | Fix |
+|---|---|
+| `No module named ...` | `uv sync` from the toolkit root, run tools with `uv run` |
+| `MODAL_*_ENDPOINT_URL not configured` | `uv run tools/verify_setup.py`; `uv run tools/modal_setup.py --list` |
+| `submit` exits 3, `lock_held` | Another job is running; `status` that id, or `cancel` it if it is stuck |
+| `submit` exits 2, `budget_exceeded` | Raise `--max-usd`, drop a scene, use `flux` or `"ideogram": {"speed": "TURBO"}` |
+| `submit --brief` exits 2, `no_expander` | Write the spec yourself and pass `--spec`, or set `VIDEO_JOB_EXPANDER` |
+| Job `failed`, `error_code: step_failed` | `status --json` has the error; `jobs/<id>/job.log` has the tool output. Modal cold starts can time out once: resubmit |
+| Job `failed`, `worker_died` | The worker process was killed; the project copy in `jobs/<id>/project/` is intact |
+| Cold start on Modal | First call after idle takes 1 to 3 minutes; the next is warm |
+| Captions missing from a job's video | No `ELEVENLABS_API_KEY` and no local whisper (`uv sync --extra whisper`); the job logs it and renders without |
