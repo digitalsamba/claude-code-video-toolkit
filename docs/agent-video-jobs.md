@@ -133,6 +133,35 @@ The lock `jobs/.lock` names the running job. It is considered stale when that jo
 dead, or no worker reported in within two minutes, so a crash never wedges the queue. Longarm's daily cap
 assumes serial spend, which the lock guarantees.
 
+## Running under an agent runtime's tool call (longarm)
+
+Longarm's `native__run_tool` spawns toolkit tools through its `video-spend.py` wrapper with an argv
+list, no shell, no files the model can write, every argument capped at 4 KB, and `--progress json`
+injected. `video_job.py` fits that:
+
+- `--progress json` is accepted on every command. `submit` then prints one `cost` event on stderr
+  with the whole estimate, which the wrapper turns into a receipt, so longarm's daily cap books the
+  job as a **reservation** the moment it starts. In that mode (`LONGARM_WORKSPACE` set, or
+  `VIDEO_JOB_RESERVE_AT_SUBMIT=1`) the worker keeps its actual per-tool receipts in
+  `jobs/<id>/receipts.jsonl` only, so nothing is counted twice. `status`, `result`, `list` and
+  `cancel` print a `$0.0000` cost event so they are not charged the wrapper's unknown-cost default.
+  The ledger path follows `MEDIA_SPEND_LOG`, else `$LONGARM_WORKSPACE/logs/media-spend.log`.
+- `--spec-json '<json>'` takes the spec inline. To fit a 3-scene spec in 4 KB, an `ideogram` scene
+  can give the short caption form `{"headline": "...", "object": "...", "description": "..."}`, which
+  `normalize_spec` expands into the full template.
+- `submit --output files/<name>.mp4` copies the finished MP4 there as well (longarm serves `files/`
+  at a public URL and computes that URL itself from the `--output` argument; the file exists once
+  `status` says `done`). `result` reports it as `published`.
+- `status` carries `eta_s`, a rough seconds-left figure from the phase and the assets still to make,
+  so an agent can say "about 3 minutes to go" instead of a percentage.
+- The per-call cost bound of longarm's allowlist becomes the job's `--max-usd` (default 2.00, env
+  `VIDEO_JOB_MAX_USD`); set it at or under the daily cap's call reserve policy you want.
+
+The brain's media venv needs `moviepy`, `numpy` and `elevenlabs` on top of the client libraries
+(the build and QC steps run locally in the container); `IDEOGRAM_API_KEY` goes in the toolkit's
+own `.env` on the host. The agent-facing contract for the api engine is a section in
+`identity.d/22-tools-media.api.md`; `skills/video-toolkit/SKILL.md` is the claude-cli counterpart.
+
 ## MCP server
 
 `tools/video_mcp.py` wraps the same module for agents without a shell. It holds no pipeline logic.

@@ -120,6 +120,12 @@ Have only a brief and want the toolkit to write the spec? Set `VIDEO_JOB_EXPANDE
 script). Then `--brief "..."` works everywhere `--spec` does. Without it, `estimate --brief` still answers with a
 skeleton estimate; `submit --brief` is refused.
 
+Runtimes that pass an argv list and can't write files (longarm's `native__run_tool`, most MCP
+bridges) take the spec inline: `--spec-json '<json>'`, with the short caption form
+`{"headline": "...", "object": "...", "description": "..."}` per ideogram scene so it fits in one
+argument. Add `--output files/<dated-name>.mp4` when your runtime serves a `files/` directory at
+a public URL; the file lands there once the job is done.
+
 ### 2. Estimate, then submit under a cap
 
 ```bash
@@ -142,8 +148,9 @@ uv run tools/video_job.py status JOB_ID --json
 ```
 
 Poll every 20 to 30 s. `phase` walks `queued → voiceover → visuals → captions → build → qc → publish → done`,
-or ends in `failed` (with `error` and `error_code`) or `cancelled`. `progress` is 0 to 100, `actual_usd` is spend
-so far, `step_detail` names the asset being generated, `log_tail` is the last few log lines. A typical 30 s video
+or ends in `failed` (with `error` and `error_code`) or `cancelled`. `progress` is 0 to 100, `eta_s` is a rough
+seconds-left figure (say "about 3 minutes to go", not a percentage), `actual_usd` is spend so far,
+`step_detail` names the asset being generated, `log_tail` is the last few log lines. A typical 30 s video
 takes 5 to 10 minutes; the LTX clip is the slow step (2 to 4 minutes each, more on a cold start).
 
 Tell the user the id and the estimate as soon as `submit` returns. Do not promise to keep watching from inside
