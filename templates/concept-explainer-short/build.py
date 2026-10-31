@@ -254,7 +254,8 @@ def build() -> None:
     out = HERE / "out" / "short.mp4"
     out.parent.mkdir(exist_ok=True)
     final.write_videofile(str(out), fps=FPS, codec="libx264",
-                          audio_codec="aac", preset="medium", threads=8)
+                          audio_codec="aac", preset="medium", threads=8,
+                          logger="bar" if sys.stderr.isatty() else None)  # no bar spam in job logs
     print(f"wrote {out}")
 
 
