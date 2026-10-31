@@ -195,7 +195,32 @@ def jobs_dir() -> Path:
 
 
 def spend_log_path() -> Path:
-    return Path(os.environ.get("MEDIA_SPEND_LOG") or ROOT / "logs" / "media-spend.log")
+    """MEDIA_SPEND_LOG, else the agent workspace's ledger when one is set (longarm exports
+    LONGARM_WORKSPACE into every tool call), else the toolkit's own logs/."""
+    if os.environ.get("MEDIA_SPEND_LOG"):
+        return Path(os.environ["MEDIA_SPEND_LOG"])
+    if os.environ.get("LONGARM_WORKSPACE"):
+        return Path(os.environ["LONGARM_WORKSPACE"]) / "logs" / "media-spend.log"
+    return ROOT / "logs" / "media-spend.log"
+
+
+def reserve_at_submit() -> bool:
+    """When true, `submit` books the whole estimate in the shared ledger as one receipt (a
+    reservation the daily cap can count at once) and the worker keeps its per-tool receipts
+    in the job directory only. On by default under longarm, whose cap sums the ledger before
+    every call; off elsewhere so the ledger holds actuals."""
+    v = os.environ.get("VIDEO_JOB_RESERVE_AT_SUBMIT")
+    if v is not None:
+        return v.strip().lower() in ("1", "true", "yes", "on")
+    return bool(os.environ.get("LONGARM_WORKSPACE"))
+
+
+def emit_cost_event(usd: float, msg: str) -> None:
+    """The `cost` progress line longarm's video-spend.py wrapper turns into a receipt. Only
+    printed under --progress json, so plain CLI use stays quiet."""
+    print(json.dumps({"ts": time.strftime("%H:%M:%S"), "stage": "cost",
+                      "msg": f"Est. cost: ${usd:.4f} ({msg})", "pct": None, "elapsed": 0.0}),
+          file=sys.stderr, flush=True)
 
 
 def _now() -> str:
@@ -310,6 +335,14 @@ def normalize_spec(spec: dict) -> dict:
             raise SpecError(f"scene {s['id']}: visual.kind must be one of {', '.join(VISUAL_KINDS)}")
         if kind != "none" and not (vis.get("prompt") or vis.get("caption")):
             raise SpecError(f"scene {s['id']}: visual.{kind} needs a prompt (or a caption for ideogram)")
+        cap = vis.get("caption")
+        if kind == "ideogram" and isinstance(cap, dict) and "headline" in cap:
+            # short form {headline, object, description}: expand into the full template
+            vis["caption"] = _caption(str(cap["headline"]).strip(),
+                                      str(cap.get("object") or "a single simple icon, centered").strip(),
+                                      str(cap.get("description") or
+                                          f"A dark-navy poster with the headline {cap['headline']}, "
+                                          "one simple object below it, clear space in the bottom fifth.").strip())
         vis["kind"] = kind
         s["visual"] = vis
         if kind == "ltx":
@@ -520,7 +553,10 @@ def write_receipt(job: dict, tool: str, cost_usd: float | None, elapsed_s: float
     """Same shape as longarm's video-spend.py ledger, plus job_id."""
     entry = {"ts": _now(), "tool": tool, "cost_usd": cost_usd, "elapsed_s": elapsed_s,
              "exit": exit_code, "args": args, "job_id": job["id"]}
-    for path in (job_dir(job["id"]) / "receipts.jsonl", spend_log_path()):
+    paths = [job_dir(job["id"]) / "receipts.jsonl"]
+    if job.get("ledger") != "reserve":
+        paths.append(spend_log_path())
+    for path in paths:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
@@ -919,7 +955,13 @@ def step_publish(job: dict, spec: dict, final: Path) -> dict:
     dest = job_dir(job["id"]) / name
     shutil.copy2(final, dest)
     out = {"mp4": str(dest), "duration_s": _probe_duration(dest), "size_bytes": dest.stat().st_size,
-           "url": None, "r2_key": None}
+           "url": None, "r2_key": None, "published": None}
+    if job.get("publish_to"):
+        target = Path(job["publish_to"])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(final, target)
+        out["published"] = str(target)
+        log_line(job, f"copied to {target}")
     try:
         from file_transfer import get_r2_client, upload_to_r2
         client, _ = get_r2_client()
@@ -977,7 +1019,7 @@ def run_pipeline(job: dict, spec: dict, steps: dict | None = None) -> dict:
 # ---------------------------------------------------------------------------
 
 def submit(spec: dict, max_usd: float, spec_source: str = "spec", brief: str | None = None,
-           start_worker: bool = True) -> dict:
+           start_worker: bool = True, publish_to: str | None = None) -> dict:
     """Create the job on disk, take the lock, and launch the detached worker. Returns the
     job dict. Raises BudgetExceeded (before anything is written) or LockHeld."""
     spec = normalize_spec(spec)
@@ -999,6 +1041,8 @@ def submit(spec: dict, max_usd: float, spec_source: str = "spec", brief: str | N
         "brief": brief, "spec_source": spec_source, "spec_path": str(d / "spec.json"),
         "project_dir": None, "estimate_usd": est["estimate_usd"], "actual_usd": 0.0, "max_usd": max_usd,
         "steps": {}, "output": None, "error": None, "worker_pid": None, "log": str(d / "job.log"),
+        "publish_to": str(Path(publish_to).resolve()) if publish_to else None,
+        "ledger": "reserve" if reserve_at_submit() else "actual",
     }
     save_job(job)
     log_line(job, f"submitted: {spec['title']!r} {spec['format']} {len(spec['scenes'])} scenes "
@@ -1049,8 +1093,38 @@ def refresh_status(job: dict) -> dict:
     return job
 
 
+# Typical seconds per step, measured 2026-10-31 on Modal (LTX warm; a cold start adds ~60 s).
+_STEP_SECONDS = {"voiceover": 70, "ltx": 170, "ideogram": 12, "flux": 20, "captions": 8,
+                 "music": 60, "build": 60, "qc": 10, "publish": 8}
+
+
+def eta_seconds(job: dict) -> int | None:
+    """Rough time left, from the phase and the assets still to make. None when finished."""
+    if job.get("phase") in TERMINAL:
+        return None
+    try:
+        spec = json.loads(Path(job["spec_path"]).read_text(encoding="utf-8"))
+    except (OSError, ValueError, KeyError):
+        return None
+    kinds = [s["visual"]["kind"] for s in spec.get("scenes", []) if s["visual"]["kind"] != "none"]
+    visuals = sum(_STEP_SECONDS.get(k, 20) for k in kinds)
+    order = ["voiceover", "visuals", "captions", "music", "build", "qc", "publish"]
+    costs = {"voiceover": _STEP_SECONDS["voiceover"], "visuals": visuals,
+             "captions": _STEP_SECONDS["captions"] if spec.get("captions", {}).get("enabled", True) else 0,
+             "music": _STEP_SECONDS["music"] if spec.get("music", {}).get("enabled") else 0,
+             "build": _STEP_SECONDS["build"], "qc": _STEP_SECONDS["qc"], "publish": _STEP_SECONDS["publish"]}
+    phase = job.get("phase", "queued")
+    start = order.index(phase) if phase in order else 0
+    remaining = sum(costs[p] for p in order[start:])
+    if phase == "visuals" and job.get("step_detail"):
+        done = [k for k in kinds][:max(0, int((job.get("progress", 30) - 30) / 45 * len(kinds)))]
+        remaining -= sum(_STEP_SECONDS.get(k, 20) for k in done)
+    return max(15, int(remaining))
+
+
 def status(job_id: str, log_lines: int = 15) -> dict:
     job = refresh_status(load_job(job_id))
+    job["eta_s"] = eta_seconds(job)
     tail: list[str] = []
     try:
         tail = (job_dir(job_id) / "job.log").read_text(encoding="utf-8").splitlines()[-log_lines:]
@@ -1072,7 +1146,7 @@ def result(job_id: str) -> dict:
         except Exception:  # noqa: BLE001
             pass
     return {"id": job["id"], "phase": job["phase"], "progress": job.get("progress"), "title": job.get("title"),
-            "format": job.get("format"), "mp4": out.get("mp4"), "url": out.get("url"),
+            "format": job.get("format"), "mp4": out.get("mp4"), "published": out.get("published"), "url": out.get("url"),
             "duration_s": out.get("duration_s"), "qc": out.get("qc"), "estimate_usd": job.get("estimate_usd"),
             "actual_usd": job.get("actual_usd"), "error": job.get("error"), "error_code": job.get("error_code"),
             "ready": job["phase"] == "done"}
@@ -1160,6 +1234,8 @@ def _human_status(s: dict) -> str:
             f"est ${s.get('estimate_usd', 0):.2f} spent ${s.get('actual_usd', 0):.2f}")
     if s.get("step_detail") and s["phase"] not in TERMINAL:
         head += f"\n  now: {s['step_detail']}"
+    if s.get("eta_s"):
+        head += f"\n  about {max(1, round(s['eta_s'] / 60))} min left"
     if s.get("error"):
         head += f"\n  error: {s['error']}"
     if s.get("output", {}) and s["output"].get("mp4"):
@@ -1175,11 +1251,13 @@ def main(argv: list[str] | None = None) -> int:
     def add_spec_args(p, with_max=False):
         p.add_argument("--brief", help="One-paragraph description of the video")
         p.add_argument("--spec", help="Finished spec JSON file ('-' for stdin)")
+        p.add_argument("--spec-json", help="The spec as a JSON string (for callers that can't write files)")
         p.add_argument("--format", choices=list(FORMATS), default=None, help="Output format (default 9:16)")
         p.add_argument("--duration", type=int, default=45, help="Target seconds, for --brief (default 45)")
         if with_max:
             p.add_argument("--max-usd", type=float, default=float(os.environ.get("VIDEO_JOB_MAX_USD", DEFAULT_MAX_USD)),
                            help=f"Refuse if the estimate is above this (default {DEFAULT_MAX_USD}, env VIDEO_JOB_MAX_USD)")
+            p.add_argument("--output", "-o", help="Also copy the finished MP4 here (e.g. an agent's public files/ dir)")
         p.add_argument("--json", action="store_true", help="Machine-readable output")
 
     add_spec_args(sub.add_parser("estimate", help="Cost estimate; needs no API keys"))
@@ -1193,13 +1271,20 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("presets").add_argument("--json", action="store_true")
     w = sub.add_parser("_worker", help=argparse.SUPPRESS)
     w.add_argument("job_id")
+    for p in sub.choices.values():  # longarm's wrapper injects this on every call
+        p.add_argument("--progress", choices=["human", "json"], default="human",
+                       help="json: emit a cost event on stderr (the estimate on submit, $0 otherwise)")
     args = ap.parse_args(argv)
+    progress_json = getattr(args, "progress", "human") == "json"
 
     try:
         if args.cmd in ("estimate", "submit", "spec"):
             fmt = args.format or "9:16"
-            spec, source = resolve_spec(args.brief, args.spec, fmt, args.duration,
-                                        allow_skeleton=(args.cmd == "estimate"))
+            if args.spec_json:
+                spec, source = normalize_spec(json.loads(args.spec_json)), "spec"
+            else:
+                spec, source = resolve_spec(args.brief, args.spec, fmt, args.duration,
+                                            allow_skeleton=(args.cmd == "estimate"))
             if args.format and args.spec:
                 spec["format"] = args.format
                 spec = normalize_spec(spec)
@@ -1208,9 +1293,14 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             est = estimate(spec)
             if args.cmd == "estimate":
+                if progress_json:
+                    emit_cost_event(0.0, "estimate only, nothing generated")
                 _print({**est, "spec_source": source}, args.json, _human_estimate(est, source))
                 return 0
-            job = submit(spec, args.max_usd, spec_source=source, brief=args.brief)
+            job = submit(spec, args.max_usd, spec_source=source, brief=args.brief, publish_to=args.output)
+            if progress_json:
+                emit_cost_event(job["estimate_usd"] if job["ledger"] == "reserve" else 0.0,
+                                f"{'reserved' if job['ledger'] == 'reserve' else 'estimate'} for job {job['id']}")
             _print({"id": job["id"], "phase": job["phase"], "estimate_usd": job["estimate_usd"],
                     "max_usd": job["max_usd"], "title": job["title"], "format": job["format"],
                     "scenes": job["scenes"], "spec_path": job["spec_path"], "log": job["log"],
@@ -1218,6 +1308,8 @@ def main(argv: list[str] | None = None) -> int:
                    args.json, f"submitted {job['id']}  est ${job['estimate_usd']:.2f}  "
                               f"(poll: uv run tools/video_job.py status {job['id']})")
             return 0
+        if progress_json and args.cmd in ("status", "result", "list", "cancel", "presets"):
+            emit_cost_event(0.0, f"{args.cmd}: no generation")
         if args.cmd == "status":
             s = status(args.job_id)
             _print(s, args.json, _human_status(s))
