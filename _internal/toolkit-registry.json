@@ -103,6 +103,15 @@
       "note": "Reference builds: examples/ds-free-schedule-demo (one flow) and examples/ds-release-649 (a whole release). Product screen kits stay in the project, not lib.",
       "created": "2026-10-21",
       "updated": "2026-10-21"
+    },
+    "video-toolkit": {
+      "path": "skills/video-toolkit/",
+      "description": "Agent-facing skill for any runtime (OpenClaw, Codex, Hermes, longarm, MCP clients): the estimate -> submit -> poll status -> result flow of tools/video_job.py first, then the individual tools with current defaults (SoulX, Ideogram for text, qc.py before delivery, --max-wpm)",
+      "status": "beta",
+      "audience": "agents other than Claude Code; keeps the metadata.openclaw frontmatter so OpenClaw loads it",
+      "note": "Was skills/openclaw-video-toolkit (OpenClaw-only paths and yieldMs polling) until 2026-10-31",
+      "created": "2026-04-14",
+      "updated": "2026-10-31"
     }
   },
   "commands": {
@@ -902,6 +911,70 @@
       },
       "created": "2026-10-28",
       "updated": "2026-10-28"
+    },
+    "video_job": {
+      "path": "tools/video_job.py",
+      "description": "Async video jobs for agents: a scene spec (or a brief via VIDEO_JOB_EXPANDER) in, a QC-checked MP4 out. submit returns in seconds with a job id and estimate; a detached worker runs voiceover -> visuals (Ideogram/LTX/FLUX) -> captions -> build (concept-explainer-short, 9:16 or 16:9) -> qc --fix -> publish (R2 URL when configured). State on disk under jobs/<id>/, one job at a time, --max-usd refused before any spend and enforced before each paid step, receipts in longarm's media-spend shape",
+      "usage": "uv run tools/video_job.py submit --spec spec.json --max-usd 1.00 --json; then status JOB_ID --json; result JOB_ID --json",
+      "status": "beta",
+      "category": "project",
+      "commands": [
+        "estimate",
+        "submit",
+        "status",
+        "result",
+        "list",
+        "cancel",
+        "spec",
+        "presets"
+      ],
+      "options": {
+        "brief": "One-paragraph description; needs VIDEO_JOB_EXPANDER to submit (estimate answers with a skeleton without one)",
+        "spec": "Finished spec JSON file or '-' (scenes with text + visual kind/prompt); the agent-is-the-LLM path",
+        "format": "9:16 (default) or 16:9",
+        "duration": "Target seconds for --brief (default 45)",
+        "max-usd": "Refuse when the estimate is above this (default 2.00, env VIDEO_JOB_MAX_USD); worker stops before the next paid step at the cap",
+        "json": "Stable machine-readable output (documented in docs/agent-video-jobs.md)"
+      },
+      "prices": "PRICES table in the module (presets --json prints it): ltx clip 0.20, ideogram image 0.03/0.06/0.10 by speed, flux image 0.01, qwen3 voice 0.01/scene, elevenlabs 0.20/1k chars, scribe captions 0.40/audio hour",
+      "env": [
+        "VIDEO_JOB_EXPANDER",
+        "VIDEO_JOB_MAX_USD",
+        "VIDEO_JOBS_DIR",
+        "MEDIA_SPEND_LOG"
+      ],
+      "exitCodes": {
+        "0": "ok",
+        "1": "bad request",
+        "2": "refused or not ready (budget_exceeded, no_expander, job not done)",
+        "3": "lock_held"
+      },
+      "tests": "uv run python -m unittest tests/python/test_video_job.py",
+      "created": "2026-10-31"
+    },
+    "video_mcp": {
+      "path": "tools/video_mcp.py",
+      "description": "MCP server (stdio) for agents without a shell: video_estimate, video_submit, video_status, video_result, video_list_presets (+ video_list, video_cancel). A thin wrapper over tools/video_job.py with no pipeline logic of its own",
+      "usage": "uv sync --extra mcp && uv run --extra mcp tools/video_mcp.py",
+      "status": "beta",
+      "category": "agent",
+      "requires": "uv sync --extra mcp (mcp>=1.2; works on mcp 1.x FastMCP and 2.x MCPServer)",
+      "clientConfig": {
+        "mcpServers": {
+          "video-toolkit": {
+            "command": "uv",
+            "args": [
+              "run",
+              "--directory",
+              "/path/to/claude-code-video-toolkit",
+              "--extra",
+              "mcp",
+              "tools/video_mcp.py"
+            ]
+          }
+        }
+      },
+      "created": "2026-10-31"
     }
   },
   "optionalComponents": {
@@ -1124,11 +1197,12 @@
     },
     "concept-explainer-short": {
       "path": "templates/concept-explainer-short/",
-      "description": "9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts) — Python/moviepy build driven by scenes.json: cloned TTS with pacing QC, Ideogram cards, LTX b-roll, burned karaoke captions",
+      "description": "Concept-explainer shorts, 9:16 by default or 16:9 via config.json format — Python/moviepy build driven by scenes.json: cloned TTS with pacing QC, Ideogram cards, LTX b-roll, burned karaoke captions",
       "stack": "python-moviepy",
       "status": "beta",
       "created": "2026-06-09",
-      "updated": "2026-10-12"
+      "updated": "2026-10-31",
+      "note": "The compositor tools/video_job.py drives; jobs copy it into jobs/<id>/project/"
     },
     "ds-release-notes": {
       "path": "templates/ds-release-notes/",

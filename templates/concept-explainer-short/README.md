@@ -1,7 +1,7 @@
 # concept-explainer-short
 
-A 9:16 vertical **concept explainer** template — TikTok / Reels / YouTube Shorts
-style — built entirely from AI-generated parts and composed with a single Python
+A **concept explainer** template, 9:16 vertical by default (TikTok / Reels / YouTube Shorts)
+or 16:9 landscape by config — see "Formats" below — — built entirely from AI-generated parts and composed with a single Python
 build (no Remotion/Node). One concept, hook → explanation → payoff → CTA, with
 big burned karaoke captions for sound-off viewing.
 
@@ -19,6 +19,11 @@ scenes.json ──► gen_vo.py ──► gen_captions.py ──► build.py ─
 ```
 
 ## Quick start
+
+**From an agent, or hands-off:** `uv run tools/video_job.py submit --spec spec.json` copies
+this template into `jobs/<id>/project/`, runs every step below and QC, and `result JOB_ID`
+hands back the MP4 (see `docs/agent-video-jobs.md`). The manual path:
+
 
 ```bash
 cp -r templates/concept-explainer-short projects/my-short
@@ -60,6 +65,20 @@ uv run build.py
 ~140 words total; the 4-scene example is ~45s. Keep the hook under 3 seconds
 of setup. Platform limits: YouTube Shorts ≤ 3 min, Reels ≤ 3 min,
 TikTok ≤ 10 min — gen_vo.py and build.py print a warning past 3 minutes.
+
+## Formats
+
+`config.json → format` is the canvas. The build adapts to any size (placeholder cards,
+Ken Burns, boomerang loops and captions are all computed from it), so 16:9 is a config
+change, not a different template:
+
+```json
+"format":   { "width": 1920, "height": 1080, "fps": 30 },
+"captions": { "y": 900, "size": 64, "maxWords": 4, "maxChars": 30, ... }
+```
+
+Generate assets at the matching size: Ideogram `--resolution 1280x720`, LTX `1024x576`.
+`tools/video_job.py` writes both configs for you (`--format 16:9`).
 
 ## Visuals
 
@@ -108,6 +127,14 @@ Alternate cards and motion so the viewer gets a pattern interrupt every
   `brands/my-brand/voice.json` (voiceId and settings) instead of the ambient
   config. Works with any provider, and pairs with a brand's palette so one
   brand drives both look and narrator.
+
+## Title and headline overlays
+
+`scenes.json` may carry a top-level `"titleCard": {"text": "...", "seconds": 2.8}` and, per scene,
+`"overlay": {"headline": "...", "subline": "..."}`. The build animates them in (slide up and fade,
+an accent bar drawing across, the subline following) in the upper half of the frame, clear of the
+caption band. With `timing.startPad` at 0 the first scene is on screen from frame 0, so the
+Shorts/Reels cover is never black. `tools/video_job.py` writes both from a spec.
 
 ## Captions
 

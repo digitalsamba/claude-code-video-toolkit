@@ -573,6 +573,19 @@ uv run tools/notebooklm_brand.py \
 
 Trims NotebookLM visuals, keeps full audio, bridges with freeze frame, adds branded outro.
 
+### Agent Video Jobs (brief in, MP4 out)
+
+`tools/video_job.py` is the async entrypoint for agents that can't babysit a render: `submit --spec spec.json
+--max-usd 1.00` returns in seconds with a job id and estimate, a detached worker runs voiceover → visuals →
+captions → build → `qc.py --fix`, and `status JOB_ID --json` / `result JOB_ID --json` read state from disk from
+any fresh process. The spec is scenes with narration text and one visual each (`ltx`, `ideogram`, `flux`,
+`none`); the compositor is `concept-explainer-short` in 9:16 or 16:9. `estimate` is a pure function of the
+spec and the module's `PRICES` table, `submit` refuses over the cap before any spend, one job runs at a time,
+and receipts land in `logs/media-spend.log` in longarm's ledger shape. Brief → spec needs an LLM: agents write
+the spec themselves, or set `VIDEO_JOB_EXPANDER` to any command that turns a brief into one. Agents without a
+shell get the same five calls from `tools/video_mcp.py` (MCP over stdio, `uv sync --extra mcp`). The
+agent-facing skill is `skills/video-toolkit/`; the full contract is in `docs/agent-video-jobs.md`.
+
 ### Publishing to YouTube
 
 Upload a finished render to YouTube via the Data API v3. Use the `/publish` command for the
