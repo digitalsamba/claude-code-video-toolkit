@@ -154,6 +154,56 @@ IDEOGRAM_CAPTION_TEMPLATE = {
 }
 
 
+def _diagram_steps(obj: str) -> list[str]:
+    """'A -> B -> C' (also '\u2192' or '=>') as 2 to 4 step labels; [] when the object is not a chain."""
+    s = obj.replace("\u2192", "->").replace("=>", "->")
+    if "->" not in s:
+        return []
+    steps = [p.strip().strip('"') for p in s.split("->")]
+    steps = [p for p in steps if p]
+    return steps if 2 <= len(steps) <= 4 else []
+
+
+def _diagram_caption(headline: str, steps: list[str], fmt: str, description: str | None = None) -> dict:
+    """A simple flow diagram on the card: one labelled box per step, an arrow between each
+    pair, laid out across the frame in landscape and down it in portrait. Ideogram renders
+    the labels legibly because each is its own text element with a bbox; a prose request for
+    "a diagram" comes back as a silhouette."""
+    cap = json.loads(json.dumps(IDEOGRAM_CAPTION_TEMPLATE))
+    n = len(steps)
+    chain = " \u2192 ".join(steps)
+    cap["high_level_description"] = (description or
+        f"A dark-navy explainer poster with the headline {headline} and a simple flow diagram of "
+        f"{n} labelled boxes joined by arrows, reading {chain}, with clear space in the bottom fifth.")
+    head = cap["compositional_deconstruction"]["elements"][0]
+    head["text"] = headline
+    elements = [head]
+    landscape = fmt in ("16:9", "1:1")
+    box_desc = "Rounded rectangle with a thin electric-blue outline and the label '{}' in white sans-serif, centered"
+    if landscape:
+        gap, left0, span = 60, 100, 800
+        width = (span - gap * (n - 1)) // n
+        for k, step in enumerate(steps):
+            left = left0 + k * (width + gap)
+            elements.append({"type": "text", "bbox": [420, left, 620, left + width], "text": step,
+                             "desc": box_desc.format(step), "color_palette": ["#4DA8FF", "#FFFFFF"]})
+            if k < n - 1:
+                elements.append({"type": "obj", "bbox": [495, left + width, 545, left + width + gap],
+                                 "desc": "short amber arrow pointing right", "color_palette": ["#FFB347"]})
+    else:
+        gap, top0, span = 50, 280, 480
+        height = (span - gap * (n - 1)) // n
+        for k, step in enumerate(steps):
+            top = top0 + k * (height + gap)
+            elements.append({"type": "text", "bbox": [top, 150, top + height, 850], "text": step,
+                             "desc": box_desc.format(step), "color_palette": ["#4DA8FF", "#FFFFFF"]})
+            if k < n - 1:
+                elements.append({"type": "obj", "bbox": [top + height, 470, top + height + gap, 530],
+                                 "desc": "short amber arrow pointing down", "color_palette": ["#FFB347"]})
+    cap["compositional_deconstruction"]["elements"] = elements
+    return cap
+
+
 def _caption(headline: str, obj: str, description: str) -> dict:
     """Fill IDEOGRAM_CAPTION_TEMPLATE (used by SPEC_EXAMPLE)."""
     cap = json.loads(json.dumps(IDEOGRAM_CAPTION_TEMPLATE))
@@ -286,7 +336,12 @@ class SpecError(ValueError):
 def auto_background_prompt(text: str, hint: str | None = None) -> str:
     """A text-free FLUX background that evokes the narration. The words themselves never
     go into the image; captions and the headline overlay carry them."""
-    gist = (hint or " ".join(text.split()[:18])).strip().rstrip(".")
+    if not hint:
+        # the first sentence, not the first 18 words: a gist cut mid-clause ("But the
+        # constraint was.") reads as nonsense to the image model
+        first = re.split(r"(?<=[.!?])\s+", text.strip(), maxsplit=1)[0]
+        hint = " ".join(first.split()[:18])
+    gist = hint.strip().rstrip(".!?,;:")
     return f"Abstract cinematic background evoking: {gist}. {BACKGROUND_STYLE}"
 
 
@@ -385,12 +440,19 @@ def normalize_spec(spec: dict) -> dict:
             raise SpecError(f"scene {s['id']}: visual.{kind} needs a prompt (or a caption for ideogram)")
         cap = vis.get("caption")
         if kind == "ideogram" and isinstance(cap, dict) and "headline" in cap:
-            # short form {headline, object, description}: expand into the full template
-            vis["caption"] = _caption(str(cap["headline"]).strip(),
-                                      str(cap.get("object") or "a single simple icon, centered").strip(),
-                                      str(cap.get("description") or
-                                          f"A dark-navy poster with the headline {cap['headline']}, "
-                                          "one simple object below it, clear space in the bottom fifth.").strip())
+            # short form {headline, object, description}: expand into the full template.
+            # An object written as a chain ('A -> B -> C') becomes a labelled flow diagram.
+            headline = str(cap["headline"]).strip()
+            obj = str(cap.get("object") or "a single simple icon, centered").strip()
+            steps = _diagram_steps(obj)
+            if steps:
+                vis["caption"] = _diagram_caption(headline, steps, out.get("format") or "9:16",
+                                                  cap.get("description"))
+            else:
+                vis["caption"] = _caption(headline, obj,
+                                          str(cap.get("description") or
+                                              f"A dark-navy poster with the headline {headline}, "
+                                              "one simple object below it, clear space in the bottom fifth.").strip())
         vis["kind"] = kind
         s["visual"] = vis
         if kind == "ltx":
@@ -609,6 +671,8 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: 
         "narration text :: ltx: slow pan over a harbour"   -> motion clip
         "narration text :: card: ONE EXTRA DAY ; an amber calendar icon showing 29"
                                                           -> ideogram card (headline ; object)
+        "narration text :: card: THE LOOP ; prompt -> agent -> video"
+                                                          -> ideogram card with a labelled flow diagram
         "narration text :: flux: soft navy gradient"       -> text-free still
         "narration text :: text: ONE EXTRA DAY ; why February grows"
                                                           -> generated background + animated headline (; subline)
@@ -1446,7 +1510,8 @@ def main(argv: list[str] | None = None) -> int:
                                            "agent workspace when LONGARM_WORKSPACE is set)")
         p.add_argument("--scene", action="append", default=[], metavar="TEXT[ :: KIND: PROMPT]",
                        help="Flat form, repeatable, one per scene: narration, then optionally ' :: ltx: motion "
-                            "prompt', ' :: card: HEADLINE ; object', ' :: flux: prompt'. No JSON needed")
+                            "prompt', ' :: card: HEADLINE ; object' (or 'HEADLINE ; A -> B -> C' for a "
+                            "flow diagram), ' :: flux: prompt'. No JSON needed")
         p.add_argument("--title", help="Video title (flat form; default: the first scene's text)")
         p.add_argument("--voice", help="Voice preset: assets/voices/<name>.json (a clone) or a brand name")
         p.add_argument("--music", help="Music bed prompt (default: a subtle ambient bed; it's free on acemusic)")

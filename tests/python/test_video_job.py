@@ -109,6 +109,31 @@ class TestEstimate(Isolated):
         self.assertEqual(tx["scenes"][0]["overlay"], {"headline": "HI", "subline": "s"})
         self.assertTrue(tx["titleCard"]["text"])
 
+    def test_background_gist_stops_at_the_first_sentence(self):
+        p = vj.auto_background_prompt("We kept looking at the model. But the constraint was never the silicon.")
+        self.assertIn("evoking: We kept looking at the model.", p)
+        self.assertNotIn("constraint", p)
+        self.assertIn("evoking: a harbour at dawn.", vj.auto_background_prompt("ignored", "a harbour at dawn"))
+
+    def test_card_object_written_as_a_chain_becomes_a_flow_diagram(self):
+        flat = vj.spec_from_scene_args("t", ["one :: card: THE LOOP ; prompt -> agent -> video",
+                                             "two :: card: ONE DAY ; an amber calendar"], "16:9")
+        n = vj.normalize_spec(flat)
+        els = n["scenes"][0]["visual"]["caption"]["compositional_deconstruction"]["elements"]
+        labels = [e["text"] for e in els if e["type"] == "text"]
+        self.assertEqual(labels, ["THE LOOP", "prompt", "agent", "video"])
+        self.assertEqual(sum(e["type"] == "obj" for e in els), 2)          # an arrow between each pair
+        boxes = [e for e in els if e["type"] == "text"][1:]
+        self.assertTrue(all(b["bbox"][0] == boxes[0]["bbox"][0] for b in boxes))  # one row in landscape
+        self.assertLess(boxes[0]["bbox"][1], boxes[1]["bbox"][1])
+        portrait = vj.normalize_spec(vj.spec_from_scene_args("t", ["one :: card: X ; a -> b"], "9:16"))
+        pb = [e for e in portrait["scenes"][0]["visual"]["caption"]["compositional_deconstruction"]["elements"]
+              if e["type"] == "text"][1:]
+        self.assertLess(pb[0]["bbox"][0], pb[1]["bbox"][0])                    # stacked in portrait
+        plain = n["scenes"][1]["visual"]["caption"]["compositional_deconstruction"]["elements"]
+        self.assertEqual([e["type"] for e in plain], ["text", "obj"])          # a plain object is unchanged
+        self.assertEqual(vj._diagram_steps("a -> b -> c -> d -> e"), [])     # five steps is not a card
+
 
 class TestCapAndLock(Isolated):
     def test_cap_below_estimate_is_refused_before_any_spend(self):
