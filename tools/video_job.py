@@ -111,7 +111,8 @@ VISUAL_KINDS = ("ideogram", "ltx", "flux", "text", "none")
 # from the Ken Burns drift and the reveal, about a cent. "flux" is the same background
 # without the headline, and is what a scene with no visual at all gets.
 BACKGROUND_STYLE = ("deep navy and electric blue, soft volumetric light, subtle abstract geometric forms, "
-                    "shallow depth of field, cinematic, high detail, no text, no words, no letters, no logos")
+                    "shallow depth of field, cinematic, high detail, no text, no words, no letters, no logos, "
+                    "no people, no faces, no figures")
 DEFAULT_MUSIC_PROMPT = ("subtle ambient electronic bed for a short explainer video, soft warm pads, slow "
                         "pulse, minimal, no vocals, no drums, calm and modern")
 TITLE_CARD_SECONDS = 2.8
@@ -122,6 +123,14 @@ DEFAULT_LTX_FRAMES = 121        # ~5 s at 24 fps; the build boomerang-loops it
 # LTX-2 puts stray text, logos and anime styling in ~30% of clips unless told not to.
 DEFAULT_LTX_NEGATIVE = ("text, letters, words, captions, subtitles, logo, watermark, anime, cartoon, "
                         "illustration, worst quality, inconsistent motion, blurry, jittery, distorted")
+# Both image models put a stranger in the shot when nobody was asked for: a "slow push-in on a
+# server room" came back as a woman praying at the rack, an "abstract cinematic background" as a
+# portrait. A person in a video is a casting decision, so the clip prompt has to name one.
+NO_PEOPLE_NEGATIVE = "people, person, man, woman, face, portrait, hands, crowd, figure, silhouette"
+PEOPLE_WORDS = re.compile(r"\b(people|person|persons|man|men|woman|women|boy|girl|kid|child|children|"
+                          r"face|faces|hand|hands|crowd|figure|figures|silhouette|portrait|presenter|"
+                          r"narrator|someone|somebody|human|humans|he|she|they|worker|engineer|developer|"
+                          r"player|gamer|family|couple|team)\b", re.I)
 PHASES = ("queued", "voiceover", "visuals", "captions", "music", "build", "qc", "publish")
 TERMINAL = ("done", "failed", "cancelled")
 TOOL_TIMEOUT = 1500             # per tool call (LTX cold start ~3 min, VO batch longer)
@@ -1046,7 +1055,10 @@ def _visual_args(spec: dict, s: dict, proj: Path) -> tuple[str, list[str], float
         args = ["--prompt", vis["prompt"], "--width", str(w), "--height", str(h),
                 "--num-frames", str(vis.get("numFrames") or DEFAULT_LTX_FRAMES),
                 "--output", str(out), "--no-open", "--json", "--progress", "json", "--cloud", "modal"]
-        args += ["--negative-prompt", vis.get("negativePrompt") or DEFAULT_LTX_NEGATIVE]
+        negative = vis.get("negativePrompt") or DEFAULT_LTX_NEGATIVE
+        if not vis.get("negativePrompt") and not PEOPLE_WORDS.search(vis.get("prompt") or ""):
+            negative += ", " + NO_PEOPLE_NEGATIVE
+        args += ["--negative-prompt", negative]
         if vis.get("seed") is not None:
             args += ["--seed", str(vis["seed"])]
         if vis.get("quality"):

@@ -109,6 +109,13 @@ class TestEstimate(Isolated):
         self.assertEqual(tx["scenes"][0]["overlay"], {"headline": "HI", "subline": "s"})
         self.assertTrue(tx["titleCard"]["text"])
 
+    def test_nobody_in_the_shot_unless_the_prompt_casts_them(self):
+        self.assertIn("no people", vj.auto_background_prompt("any narration at all"))
+        self.assertIsNone(vj.PEOPLE_WORDS.search("slow push-in on a server room, rack lights pulsing"))
+        self.assertIsNotNone(vj.PEOPLE_WORDS.search("a woman at a kitchen table, kettle going cold"))
+        self.assertIsNotNone(vj.PEOPLE_WORDS.search("close-up of hands typing one prompt"))
+        self.assertIsNone(vj.PEOPLE_WORDS.search("manual export bar filling, humane pacing"))  # whole words only
+
     def test_background_gist_stops_at_the_first_sentence(self):
         p = vj.auto_background_prompt("We kept looking at the model. But the constraint was never the silicon.")
         self.assertIn("evoking: We kept looking at the model.", p)
