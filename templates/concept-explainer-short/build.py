@@ -298,11 +298,17 @@ def build() -> None:
     print("── audio-anchored timeline ──")
     for idx, s in enumerate(scenes):
         vo_dur = durations.get(s["id"]) or estimate_duration(s["text"])
-        scene_start = cursor
-        audio_start = scene_start + LEAD
-        scene_dur = LEAD + vo_dur + TAIL
-        print(f"  {s['id']} {s['slug']:16s} {scene_start:7.2f} → "
-              f"{scene_start + scene_dur:7.2f}  (vo {vo_dur:.2f}s)")
+        # Scenes crossfade: from the second one on, the visual starts XFADE early and fades
+        # in over the previous scene's fade-out, so a join never dips through black (qc.py
+        # flagged a 0.5 s black gap at a dark-on-dark join when they ran back to back).
+        overlap = XFADE if idx > 0 else 0.0
+        content_start = cursor                     # where this scene's own time begins
+        content_dur = LEAD + vo_dur + TAIL
+        scene_start = content_start - overlap
+        audio_start = content_start + LEAD
+        scene_dur = overlap + content_dur
+        print(f"  {s['id']} {s['slug']:16s} {content_start:7.2f} → "
+              f"{content_start + content_dur:7.2f}  (vo {vo_dur:.2f}s)")
 
         asset = HERE / s["asset"] if s.get("asset") else None
         if asset and asset.exists() and asset.suffix.lower() in VIDEO_EXTS:
@@ -321,13 +327,13 @@ def build() -> None:
 
         ov = s.get("overlay") or {}
         if idx == 0 and title_card and title_card.get("text"):
-            secs = min(float(title_card.get("seconds", 2.8)), scene_dur - 0.4)
-            clips += overlay_clips(title_card["text"], "", scene_start, secs, big=True)
+            secs = min(float(title_card.get("seconds", 2.8)), content_dur - 0.4)
+            clips += overlay_clips(title_card["text"], "", content_start, secs, big=True)
             if ov.get("headline"):
                 clips += overlay_clips(ov["headline"], ov.get("subline", ""),
-                                       scene_start + secs + 0.1, scene_dur - secs - 0.5)
+                                       content_start + secs + 0.1, content_dur - secs - 0.5)
         elif ov.get("headline"):
-            clips += overlay_clips(ov["headline"], ov.get("subline", ""), scene_start + 0.35, scene_dur - 0.7)
+            clips += overlay_clips(ov["headline"], ov.get("subline", ""), content_start + 0.35, content_dur - 0.7)
 
         mp3 = HERE / "audio" / "scenes" / f"{s['id']}_{s['slug']}.mp3"
         if mp3.exists() and s["id"] in durations:
@@ -345,7 +351,7 @@ def build() -> None:
                     .with_position(("center", CAPTIONS.get("y", 1640)))
                 )
 
-        cursor = scene_start + scene_dur
+        cursor = content_start + content_dur
 
     total = cursor + 0.4
     clips[0] = clips[0].with_duration(total)
