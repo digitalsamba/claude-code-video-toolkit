@@ -131,7 +131,7 @@ class TestAgentSeams(Isolated):
         out = io.StringIO()
         with redirect_stdout(out):
             rc = vj.main(["estimate", "--format", "16:9", "--title", "T", "--json",
-                          "--scene", "one two three :: ltx: pan", "--scene", "four five :: card: HI ; a dot"])
+                          "--scene", "one two three :: ltx: slow pan over a harbour", "--scene", "four five :: card: HI ; a dot"])
         self.assertEqual(rc, 0)
         self.assertEqual(json.loads(out.getvalue())["spec_source"], "scenes")
 
