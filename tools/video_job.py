@@ -127,6 +127,26 @@ DEFAULT_LTX_NEGATIVE = ("text, letters, words, captions, subtitles, logo, waterm
 # server room" came back as a woman praying at the rack, an "abstract cinematic background" as a
 # portrait. A person in a video is a casting decision, so the clip prompt has to name one.
 NO_PEOPLE_NEGATIVE = "people, person, man, woman, face, portrait, hands, crowd, figure, silhouette"
+# A terse clip prompt ("filing cabinet drawers sliding open, papers flowing out") leaves the
+# style to the model, which picked a cartoon twice in one job; the same job's prompts that
+# carried "cinematic lighting" and "dust motes" came back live-action. So every ltx prompt
+# gets a footage suffix unless it already names a style, or the spec sets ltxStyle ("" to
+# disable, or a different suffix).
+LTX_STYLE_SUFFIX = ("live-action footage, photorealistic, cinematic lighting, shallow depth of field, "
+                    "natural colour, 35mm film look")
+STYLE_WORDS = re.compile(r"\b(cinematic|photoreal\w*|live.action|footage|35mm|16mm|film look|filmic|documentary|"
+                         r"realistic|anamorphic|bokeh|handheld|steadicam|drone shot|time.lapse|timelapse|macro|"
+                         r"stop.motion|claymation|watercolou?r|hand.drawn|pixel art|noir)\b", re.I)
+
+
+def styled_ltx_prompt(prompt: str, spec_style: str | None) -> str:
+    """The prompt as sent to LTX: untouched when it names a style or ltxStyle is "", else with
+    the footage suffix (or the spec's own)."""
+    prompt = (prompt or "").strip().rstrip(",.;")
+    suffix = LTX_STYLE_SUFFIX if spec_style is None else str(spec_style).strip()
+    if not suffix or STYLE_WORDS.search(prompt):
+        return prompt
+    return f"{prompt}, {suffix}"
 # LTX cannot draw software. Ask it for a terminal, a dashboard, a timeline or "code lines" and
 # it paints a fake interface covered in garbled text (three of three such clips on the first
 # live day). Submit refuses these before any spend unless the spec says allowScreens; the
@@ -1148,7 +1168,7 @@ def _visual_args(spec: dict, s: dict, proj: Path) -> tuple[str, list[str], float
         return "ideogram4.py", args, PRICES["ideogram_image"][speed]
     if kind == "ltx":
         w, h = fmt["ltx"]
-        args = ["--prompt", vis["prompt"], "--width", str(w), "--height", str(h),
+        args = ["--prompt", styled_ltx_prompt(vis["prompt"], spec.get("ltxStyle")), "--width", str(w), "--height", str(h),
                 "--num-frames", str(vis.get("numFrames") or DEFAULT_LTX_FRAMES),
                 "--output", str(out), "--no-open", "--json", "--progress", "json", "--cloud", "modal"]
         negative = vis.get("negativePrompt") or DEFAULT_LTX_NEGATIVE
