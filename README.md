@@ -12,11 +12,6 @@ Tell [Claude Code](https://claude.ai/code) what video you want — it writes the
 
 Every frame below was generated in this workspace — click to watch.
 
-| |
-|:--:|
-| <a href="https://demos.digitalsamba.com/video/the-agent-handoff.mp4"><img src="assets/readme-thumbs/the-agent-handoff.jpg" width="880" alt="The Agent Handoff: a 57-second explainer an agent made from one chat message"></a> |
-| **Made by an agent, start to finish**<br>One Discord message to Lugh. He wrote the script, chose the shots, narrated it in his own cloned voice, and the bot posted the finished MP4 23 minutes later. `tools/video_job.py`, four LTX-2 clips, one Ideogram diagram card, $0.47. |
-
 | | |
 |:--:|:--:|
 | <a href="https://demos.digitalsamba.com/video/ds-release-650.mp4"><img src="assets/readme-thumbs/ds-release-650.jpg" width="430" alt="Release-notes video with product UI rebuilt from source"></a> | <a href="https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4"><img src="assets/readme-thumbs/ds-free-schedule-demo.jpg" width="430" alt="Product demo with an AI narrator tile"></a> |
