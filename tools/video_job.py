@@ -481,7 +481,9 @@ def load_voice_preset(name: str) -> dict:
         return v
     if (ROOT / "brands" / name / "voice.json").exists():
         return {"brand": name}
-    raise SpecError(f"unknown voice preset {name!r}: no assets/voices/{name}.json and no brands/{name}/")
+    known = sorted(p.stem for p in (ROOT / "assets" / "voices").glob("*.json"))
+    raise SpecError(f"unknown voice preset {name!r}: no assets/voices/{name}.json and no brands/{name}/. "
+                    f"Presets here: {', '.join(known) or 'none'}; or leave --voice off for the default narrator")
 
 
 def normalize_spec(spec: dict) -> dict:
@@ -718,9 +720,26 @@ class NoExpander(RuntimeError):
     pass
 
 
-def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300) -> dict:
+EXPANDER_INSTRUCTIONS = (
+    "Write a spec JSON for a short explainer video. Keep total narration near words_budget; each scene's "
+    "'text' is the sentence or two the narrator says, in plain spoken English (never a headline in capitals). "
+    "Give every scene one visual, mixing three kinds: 'text' (a generated background with an animated "
+    "headline: {\"kind\": \"text\", \"headline\": \"2 TO 5 WORDS\", \"subline\": \"optional\"}), 'ltx' "
+    "(5 s of motion footage: {\"kind\": \"ltx\", \"prompt\": \"...\"}), and 'ideogram' (a designed card with "
+    "legible text: {\"kind\": \"ideogram\", \"caption\": {\"headline\": \"...\", \"object\": \"...\"}}; an "
+    "object written 'A -> B -> C' becomes a labelled flow diagram). An ltx prompt must name a real physical thing "
+    "a camera could film, how it moves and the light (e.g. 'slow push-in on a brass kettle, steam rising, warm "
+    "kitchen light'). It must not ask for any screen, window, interface, dashboard, terminal, code, chart, app, "
+    "or person, nor an idea (animation, abstract, diagram, network, particles, hologram, energy): those are "
+    "refused. Put ideas in a 'text' scene's headline instead. Scene 1 must hook in one sentence. Output only "
+    "the JSON object.")
+
+
+def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, attempts: int = 2) -> dict:
     """Run the VIDEO_JOB_EXPANDER command. It reads a JSON request on stdin and prints a
-    spec JSON on stdout (code fences tolerated). Any provider: the toolkit doesn't care."""
+    spec JSON on stdout (code fences tolerated). Any provider: the toolkit doesn't care.
+    A spec the validator refuses goes back to the expander once with the error attached
+    (`previous_error`, `previous_spec`), the same way an agent would fix its own."""
     cmd = os.environ.get("VIDEO_JOB_EXPANDER", "").strip()
     if not cmd:
         raise NoExpander(
@@ -733,27 +752,30 @@ def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300) -> d
         "words_budget": round(duration_s * WORDS_PER_SECOND),
         "spec_example": SPEC_EXAMPLE,
         "ideogram_caption_template": IDEOGRAM_CAPTION_TEMPLATE,
-        "instructions": (
-            "Write a spec JSON for a short explainer video. Keep total narration near "
-            "words_budget. Alternate visual kinds: 'ltx' (motion b-roll; prompt describes motion "
-            "and atmosphere, never on-screen text) and 'ideogram' (a designed card). Every ideogram "
-            "scene carries a 'caption' object filled from ideogram_caption_template (replace the "
-            "<...> placeholders, keep the headline under 6 words, all caps); never a plain prompt, "
-            "which adds filler text to the card. Scene 1 must hook in one sentence. Output only JSON."),
+        "instructions": EXPANDER_INSTRUCTIONS,
     }
     args = split_command(cmd)
-    r = subprocess.run(args, input=json.dumps(request), capture_output=True, text=True,
-                       timeout=timeout, cwd=str(ROOT))
-    if r.returncode != 0:
-        raise RuntimeError(f"expander exited {r.returncode}: {r.stderr.strip()[-800:]}")
-    text = r.stdout.strip()
-    m = re.search(r"\{.*\}", text, re.S)
-    if not m:
-        raise RuntimeError(f"expander printed no JSON object: {text[:300]!r}")
-    spec = json.loads(m.group(0))
-    spec.setdefault("format", fmt)
-    spec.setdefault("brief", brief)
-    return normalize_spec(spec)
+    for attempt in range(max(1, attempts)):
+        r = subprocess.run(args, input=json.dumps(request), capture_output=True, text=True,
+                           timeout=timeout, cwd=str(ROOT), encoding="utf-8", errors="replace")
+        if r.returncode != 0:
+            raise RuntimeError(f"expander exited {r.returncode}: {r.stderr.strip()[-800:]}")
+        text = r.stdout.strip()
+        m = re.search(r"\{.*\}", text, re.S)
+        if not m:
+            raise RuntimeError(f"expander printed no JSON object: {text[:300]!r}")
+        spec = parse_spec_text(m.group(0))
+        spec.setdefault("format", fmt)
+        spec.setdefault("brief", brief)
+        try:
+            return normalize_spec(spec)
+        except SpecError as e:
+            if attempt + 1 >= max(1, attempts):
+                raise SpecError(f"the expander's spec was refused: {e}")
+            request["previous_spec"] = spec
+            request["previous_error"] = (f"Your previous spec was refused: {e} Return the corrected spec, "
+                                         "changing only what the error names.")
+    raise RuntimeError("unreachable")
 
 
 def split_command(cmd: str) -> list[str]:

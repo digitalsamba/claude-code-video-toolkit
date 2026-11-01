@@ -395,6 +395,24 @@ class TestEventsAndWarnings(Isolated):
         self.assertTrue(any("12.0 MB" in w for w in r["warnings"]))
 
 
+class TestExpander(Isolated):
+    def test_a_refused_spec_goes_back_to_the_expander_once_with_the_error(self):
+        script = self.tmp / "expander.py"
+        script.write_text(
+            "import json,sys\nreq=json.load(sys.stdin)\n"
+            "prompt = 'slow pan over a harbour at dawn' if 'previous_error' in req else 'a laptop screen glowing'\n"
+            "print(json.dumps({'title': 't', 'scenes': [{'text': 'Boats at first light.', "
+            "'visual': {'kind': 'ltx', 'prompt': prompt}}]}))\n")
+        os.environ["VIDEO_JOB_EXPANDER"] = f'"{sys.executable}" "{script}"'
+        s, source = vj.resolve_spec("boats", None, "16:9", 10, allow_skeleton=False)
+        self.assertEqual(source, "expander")
+        self.assertIn("harbour", s["scenes"][0]["visual"]["prompt"])
+        with self.assertRaises(vj.SpecError) as cm:
+            vj.expand_brief("boats", "16:9", 10, attempts=1)
+        self.assertIn("expander's spec was refused", str(cm.exception))
+        self.assertIn("screen", vj.EXPANDER_INSTRUCTIONS)
+
+
 class TestSmallSeams(Isolated):
     def test_output_must_be_an_mp4_inside_the_allowed_roots(self):
         with self.assertRaises(vj.SpecError):
