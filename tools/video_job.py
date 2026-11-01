@@ -352,6 +352,35 @@ class SpecError(ValueError):
     pass
 
 
+def _spoken_key(s: str) -> str:
+    """Words only, lowercased: 'THE PRICE GAP ; cheap, dear' == 'the price gap cheap dear'."""
+    return " ".join(re.findall(r"[a-z0-9']+", (s or "").lower()))
+
+
+def check_narration_is_spoken(scene_id: str, text: str, vis: dict) -> None:
+    """The narration is what the voice says; the headline is what the screen shows. An agent
+    that writes the headline into the narration field gets its voice reading 'THE PRICE GAP
+    intelligence cheap hardware dear' aloud over a card that already says it (seen live on
+    2026-11-01). Refuse the two shapes that produce it: narration equal to the headline (with
+    or without the subline), and narration that is mostly capitals."""
+    words = text.split()
+    if len(words) >= 3:
+        letters = [c for c in text if c.isalpha()]
+        if letters and sum(c.isupper() for c in letters) / len(letters) > 0.8:
+            raise SpecError(f"scene {scene_id}: the narration is written in capitals, like a headline. The "
+                            "narration is the sentence you say; put the headline after ' :: text: ' instead.")
+    cap = vis.get("caption")
+    head = vis.get("headline") or (cap.get("headline") if isinstance(cap, dict) else None)
+    if not head:
+        return
+    sub = vis.get("subline") or ""
+    key = _spoken_key(text)
+    if key and key in (_spoken_key(head), _spoken_key(f"{head} {sub}")):
+        raise SpecError(f"scene {scene_id}: the narration repeats the headline word for word. The narration "
+                        "is what you say (a sentence or two, said plainly); the headline is the 2 to 5 words "
+                        "shown on screen. Write the spoken line.")
+
+
 def auto_background_prompt(text: str, hint: str | None = None) -> str:
     """A text-free FLUX background that evokes the narration. The words themselves never
     go into the image; captions and the headline overlay carry them."""
@@ -457,6 +486,7 @@ def normalize_spec(spec: dict) -> dict:
             vis["prompt"] = vis.get("prompt") or auto_background_prompt(text, vis.get("background"))
         if kind != "none" and not (vis.get("prompt") or vis.get("caption")):
             raise SpecError(f"scene {s['id']}: visual.{kind} needs a prompt (or a caption for ideogram)")
+        check_narration_is_spoken(s["id"], text, vis)
         if kind == "ltx" and not out.get("allowScreens"):
             hit = SCREEN_WORDS.search(vis.get("prompt") or "")
             if hit:

@@ -133,6 +133,20 @@ class TestEstimate(Isolated):
         # text and card scenes are never linted: their prompts are backgrounds and posters
         vj.normalize_spec(vj.spec_from_scene_args("t", ["one :: text: THE DASHBOARD ; a screen full of green"], "16:9"))
 
+    def test_narration_that_is_just_the_headline_is_refused(self):
+        with self.assertRaises(vj.SpecError) as cm:
+            vj.normalize_spec(vj.spec_from_scene_args(
+                "t", ["THE PRICE GAP ; intelligence cheap, hardware dear :: text: THE PRICE GAP ; intelligence cheap, hardware dear"], "16:9"))
+        self.assertIn("scene 01", str(cm.exception))
+        with self.assertRaises(vj.SpecError):      # headline alone, different punctuation
+            vj.normalize_spec(vj.spec_from_scene_args("t", ["One prompt in a chat. :: text: ONE PROMPT IN A CHAT ; the rest"], "16:9"))
+        with self.assertRaises(vj.SpecError):      # shouting narration on a card
+            vj.normalize_spec(vj.spec_from_scene_args("t", ["YOU ARE THE GATE :: card: THE GATE ; an amber key"], "16:9"))
+        ok = vj.normalize_spec(vj.spec_from_scene_args(
+            "t", ["Intelligence got cheap while the hardware got dear. :: text: THE PRICE GAP ; intelligence cheap, hardware dear",
+                  "AI remembers everything. :: ltx: a brass kettle on a gas ring, steam rising"], "16:9"))
+        self.assertEqual(len(ok["scenes"]), 2)
+
     def test_background_gist_stops_at_the_first_sentence(self):
         p = vj.auto_background_prompt("We kept looking at the model. But the constraint was never the silicon.")
         self.assertIn("evoking: We kept looking at the model.", p)
