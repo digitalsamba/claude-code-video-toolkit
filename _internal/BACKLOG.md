@@ -106,12 +106,6 @@ The current frontend-design skill is generic web-focused. Rework to be Remotion/
 - Step-by-step sections
 - Code highlighting
 
-### Changelog Template
-- Version header
-- Feature list with icons
-- Breaking changes section
-- Compact format
-
 ### Comparison Template
 - Before/After split screen
 - Feature comparison cards
@@ -123,7 +117,6 @@ The current frontend-design skill is generic web-focused. Rework to be Remotion/
 
 ### Still Needed
 - CodeHighlight (syntax-highlighted code blocks)
-- ClickRipple (mouse click effect for demos)
 - TypeWriter (animated text typing effect)
 
 ### NarratorPiP API Refinement
@@ -156,20 +149,10 @@ Document best practices for creating narrator PiP videos:
 
 ## Infrastructure
 
-### Asset Validation Script
-Pre-render check:
-- All referenced videos exist
-- All audio files exist
-- Duration matches config
-- TypeScript compiles
-
 ### Multi-Format Output
-Render pipeline for:
-- MP4 (primary)
+Render pipeline for (square and vertical cut-downs are done in `tools/cutdown.py`):
 - WebM (web fallback)
 - GIF (preview/social)
-- Square format (social)
-- Vertical format (mobile/stories)
 
 ### Python Compatibility
 The documentation uses `python` but macOS and some systems require `python3`:
