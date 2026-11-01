@@ -147,6 +147,17 @@ class TestEstimate(Isolated):
                   "AI remembers everything. :: ltx: a brass kettle on a gas ring, steam rising"], "16:9"))
         self.assertEqual(len(ok["scenes"]), 2)
 
+    def test_clip_prompts_that_ask_for_an_idea_are_refused(self):
+        for bad in ("scale animation, models getting lighter, GPUs getting heavier",
+                    "neural net sculpture, light flowing through connections",
+                    "abstract node constellation, camera orbiting slowly"):
+            with self.assertRaises(vj.SpecError) as cm:
+                vj.normalize_spec(vj.spec_from_scene_args("t", [f"one :: ltx: {bad}"], "16:9"))
+            self.assertIn("not a shot", str(cm.exception))
+        good = "slow push-in on an old brass balance scale, coins on one pan, a bare circuit board on the other, candlelight"
+        self.assertEqual(vj.normalize_spec(vj.spec_from_scene_args("t", [f"one :: ltx: {good}"], "16:9"))
+                         ["scenes"][0]["visual"]["kind"], "ltx")
+
     def test_one_word_clip_prompts_are_refused(self):
         with self.assertRaises(vj.SpecError) as cm:
             vj.normalize_spec(vj.spec_from_scene_args("t", ["So we stopped deciding. We just asked. :: ltx: drift"], "16:9"))

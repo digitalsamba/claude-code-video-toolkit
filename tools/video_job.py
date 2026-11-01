@@ -131,6 +131,14 @@ NO_PEOPLE_NEGATIVE = "people, person, man, woman, face, portrait, hands, crowd, 
 # it paints a fake interface covered in garbled text (three of three such clips on the first
 # live day). Submit refuses these before any spend unless the spec says allowScreens; the
 # message tells the agent what to do instead, which prose in its instructions did not achieve.
+# Conceptual nouns pull the video model away from footage: "scale animation" came back as a
+# cartoon cat, "neural net sculpture" as a sculptor's hands. A clip prompt has to name a thing
+# a camera could film; the idea it stands for belongs in the narration and the headline.
+CONCEPT_WORDS = re.compile(r"\b(animation|animated|animations|sculpture|sculptures|abstract|visuali[sz]ation|"
+                           r"visuali[sz]ed|metaphor|metaphorical|symbolic|symbol|symbols|concept|conceptual|"
+                           r"infographic|diagram|diagrams|3d|cgi|motion graphics|graphic|graphics|illustration|"
+                           r"illustrated|cartoon|anime|constellation|particles|network of|nodes?|data flowing|"
+                           r"glowing lines|energy|holographic|hologram)\b", re.I)
 SCREEN_WORDS = re.compile(r"\b(screens?|interface|ui|dashboards?|terminal|console|code|coding|timeline|"
                           r"export bar|progress bar|loading bar|chat window|chat interface|browser|"
                           r"website|web ?page|app|apps|application|toggle|buttons?|menu|graphs?|charts?|"
@@ -492,6 +500,13 @@ def normalize_spec(spec: dict) -> dict:
                             "Describe the thing, what moves and the light in a short sentence, e.g. "
                             "'slow push-in on a brass kettle, steam rising, warm kitchen light'.")
         if kind == "ltx" and not out.get("allowScreens"):
+            hit = CONCEPT_WORDS.search(vis.get("prompt") or "")
+            if hit:
+                raise SpecError(
+                    f"scene {s['id']}: the clip prompt asks for an idea ('{hit.group(0)}'), not a shot, and the video "
+                    "model turns ideas into cartoons and clip art. Name a real thing a camera could film and how it "
+                    "moves (a brass kettle, a filing cabinet, rain on a window ledge, a lamp switching on); the idea "
+                    "lives in the narration and the headline. To insist, set allowScreens (--allow-screens).")
             hit = SCREEN_WORDS.search(vis.get("prompt") or "")
             if hit:
                 raise SpecError(
