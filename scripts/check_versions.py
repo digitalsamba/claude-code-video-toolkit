@@ -144,6 +144,60 @@ def check_remotion(root: Path, offline: bool) -> dict:
     }
 
 
+# ─── Dependabot coverage ─────────────────────────────────────
+
+def dependabot_directories(root: Path) -> set[str] | None:
+    """Directories listed for npm in .github/dependabot.yml, without the leading slash.
+
+    A line-based read (no YAML dependency): every `- /path` item under a `directories:`
+    key, plus any single `directory: /path`, inside npm `updates` entries. Returns None
+    when the file is missing.
+    """
+    try:
+        lines = (root / ".github" / "dependabot.yml").read_text().splitlines()
+    except OSError:
+        return None
+    dirs: set[str] = set()
+    ecosystem = None
+    in_list = False
+    for raw in lines:
+        line = raw.split("#", 1)[0].rstrip()
+        if not line.strip():
+            continue
+        if m := re.match(r"^\s*-\s*package-ecosystem:\s*[\"']?([\w-]+)", line):
+            ecosystem, in_list = m.group(1), False
+            continue
+        if ecosystem != "npm":
+            continue
+        if m := re.match(r"^\s*directory:\s*[\"']?(/[^\"'\s]*)", line):
+            dirs.add(m.group(1).strip("/"))
+            in_list = False
+        elif re.match(r"^\s*directories:\s*$", line):
+            in_list = True
+        elif in_list and (m := re.match(r"^\s*-\s*[\"']?(/[^\"'\s]*)", line)):
+            dirs.add(m.group(1).strip("/"))
+        else:
+            in_list = False
+    return dirs
+
+
+def check_dependabot(root: Path, projects: list[dict]) -> dict:
+    """Every project that pins Remotion must be in dependabot.yml, or its pins drift.
+
+    The monthly grouped PR only touches the directories it is told about; a project
+    added later stays on the old version silently (three did, until 4.0.539).
+    """
+    listed = dependabot_directories(root)
+    if listed is None:
+        return {"configured": False, "uncovered": [], "stale": []}
+    pinned = {Path(p["path"]).as_posix() for p in projects}
+    return {
+        "configured": True,
+        "uncovered": sorted(pinned - listed),
+        "stale": sorted(d for d in listed - pinned if d),  # listed, but no Remotion pins there now
+    }
+
+
 # ─── Python ──────────────────────────────────────────────────
 
 def _direct_python_deps(root: Path) -> set[str]:
@@ -226,9 +280,21 @@ def format_human(report: dict) -> str:
         L.append(f"  {p['path']:<42} {ver:<10}{flag}")
     if r["pinned_versions"] and len(r["pinned_versions"]) > 1:
         L.append(f"  ⚠ Toolkit pins disagree across projects: {', '.join(r['pinned_versions'])}")
+    db = report.get("dependabot", {})
+    if not db.get("configured"):
+        L.append("  Dependabot: .github/dependabot.yml not found")
+    elif db["uncovered"]:
+        L.append("  ⚠ Not in .github/dependabot.yml, so the monthly Remotion PR skips them:")
+        L.extend(f"      /{d}" for d in db["uncovered"])
+    else:
+        L.append("  Dependabot covers every pinned project")
+    if db.get("stale"):
+        L.append("  Listed in dependabot.yml but no Remotion pins found: " + ", ".join(f"/{d}" for d in db["stale"]))
     L.append("")
 
     py = report["python"]
+    if py.get("skipped"):
+        return "\n".join(L).rstrip()
     L.append("Python")
     if not py.get("uv"):
         L.append("  uv not installed — skipped")
@@ -255,21 +321,26 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--json", action="store_true", help="JSON output")
     ap.add_argument("--offline", action="store_true", help="Skip npm / GitHub / uv network calls")
-    ap.add_argument("--strict", action="store_true", help="Exit 1 on caret ranges or internal mismatches")
+    ap.add_argument("--strict", action="store_true",
+                    help="Exit 1 on caret ranges, internal mismatches, or a pinned project missing from dependabot.yml")
+    ap.add_argument("--remotion-only", action="store_true",
+                    help="Skip the Python and toolkit checks (what CI runs)")
     args = ap.parse_args()
 
     root = repo_root()
+    remotion = check_remotion(root, args.offline)
     report = {
-        "remotion": check_remotion(root, args.offline),
-        "python": check_python(root, args.offline),
-        "toolkit": check_toolkit(root, args.offline),
+        "remotion": remotion,
+        "dependabot": check_dependabot(root, remotion["projects"]),
+        "python": {"uv": False, "skipped": True} if args.remotion_only else check_python(root, args.offline),
+        "toolkit": {"current": None, "skipped": True} if args.remotion_only else check_toolkit(root, args.offline),
     }
     if args.json:
         print(json.dumps(report, indent=2))
     else:
         print(format_human(report))
 
-    if args.strict and not report["remotion"]["consistent"]:
+    if args.strict and (not remotion["consistent"] or report["dependabot"]["uncovered"]):
         return 1
     return 0
 

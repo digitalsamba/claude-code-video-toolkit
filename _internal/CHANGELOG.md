@@ -8,6 +8,14 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+### Added
+
+- **`check_versions.py` checks Dependabot coverage**: every project that pins Remotion must be listed in `.github/dependabot.yml`, or the monthly grouped bump skips it. `--strict` fails on a gap, and a new `Check versions` workflow runs it on any PR that touches a `package.json` or `dependabot.yml` (`--remotion-only` skips the Python and toolkit checks).
+
+### Changed
+
+- **Remotion 4.0.539** in every template, example and showcase (#152, #154). `templates/ds-release-notes`, `examples/ds-release-649` and `examples/ds-free-schedule-demo` are now in `dependabot.yml`.
+
 ---
 
 ## 2026-11-01 (v0.24.0)
