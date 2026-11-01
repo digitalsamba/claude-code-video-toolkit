@@ -487,6 +487,10 @@ def normalize_spec(spec: dict) -> dict:
         if kind != "none" and not (vis.get("prompt") or vis.get("caption")):
             raise SpecError(f"scene {s['id']}: visual.{kind} needs a prompt (or a caption for ideogram)")
         check_narration_is_spoken(s["id"], text, vis)
+        if kind == "ltx" and len((vis.get("prompt") or "").split()) < 3 and not str(vis.get("prompt", "")).startswith("("):
+            raise SpecError(f"scene {s['id']}: the {kind} prompt is '{vis.get('prompt')}', which is not a shot. "
+                            "Describe the thing, what moves and the light in a short sentence, e.g. "
+                            "'slow push-in on a brass kettle, steam rising, warm kitchen light'.")
         if kind == "ltx" and not out.get("allowScreens"):
             hit = SCREEN_WORDS.search(vis.get("prompt") or "")
             if hit:
@@ -834,6 +838,34 @@ def set_phase(job: dict, phase: str, progress: int | None = None, **fields) -> N
     job.update(fields)
     save_job(job)
     log_line(job, f"phase={phase} progress={job.get('progress')}")
+    if phase in TERMINAL:
+        settle_reservation(job)
+
+
+def settle_reservation(job: dict) -> float | None:
+    """Under the reserve ledger the whole estimate was booked at submit. When the job ends,
+    append one correcting line (actual minus reserved, usually negative) so the shared ledger,
+    which the daily cap sums naively, holds what was really spent. Without this a cancelled
+    job keeps its full estimate against the cap: two cancelled takes on 2026-11-01 reserved
+    $2.24, spent $0.14, and locked the agent out for the day. Idempotent via job["settled"];
+    returns the delta written, or None when there was nothing to settle."""
+    if job.get("ledger") != "reserve" or job.get("phase") not in TERMINAL or "settled" in job:
+        return None
+    reserved = float(job.get("estimate_usd") or 0.0)
+    actual = float(job.get("actual_usd") or 0.0)
+    delta = round(actual - reserved, 4)
+    if delta:
+        entry = {"ts": _now(), "tool": "video_job.py", "cost_usd": delta, "elapsed_s": 0.0, "exit": 0,
+                 "args": ["settle", job["id"], job["phase"]], "job_id": job["id"],
+                 "reserved_usd": round(reserved, 4), "actual_usd": round(actual, 4)}
+        path = spend_log_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+    job["settled"] = delta
+    save_job(job)
+    log_line(job, f"settled: reserved ${reserved:.2f} actual ${actual:.2f} ledger {delta:+.2f}")
+    return delta
 
 
 def write_receipt(job: dict, tool: str, cost_usd: float | None, elapsed_s: float | None,
@@ -1597,6 +1629,10 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("job_id")
         p.add_argument("--json", action="store_true")
     sub.add_parser("list").add_argument("--json", action="store_true")
+    st = sub.add_parser("settle", help="Write the ledger correction for finished reserve-mode jobs that never got one")
+    st.add_argument("job_id", nargs="?")
+    st.add_argument("--all", action="store_true", help="Every finished job without a settlement")
+    st.add_argument("--json", action="store_true")
     sub.add_parser("presets").add_argument("--json", action="store_true")
     w = sub.add_parser("_worker", help=argparse.SUPPRESS)
     w.add_argument("job_id")
@@ -1669,6 +1705,23 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.cmd == "presets":
             _print(presets(), True)
+            return 0
+        if args.cmd == "settle":
+            if not args.job_id and not args.all:
+                _print({"error": "settle needs a job id or --all", "error_code": "usage"}, args.json,
+                       "settle needs a job id or --all")
+                return 2
+            ids = [args.job_id] if args.job_id else [j["id"] for j in list_jobs() if j.get("phase") in TERMINAL]
+            rows = []
+            for jid in ids:
+                j = load_job(jid)
+                delta = settle_reservation(j)
+                rows.append({"id": jid, "phase": j.get("phase"), "reserved_usd": j.get("estimate_usd"),
+                             "actual_usd": j.get("actual_usd"), "ledger_delta": delta})
+            _print(rows, args.json, "\n".join(
+                f"{r['id']}  {r['phase']:10s} reserved ${r['reserved_usd'] or 0:.2f} actual ${r['actual_usd'] or 0:.2f} "
+                f"{'ledger ' + format(r['ledger_delta'], '+.2f') if r['ledger_delta'] is not None else 'already settled'}"
+                for r in rows) or "nothing to settle")
             return 0
         if args.cmd == "_worker":
             return worker_main(args.job_id)
