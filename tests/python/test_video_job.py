@@ -96,7 +96,7 @@ class TestEstimate(Isolated):
             vj.normalize_spec(spec(format="4:3"))
         with self.assertRaises(vj.SpecError):
             vj.normalize_spec({"scenes": [{"text": "hi", "visual": {"kind": "ltx"}}]})  # no prompt
-        n = vj.normalize_spec({"scenes": [{"text": "one", "visual": {"kind": "ltx", "prompt": "p"}},
+        n = vj.normalize_spec({"scenes": [{"text": "one", "visual": {"kind": "ltx", "prompt": "slow pan over a harbour"}},
                                           {"text": "two", "visual": {"kind": "ideogram", "prompt": "p"}},
                                           {"text": "three"}]})
         self.assertEqual([s["visual"]["kind"] for s in n["scenes"]], ["ltx", "ideogram", "flux"])
@@ -132,6 +132,25 @@ class TestEstimate(Isolated):
                          ["scenes"][0]["visual"]["kind"], "ltx")
         # text and card scenes are never linted: their prompts are backgrounds and posters
         vj.normalize_spec(vj.spec_from_scene_args("t", ["one :: text: THE DASHBOARD ; a screen full of green"], "16:9"))
+
+    def test_narration_that_is_just_the_headline_is_refused(self):
+        with self.assertRaises(vj.SpecError) as cm:
+            vj.normalize_spec(vj.spec_from_scene_args(
+                "t", ["THE PRICE GAP ; intelligence cheap, hardware dear :: text: THE PRICE GAP ; intelligence cheap, hardware dear"], "16:9"))
+        self.assertIn("scene 01", str(cm.exception))
+        with self.assertRaises(vj.SpecError):      # headline alone, different punctuation
+            vj.normalize_spec(vj.spec_from_scene_args("t", ["One prompt in a chat. :: text: ONE PROMPT IN A CHAT ; the rest"], "16:9"))
+        with self.assertRaises(vj.SpecError):      # shouting narration on a card
+            vj.normalize_spec(vj.spec_from_scene_args("t", ["YOU ARE THE GATE :: card: THE GATE ; an amber key"], "16:9"))
+        ok = vj.normalize_spec(vj.spec_from_scene_args(
+            "t", ["Intelligence got cheap while the hardware got dear. :: text: THE PRICE GAP ; intelligence cheap, hardware dear",
+                  "AI remembers everything. :: ltx: a brass kettle on a gas ring, steam rising"], "16:9"))
+        self.assertEqual(len(ok["scenes"]), 2)
+
+    def test_one_word_clip_prompts_are_refused(self):
+        with self.assertRaises(vj.SpecError) as cm:
+            vj.normalize_spec(vj.spec_from_scene_args("t", ["So we stopped deciding. We just asked. :: ltx: drift"], "16:9"))
+        self.assertIn("'drift'", str(cm.exception))
 
     def test_background_gist_stops_at_the_first_sentence(self):
         p = vj.auto_background_prompt("We kept looking at the model. But the constraint was never the silicon.")
@@ -277,6 +296,29 @@ class TestStateMachine(Isolated):
         self.assertEqual(on_disk["phase"], "failed")
         self.assertEqual(on_disk["error_code"], "budget_exceeded")
         self.assertAlmostEqual(on_disk["actual_usd"], est, places=4)
+
+    def test_cancelled_reservation_is_settled_in_the_ledger(self):
+        os.environ["VIDEO_JOB_RESERVE_AT_SUBMIT"] = "1"
+        try:
+            job = vj.submit(spec(), max_usd=5, start_worker=False)
+            self.assertEqual(job["ledger"], "reserve")
+            # longarm books the estimate itself at submit; mimic that line in the shared ledger
+            vj.spend_log_path().parent.mkdir(parents=True, exist_ok=True)
+            with open(vj.spend_log_path(), "a") as f:
+                f.write(json.dumps({"ts": vj._now(), "tool": "video_job.py", "cost_usd": job["estimate_usd"],
+                                    "elapsed_s": 0.0, "exit": 0, "args": ["submit"]}) + "\n")
+            vj.cancel(job["id"])
+            lines = [json.loads(l) for l in vj.spend_log_path().read_text().splitlines()]
+            self.assertEqual(lines[-1]["args"][:2], ["settle", job["id"]])
+            self.assertAlmostEqual(sum(l["cost_usd"] for l in lines), 0.0, places=4)   # nothing was spent
+            self.assertEqual(vj.load_job(job["id"])["settled"], round(-job["estimate_usd"], 4))
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                self.assertEqual(vj.main(["settle", "--all", "--json"]), 0)
+            self.assertIsNone(json.loads(buf.getvalue())[0]["ledger_delta"])     # idempotent
+            self.assertEqual(len(vj.spend_log_path().read_text().splitlines()), 2)
+        finally:
+            os.environ.pop("VIDEO_JOB_RESERVE_AT_SUBMIT", None)
 
     def test_receipts_match_the_ledger_shape(self):
         job = vj.submit(spec(), max_usd=5, start_worker=False)
