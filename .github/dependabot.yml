@@ -16,7 +16,10 @@ updates:
       - /templates/sprint-review-v2
       - /templates/product-demo
       - /templates/ai-engineering-review
+      - /templates/ds-release-notes
       - /examples/hello-world
+      - /examples/ds-free-schedule-demo
+      - /examples/ds-release-649
       - /examples/digital-samba-skill-demo/remotion
       - /examples/sprint-review-cho-oyu/remotion
       - /showcase/transitions
