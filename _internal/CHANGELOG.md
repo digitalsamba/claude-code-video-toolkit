@@ -8,8 +8,25 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+---
+
+## 2026-11-01 (v0.24.0)
+
+### Added
+
+- **Agent video jobs (experimental)**: `tools/video_job.py` turns a scene list into a narrated, captioned, QC-checked MP4 as a background job any agent can submit and poll from a fresh process. Cost is estimated and capped before any spend, one job runs at a time, and receipts land in a spend ledger. Scenes can be flat `--scene "narration :: kind: prompt"` strings, so an agent never writes nested JSON, and slipped JSON from open models is repaired. Jobs look finished by default: cloned narration, animated title and headlines over generated backgrounds, a music bed and a contact sheet. The contract is in `docs/agent-video-jobs.md`.
+- **Submit-time guards for agent jobs**: a job is refused before any spend when a clip prompt asks for a screen, names an idea instead of a filmable thing, or is a single word, or when narration only repeats the on-screen headline. Clip prompts get a live-action footage style unless they name one, and a no-people negative unless they cast a person. `HEADLINE ; A -> B -> C` makes a diagram card. Each guard comes from a real failed take.
+- **`tools/video_mcp.py`**: the same estimate, submit, status, result and list calls over MCP for agents without a shell (`uv sync --extra mcp`).
+- **concept-explainer-short renders 16:9** from `config.json`, not only 9:16.
+
+### Changed
+
+- **`skills/openclaw-video-toolkit` is replaced by `skills/video-toolkit`**, written for any agent runtime. Update any path pointing at the old folder.
+- concept-explainer-short crossfades scene joins instead of dipping through black.
+
 ### Fixed
 
+- A cancelled or failed job's cost reservation is settled when the job ends, so it no longer counts against an agent's daily cap.
 - **product-demo template text is readable on a phone and passes WCAG AA**: every slide's text is at least 28px at 1080p (it was down to 12px), the problem badges use dark text on the coral (2.8:1 → 6.5:1), and the CTA tagline uses `textMedium` instead of `textLight` (2.6:1 → 5.4:1). The demo window is marked `data-qc="product"`. `qc.py --layout` on the template now reports no text findings.
 
 ---
