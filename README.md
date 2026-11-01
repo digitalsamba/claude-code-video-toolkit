@@ -12,6 +12,11 @@ Tell [Claude Code](https://claude.ai/code) what video you want — it writes the
 
 Every frame below was generated in this workspace — click to watch.
 
+| |
+|:--:|
+| <a href="https://demos.digitalsamba.com/video/the-agent-handoff.mp4"><img src="assets/readme-thumbs/the-agent-handoff.jpg" width="880" alt="The Agent Handoff: a 57-second explainer an agent made from one chat message"></a> |
+| **Made by an agent, start to finish**<br>One Discord message to Lugh. He wrote the script, chose the shots, narrated it in his own cloned voice, and the bot posted the finished MP4 23 minutes later. `tools/video_job.py`, four LTX-2 clips, one Ideogram diagram card, $0.47. |
+
 | | |
 |:--:|:--:|
 | <a href="https://demos.digitalsamba.com/video/ds-release-650.mp4"><img src="assets/readme-thumbs/ds-release-650.jpg" width="430" alt="Release-notes video with product UI rebuilt from source"></a> | <a href="https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4"><img src="assets/readme-thumbs/ds-free-schedule-demo.jpg" width="430" alt="Product demo with an AI narrator tile"></a> |
@@ -128,6 +133,7 @@ See `examples/` for finished projects you can learn from (newest first — scrol
 
 | Date | Demo | Description |
 |------|------|-------------|
+| 2026-11-01 | [the-agent-handoff](https://demos.digitalsamba.com/video/the-agent-handoff.mp4) | 57s showcase an agent made unattended from one Discord message: Lugh wrote the script and the shot list, `video_job.py` voiced it with his clone, generated four LTX-2 clips and a diagram card, built and QC'd it, and the Discord bot posted the link when it went live; $0.47, the fourth take after three pipeline fixes (`docs/agent-video-jobs.md`) |
 | 2026-10-28 | [ds-release-650](https://demos.digitalsamba.com/video/ds-release-650.mp4) | 87s release-notes video built from the `ds-release-notes` template: six items across the room and account center, Lugh's cloned voice made livelier with `voice_prosody.py`, checked with `qc.py --render --layout` (`templates/ds-release-notes`) |
 | 2026-10-21 | [ds-release-649](https://demos.digitalsamba.com/video/ds-release-649.mp4) | Release-notes video with no screen recording: three product UIs rebuilt from their source code, driven by a scripted cursor and camera, narrated by Lugh (`examples/ds-release-649`) |
 | 2026-10-21 | [ds-free-schedule-demo](https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4) | 26s synthetic product demo of scheduling a call, with a SoulX talking-head narrator tile (`examples/ds-free-schedule-demo`) |
