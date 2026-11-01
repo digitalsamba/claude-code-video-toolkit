@@ -118,7 +118,8 @@ placeholders and leave everything else. The headline is under 6 words, all caps.
 ```
 
 Rules of thumb: one headline and one object per card; describe the object as shapes and colours, not as a
-concept; keep the bottom fifth empty because the burned captions sit there; change `color_palette` only
+concept (for a diagram, write the object as a chain, `"object": "prompt -> agent -> video"`, and the toolkit
+lays out labelled boxes and arrows); keep the bottom fifth empty because the burned captions sit there; change `color_palette` only
 when the brand asks for it. The full caption format, for cards with more elements, is in the toolkit's
 `.claude/skills/ideogram4/`.
 

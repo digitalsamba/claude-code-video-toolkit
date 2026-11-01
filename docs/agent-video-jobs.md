@@ -87,6 +87,9 @@ uv run tools/video_job.py submit --format 16:9 --voice lugh --title "The Real Bo
 
 After the narration and ` :: `: `ltx: <motion prompt>`, `text: <HEADLINE> ; <subline>`,
 `card: <HEADLINE> ; <object>` (Ideogram), `flux: <prompt>`, or nothing (a generated background).
+An object written as a chain, `card: THE LOOP ; prompt -> agent -> video`, becomes a labelled flow
+diagram (2 to 4 boxes with arrows, across the frame in 16:9 and down it in 9:16). Asking for "a
+diagram" in prose gets a silhouette; the chain form is how a diagram is spelled.
 `--music "..."`, `--no-music`, `--draft` and `--no-title-card` set the rest.
 
 ## Brief → spec
