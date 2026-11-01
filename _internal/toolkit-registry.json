@@ -914,7 +914,7 @@
     },
     "video_job": {
       "path": "tools/video_job.py",
-      "description": "Async video jobs for agents: a scene spec (or a brief via VIDEO_JOB_EXPANDER) in, a QC-checked MP4 out. submit returns in seconds with a job id and estimate; a detached worker runs voiceover -> visuals (Ideogram/LTX/FLUX) -> captions -> build (concept-explainer-short, 9:16 or 16:9) -> qc --fix -> publish (R2 URL when configured). State on disk under jobs/<id>/, one job at a time, --max-usd refused before any spend and enforced before each paid step, receipts in longarm's media-spend shape",
+      "description": "Async video jobs for agents: a scene spec (or a brief via VIDEO_JOB_EXPANDER) in, a QC-checked MP4 out. submit returns in seconds with a job id and estimate; a detached worker runs voiceover -> visuals (Ideogram/LTX/FLUX) -> captions -> build (concept-explainer-short, 9:16 or 16:9) -> qc --fix -> publish (R2 URL when configured). State on disk under jobs/<id>/, one job at a time, --max-usd refused before any spend and enforced before each paid step, receipts in longarm's media-spend shape. Failed or cancelled jobs resume from their first missing output; status has timestamped events, warnings and a per-host ETA; renders are encoded under 9.5 MB for chat attachments",
       "usage": "uv run tools/video_job.py submit --spec spec.json --max-usd 1.00 --json; then status JOB_ID --json; result JOB_ID --json",
       "status": "beta",
       "category": "project",
@@ -925,23 +925,32 @@
         "result",
         "list",
         "cancel",
+        "resume",
+        "prune",
         "spec",
-        "presets"
+        "presets",
+        "settle"
       ],
       "options": {
         "brief": "One-paragraph description; needs VIDEO_JOB_EXPANDER to submit (estimate answers with a skeleton without one)",
         "spec": "Finished spec JSON file or '-' (scenes with text + visual kind/prompt); the agent-is-the-LLM path",
         "format": "9:16 (default) or 16:9",
         "duration": "Target seconds for --brief (default 45)",
-        "max-usd": "Refuse when the estimate is above this (default 2.00, env VIDEO_JOB_MAX_USD); worker stops before the next paid step at the cap",
-        "json": "Stable machine-readable output (documented in docs/agent-video-jobs.md)"
+        "max-usd": "Refuse when the estimate is above this (default 2.00, env VIDEO_JOB_MAX_USD); worker stops before the next paid step at the cap; resume --max-usd raises a stopped job's cap",
+        "json": "Stable machine-readable output (documented in docs/agent-video-jobs.md)",
+        "keep": "prune: newest jobs never pruned (default 10; submit auto-prunes with VIDEO_JOB_KEEP)",
+        "older-than": "prune: only jobs finished at least this many days ago"
       },
-      "prices": "PRICES table in the module (presets --json prints it): ltx clip 0.20, ideogram image 0.03/0.06/0.10 by speed, flux image 0.01, qwen3 voice 0.01/scene, elevenlabs 0.20/1k chars, scribe captions 0.40/audio hour",
+      "prices": "PRICES table in the module (presets --json prints it), checked against receipts 2026-11-01: ltx clip 0.10, ideogram image 0.03/0.06/0.10 by speed, flux image 0.0075, qwen3 voice 0.01/scene (actuals booked from the Modal cost event), elevenlabs 0.20/1k chars, scribe captions 0.40/audio hour",
       "env": [
         "VIDEO_JOB_EXPANDER",
         "VIDEO_JOB_MAX_USD",
         "VIDEO_JOBS_DIR",
-        "MEDIA_SPEND_LOG"
+        "MEDIA_SPEND_LOG",
+        "VIDEO_JOB_MAX_MB",
+        "VIDEO_JOB_KEEP",
+        "VIDEO_JOB_OUTPUT_ROOTS",
+        "VIDEO_JOB_RESERVE_AT_SUBMIT"
       ],
       "exitCodes": {
         "0": "ok",
@@ -949,12 +958,13 @@
         "2": "refused or not ready (budget_exceeded, no_expander, job not done)",
         "3": "lock_held"
       },
-      "tests": "uv run python -m unittest tests/python/test_video_job.py",
-      "created": "2026-10-31"
+      "tests": "uv run python -m unittest tests/python/test_video_job.py tests/python/test_video_job_agents.py tests/python/test_video_job_hardening.py",
+      "created": "2026-10-31",
+      "updated": "2026-11-01"
     },
     "video_mcp": {
       "path": "tools/video_mcp.py",
-      "description": "MCP server (stdio) for agents without a shell: video_estimate, video_submit, video_status, video_result, video_list_presets (+ video_list, video_cancel). A thin wrapper over tools/video_job.py with no pipeline logic of its own",
+      "description": "MCP server (stdio) for agents without a shell: video_estimate, video_submit, video_status, video_result, video_list_presets (+ video_list, video_cancel, video_resume). A thin wrapper over tools/video_job.py with no pipeline logic of its own",
       "usage": "uv sync --extra mcp && uv run --extra mcp tools/video_mcp.py",
       "status": "beta",
       "category": "agent",
@@ -974,7 +984,8 @@
           }
         }
       },
-      "created": "2026-10-31"
+      "created": "2026-10-31",
+      "updated": "2026-11-01"
     }
   },
   "optionalComponents": {

@@ -581,9 +581,12 @@ captions → build → `qc.py --fix`, and `status JOB_ID --json` / `result JOB_I
 any fresh process. The spec is scenes with narration text and one visual each (`ltx`, `ideogram`, `flux`,
 `none`); the compositor is `concept-explainer-short` in 9:16 or 16:9. `estimate` is a pure function of the
 spec and the module's `PRICES` table, `submit` refuses over the cap before any spend, one job runs at a time,
-and receipts land in `logs/media-spend.log` in longarm's ledger shape. Brief → spec needs an LLM: agents write
+and receipts land in `logs/media-spend.log` in longarm's ledger shape. A job that dies part-way keeps what
+it bought: `resume JOB_ID` redoes only the missing outputs. `status` carries timestamped `events`, `warnings` and
+an ETA calibrated per host, `submit` prunes old jobs' project trees, and renders are encoded under 9.5 MB so they
+attach in Discord. Brief → spec needs an LLM: agents write
 the spec themselves, or set `VIDEO_JOB_EXPANDER` to any command that turns a brief into one. Agents without a
-shell get the same five calls from `tools/video_mcp.py` (MCP over stdio, `uv sync --extra mcp`). The
+shell get the same calls from `tools/video_mcp.py` (MCP over stdio, `uv sync --extra mcp`). The
 agent-facing skill is `skills/video-toolkit/`; the full contract is in `docs/agent-video-jobs.md`.
 
 ### Publishing to YouTube
