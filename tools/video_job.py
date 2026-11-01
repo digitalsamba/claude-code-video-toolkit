@@ -467,8 +467,18 @@ def auto_background_prompt(text: str, hint: str | None = None) -> str:
         # constraint was.") reads as nonsense to the image model
         first = re.split(r"(?<=[.!?])\s+", text.strip(), maxsplit=1)[0]
         hint = " ".join(first.split()[:18])
-    gist = hint.strip().rstrip(".!?,;:")
-    return f"Abstract cinematic background evoking: {gist}. {BACKGROUND_STYLE}"
+    return f"Abstract cinematic background evoking: {background_gist(hint)}. {BACKGROUND_STYLE}"
+
+
+def background_gist(text: str, max_words: int = 12) -> str:
+    """The narration as a theme, not a sentence to letter. FLUX printed 'listen & you'll hear
+    it coming' across a background whose prompt quoted a narration with a quotation, an
+    ampersand and slashes in it (2026-11-01), despite 'no text' in the style. Quoted phrases
+    go, symbols become spaces, and it is lower-cased and capped."""
+    t = re.sub(r"[\"\u201c\u201d][^\"\u201c\u201d]*[\"\u201c\u201d]", " ", text or "")
+    t = re.sub(r"[^A-Za-z0-9' ]+", " ", t.replace("\u2019", "'"))
+    words = [w.strip("'") for w in t.lower().split()]
+    return " ".join([w for w in words if w][:max_words])
 
 
 def load_voice_preset(name: str) -> dict:
@@ -1000,7 +1010,9 @@ def settle_reservation(job: dict) -> float | None:
     returns the delta written, or None when there was nothing to settle."""
     if job.get("ledger") != "reserve" or job.get("phase") not in TERMINAL or "settled" in job:
         return None
-    reserved = float(job.get("estimate_usd") or 0.0)
+    # what the shared ledger holds for this job right now: the estimate at submit, the
+    # actual after a settle, plus whatever a resume reserved on top
+    reserved = float(job["ledger_usd"] if job.get("ledger_usd") is not None else job.get("estimate_usd") or 0.0)
     actual = float(job.get("actual_usd") or 0.0)
     delta = round(actual - reserved, 4)
     if delta:
@@ -1012,6 +1024,7 @@ def settle_reservation(job: dict) -> float | None:
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
     job["settled"] = delta
+    job["ledger_usd"] = round(actual, 4)
     save_job(job)
     log_line(job, f"settled: reserved ${reserved:.2f} actual ${actual:.2f} ledger {delta:+.2f}")
     return delta
@@ -1055,15 +1068,28 @@ def _read_lock() -> dict | None:
         return None
 
 
-def _lock_is_stale(holder: dict) -> bool:
+LOCK_GRACE_S = 120
+
+
+def _lock_is_stale(holder: dict, now: float | None = None) -> bool:
     """Stale when the job it names is finished, or its worker is known and dead, or no
-    worker ever reported in and the lock is old."""
+    worker ever reported in and the lock is old. A lock younger than LOCK_GRACE_S is never
+    stale while its job is still being set up: submit takes the lock before job.json
+    exists, and resume takes it while job.json still says failed."""
+    now = now if now is not None else time.time()
+    young = now - float(holder.get("ts", 0)) < LOCK_GRACE_S
     try:
         job = load_job(holder.get("job_id", ""))
-    except (FileNotFoundError, SpecError):
+    except FileNotFoundError:
+        return not young
+    except SpecError:
         return True
     if job.get("phase") in TERMINAL:
-        return True
+        # phase_started_ts of a terminal phase is when the job ended; a lock taken after
+        # that is a resume being set up
+        ended = float(job.get("phase_started_ts") or 0.0)
+        resuming = young and ended > 0 and float(holder.get("ts", 0)) > ended
+        return not resuming
     pid = job.get("worker_pid")
     if pid:
         return not pid_alive(pid)
@@ -1145,6 +1171,14 @@ def run_tool(job: dict, tool: str, args: list[str], cwd: Path | None = None,
     add_event(job, "tool", f"{Path(tool).name} {'finished' if rc == 0 else f'failed (exit {rc})'} in {elapsed:.0f}s",
               tool=Path(tool).name, seconds=elapsed, cost_usd=cost, exit=rc)
     return {"returncode": rc, "stdout": out, "stderr": err, "cost": cost, "elapsed": elapsed}
+
+
+def _error_tail(r: dict, limit: int = 600) -> str:
+    """The end of a failed tool's output without the JSON progress lines (heartbeats, cost)
+    that --progress json interleaves on stderr, so the error is the error."""
+    lines = [ln for ln in (r.get("stderr") or r.get("stdout") or "").splitlines()
+             if not ln.lstrip().startswith('{"ts"')]
+    return "\n".join(lines).strip()[-limit:]
 
 
 class BudgetExceeded(RuntimeError):
@@ -1245,16 +1279,31 @@ def voiceover_done(proj: Path, spec: dict) -> dict | None:
     return None
 
 
-def asset_done(proj: Path, s: dict) -> bool:
-    return bool(s.get("asset")) and _nonempty(proj / s["asset"])
+def _made(job: dict | None, rel: str) -> bool:
+    """A file counts as made only once its tool succeeded (job["made"]), so a partial file
+    left by a killed or failing tool is never reused. Jobs from before the list existed
+    trust the file."""
+    if job is None or "made" not in job:
+        return True
+    return rel in job["made"]
+
+
+def _mark_made(job: dict, rel: str) -> None:
+    made = job.setdefault("made", [])
+    if rel not in made:
+        made.append(rel)
+
+
+def asset_done(proj: Path, s: dict, job: dict | None = None) -> bool:
+    return bool(s.get("asset")) and _nonempty(proj / s["asset"]) and _made(job, s["asset"])
 
 
 def captions_done(proj: Path, spec: dict) -> bool:
     return all(_nonempty(proj / "captions" / f"words_{s['id']}.json") for s in spec["scenes"])
 
 
-def music_done(proj: Path) -> bool:
-    return _nonempty(proj / "audio" / "music.mp3")
+def music_done(proj: Path, job: dict | None = None) -> bool:
+    return _nonempty(proj / "audio" / "music.mp3") and _made(job, "audio/music.mp3")
 
 
 def remaining_estimates(job: dict, spec: dict) -> dict:
@@ -1267,11 +1316,11 @@ def remaining_estimates(job: dict, spec: dict) -> dict:
         return est
     if voiceover_done(proj, spec) is not None:
         est["voiceover"] = 0.0
-    missing = [s for s in spec["scenes"] if s["visual"]["kind"] != "none" and not asset_done(proj, s)]
+    missing = [s for s in spec["scenes"] if s["visual"]["kind"] != "none" and not asset_done(proj, s, job)]
     est["visuals"] = round(sum(_visual_args(spec, s, proj)[2] for s in missing), 4)
     if captions_done(proj, spec):
         est["captions"] = 0.0
-    if music_done(proj):
+    if music_done(proj, job):
         est["music"] = 0.0
     return est
 
@@ -1310,7 +1359,7 @@ def step_voiceover(job: dict, spec: dict) -> dict:
     per_scene = step_estimates(spec).get("voiceover", 0.0)
     r = run_tool(job, "voiceover.py", args, fallback_cost=per_scene)
     if r["returncode"] != 0:
-        raise StepFailed(f"voiceover.py exited {r['returncode']}: {r['stderr'].strip()[-600:]}")
+        raise StepFailed(f"voiceover.py exited {r['returncode']}: {_error_tail(r)}")
     try:
         result = json.loads(r["stdout"])
     except ValueError:
@@ -1388,17 +1437,20 @@ def step_visuals(job: dict, spec: dict) -> dict:
     reused = 0
     for i, s in enumerate(todo):
         tool, args, unit = _visual_args(spec, s, proj)
-        if asset_done(proj, s):
+        if asset_done(proj, s, job):
             reused += 1
             made.append(s["asset"])
             continue
         check_budget(job, f"visual {s['id']} ({tool})", unit)
         set_phase(job, "visuals", 30 + int(45 * i / max(n, 1)), step_detail=f"{s['id']}_{s['slug']} via {tool}")
-        r = run_tool(job, tool, args, fallback_cost=unit)
         out = proj / s["asset"]
+        out.unlink(missing_ok=True)          # never build on a partial file from an earlier try
+        r = run_tool(job, tool, args, fallback_cost=unit)
         if r["returncode"] != 0 or not out.exists():
+            out.unlink(missing_ok=True)
             raise StepFailed(f"{tool} for scene {s['id']} exited {r['returncode']}: "
-                             f"{(r['stderr'] or r['stdout']).strip()[-600:]}")
+                             f"{_error_tail(r)}")
+        _mark_made(job, s["asset"])
         kind = s["visual"]["kind"]
         job.setdefault("timings", {}).setdefault("assets", []).append(
             {"kind": kind, "s": r["elapsed"], "ended": time.time()})
@@ -1442,7 +1494,7 @@ def step_captions(job: dict, spec: dict, narration_s: float) -> dict:
     unit = PRICES["captions_per_audio_second"]["scribe"] if paid else 0.0
     r = run_tool(job, "captions.py", args, fallback_cost=round(narration_s * unit, 4))
     if r["returncode"] != 0:
-        reason = (r["stderr"] or r["stdout"]).strip()[-300:]
+        reason = _error_tail(r, 300)
         log_line(job, f"captions skipped: {reason}")
         add_event(job, "captions", "captions skipped: the video renders without them", reason=reason[-200:])
         return {"skipped": True, "reason": reason}
@@ -1469,18 +1521,21 @@ def step_music(job: dict, spec: dict, total_s: float) -> dict:
     proj = _project(job)
     music = spec["music"]
     out = proj / "audio" / "music.mp3"
-    if music_done(proj):
+    if music_done(proj, job):
         return {"file": "audio/music.mp3", "reused": True}
+    out.unlink(missing_ok=True)
     args = ["--prompt", music.get("prompt") or DEFAULT_MUSIC_PROMPT,
             "--duration", str(int(min(240, max(30, total_s + 8)))), "--output", str(out),
             "--progress", "json", "--json", "--cloud", music.get("provider") or "acemusic"]
     unit = PRICES["music_track"].get(music.get("provider", "acemusic"), 0.03)
     r = run_tool(job, "music_gen.py", args, fallback_cost=unit)
     if r["returncode"] != 0 or not out.exists():
-        reason = (r["stderr"] or r["stdout"]).strip()[-300:]
+        out.unlink(missing_ok=True)      # build.py mixes any music.mp3 it finds; a partial one must go
+        reason = _error_tail(r, 300)
         log_line(job, "music skipped: " + reason)
         add_event(job, "music", "music skipped: the video renders without a bed", reason=reason[-200:])
         return {"skipped": True, "reason": reason}
+    _mark_made(job, "audio/music.mp3")
     add_event(job, "music", f"music bed ready ({music.get('provider') or 'acemusic'})")
     return {"file": "audio/music.mp3"}
 
@@ -1492,7 +1547,7 @@ def step_build(job: dict) -> Path:
     r = run_tool(job, str(proj / "build.py"), [], cwd=proj, timeout=1800)
     out = proj / "out" / "short.mp4"
     if r["returncode"] != 0 or not out.exists():
-        raise StepFailed(f"build.py exited {r['returncode']}: {(r['stderr'] or r['stdout']).strip()[-800:]}")
+        raise StepFailed(f"build.py exited {r['returncode']}: {_error_tail(r, 800)}")
     return out
 
 
@@ -1684,12 +1739,12 @@ def submit(spec: dict, max_usd: float, spec_source: str = "spec", brief: str | N
         raise BudgetExceeded(f"estimate ${est['estimate_usd']:.2f} is over --max-usd ${max_usd:.2f}; "
                              "raise the cap, drop scenes, or use cheaper visuals (flux, TURBO)")
     publish_to = resolve_output(publish_to)
-    job_id = new_job_id()
-    acquire_lock(job_id)
-    try:
+    try:   # before the lock, so a slow prune never holds it with no job.json behind it
         pruned = auto_prune()
     except Exception as e:  # noqa: BLE001 — housekeeping never blocks a submit
         pruned = {"error": str(e)}
+    job_id = new_job_id()
+    acquire_lock(job_id)
     d = job_dir(job_id)
     d.mkdir(parents=True, exist_ok=True)
     _write_json_atomic(d / "spec.json", spec)
@@ -1701,6 +1756,8 @@ def submit(spec: dict, max_usd: float, spec_source: str = "spec", brief: str | N
         "steps": {}, "output": None, "error": None, "worker_pid": None, "log": str(d / "job.log"),
         "publish_to": publish_to,
         "ledger": "reserve" if reserve_at_submit() else "actual",
+        "ledger_usd": est["estimate_usd"] if reserve_at_submit() else 0.0,
+        "made": [],
         "host": platform.node(), "phase_started_ts": time.time(), "events": [], "timings": {},
     }
     add_event(job, "submitted", f"{len(spec['scenes'])} scenes, {spec['format']}, est ${est['estimate_usd']:.2f}, "
@@ -1773,7 +1830,9 @@ def refresh_status(job: dict) -> dict:
         set_phase(job, "failed", error="worker exited without finishing (see job.log); resume it to carry on",
                   error_code="worker_died", finished=_now())
         release_lock(job["id"])
-    elif not job.get("worker_pid") and job.get("phase") == "queued" and _age_s(job.get("created")) > NEVER_STARTED_S:
+    elif (not job.get("worker_pid") and job.get("phase") == "queued"
+          and time.time() - float(job.get("phase_started_ts") or (time.time() - _age_s(job.get("created"))))
+          > NEVER_STARTED_S):
         set_phase(job, "failed", error="the worker never started; resume it or submit again",
                   error_code="worker_never_started", finished=_now())
         release_lock(job["id"])
@@ -1838,6 +1897,7 @@ def resume(job_id: str, max_usd: float | None = None, start_worker: bool = True)
     if job.get("ledger") == "reserve" and "settled" in job:
         extra = round(max(0.0, float(job.get("estimate_usd") or 0) - float(job.get("actual_usd") or 0)), 4)
         job.pop("settled")
+        job["ledger_usd"] = round(float(job.get("ledger_usd") or job.get("actual_usd") or 0) + extra, 4)
     job["resume_reserved_usd"] = extra
     job["resumes"] = int(job.get("resumes") or 0) + 1
     prior = job.get("error_code")
@@ -1966,13 +2026,6 @@ def host_history(host: str, exclude: str | None = None, limit: int = ETA_HISTORY
     return out
 
 
-def last_ltx_ended(host: str) -> float | None:
-    """When this host's last LTX clip finished (epoch seconds), from any recent job."""
-    ends = [a.get("ended") for j in _recent_jobs(host) for a in (j.get("timings") or {}).get("assets", [])
-            if a.get("kind") == "ltx" and a.get("ended")]
-    return max(ends) if ends else None
-
-
 def step_model(history: list[dict]) -> dict:
     """Seconds per step and per visual kind (medians of the history, the table without
     one), and build seconds per second of video."""
@@ -2002,16 +2055,22 @@ def eta_seconds(job: dict, now: float | None = None, history: list[dict] | None 
         return None
     now = now if now is not None else time.time()
     host = job.get("host") or platform.node()
+    recent = None
+    if history is None or last_ltx == -1.0:
+        recent = list(_recent_jobs(host))          # one pass over job.json files per poll
     if history is None:
-        history = host_history(host, exclude=job.get("id"))
+        history = [j["timings"] for j in recent if j.get("id") != job.get("id")
+                   and j.get("phase") == "done" and j.get("timings")][:ETA_HISTORY]
     m = step_model(history)
     proj = Path(job["project_dir"]) if job.get("project_dir") else None
     pending = [s for s in spec.get("scenes", []) if s["visual"]["kind"] != "none"
-               and not (proj and asset_done(proj, s))]
+               and not (proj and asset_done(proj, s, job))]
     visuals = sum(m["kinds"].get(s["visual"]["kind"], _STEP_SECONDS["flux"]) for s in pending)
     if any(s["visual"]["kind"] == "ltx" for s in pending):
         if last_ltx == -1.0:
-            last_ltx = last_ltx_ended(host)
+            ends = [a.get("ended") for j in (recent or []) for a in (j.get("timings") or {}).get("assets", [])
+                    if a.get("kind") == "ltx" and a.get("ended")]
+            last_ltx = max(ends) if ends else None
         if last_ltx is None or now - last_ltx > LTX_WARM_WINDOW_S:
             visuals += LTX_COLD_START_S
     try:
@@ -2113,6 +2172,20 @@ def list_jobs() -> list[dict]:
     return rows
 
 
+def _is_our_worker(pid: int, job_id: str) -> bool:
+    """Whether pid is still this job's worker and not a recycled pid. POSIX asks ps for
+    the command line; elsewhere (or when ps is missing) the pid is trusted."""
+    if os.name == "nt":
+        return True
+    try:
+        r = subprocess.run(["ps", "-o", "command=", "-p", str(pid)], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return True
+    if r.returncode != 0:
+        return False
+    return "_worker" in r.stdout and job_id in r.stdout
+
+
 def _kill_tree(pid: int) -> None:
     """Stop the worker and the tool it is running (ltx2.py, build.py and their ffmpeg).
     POSIX: the worker leads its own process group (start_new_session), so signal the
@@ -2135,6 +2208,9 @@ def cancel(job_id: str) -> dict:
     if job["phase"] in TERMINAL:
         return job
     pid = job.get("worker_pid")
+    if pid and pid_alive(pid) and not _is_our_worker(pid, job_id):
+        log_line(job, f"cancel: pid {pid} is no longer this job's worker; not signalling it")
+        pid = None
     if pid and pid_alive(pid):
         try:
             _kill_tree(pid)

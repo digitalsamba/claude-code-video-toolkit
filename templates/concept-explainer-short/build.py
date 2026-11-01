@@ -267,6 +267,11 @@ def ken_burns(img_path: str, duration: float, zoom_in: bool) -> VideoClip:
     and several times cheaper, which matters on small CPUs (a LANCZOS resize of a
     1440x2560 card per frame was the build's biggest cost)."""
     with Image.open(img_path) as im:
+        if im.mode in ("RGBA", "LA", "PA") or "transparency" in im.info:
+            # a transparent card shows the palette's ink behind it, as it did when this was
+            # an ImageClip with a mask over the ink background
+            flat = Image.new("RGBA", im.size, (*_rgb(PALETTE["ink"]), 255))
+            im = Image.alpha_composite(flat, im.convert("RGBA"))
         im = im.convert("RGB")
         base = max(W / im.width, H / im.height) * (1 + KB_AMP)
         big = im.resize((max(W, math.ceil(im.width * base)), max(H, math.ceil(im.height * base))),

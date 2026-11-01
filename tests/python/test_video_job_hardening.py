@@ -235,6 +235,67 @@ class TestPrune(Isolated):
             os.environ.pop("VIDEO_JOB_KEEP")
 
 
+class TestReviewFixes(Isolated):
+    def test_a_partial_file_from_a_failed_tool_is_never_reused(self):
+        class Partial(FakeTools):
+            def __call__(self, job, tool, args, **kw):
+                r = super().__call__(job, tool, args, **kw)
+                if r["returncode"]:
+                    Path(args[args.index("--output") + 1]).write_bytes(b"half a file")
+                return r
+        job = vj.submit(spec(), max_usd=5, start_worker=False)
+        run(job, Partial(fail_scene="03"))
+        job = vj.resume(job["id"], start_worker=False)
+        again = FakeTools()
+        run(job, again)
+        self.assertIn("ideogram4.py", again.names())        # scene 03 bought again, not reused
+        self.assertIn("images/03_cta.png", vj.load_job(job["id"])["made"])
+
+    def test_resume_lock_is_not_stolen_by_a_status_poll(self):
+        job = vj.submit(spec(), max_usd=5, start_worker=False)
+        run(job, FakeTools(fail_scene="03"))
+        vj.release_lock(job["id"])
+        vj.acquire_lock(job["id"])            # what resume does while job.json still says failed
+        vj.clear_stale_lock()
+        self.assertTrue(vj.lock_path().exists())
+
+    def test_reserve_ledger_nets_when_the_first_run_overspent(self):
+        os.environ["VIDEO_JOB_RESERVE_AT_SUBMIT"] = "1"
+        try:
+            job = vj.submit(spec(), max_usd=5, start_worker=False)
+            ledger = vj.spend_log_path()
+            ledger.parent.mkdir(parents=True, exist_ok=True)
+            with open(ledger, "a") as f:
+                f.write(json.dumps({"cost_usd": job["estimate_usd"]}) + "\n")
+            job["project_dir"] = str(vj.create_project(job, json.loads(Path(job["spec_path"]).read_text())))
+            job["actual_usd"] = job["estimate_usd"] + 0.20           # overspent, then failed
+            vj.set_phase(job, "failed", error="x", error_code="step_failed")
+            job = vj.resume(job["id"], start_worker=False)
+            self.assertEqual(job["resume_reserved_usd"], 0.0)
+            job["actual_usd"] += 0.10
+            vj.set_phase(job, "done")
+            total = sum(json.loads(l)["cost_usd"] for l in ledger.read_text().splitlines())
+            self.assertAlmostEqual(total, vj.load_job(job["id"])["actual_usd"], places=4)
+        finally:
+            os.environ.pop("VIDEO_JOB_RESERVE_AT_SUBMIT", None)
+
+    def test_error_tail_drops_progress_lines(self):
+        r = {"stderr": '{"ts": "1", "stage": "heartbeat"}\nTraceback: boom\n{"ts": "2", "stage": "cost"}'}
+        self.assertEqual(vj._error_tail(r), "Traceback: boom")
+
+    @unittest.skipIf(os.name == "nt", "ps check is POSIX")
+    def test_cancel_leaves_a_recycled_pid_alone(self):
+        other = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], start_new_session=True)
+        try:
+            job = vj.submit(spec(), max_usd=5, start_worker=False)
+            job.update(worker_pid=other.pid, phase="visuals")
+            vj.save_job(job)
+            vj.cancel(job["id"])
+            self.assertTrue(vj.pid_alive(other.pid))
+        finally:
+            other.kill()
+
+
 class TestLockWindow(Isolated):
     def test_a_submit_that_never_spawned_frees_the_lock_after_120s(self):
         job = vj.submit(spec(), max_usd=5, start_worker=False)
@@ -243,6 +304,7 @@ class TestLockWindow(Isolated):
         old = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 200))
         j = vj.load_job(job["id"])
         j["created"] = old
+        j["phase_started_ts"] = time.time() - 200
         vj.save_job(j)
         lock = json.loads(vj.lock_path().read_text())
         lock["ts"] = time.time() - 200
@@ -467,10 +529,11 @@ class TestSmallSeams(Isolated):
         code = ("import subprocess,sys,time\n"
                 "p=subprocess.Popen([sys.executable,'-c','import time; time.sleep(60)'])\n"
                 "print(p.pid,flush=True)\ntime.sleep(60)\n")
-        parent = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE, text=True,
-                                  start_new_session=True)
-        child = int(parent.stdout.readline())
         job = vj.submit(spec(), max_usd=5, start_worker=False)
+        # argv carries "_worker <id>" like the real worker, which cancel checks for
+        parent = subprocess.Popen([sys.executable, "-c", code, "_worker", job["id"]], stdout=subprocess.PIPE,
+                                  text=True, start_new_session=True)
+        child = int(parent.stdout.readline())
         job["worker_pid"] = parent.pid
         job["phase"] = "visuals"
         vj.save_job(job)

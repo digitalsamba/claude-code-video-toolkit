@@ -174,9 +174,14 @@ class TestEstimate(Isolated):
 
     def test_background_gist_stops_at_the_first_sentence(self):
         p = vj.auto_background_prompt("We kept looking at the model. But the constraint was never the silicon.")
-        self.assertIn("evoking: We kept looking at the model.", p)
+        self.assertIn("evoking: we kept looking at the model.", p)
         self.assertNotIn("constraint", p)
         self.assertIn("evoking: a harbour at dawn.", vj.auto_background_prompt("ignored", "a harbour at dawn"))
+        leaky = vj.auto_background_prompt('So the old advice, "a watched pot never boils", has it backwards: '
+                                          "listen & you'll hear it coming. The quiet / not the noise / is the sign.")
+        self.assertNotIn("watched pot", leaky)                 # quoted phrases are what get lettered
+        self.assertNotIn("&", leaky)
+        self.assertIn("evoking: so the old advice has it backwards listen you'll hear it coming.", leaky)
 
     def test_card_object_written_as_a_chain_becomes_a_flow_diagram(self):
         flat = vj.spec_from_scene_args("t", ["one :: card: THE LOOP ; prompt -> agent -> video",
