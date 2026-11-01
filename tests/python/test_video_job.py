@@ -158,6 +158,14 @@ class TestEstimate(Isolated):
         self.assertEqual(vj.normalize_spec(vj.spec_from_scene_args("t", [f"one :: ltx: {good}"], "16:9"))
                          ["scenes"][0]["visual"]["kind"], "ltx")
 
+    def test_terse_clip_prompts_get_a_footage_style(self):
+        p = vj.styled_ltx_prompt("filing cabinet drawers sliding open, papers flowing out", None)
+        self.assertTrue(p.endswith(vj.LTX_STYLE_SUFFIX))
+        styled = "slow push-in on a server rack, one GPU glowing amber, cinematic lighting"
+        self.assertEqual(vj.styled_ltx_prompt(styled, None), styled)                 # already has a style
+        self.assertEqual(vj.styled_ltx_prompt("a kettle, steam rising", ""), "a kettle, steam rising")
+        self.assertEqual(vj.styled_ltx_prompt("a kettle, steam rising", "stop-motion clay"), "a kettle, steam rising, stop-motion clay")
+
     def test_one_word_clip_prompts_are_refused(self):
         with self.assertRaises(vj.SpecError) as cm:
             vj.normalize_spec(vj.spec_from_scene_args("t", ["So we stopped deciding. We just asked. :: ltx: drift"], "16:9"))
