@@ -75,7 +75,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = ROOT / "templates" / "concept-explainer-short"
-PRICES_VERSION = "2026-10-31"
+PRICES_VERSION = "2026-11-01"
 
 # ---------------------------------------------------------------------------
 # Unit prices (USD). The one table `estimate` reads. Sources: Ideogram list price
@@ -83,12 +83,16 @@ PRICES_VERSION = "2026-10-31"
 # (docs/ltx2.md benchmarks, 576x1024 or 1024x576 at 121 frames lands at the top of the
 # range); Qwen3-TTS and FLUX.2 on Modal A10G at $1.10/h; ElevenLabs TTS at the Creator
 # tier per-character rate; ElevenLabs Scribe at $0.40 per audio hour.
+# 2026-11-01: checked against the receipts of the last ten jobs on Lugh's host. LTX clips cost
+# a median $0.0825 (26 clips, $0.077-0.169 with cold starts), so 0.10, not 0.20; FLUX
+# backgrounds $0.0058 (11), so 0.0075, not 0.01. Ideogram DEFAULT ($0.06) and Scribe
+# (~$0.004 a job) matched the table.
 # ---------------------------------------------------------------------------
 PRICES = {
     "version": PRICES_VERSION,
     "ideogram_image": {"TURBO": 0.03, "DEFAULT": 0.06, "QUALITY": 0.10},
-    "ltx_clip": 0.20,
-    "flux_image": 0.01,
+    "ltx_clip": 0.10,
+    "flux_image": 0.0075,
     "voiceover": {"qwen3": 0.01, "elevenlabs_per_1k_chars": 0.20, "60db": 0.0},
     "captions_per_audio_second": {"scribe": 0.40 / 3600, "whisper": 0.0},
     "music_track": {"acemusic": 0.0, "modal": 0.03, "runpod": 0.03},
@@ -1172,6 +1176,10 @@ def create_project(job: dict, spec: dict) -> Path:
     _write_json_atomic(dest / "config.json", config)
 
     config["music"] = {**config.get("music", {}), "volume": 0.12}
+    if not spec["music"]["enabled"]:
+        # no bed asked for: drop the file key, or qc.py warns "audio/music.mp3 not found" and
+        # the agent passes on a problem that isn't one
+        config["music"]["file"] = None
     config["timing"] = {**config.get("timing", {}), "startPad": 0.0}   # frame 0 is the cover
     # veryfast: a quarter of medium's CPU on small hosts at the same look for this content;
     # maxMB keeps the file attachable (Discord's bot limit is 10 MB)
@@ -1474,7 +1482,7 @@ def _qc(job: dict, render: Path, fix: bool) -> dict:
         return json.loads(r["stdout"])
     except ValueError:
         return {"passed": False, "errors": 1, "warnings": 0,
-                "findings": [{"level": "error", "area": "qc", "msg": f"qc.py exited {r['returncode']}: "
+                "findings": [{"level": "error", "check": "qc", "message": f"qc.py exited {r['returncode']}: "
                               f"{(r['stderr'] or r['stdout']).strip()[-400:]}"}]}
 
 
@@ -1490,7 +1498,7 @@ def step_qc(job: dict, render: Path) -> tuple[Path, dict]:
                "findings": [f for f in report.get("findings", []) if f.get("level") in ("error", "warn")][:30],
                "loudness_fixed": bool(fixed)}
     _write_json_atomic(job_dir(job["id"]) / "qc.json", report)
-    top = "; ".join(f.get("msg", "")[:120] for f in summary["findings"][:3])
+    top = "; ".join((f.get("message") or f.get("msg") or "")[:120] for f in summary["findings"][:3])
     add_event(job, "qc", f"QC {'passed' if summary['passed'] else 'failed'}: {summary['errors']} errors, "
               f"{summary['warnings']} warnings" + (f" ({top})" if top else ""),
               passed=summary["passed"], errors=summary["errors"], warnings=summary["warnings"])

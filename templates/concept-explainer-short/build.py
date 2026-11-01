@@ -424,8 +424,9 @@ def build() -> None:
           + ("  (>3 min: fine for TikTok, too long for Shorts/Reels)" if total > 180 else ""))
 
     music_cfg = CONFIG.get("music", {})
-    music_path = HERE / music_cfg.get("file", "audio/music.mp3")
-    if music_path.exists():
+    music_file = music_cfg.get("file", "audio/music.mp3")     # null: no bed
+    music_path = HERE / music_file if music_file else None
+    if music_path and music_path.exists():
         audio.insert(0, AudioFileClip(str(music_path)).with_effects([
             AudioLoop(duration=total),
             MultiplyVolume(music_cfg.get("volume", 0.16)),
