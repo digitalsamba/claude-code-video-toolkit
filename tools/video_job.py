@@ -127,6 +127,16 @@ DEFAULT_LTX_NEGATIVE = ("text, letters, words, captions, subtitles, logo, waterm
 # server room" came back as a woman praying at the rack, an "abstract cinematic background" as a
 # portrait. A person in a video is a casting decision, so the clip prompt has to name one.
 NO_PEOPLE_NEGATIVE = "people, person, man, woman, face, portrait, hands, crowd, figure, silhouette"
+# LTX cannot draw software. Ask it for a terminal, a dashboard, a timeline or "code lines" and
+# it paints a fake interface covered in garbled text (three of three such clips on the first
+# live day). Submit refuses these before any spend unless the spec says allowScreens; the
+# message tells the agent what to do instead, which prose in its instructions did not achieve.
+SCREEN_WORDS = re.compile(r"\b(screens?|interface|ui|dashboards?|terminal|console|code|coding|timeline|"
+                          r"export bar|progress bar|loading bar|chat window|chat interface|browser|"
+                          r"website|web ?page|app|apps|application|toggle|buttons?|menu|graphs?|charts?|"
+                          r"spreadsheet|login|form|popup|pop-up|notifications?|alerts?|cursor|typing|"
+                          r"keyboard shortcuts?|monitor|display|window|windows|render(?:ing)? complet\w*|"
+                          r"system check|status page|green checkmarks?)\b", re.I)
 PEOPLE_WORDS = re.compile(r"\b(people|person|persons|man|men|woman|women|boy|girl|kid|child|children|"
                           r"face|faces|hand|hands|crowd|figure|figures|silhouette|portrait|presenter|"
                           r"narrator|someone|somebody|human|humans|he|she|they|worker|engineer|developer|"
@@ -447,6 +457,14 @@ def normalize_spec(spec: dict) -> dict:
             vis["prompt"] = vis.get("prompt") or auto_background_prompt(text, vis.get("background"))
         if kind != "none" and not (vis.get("prompt") or vis.get("caption")):
             raise SpecError(f"scene {s['id']}: visual.{kind} needs a prompt (or a caption for ideogram)")
+        if kind == "ltx" and not out.get("allowScreens"):
+            hit = SCREEN_WORDS.search(vis.get("prompt") or "")
+            if hit:
+                raise SpecError(
+                    f"scene {s['id']}: the clip prompt asks for a screen ('{hit.group(0)}'), and the video model "
+                    "draws fake software covered in garbled text. Film a physical thing and its light instead "
+                    "(the room, the desk, an object, a hand on a key), or make this a 'text:' scene with the idea "
+                    "as the headline. To insist, set allowScreens in the spec (--allow-screens).")
         cap = vis.get("caption")
         if kind == "ideogram" and isinstance(cap, dict) and "headline" in cap:
             # short form {headline, object, description}: expand into the full template.
@@ -672,7 +690,8 @@ def parse_spec_text(text: str) -> dict:
 
 
 def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: str | None = None,
-                         music: str | bool | None = None, draft: bool = False, title_card: bool = True) -> dict:
+                         music: str | bool | None = None, draft: bool = False, title_card: bool = True,
+                         allow_screens: bool = False) -> dict:
     """The flat form, for callers that can't reliably write nested JSON (an open model
     with no editor). One string per scene:
 
@@ -724,7 +743,7 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: 
                 raise SpecError(f"--scene {i + 1}: {kind} needs a prompt after the colon")
         out_scenes.append({"text": text, "visual": visual})
     spec = {"title": title or out_scenes[0]["text"][:60], "format": fmt, "scenes": out_scenes,
-            "draft": draft, "titleCard": title_card}
+            "draft": draft, "titleCard": title_card, "allowScreens": allow_screens}
     if voice:
         spec["voice"] = voice
     if music is not None:
@@ -1529,6 +1548,8 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--music", help="Music bed prompt (default: a subtle ambient bed; it's free on acemusic)")
         p.add_argument("--no-music", action="store_true", help="No music bed")
         p.add_argument("--draft", action="store_true", help="Scenes without a visual get a plain placeholder instead of a generated background")
+        p.add_argument("--allow-screens", action="store_true",
+                       help="Let an ltx: prompt ask for a screen, interface or dashboard (refused by default: the model draws fake software)")
         p.add_argument("--no-title-card", action="store_true", help="Skip the animated title over the first scene")
         p.add_argument("--format", choices=list(FORMATS), default=None, help="Output format (default 9:16)")
         p.add_argument("--duration", type=int, default=45, help="Target seconds, for --brief (default 45)")
@@ -1562,7 +1583,7 @@ def main(argv: list[str] | None = None) -> int:
                 music = False if args.no_music else (args.music or None)
                 spec, source = normalize_spec(spec_from_scene_args(
                     args.title, args.scene, fmt, voice=args.voice, music=music, draft=args.draft,
-                    title_card=not args.no_title_card)), "scenes"
+                    title_card=not args.no_title_card, allow_screens=args.allow_screens)), "scenes"
             elif args.spec_json:
                 spec, source = normalize_spec(parse_spec_text(args.spec_json)), "spec"
             else:

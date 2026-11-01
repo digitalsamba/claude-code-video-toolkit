@@ -116,6 +116,23 @@ class TestEstimate(Isolated):
         self.assertIsNotNone(vj.PEOPLE_WORDS.search("close-up of hands typing one prompt"))
         self.assertIsNone(vj.PEOPLE_WORDS.search("manual export bar filling, humane pacing"))  # whole words only
 
+    def test_clip_prompts_that_ask_for_a_screen_are_refused_before_spend(self):
+        screen = "dark terminal screen, red warning text flickering, slow zoom on vulnerability alert"
+        with self.assertRaises(vj.SpecError) as cm:
+            vj.normalize_spec(vj.spec_from_scene_args("t", [f"one :: ltx: {screen}"], "16:9"))
+        self.assertIn("scene 01", str(cm.exception))
+        self.assertIn("'terminal'", str(cm.exception))
+        ok = vj.normalize_spec(vj.spec_from_scene_args("t", [f"one :: ltx: {screen}"], "16:9", allow_screens=True))
+        self.assertEqual(ok["scenes"][0]["visual"]["kind"], "ltx")
+        physical = "slow push-in on an empty desk at night, a lamp over a closed laptop, rain on the window"
+        with self.assertRaises(vj.SpecError):   # 'window' is a screen word; the lint is deliberately strict
+            vj.normalize_spec(vj.spec_from_scene_args("t", [f"one :: ltx: {physical}"], "16:9"))
+        physical = "slow push-in on an empty desk at night, a lamp over a closed laptop, rain on the glass"
+        self.assertEqual(vj.normalize_spec(vj.spec_from_scene_args("t", [f"one :: ltx: {physical}"], "16:9"))
+                         ["scenes"][0]["visual"]["kind"], "ltx")
+        # text and card scenes are never linted: their prompts are backgrounds and posters
+        vj.normalize_spec(vj.spec_from_scene_args("t", ["one :: text: THE DASHBOARD ; a screen full of green"], "16:9"))
+
     def test_background_gist_stops_at_the_first_sentence(self):
         p = vj.auto_background_prompt("We kept looking at the model. But the constraint was never the silicon.")
         self.assertIn("evoking: We kept looking at the model.", p)
