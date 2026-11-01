@@ -58,7 +58,8 @@ class FakeTools:
         elif name == "captions.py":
             for mp3 in Path(args[0]).glob("*.mp3"):
                 mp3.with_suffix(".captions.json").write_text(json.dumps(
-                    [{"text": "hello", "startMs": 0, "endMs": 400}, {"text": "there", "startMs": 400, "endMs": 800}]))
+                    [{"text": "hello", "startMs": 0, "endMs": 400}, {"text": "/", "startMs": 400, "endMs": 450},
+                     {"text": "there", "startMs": 450, "endMs": 800}]))
         elif name == "music_gen.py":
             Path(args[args.index("--output") + 1]).write_bytes(b"music")
         cost = fallback_cost if rc == 0 else None
@@ -443,6 +444,8 @@ class TestEventsAndWarnings(Isolated):
         self.assertTrue(all("ts" in e for e in s["events"]))
         self.assertTrue(any("02" in w and "fast" in w for w in s["warnings"]))
         self.assertTrue(s["log_tail"])
+        words = json.loads((Path(job["project_dir"]) / "captions" / "words_01.json").read_text())
+        self.assertEqual(words[0]["text"], "hello there")          # the lone "/" is dropped
         t = vj.load_job(job["id"])["timings"]
         self.assertEqual({a["kind"] for a in t["assets"]}, {"ltx", "ideogram"})
         self.assertIn("build", t["steps"])

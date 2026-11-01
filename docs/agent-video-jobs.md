@@ -175,6 +175,8 @@ before that date were roughly double the actual spend.
 | `events` | timestamped list (last 200): each phase, tool start and finish (seconds, cost), each scene voiced (wpm), each asset made, captions engine or skip, music, QC findings, render size, publish, resume |
 | `timings`, `host` | per-step and per-asset seconds and the build rate, which this host's ETAs are calibrated from |
 | `resumes`, `pruned` | how many times the job was resumed; when its project tree was pruned |
+| `made` | outputs whose tool succeeded; resume reuses only these, so a half-written file is bought again |
+| `ledger_usd` | reserve mode: what the shared ledger holds for this job right now (settles net to `actual_usd`) |
 | `output` | `mp4`, `url`, `r2_key`, `duration_s`, `size_bytes`, `qc` |
 | `error`, `error_code` | `budget_exceeded`, `step_failed`, `worker_died`, `worker_never_started`, `worker_crash`, `cancelled` |
 | `worker_pid` | the detached worker; `status` marks the job `worker_died` if it is gone before a terminal phase |

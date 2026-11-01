@@ -1505,8 +1505,10 @@ def step_captions(job: dict, spec: dict, narration_s: float) -> dict:
         src = scene_dir / f"{s['id']}_{s['slug']}.captions.json"
         if not src.exists():
             continue
+        # a word with no letters or digits ("/", "&", "-") reads as a stray mark in a pill
         words = [{"w": c["text"].strip(), "s": c["startMs"] / 1000.0, "e": c["endMs"] / 1000.0}
-                 for c in json.loads(src.read_text(encoding="utf-8")) if c.get("text", "").strip()]
+                 for c in json.loads(src.read_text(encoding="utf-8"))
+                 if any(ch.isalnum() for ch in c.get("text", ""))]
         chunks = _chunk_words(words, caps.get("maxWords", 3), caps.get("maxChars", 22))
         _write_json_atomic(proj / "captions" / f"words_{s['id']}.json", chunks)
         written += 1
