@@ -128,6 +128,14 @@ Alternate cards and motion so the viewer gets a pattern interrupt every
   config. Works with any provider, and pairs with a brand's palette so one
   brand drives both look and narrator.
 
+## Title and headline overlays
+
+`scenes.json` may carry a top-level `"titleCard": {"text": "...", "seconds": 2.8}` and, per scene,
+`"overlay": {"headline": "...", "subline": "..."}`. The build animates them in (slide up and fade,
+an accent bar drawing across, the subline following) in the upper half of the frame, clear of the
+caption band. With `timing.startPad` at 0 the first scene is on screen from frame 0, so the
+Shorts/Reels cover is never black. `tools/video_job.py` writes both from a spec.
+
 ## Captions
 
 Karaoke pills, 1–3 words at a time, timed from whisper word timestamps but

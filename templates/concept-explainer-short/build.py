@@ -62,10 +62,11 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 VIDEO_EXTS = {".mp4", ".mov", ".webm"}
 
 _FONT_CANDIDATES = {
-    "Darwin": ["/System/Library/Fonts/Supplemental/Arial Bold.ttf"],
+    "Darwin": ["/System/Library/Fonts/Supplemental/Arial Bold.ttf", "/System/Library/Fonts/Helvetica.ttc"],
     "Linux": ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-              "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf"],
-    "Windows": ["C:/Windows/Fonts/arialbd.ttf"],
+              "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+              "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"],
+    "Windows": ["C:/Windows/Fonts/arialbd.ttf", "C:/Windows/Fonts/arial.ttf"],
 }
 
 
@@ -75,7 +76,10 @@ def _load_font(size: int):
             return ImageFont.truetype(path, size)
         except OSError:
             continue
-    return ImageFont.load_default()
+    try:
+        return ImageFont.load_default(size=size)   # Pillow >= 10.1: a scalable fallback
+    except TypeError:
+        return ImageFont.load_default()
 
 
 def _rgb(hex_color: str) -> tuple:
@@ -114,6 +118,105 @@ def render_caption_png(txt: str) -> str:
                          Image.LANCZOS)
     img.save(path)
     return str(path)
+
+
+def _wrap(draw, text: str, font, max_w: int) -> list[str]:
+    words, lines, cur = text.split(), [], ""
+    for w in words:
+        cand = (cur + " " + w).strip()
+        if cur and draw.textbbox((0, 0), cand, font=font)[2] > max_w:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = cand
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+def headline_png(text: str, size: int, fill: str, max_w: int, shadow: bool = True) -> str:
+    """Wrapped headline with a soft shadow, transparent background, cached."""
+    TEXT_CACHE.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha1(f"hl|{text}|{size}|{fill}|{max_w}".encode()).hexdigest()[:16]
+    path = TEXT_CACHE / f"{key}.png"
+    if path.exists():
+        return str(path)
+    font = _load_font(size)
+    probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    lines = _wrap(probe, text, font, max_w)
+    lh = int(size * 1.15)
+    widths = [probe.textbbox((0, 0), ln, font=font)[2] for ln in lines]
+    pad = size // 3
+    img = Image.new("RGBA", (max(widths) + pad * 2, lh * len(lines) + pad * 2), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    for i, ln in enumerate(lines):
+        x = (img.width - widths[i]) // 2
+        y = pad + i * lh
+        if shadow:
+            draw.text((x + 3, y + 4), ln, font=font, fill=(0, 0, 0, 150))
+        draw.text((x, y), ln, font=font, fill=(*_rgb(fill), 255),
+                  stroke_width=max(1, size // 40), stroke_fill=(*_rgb(PALETTE["ink"]), 120))
+    img.save(path)
+    return str(path)
+
+
+def _ease_out(t: float, d: float) -> float:
+    x = max(0.0, min(1.0, t / d))
+    return 1 - (1 - x) ** 3
+
+
+def scrim_png(height: int) -> str:
+    """A top-down dark gradient so headlines stay legible over a busy background."""
+    TEXT_CACHE.mkdir(parents=True, exist_ok=True)
+    path = TEXT_CACHE / f"scrim_{W}x{height}.png"
+    if path.exists():
+        return str(path)
+    img = Image.new("RGBA", (W, height), (0, 0, 0, 0))
+    px = img.load()
+    ink = _rgb(PALETTE["ink"])
+    for y in range(height):
+        t = y / height
+        a = int(175 * (1 - t) ** 1.6)
+        for x in range(W):
+            px[x, y] = (*ink, a)
+    img.save(path)
+    return str(path)
+
+
+def overlay_clips(headline: str, subline: str, start: float, duration: float, big: bool = False) -> list:
+    """Animated headline block: headline slides up and fades in, an accent bar draws across
+    beneath it, the subline follows. Sits in the upper half, clear of the caption band."""
+    out = []
+    if duration <= 0.8:
+        return out
+    vertical = H > W
+    out.append(ImageClip(scrim_png(int(H * 0.62))).with_start(start).with_duration(duration)
+               .with_position((0, 0)).with_effects([vfx.FadeIn(0.45), vfx.FadeOut(0.35)]))
+    size = int(W * (0.085 if vertical else 0.052) * (1.25 if big else 1.0))
+    max_w = int(W * 0.84)
+    y_top = int(H * (0.14 if vertical else 0.16))
+    hl = ImageClip(headline_png(headline, size, PALETTE["white"], max_w))
+    rise = 36
+    hl = (hl.with_start(start).with_duration(duration)
+            .with_position(lambda t: ("center", y_top + int(rise * (1 - _ease_out(t, 0.7)))))
+            .with_effects([vfx.FadeIn(0.45), vfx.FadeOut(0.35)]))
+    out.append(hl)
+    bar_w = int(W * 0.14)
+    bar_h = max(4, size // 12)
+    bar_y = y_top + hl.h + size // 5
+    bar = (ColorClip((bar_w, bar_h), color=_rgb(PALETTE["accent2"]))
+           .with_start(start + 0.25).with_duration(max(0.1, duration - 0.25))
+           .resized(lambda t: (max(2, int(bar_w * _ease_out(t, 0.6))), bar_h))
+           .with_position(lambda t: ((W - max(2, int(bar_w * _ease_out(t, 0.6)))) // 2, bar_y))
+           .with_effects([vfx.FadeOut(0.35)]))
+    out.append(bar)
+    if subline:
+        sub = ImageClip(headline_png(subline, int(size * 0.56), PALETTE["white"], max_w, shadow=True))
+        sub = (sub.with_start(start + 0.45).with_duration(max(0.1, duration - 0.45))
+                  .with_position(("center", bar_y + bar_h + size // 3))
+                  .with_effects([vfx.FadeIn(0.5), vfx.FadeOut(0.35)]))
+        out.append(sub)
+    return out
 
 
 def placeholder_png(scene: dict, idx: int) -> str:
@@ -178,7 +281,9 @@ def estimate_duration(text: str) -> float:
 
 
 def build() -> None:
-    scenes = json.loads((HERE / "scenes.json").read_text())["scenes"]
+    doc = json.loads((HERE / "scenes.json").read_text())
+    scenes = doc["scenes"]
+    title_card = doc.get("titleCard") or None
     dur_path = HERE / "vo_durations.json"
     durations = json.loads(dur_path.read_text()) if dur_path.exists() else {}
     if not durations:
@@ -210,8 +315,19 @@ def build() -> None:
                 print(f"     [missing {s['asset']} — placeholder card]")
             vis = ken_burns(placeholder_png(s, idx), scene_dur, zoom_in)
             zoom_in = not zoom_in
-        clips.append(vis.with_start(scene_start)
-                        .with_effects([vfx.FadeIn(XFADE), vfx.FadeOut(XFADE)]))
+        # the first scene is on screen from frame 0 (that frame is the cover on Shorts/Reels)
+        fx = [vfx.FadeOut(XFADE)] if idx == 0 and START_PAD == 0 else [vfx.FadeIn(XFADE), vfx.FadeOut(XFADE)]
+        clips.append(vis.with_start(scene_start).with_effects(fx))
+
+        ov = s.get("overlay") or {}
+        if idx == 0 and title_card and title_card.get("text"):
+            secs = min(float(title_card.get("seconds", 2.8)), scene_dur - 0.4)
+            clips += overlay_clips(title_card["text"], "", scene_start, secs, big=True)
+            if ov.get("headline"):
+                clips += overlay_clips(ov["headline"], ov.get("subline", ""),
+                                       scene_start + secs + 0.1, scene_dur - secs - 0.5)
+        elif ov.get("headline"):
+            clips += overlay_clips(ov["headline"], ov.get("subline", ""), scene_start + 0.35, scene_dur - 0.7)
 
         mp3 = HERE / "audio" / "scenes" / f"{s['id']}_{s['slug']}.mp3"
         if mp3.exists() and s["id"] in durations:

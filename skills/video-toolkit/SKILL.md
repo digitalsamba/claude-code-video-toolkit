@@ -69,9 +69,16 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
 
 - `format`: `9:16` (Shorts, Reels, TikTok) or `16:9` (YouTube, decks).
 - `visual.kind`: `ltx` (5 s motion b-roll, prompt the motion and atmosphere, never on-screen text),
-  `ideogram` (a designed card with legible text: **always a `caption` object**, filled from the template
-  below), `flux` (text-free still background, cheapest), `none` (gradient placeholder card, free).
-  Alternate motion and cards so there is a pattern interrupt every ~15 s.
+  `text` (constructed: a generated background that drifts, with `headline` and optional `subline`
+  animated in; about a cent), `ideogram` (a designed card with legible text: **always a `caption`
+  object**, filled from the template below), `flux` (text-free generated background), `none`
+  (placeholder, drafts only). A scene with no visual gets a generated background. Alternate motion
+  and constructed scenes so there is a pattern interrupt every ~15 s.
+- `voice`: a preset name (`"lugh"`, from `assets/voices/lugh.json`) or an object. The title animates
+  over the first scene and a soft music bed is mixed in by default; `"titleCard": false` and
+  `"music": false` turn them off.
+- **No JSON at all:** `--scene "narration :: ltx: motion prompt"` per scene, `--scene "narration ::
+  text: HEADLINE ; subline"`, `--title`, `--voice lugh`. See the docs page for the full flat form.
 - Scene 1 must hook in one sentence. Scene N is the call to action. Captions are burned from the script text,
   so write every scene exactly as it should appear.
 - Optional: `"music": {"enabled": true, "prompt": "..."}` (off by default), `"brand": "digital-samba"`,

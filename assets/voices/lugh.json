@@ -1,0 +1,8 @@
+{
+  "note": "Lugh's narration voice: a Qwen3-TTS clone of assets/voices/lugh-ref-expressive.wav (the Praat-expanded reference from release 650; Conal OK'd it being public 2026-10-21). The .wav is gitignored like every voice sample; copy it beside this file. Used by tools/video_job.py --voice lugh.",
+  "provider": "qwen3",
+  "cloud": "modal",
+  "refAudio": "assets/voices/lugh-ref-expressive.wav",
+  "refText": "Good morning. I've had a look through last night's tickets. There's one that needs your attention from the key meeting team. Nothing urgent, but I'd like to flag it before we move on to the support queue.",
+  "maxWpm": 165
+}

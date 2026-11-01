@@ -65,7 +65,8 @@ class TestEstimate(Isolated):
                     + 1 * vj.PRICES["ltx_clip"] + narration_s * vj.PRICES["captions_per_audio_second"]["scribe"])
         self.assertAlmostEqual(a["estimate_usd"], round(expected, 4), places=4)
         self.assertEqual(a["scenes"], 3)
-        self.assertEqual({r["step"] for r in a["breakdown"]}, {"voiceover", "visuals", "captions"})
+        self.assertEqual({r["step"] for r in a["breakdown"]}, {"voiceover", "visuals", "captions", "music"})
+        self.assertEqual(next(r for r in a["breakdown"] if r["step"] == "music")["usd"], 0.0)  # acemusic is free
         self.assertEqual(a["prices_version"], vj.PRICES_VERSION)
 
     def test_prices_follow_the_spec_knobs(self):
@@ -98,10 +99,15 @@ class TestEstimate(Isolated):
         n = vj.normalize_spec({"scenes": [{"text": "one", "visual": {"kind": "ltx", "prompt": "p"}},
                                           {"text": "two", "visual": {"kind": "ideogram", "prompt": "p"}},
                                           {"text": "three"}]})
-        self.assertEqual([s["visual"]["kind"] for s in n["scenes"]], ["ltx", "ideogram", "none"])
+        self.assertEqual([s["visual"]["kind"] for s in n["scenes"]], ["ltx", "ideogram", "flux"])
         self.assertEqual(n["scenes"][0]["asset"], "clips/01_one.mp4")
         self.assertEqual(n["scenes"][1]["asset"], "images/02_two.png")
-        self.assertEqual(n["scenes"][2]["asset"], "")              # placeholder card, costs nothing
+        self.assertIn("no text", n["scenes"][2]["visual"]["prompt"])   # a generated background, about a cent
+        d = vj.normalize_spec({"draft": True, "scenes": [{"text": "three"}]})
+        self.assertEqual(d["scenes"][0]["visual"]["kind"], "none")  # drafts keep the free placeholder
+        tx = vj.normalize_spec({"scenes": [{"text": "x", "visual": {"kind": "text", "headline": "HI", "subline": "s"}}]})
+        self.assertEqual(tx["scenes"][0]["overlay"], {"headline": "HI", "subline": "s"})
+        self.assertTrue(tx["titleCard"]["text"])
 
 
 class TestCapAndLock(Isolated):

@@ -40,6 +40,8 @@ class TestAgentSeams(Isolated):
 
     def test_reserve_mode_books_the_estimate_once(self):
         os.environ["VIDEO_JOB_RESERVE_AT_SUBMIT"] = "1"
+        real_spawn = vj.spawn_worker
+        vj.spawn_worker = lambda job_id: 0          # never start a real (paid) worker from a test
         try:
             s = json.dumps(spec())
             out, err = io.StringIO(), io.StringIO()
@@ -60,6 +62,7 @@ class TestAgentSeams(Isolated):
             # a worker that was started elsewhere is gone: cancel so the lock is free
             vj.cancel(job_id)
         finally:
+            vj.spawn_worker = real_spawn
             os.environ.pop("VIDEO_JOB_RESERVE_AT_SUBMIT", None)
 
     def test_actual_mode_is_the_default_outside_longarm(self):

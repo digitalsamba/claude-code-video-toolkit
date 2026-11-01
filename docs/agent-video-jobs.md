@@ -62,15 +62,32 @@ Exit codes: 0 ok, 1 bad request, 2 refused or not ready (`budget_exceeded`, `no_
 |---|---|
 | `format` | `9:16` (1080x1920) or `16:9` (1920x1080). Default 9:16. |
 | `scenes[].text` | Narration, verbatim. Captions burn this text. ~2.4 words a second. |
-| `scenes[].visual.kind` | `ltx` (5 s motion clip), `ideogram` (designed card with legible text), `flux` (text-free still), `none` (placeholder card). A scene with no `visual` gets `none`. |
+| `scenes[].visual.kind` | `ltx` (5 s motion clip, looped), `text` (constructed: a generated background that drifts plus the scene's `headline` and optional `subline` animated in), `ideogram` (designed card with legible text), `flux` (text-free generated background), `none` (placeholder card). A scene with no `visual` gets `flux` with a prompt built from its narration, or `none` when the spec says `"draft": true`. Any non-ideogram kind may carry `headline`/`subline` too. |
 | `scenes[].visual.prompt` / `caption` | `prompt` for `ltx` and `flux`. For `ideogram`, always a JSON `caption`: `presets --json` prints `ideogram_caption_template` to fill in (a plain `prompt` works but adds filler text to the card). Optional per-scene `speed`, `numFrames`, `negativePrompt` (LTX gets a text-and-logo-excluding default), `seed`. |
-| `voice` | Merged over the template's voice block: `provider` (qwen3, elevenlabs, 60db), `speaker`, `tone`, `refAudio` + `refText` for a clone, `maxWpm`, `brand`, `voiceId`. |
+| `voice` | An object merged over the template's voice block (`provider`, `speaker`, `tone`, `refAudio` + `refText` for a clone, `maxWpm`, `brand`, `voiceId`), or a preset name: `assets/voices/<name>.json` (a clone; the audio file beside it is gitignored, copy it) or a brand with a `voice.json`. `--voice lugh` on the CLI. |
 | `captions` | `{"enabled": true, "engine": "auto"}`. `auto` is Scribe when `ELEVENLABS_API_KEY` is set, else local whisper; neither available means the job renders without captions and says so. |
-| `music` | `{"enabled": false}` by default. `{"enabled": true, "prompt": "...", "provider": "acemusic"}` adds a ducked, looped bed. |
+| `music` | On by default (a subtle ambient bed from the free acemusic API, looped and ducked under the narration); `false`, a prompt string, or `{"enabled", "prompt", "provider"}`. Skipped with a log line when the key is missing. |
+| `titleCard` | On by default: the title animates in over the first scene for 2.8 s (so frame 0, the Shorts cover, is never empty). `false` to skip, or `{"text", "seconds"}`. |
 | `ideogram.speed` | `TURBO` $0.03, `DEFAULT` $0.06, `QUALITY` $0.10 per image. |
 | `brand`, `palette` | A `brands/<name>` for voice and Ideogram colours; palette overrides for the placeholder cards and caption pills. |
 
 Normalisation adds `id` (`01`, `02`...) and `asset` paths; `jobs/<id>/spec.json` is the normalised copy.
+
+### The flat form (no JSON)
+
+For callers that can't reliably write nested JSON (an open model with no editor, or a person at a
+terminal), scenes are plain strings, one per `--scene`:
+
+```bash
+uv run tools/video_job.py submit --format 16:9 --voice lugh --title "The Real Bottleneck" --max-usd 2 \
+  --scene "AI gets cheaper every month. Your PlayStation just doubled in price. :: ltx: slow push-in through a dark server room, blue lights pulsing" \
+  --scene "Compute is the new scarce thing. :: text: COMPUTE IS THE SCARCE THING ; the price of intelligence falls, the price of silicon climbs" \
+  --scene "One prompt. One agent. A finished video. :: text: ONE PROMPT ; made by Lugh, start to finish"
+```
+
+After the narration and ` :: `: `ltx: <motion prompt>`, `text: <HEADLINE> ; <subline>`,
+`card: <HEADLINE> ; <object>` (Ideogram), `flux: <prompt>`, or nothing (a generated background).
+`--music "..."`, `--no-music`, `--draft` and `--no-title-card` set the rest.
 
 ## Brief → spec
 

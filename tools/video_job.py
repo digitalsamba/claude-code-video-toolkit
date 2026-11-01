@@ -105,7 +105,16 @@ FORMATS = {
     },
 }
 
-VISUAL_KINDS = ("ideogram", "ltx", "flux", "none")
+VISUAL_KINDS = ("ideogram", "ltx", "flux", "text", "none")
+# "text" is a constructed visual: a generated text-free background (FLUX) with the scene's
+# headline and an accent bar animated in by the build. Deterministic typography, motion
+# from the Ken Burns drift and the reveal, about a cent. "flux" is the same background
+# without the headline, and is what a scene with no visual at all gets.
+BACKGROUND_STYLE = ("deep navy and electric blue, soft volumetric light, subtle abstract geometric forms, "
+                    "shallow depth of field, cinematic, high detail, no text, no words, no letters, no logos")
+DEFAULT_MUSIC_PROMPT = ("subtle ambient electronic bed for a short explainer video, soft warm pads, slow "
+                        "pulse, minimal, no vocals, no drums, calm and modern")
+TITLE_CARD_SECONDS = 2.8
 WORDS_PER_SECOND = 2.4          # narration pace the template budgets with
 CHARS_PER_WORD = 5.8            # for ElevenLabs per-character pricing
 DEFAULT_MAX_USD = 2.00
@@ -274,6 +283,26 @@ class SpecError(ValueError):
     pass
 
 
+def auto_background_prompt(text: str, hint: str | None = None) -> str:
+    """A text-free FLUX background that evokes the narration. The words themselves never
+    go into the image; captions and the headline overlay carry them."""
+    gist = (hint or " ".join(text.split()[:18])).strip().rstrip(".")
+    return f"Abstract cinematic background evoking: {gist}. {BACKGROUND_STYLE}"
+
+
+def load_voice_preset(name: str) -> dict:
+    """assets/voices/<name>.json (a clone: refAudio + refText + provider), else a brand's
+    voice.json by name. Paths inside are relative to the toolkit root."""
+    pf = ROOT / "assets" / "voices" / f"{name}.json"
+    if pf.exists():
+        v = json.loads(pf.read_text(encoding="utf-8"))
+        v.pop("note", None)
+        return v
+    if (ROOT / "brands" / name / "voice.json").exists():
+        return {"brand": name}
+    raise SpecError(f"unknown voice preset {name!r}: no assets/voices/{name}.json and no brands/{name}/")
+
+
 def normalize_spec(spec: dict) -> dict:
     """Fill defaults, derive ids and asset paths, and validate. Returns a new dict."""
     if not isinstance(spec, dict):
@@ -288,8 +317,10 @@ def normalize_spec(spec: dict) -> dict:
     if not isinstance(scenes, list) or not scenes:
         raise SpecError("spec.scenes must be a non-empty list")
     voice = out.get("voice") or {}
+    if isinstance(voice, str):
+        voice = load_voice_preset(voice)
     if not isinstance(voice, dict):
-        raise SpecError("spec.voice must be an object")
+        raise SpecError("spec.voice must be an object or a preset name")
     voice.setdefault("provider", "qwen3")
     if voice["provider"] not in ("qwen3", "elevenlabs", "60db"):
         raise SpecError("spec.voice.provider must be qwen3, elevenlabs or 60db")
@@ -299,10 +330,21 @@ def normalize_spec(spec: dict) -> dict:
     caps.setdefault("enabled", True)
     caps.setdefault("engine", "auto")
     out["captions"] = caps
-    music = out.get("music") or {}
-    music.setdefault("enabled", False)
+    music = out.get("music")
+    if music is None or music is True:
+        music = {}
+    elif music is False:
+        music = {"enabled": False}
+    elif isinstance(music, str):
+        music = {"prompt": music}
+    music.setdefault("enabled", True)        # free on the acemusic API; the build ducks it
     music.setdefault("provider", "acemusic")
+    music.setdefault("prompt", DEFAULT_MUSIC_PROMPT)
     out["music"] = music
+    tc = out.get("titleCard", True)
+    out["titleCard"] = ({"text": out["title"], "seconds": TITLE_CARD_SECONDS} if tc is True
+                        else ({**tc, "seconds": tc.get("seconds", TITLE_CARD_SECONDS)} if isinstance(tc, dict) else None))
+    draft = bool(out.get("draft"))
     ideo = out.get("ideogram") or {}
     ideo.setdefault("speed", "DEFAULT")
     if ideo["speed"] not in PRICES["ideogram_image"]:
@@ -327,12 +369,18 @@ def normalize_spec(spec: dict) -> dict:
         if isinstance(vis, str):
             vis = {"kind": vis}
         if vis is None:
-            vis = {"kind": "none"}  # no visual named: placeholder card, never a surprise paid asset
+            # no visual named: a generated background (about a cent) unless this is a draft
+            vis = {"kind": "none"} if draft else {"kind": "flux", "prompt": auto_background_prompt(text)}
         if not isinstance(vis, dict):
             raise SpecError(f"scene {s['id']}: visual must be an object")
         kind = vis.get("kind") or "none"
         if kind not in VISUAL_KINDS:
             raise SpecError(f"scene {s['id']}: visual.kind must be one of {', '.join(VISUAL_KINDS)}")
+        if kind == "text":
+            if not vis.get("headline"):
+                raise SpecError(f"scene {s['id']}: visual.text needs a headline")
+            vis["headline"] = str(vis["headline"]).strip()
+            vis["prompt"] = vis.get("prompt") or auto_background_prompt(text, vis.get("background"))
         if kind != "none" and not (vis.get("prompt") or vis.get("caption")):
             raise SpecError(f"scene {s['id']}: visual.{kind} needs a prompt (or a caption for ideogram)")
         cap = vis.get("caption")
@@ -347,10 +395,16 @@ def normalize_spec(spec: dict) -> dict:
         s["visual"] = vis
         if kind == "ltx":
             s["asset"] = f"clips/{s['id']}_{slug}.mp4"
-        elif kind in ("ideogram", "flux"):
+        elif kind in ("ideogram", "flux", "text"):
             s["asset"] = f"images/{s['id']}_{slug}.png"
         else:
             s["asset"] = ""
+        # an animated headline the build lays over the visual (text kind always; any
+        # non-ideogram kind may carry one)
+        if kind == "text":
+            s["overlay"] = {"headline": vis["headline"], "subline": (vis.get("subline") or "").strip()}
+        elif kind != "ideogram" and vis.get("headline"):
+            s["overlay"] = {"headline": str(vis["headline"]).strip(), "subline": (vis.get("subline") or "").strip()}
     out["scenes"] = scenes
     return out
 
@@ -362,9 +416,11 @@ def skeleton_spec(brief: str, fmt: str = "9:16", duration_s: int = 45) -> dict:
     words = max(8, round(duration_s * WORDS_PER_SECOND / n))
     scenes = []
     for i in range(n):
-        kind = "ltx" if i % 2 == 0 else "ideogram"
-        scenes.append({"slug": f"scene{i + 1}", "words": words, "text": "",
-                       "visual": {"kind": kind, "prompt": "(from brief)"}})
+        kind = "ltx" if i % 2 == 0 else "text"
+        vis = {"kind": kind, "prompt": "(from brief)"}
+        if kind == "text":
+            vis["headline"] = "(from brief)"
+        scenes.append({"slug": f"scene{i + 1}", "words": words, "text": "", "visual": vis})
     return {"title": brief.strip()[:80] or "Untitled", "format": fmt,
             "brief": brief, "duration_s": duration_s, "scenes": scenes}
 
@@ -405,9 +461,10 @@ def estimate(spec: dict) -> dict:
     if kinds["ltx"]:
         rows.append({"step": "visuals", "unit": "ltx clip", "count": kinds["ltx"],
                      "unit_usd": PRICES["ltx_clip"], "usd": kinds["ltx"] * PRICES["ltx_clip"]})
-    if kinds["flux"]:
-        rows.append({"step": "visuals", "unit": "flux image", "count": kinds["flux"],
-                     "unit_usd": PRICES["flux_image"], "usd": kinds["flux"] * PRICES["flux_image"]})
+    n_flux = kinds["flux"] + kinds["text"]
+    if n_flux:
+        rows.append({"step": "visuals", "unit": "flux background", "count": n_flux,
+                     "unit_usd": PRICES["flux_image"], "usd": n_flux * PRICES["flux_image"]})
 
     if spec["captions"]["enabled"]:
         engine = spec["captions"]["engine"]
@@ -543,7 +600,8 @@ def parse_spec_text(text: str) -> dict:
                     "--spec-json @path/to/spec.json")
 
 
-def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str) -> dict:
+def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: str | None = None,
+                         music: str | bool | None = None, draft: bool = False, title_card: bool = True) -> dict:
     """The flat form, for callers that can't reliably write nested JSON (an open model
     with no editor). One string per scene:
 
@@ -552,6 +610,8 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str) -> dict
         "narration text :: card: ONE EXTRA DAY ; an amber calendar icon showing 29"
                                                           -> ideogram card (headline ; object)
         "narration text :: flux: soft navy gradient"       -> text-free still
+        "narration text :: text: ONE EXTRA DAY ; why February grows"
+                                                          -> generated background + animated headline (; subline)
 
     The separator is ' :: ' and the kind is the word before the first colon after it."""
     out_scenes = []
@@ -573,6 +633,12 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str) -> dict
                     raise SpecError(f"--scene {i + 1}: card needs a headline, e.g. 'card: ONE EXTRA DAY ; an amber calendar'")
                 visual = {"kind": "ideogram", "caption": {"headline": headline,
                                                           "object": obj.strip() or "a single simple icon, centered"}}
+            elif kind in ("text", "headline", "title"):
+                headline, _, sub = rest.partition(";")
+                headline = headline.strip().strip('"')
+                if not headline:
+                    raise SpecError(f"--scene {i + 1}: text needs a headline, e.g. 'text: ONE EXTRA DAY ; a subline'")
+                visual = {"kind": "text", "headline": headline, "subline": sub.strip()}
             elif kind in ("ltx", "clip", "video"):
                 visual = {"kind": "ltx", "prompt": rest}
             elif kind in ("flux", "still", "background"):
@@ -584,7 +650,13 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str) -> dict
             if visual["kind"] in ("ltx", "flux") and not visual.get("prompt"):
                 raise SpecError(f"--scene {i + 1}: {kind} needs a prompt after the colon")
         out_scenes.append({"text": text, "visual": visual})
-    return {"title": title or out_scenes[0]["text"][:60], "format": fmt, "scenes": out_scenes}
+    spec = {"title": title or out_scenes[0]["text"][:60], "format": fmt, "scenes": out_scenes,
+            "draft": draft, "titleCard": title_card}
+    if voice:
+        spec["voice"] = voice
+    if music is not None:
+        spec["music"] = music
+    return spec
 
 
 def resolve_spec(brief: str | None, spec_path: str | None, fmt: str, duration_s: int,
@@ -819,9 +891,19 @@ def create_project(job: dict, spec: dict) -> Path:
         config["palette"] = {**config["palette"], **spec["palette"]}
     _write_json_atomic(dest / "config.json", config)
 
-    scenes = [{"id": s["id"], "slug": s["slug"], "visual": s["visual"]["kind"],
-               "asset": s["asset"], "text": s["text"]} for s in spec["scenes"]]
-    _write_json_atomic(dest / "scenes.json", {"title": spec["title"], "scenes": scenes})
+    config["music"] = {**config.get("music", {}), "volume": 0.12}
+    config["timing"] = {**config.get("timing", {}), "startPad": 0.0}   # frame 0 is the cover
+    _write_json_atomic(dest / "config.json", config)
+
+    scenes = []
+    for s in spec["scenes"]:
+        row = {"id": s["id"], "slug": s["slug"], "visual": s["visual"]["kind"],
+               "asset": s["asset"], "text": s["text"]}
+        if s.get("overlay"):
+            row["overlay"] = s["overlay"]
+        scenes.append(row)
+    _write_json_atomic(dest / "scenes.json", {"title": spec["title"], "titleCard": spec.get("titleCard"),
+                                              "scenes": scenes})
     return dest
 
 
@@ -906,7 +988,7 @@ def _visual_args(spec: dict, s: dict, proj: Path) -> tuple[str, list[str], float
         if vis.get("quality"):
             args += ["--quality", vis["quality"]]
         return "ltx2.py", args, PRICES["ltx_clip"]
-    if kind == "flux":
+    if kind in ("flux", "text"):
         w, h = fmt["flux"]
         args = ["--prompt", vis["prompt"], "--width", str(w), "--height", str(h),
                 "--output", str(out), "--no-open", "--json", "--progress", "json",
@@ -984,11 +1066,9 @@ def step_music(job: dict, spec: dict, total_s: float) -> dict:
     proj = _project(job)
     music = spec["music"]
     out = proj / "audio" / "music.mp3"
-    args = ["--prompt", music.get("prompt") or "subtle ambient background, soft pads, no vocals",
-            "--duration", str(int(min(240, total_s + 6))), "--output", str(out),
-            "--no-open", "--progress", "json", "--json"]
-    if music.get("provider") and music["provider"] != "acemusic":
-        args += ["--cloud", music["provider"]]
+    args = ["--prompt", music.get("prompt") or DEFAULT_MUSIC_PROMPT,
+            "--duration", str(int(min(240, max(30, total_s + 8)))), "--output", str(out),
+            "--progress", "json", "--json", "--cloud", music.get("provider") or "acemusic"]
     unit = PRICES["music_track"].get(music.get("provider", "acemusic"), 0.03)
     r = run_tool(job, "music_gen.py", args, fallback_cost=unit)
     if r["returncode"] != 0 or not out.exists():
@@ -1050,12 +1130,25 @@ def step_publish(job: dict, spec: dict, final: Path) -> dict:
     shutil.copy2(final, dest)
     out = {"mp4": str(dest), "duration_s": _probe_duration(dest), "size_bytes": dest.stat().st_size,
            "url": None, "r2_key": None, "published": None}
+    sheet = dest.with_name(dest.stem + "-sheet.png")
+    dur = out["duration_s"] or 30
+    try:
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(dest),
+                        "-vf", f"fps=1/{max(1.0, dur / 8):.3f},scale=480:-1,tile=4x2", str(sheet)],
+                       capture_output=True, timeout=120, check=True)
+        out["sheet"] = str(sheet)
+    except (OSError, subprocess.SubprocessError) as e:
+        log_line(job, f"contact sheet skipped: {e}")
     if job.get("publish_to"):
         target = Path(job["publish_to"])
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(final, target)
         out["published"] = str(target)
         log_line(job, f"copied to {target}")
+        if out.get("sheet"):
+            ts = target.with_name(target.stem + "-sheet.png")
+            shutil.copy2(sheet, ts)
+            out["published_sheet"] = str(ts)
     try:
         from file_transfer import get_r2_client, upload_to_r2
         client, _ = get_r2_client()
@@ -1287,11 +1380,15 @@ def presets() -> dict:
             "ltx": "5 s motion b-roll from a prompt (LTX-2.3 on Modal); describe motion and atmosphere, no text",
             "ideogram": "designed still with legible text (Ideogram 4); fill ideogram_caption_template into "
                         "visual.caption (a plain prompt works but adds filler text to the card)",
-            "flux": "text-free still background (FLUX.2 Klein on Modal, cheapest)",
+            "flux": "text-free generated background with a slow drift (FLUX.2 Klein on Modal, about a cent); "
+                    "what a scene with no visual gets",
+            "text": "constructed visual: generated background + the scene's headline and an accent bar animated in "
+                    "(headline, optional subline, optional background hint); about a cent",
             "none": "gradient placeholder card with the scene slug",
         },
         "voice_defaults": {"provider": "qwen3", "speaker": "Ryan", "maxWpm": 165,
-                           "providers": ["qwen3", "elevenlabs", "60db"]},
+                           "providers": ["qwen3", "elevenlabs", "60db"],
+                           "presets": sorted(p.stem for p in (ROOT / "assets" / "voices").glob("*.json"))},
         "defaults": {"max_usd": DEFAULT_MAX_USD, "duration_s": 45, "format": "9:16",
                      "words_per_second": WORDS_PER_SECOND},
         "spec_example": SPEC_EXAMPLE,
@@ -1351,6 +1448,11 @@ def main(argv: list[str] | None = None) -> int:
                        help="Flat form, repeatable, one per scene: narration, then optionally ' :: ltx: motion "
                             "prompt', ' :: card: HEADLINE ; object', ' :: flux: prompt'. No JSON needed")
         p.add_argument("--title", help="Video title (flat form; default: the first scene's text)")
+        p.add_argument("--voice", help="Voice preset: assets/voices/<name>.json (a clone) or a brand name")
+        p.add_argument("--music", help="Music bed prompt (default: a subtle ambient bed; it's free on acemusic)")
+        p.add_argument("--no-music", action="store_true", help="No music bed")
+        p.add_argument("--draft", action="store_true", help="Scenes without a visual get a plain placeholder instead of a generated background")
+        p.add_argument("--no-title-card", action="store_true", help="Skip the animated title over the first scene")
         p.add_argument("--format", choices=list(FORMATS), default=None, help="Output format (default 9:16)")
         p.add_argument("--duration", type=int, default=45, help="Target seconds, for --brief (default 45)")
         if with_max:
@@ -1380,7 +1482,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd in ("estimate", "submit", "spec"):
             fmt = args.format or "9:16"
             if args.scene:
-                spec, source = normalize_spec(spec_from_scene_args(args.title, args.scene, fmt)), "scenes"
+                music = False if args.no_music else (args.music or None)
+                spec, source = normalize_spec(spec_from_scene_args(
+                    args.title, args.scene, fmt, voice=args.voice, music=music, draft=args.draft,
+                    title_card=not args.no_title_card)), "scenes"
             elif args.spec_json:
                 spec, source = normalize_spec(parse_spec_text(args.spec_json)), "spec"
             else:
@@ -1388,6 +1493,9 @@ def main(argv: list[str] | None = None) -> int:
                                             allow_skeleton=(args.cmd == "estimate"))
             if args.format and args.spec:
                 spec["format"] = args.format
+                spec = normalize_spec(spec)
+            if args.voice and not args.scene:
+                spec["voice"] = load_voice_preset(args.voice)
                 spec = normalize_spec(spec)
             if args.cmd == "spec":
                 _print(spec, True)
