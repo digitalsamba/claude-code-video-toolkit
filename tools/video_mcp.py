@@ -19,7 +19,8 @@ Claude Desktop / Claude Code (one line in the client's MCP config):
 Any other MCP client: spawn the same command and speak MCP over its stdin/stdout.
 
 Tools: video_estimate, video_submit, video_status, video_result, video_list_presets
-(plus video_list and video_cancel, which cost nothing to expose).
+(plus video_list, video_cancel and video_resume, which cost nothing to expose). Every tool
+returns a dict with `ok`; failures carry `error` and `error_code`, never an exception.
 """
 from __future__ import annotations
 
@@ -47,7 +48,9 @@ mcp = FastMCP(
         "shape) -> write a spec -> video_estimate -> video_submit -> poll video_status every "
         "20-30 s until done -> video_result for the MP4 path and URL. You are the LLM: write the "
         "spec yourself (scenes with narration text and a visual prompt each) rather than passing "
-        "a brief, unless the server has a VIDEO_JOB_EXPANDER configured."
+        "a brief, unless the server has a VIDEO_JOB_EXPANDER configured. video_status has an "
+        "`events` list (what started and finished) and `warnings` to pass on to the user; a failed "
+        "job with `resumable: true` can be carried on with video_resume, paying only for what is missing."
     ),
 )
 
@@ -73,6 +76,8 @@ def video_estimate(spec: dict | None = None, brief: str | None = None, format: s
         return {"ok": True, **vj.estimate(s), "spec_source": source}
     except (vj.SpecError, ValueError, vj.NoExpander, RuntimeError) as e:
         return _err(e, "bad_request")
+    except Exception as e:  # noqa: BLE001
+        return _err(e, "internal")
 
 
 @mcp.tool()
@@ -94,26 +99,55 @@ def video_submit(spec: dict | None = None, brief: str | None = None, format: str
         return _err(e, "no_expander")
     except (vj.SpecError, ValueError, RuntimeError) as e:
         return _err(e, "bad_request")
+    except Exception as e:  # noqa: BLE001
+        return _err(e, "internal")
+
+
+def _job_call(fn, job_id: str) -> dict:
+    try:
+        return {"ok": True, **fn(job_id)}
+    except vj.JobUnreadable as e:
+        return _err(e, "job_unreadable")
+    except (FileNotFoundError, vj.SpecError) as e:
+        return _err(e, "not_found")
+    except Exception as e:  # noqa: BLE001
+        return _err(e, "internal")
 
 
 @mcp.tool()
 def video_status(job_id: str) -> dict:
     """Phase (queued, voiceover, visuals, captions, music, build, qc, publish, done, failed,
-    cancelled), progress %, spend so far, any error, and the last log lines."""
-    try:
-        return {"ok": True, **vj.status(job_id)}
-    except (FileNotFoundError, vj.SpecError) as e:
-        return _err(e, "not_found")
+    cancelled), progress %, eta_s, spend so far, any error, `events` (timestamped: scenes
+    voiced, assets made, QC, publish), `warnings`, `resumable`, and the last log lines."""
+    return _job_call(vj.status, job_id)
 
 
 @mcp.tool()
 def video_result(job_id: str) -> dict:
-    """The finished MP4: local path, a download URL when R2 is configured, duration, QC verdict
-    and actual spend. `ready` is false until the job is done."""
+    """The finished MP4: local path, a download URL when R2 is configured, duration, size, QC
+    verdict, `warnings` to pass on, and actual spend. `ready` is false until the job is done."""
+    return _job_call(vj.result, job_id)
+
+
+@mcp.tool()
+def video_resume(job_id: str, max_usd: float | None = None) -> dict:
+    """Carry on a failed or cancelled job (status says `resumable: true`) from its first
+    missing output: voice, visuals, captions and music already made are reused, so only the
+    rest is paid for. `max_usd` raises the job's cap (needed after a budget_exceeded stop)."""
     try:
-        return {"ok": True, **vj.result(job_id)}
-    except (FileNotFoundError, vj.SpecError) as e:
+        j = vj.resume(job_id, max_usd=max_usd)
+        return {"ok": True, "id": j["id"], "phase": j["phase"], "resumes": j["resumes"],
+                "actual_usd": j.get("actual_usd"), "max_usd": j.get("max_usd")}
+    except vj.LockHeld as e:
+        return {**_err(e, "lock_held"), "holder": e.holder}
+    except vj.JobUnreadable as e:
+        return _err(e, "job_unreadable")
+    except FileNotFoundError as e:
         return _err(e, "not_found")
+    except vj.SpecError as e:
+        return _err(e, "not_resumable")
+    except Exception as e:  # noqa: BLE001
+        return _err(e, "internal")
 
 
 @mcp.tool()
@@ -124,7 +158,7 @@ def video_list_presets() -> dict:
 
 @mcp.tool()
 def video_list() -> list[dict]:
-    """Recent jobs, newest first."""
+    """Recent jobs, newest first (each with `resumable`)."""
     return vj.list_jobs()
 
 
@@ -136,6 +170,8 @@ def video_cancel(job_id: str) -> dict:
         return {"ok": True, "id": j["id"], "phase": j["phase"]}
     except (FileNotFoundError, vj.SpecError) as e:
         return _err(e, "not_found")
+    except Exception as e:  # noqa: BLE001
+        return _err(e, "internal")
 
 
 if __name__ == "__main__":
