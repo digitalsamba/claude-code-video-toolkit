@@ -33,10 +33,9 @@ captions, `cutdown.py`, `/thumbnail`, `modal_setup.py`, synthetic UI demos (`Sta
 
 Ordered roughly by priority. Each is sized to one session or one PR.
 
-- [ ] **Harden agent video jobs.** Fix the known problems before adding anything: size-targeted renders
-      under Discord's 10 MB attachment limit, a cost event on every failed call, `resume` after the worker
-      dies, per-host ETAs, a timestamped `events` list in `status`, `prune` for `jobs/`, build speed on
-      small CPUs, Windows, and a real MCP client run end to end.
+- [x] **Harden agent video jobs.** Done in #156 (2026-11-02): 10 MB-safe renders, a 3x faster build, a
+      cost event on every exit, `resume`, `prune`, `events`, `warnings`, per-host ETAs, MCP run end to end.
+      Windows is reviewed but still unrun.
 - [ ] **Narration-linked cues for `Stage`.** Resolve a phrase in a scene's `.captions.json` to a frame
       (`cue('click Save')`), so cursor clicks and camera moves follow the voiceover when it is regenerated
       or re-timed, instead of being hand-set frame numbers. Pays off on every release-notes video.
@@ -45,6 +44,11 @@ Ordered roughly by priority. Each is sized to one session or one PR.
       concept-explainer-short's 16:9 path. A contributor attempt (#127) had the right design.
 - [ ] **Transcript-driven highlights for `cutdown.py`.** Pick whole sentences from the captions JSON by
       keyword or score, so a short from a long render doesn't need hand-typed `--segment` times.
+- [ ] **Spec-driven release-notes job for Lugh.** A `ds-release-notes` path in `video_job.py`: the agent
+      writes scenes as "screen, action, target, narration" over the screen kits the template already has,
+      and gets the same submit/status/result flow. Covers only screens a kit already rebuilds. Until then
+      Lugh writes a release brief (`memory/release-videos/release-<N>.md` on longarm) and a Claude Code
+      session builds from it; build this once a few briefs show which scenes recur.
 - [ ] **`video_job.py wait`**: block up to a few minutes streaming stage lines, for agents with a
       per-call time limit.
 

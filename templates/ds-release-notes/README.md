@@ -30,6 +30,11 @@ The method is the `synthetic-ui-demo` skill; this template is its release-notes 
 Copy the template to `projects/release-<number>` (or let `/video` do it), set `RELEASE_NUMBER` and
 `RELEASE_MONTH` in `src/config.ts` and the `ITEMS` list in `src/scenes/Cards.tsx`, then:
 
+0. **Start from Lugh's brief if there is one.** Lugh (longarm) traces each item to code and writes a brief:
+   the click path, the exact UI strings, states, the commit and Jira key, and the narration split into
+   phrases. Read it with `ssh longarm cat /opt/longarm/lugh/memory/release-videos/release-<N>.md`. It covers
+   steps 1 and 2; still check its quoted strings against `origin/master`, and settle its "Open questions"
+   before building.
 1. **Read the release notes and trace each item to code.** Send one subagent per app (`react-frontend`,
    `react-dashboard`, `react-account-center`), reading `origin/master`, to return the exact strings, control order,
    defaults and the commit for each item. Local checkouts are often stale. Never paraphrase UI text.
