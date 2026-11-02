@@ -8,7 +8,7 @@ Install dependencies in `playwright/`, then run:
 
 ```bash
 cd playwright
-ppnpm install --frozen-lockfile --frozen-lockfile
+pnpm install --frozen-lockfile
 npx playwright install chromium
 pnpm flow -- record --url http://localhost:3000 --flow output/onboarding.json --mask '#email'
 pnpm flow -- replay --flow output/onboarding.json --output output/onboarding-v2
