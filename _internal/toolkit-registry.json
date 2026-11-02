@@ -222,6 +222,15 @@
     }
   },
   "tools": {
+    "asset_history": {
+      "path": "tools/asset_history.py",
+      "description": "Record, search and restore immutable asset versions",
+      "usage": "uv run tools/asset_history.py --project PROJECT list",
+      "status": "beta",
+      "created": "2026-10-31",
+      "category": "utility",
+      "updated": "2026-11-03"
+    },
     "voiceover": {
       "path": "tools/voiceover.py",
       "description": "Generate TTS voiceovers using ElevenLabs, Qwen3-TTS, or 60db",
