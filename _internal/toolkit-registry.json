@@ -222,15 +222,6 @@
     }
   },
   "tools": {
-    "dubbing": {
-      "path": "tools/dubbing.py",
-      "description": "Import diarized speakers, synchronize replacement voices and preserve background stems",
-      "usage": "uv run tools/dubbing.py --help",
-      "status": "beta",
-      "created": "2026-10-31",
-      "category": "utility",
-      "updated": "2026-11-03"
-    },
     "voiceover": {
       "path": "tools/voiceover.py",
       "description": "Generate TTS voiceovers using ElevenLabs, Qwen3-TTS, or 60db",
@@ -323,6 +314,16 @@
       },
       "created": "2025-12-28",
       "updated": "2026-10-12"
+    },
+    "dubbing": {
+      "path": "tools/dubbing.py",
+      "description": "Import diarized speakers, synchronize replacement voices and preserve background stems",
+      "usage": "uv run tools/dubbing.py --help",
+      "status": "beta",
+      "created": "2026-10-31",
+      "category": "utility",
+      "updated": "2026-11-03",
+      "documentation": "docs/dubbing.md"
     },
     "addmusic": {
       "path": "tools/addmusic.py",
