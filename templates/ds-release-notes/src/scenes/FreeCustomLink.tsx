@@ -5,15 +5,29 @@ import { Shell } from '../ac/Shell';
 import { C } from '../ac/theme';
 import { Avatar, Button, FieldLabel, Switch, TextField } from '../ac/primitives';
 import { press } from '../Cursor';
+import { voice } from '../cues';
+import line06a from '../../public/audio/scenes/06a_link.captions.json';
+import line06b from '../../public/audio/scenes/06b_link.captions.json';
 
 // DS Free custom room link warning: react-account-center schedule/_components/custom-slug.js (SAMBA-9671).
 // Inline red FormHelperText under the slug field, live while editing an existing call.
 export const LINK_LEN = 470;
-// 06a 'before' @73, 'change' @88; 06b 'save' @404
-const C_ = { field: 70, save: 404 };
+
+// Every action is anchored to the word it illustrates, so regenerating or re-timing the voice moves the
+// clicks, the typing, the cursor and the camera with it. Release.tsx places the audio from LINK_VOICE.lines.
+export const LINK_VOICE = voice([
+  { file: '06a_link', at: 10, captions: line06a },
+  { file: '06b_link', at: 256, captions: line06b },
+]);
+const { cue } = LINK_VOICE;
+const C_ = {
+  field: cue('before', { offset: -3 }), // click into the slug field as "before you change" starts
+  save: cue('save'), //                   "...when you save."
+};
 export const LINK_CLICKS = Object.values(C_);
-const TYPE_AT = 86;
+const TYPE_AT = cue('change', { offset: -2 }); // the slug changes on "change"
 export const LINK_TYPE_AT = TYPE_AT;
+const WARNING = cue('because'); // the warning's reason is read out from here
 const SUFFIX = '-q4';
 const BASE_SLUG = 'weekly-sync';
 
@@ -26,19 +40,19 @@ const saveBtn = { x: 1416 - 98, y: 149 };
 
 const PATH = [
   { f: 0, x: 760, y: 700 },
-  { f: 40, x: 760, y: 700 },
-  { f: 64, ...fieldEnd },
-  { f: 330, ...fieldEnd },
-  { f: 380, ...saveBtn },
+  { f: C_.field - 30, x: 760, y: 700 },
+  { f: C_.field - 6, ...fieldEnd }, // arrive just before the click
+  { f: C_.save - 74, ...fieldEnd },
+  { f: C_.save - 24, ...saveBtn },
 ];
 const CAMERA = [
   { f: 0, z: 1, x: 720, y: 405 },
-  { f: 30, z: 1, x: 720, y: 405 },
-  { f: 60, z: 1.55, x: 600, y: 470 },
-  { f: 140, z: 1.55, x: 600, y: 470 },
-  { f: 166, z: 1.75, x: 560, y: 540 },
-  { f: 320, z: 1.75, x: 560, y: 540 },
-  { f: 356, z: 1.15, x: 820, y: 330 },
+  { f: C_.field - 40, z: 1, x: 720, y: 405 },
+  { f: C_.field - 10, z: 1.55, x: 600, y: 470 }, // in on the field
+  { f: WARNING - 12, z: 1.55, x: 600, y: 470 },
+  { f: WARNING + 14, z: 1.75, x: 560, y: 540 }, // closer, onto the warning text
+  { f: C_.save - 84, z: 1.75, x: 560, y: 540 },
+  { f: C_.save - 48, z: 1.15, x: 820, y: 330 }, // out to the Save button
 ];
 
 const PARTICIPANTS = [
