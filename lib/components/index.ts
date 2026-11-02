@@ -56,6 +56,9 @@ export type { StageProps, CameraKeyframe } from './Stage';
 export { Cursor, cursorAt, press, near } from './Cursor';
 export type { CursorProps, CursorPoint } from './Cursor';
 
+export { voice, cueWords } from './cues';
+export type { Voice, VoicePhrase, CaptionWord, CueOptions } from './cues';
+
 // Utilities
 export { hexToRgba, SIZE_PRESETS, POSITION_PRESETS } from './utils';
 export type { SizePreset, PositionPreset } from './utils';

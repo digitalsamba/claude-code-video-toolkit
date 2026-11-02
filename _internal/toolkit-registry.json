@@ -1391,6 +1391,13 @@
       "created": "2026-10-21",
       "updated": "2026-10-21"
     },
+    "cues": {
+      "path": "lib/components/cues.ts",
+      "description": "Narration-linked cues for synthetic UI demos: voice([{file, at, captions}]) then cue('save') returns the scene frame a word starts on, from tools/captions.py's .captions.json, so clicks, cursor and camera keyframes follow the voice when it is regenerated or re-timed; options offset, edge, after, nth, in; an unsaid phrase fails the bundle",
+      "status": "beta",
+      "created": "2026-11-02",
+      "updated": "2026-11-02"
+    },
     "MazeDecoration": {
       "path": "lib/components/MazeDecoration.tsx",
       "description": "Animated isometric grid decoration for video corners with wave animation",
