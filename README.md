@@ -72,8 +72,6 @@ Then in Claude Code:
 
 ## Features
 
-See [local asset version history](docs/asset-history.md) for the standalone `asset_history.py` utility.
-
 ### Skills
 
 Claude Code has deep knowledge in:
