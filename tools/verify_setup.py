@@ -23,6 +23,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+# Node 18 and 20 are end of life (April 2025, April 2026); 22 is in maintenance and 24 is the active LTS.
+MIN_NODE_MAJOR = 22
+RECOMMENDED_NODE_MAJOR = 24
+
+
 def check_command(cmd: list[str]) -> tuple[bool, str]:
     """Check if a command exists and return its version."""
     try:
@@ -41,13 +46,21 @@ def check_prerequisites() -> list[dict]:
     """Check required and optional prerequisites."""
     results = []
 
-    # Node.js (required)
+    # Node.js (required). Still works on an end-of-life major, so it passes with a nudge.
     ok, version = check_command(["node", "--version"])
+    detail = version if ok else "Install from https://nodejs.org/"
+    if ok:
+        try:
+            major = int(version.lstrip("v").split(".")[0])
+        except ValueError:
+            major = None
+        if major is not None and major < MIN_NODE_MAJOR:
+            detail += f" (end of life; install Node {RECOMMENDED_NODE_MAJOR} LTS, e.g. nvm install {RECOMMENDED_NODE_MAJOR})"
     results.append({
         "name": "Node.js",
         "required": True,
         "ok": ok,
-        "detail": version if ok else "Install from https://nodejs.org/",
+        "detail": detail,
     })
 
     # Python (recommended)

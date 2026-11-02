@@ -6,7 +6,7 @@ This guide will help you create your first video using the claude-code-video-too
 
 ### Minimum (renders videos immediately)
 
-- [Node.js](https://nodejs.org/) 18+ — that's it
+- [Node.js](https://nodejs.org/) 22+ (24 LTS recommended) — that's it
 
 ### Optional: AI Voiceover
 
