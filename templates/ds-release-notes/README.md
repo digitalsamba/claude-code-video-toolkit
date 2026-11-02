@@ -51,7 +51,9 @@ Copy the template to `projects/release-<number>` (or let `/video` do it), set `R
    ```
 4. **Build the scenes.** Copy the closest existing scene file. Lay the screen out at fixed positions on the 1440x810
    canvas, export the rects that matter, and put every cursor keyframe, click, camera move and UI state switch in
-   the constants at the top. Put each click on the frame of the word that names it (`.captions.json`).
+   the constants at the top. Put each click on the word that names it with `cue()` (`src/cues.ts`), and anchor the
+   cursor and camera keyframes to those cues, so a re-timed phrase moves the whole scene with it;
+   `src/scenes/FreeCustomLink.tsx` shows the pattern. The other 650 scenes still carry hand-set frames.
 5. **Size each scene** to its phrases plus a beat and update the header comment in `Release.tsx`.
 6. **Check stills before rendering.** Render a still at every click frame and tile them; a guessed coordinate is
    usually 20-50px off once the camera zooms.

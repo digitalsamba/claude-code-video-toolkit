@@ -113,10 +113,11 @@ import { AnimatedBackground, SlideTransition, Label } from '../../../../lib/comp
 
 **Synthetic UI demos:** `Stage` (browser window, camera zoom/pan keyframes, cursor layer) and `Cursor` (eased
 keyframe path, click ripples) drive product screens rebuilt as static React from the app's source, so nothing is
-screen-recorded. Coordinates are canvas pixels (1440x810 by default) and every click is a frame number. For product
-walkthroughs and release-notes videos, prefer this to a Playwright recording when the app's source is readable. The
-method and its gotchas are in `.claude/skills/synthetic-ui-demo/`. The reference builds are
-`examples/ds-free-schedule-demo` and `examples/ds-release-649`, and their screen kits stay in the examples.
+screen-recorded. Coordinates are canvas pixels (1440x810 by default) and every click is a frame number, looked up
+from the narration with `cue('save')` (`lib/components/cues.ts`) so the scene follows the voice when it is
+re-timed. For product walkthroughs and release-notes videos, prefer this to a Playwright recording when the app's
+source is readable. The method and its gotchas are in `.claude/skills/synthetic-ui-demo/`. The reference builds
+are `examples/ds-free-schedule-demo` and `examples/ds-release-649`, and their screen kits stay in the examples.
 
 ## Python Tools
 

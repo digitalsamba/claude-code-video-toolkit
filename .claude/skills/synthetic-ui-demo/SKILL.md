@@ -87,7 +87,21 @@ and the default values to show.
   comment is the source of truth (see "Audio-Anchored Timelines" in CLAUDE.md).
 - Everything is a frame constant at the top of the scene file: cursor keyframes, `CLICKS`, camera keyframes,
   UI state switches (`frame >= C.save` shows the dialog). Export the click frames so the parent can place click SFX.
-- Time each click to land on the word that names it.
+- **Look the frames up from the narration, don't hand-set them.** `voice()` (`lib/components/cues.ts`; the
+  ds-release-notes template has a copy) takes the scene's phrases with their `.captions.json` and start frames, and
+  `cue('save')` returns the frame the word starts on. Anchor every action to the word it illustrates, with an offset,
+  and every cursor and camera keyframe to those anchors:
+  ```tsx
+  import line06a from '../../public/audio/scenes/06a_link.captions.json';
+  export const LINK_VOICE = voice([{ file: '06a_link', at: 10, captions: line06a }, ...]);
+  const { cue } = LINK_VOICE;
+  const C = { field: cue('before', { offset: -3 }), save: cue('save') };
+  const PATH = [{ f: C.field - 6, ...field }, { f: C.save - 24, ...saveBtn }];
+  ```
+  Regenerate or re-time a phrase and the clicks, typing, cursor and camera follow it. A cue whose words are no
+  longer said fails the bundle with the words that are. Options: `offset`, `edge: 'end'`, `after` (a frame, for a
+  repeated word), `nth`, `in` (one phrase). The parent places the audio from `LINK_VOICE.lines`, so a phrase's start
+  frame is written once. `templates/ds-release-notes/src/scenes/FreeCustomLink.tsx` is the worked example.
 
 ### 4. Split dense list lines at their pauses
 
@@ -133,5 +147,6 @@ or tablet mockup you build outside it, or its UI text is judged as the video's.
   inward, as the real app does.
 - **Hover states come from the cursor path.** Use `near(cursorAt(frame, PATH), target)` rather than a second set of
   frame constants, so moving a keyframe moves the hover with it.
-- **A changed voice line moves everything after it.** Re-measure, update the header comment and the scene lengths,
-  then re-check click stills. If a lip-synced narrator is driven by the assembled voice track, regenerate it too.
+- **A changed voice line moves everything after it.** In a cued scene the clicks, cursor and camera follow on their
+  own, but the scene length and the later phrases' `at` still need checking. In a hand-set scene, re-measure every
+  frame. Either way, update the header comment and the scene lengths, then re-check click stills. If a lip-synced narrator is driven by the assembled voice track, regenerate it too.

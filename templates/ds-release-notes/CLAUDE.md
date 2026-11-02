@@ -16,7 +16,7 @@ template ships as the release 650 build so it renders as is.
   `src/room/icon-paths.json`); the room theme from `src/theme/`.
 
 ## Layout
-- `src/Release.tsx`: scene order, lengths, VO start per phrase (`moreVo` for the later phrases of a line), SFX.
+- `src/Release.tsx`: scene order, lengths, VO start per phrase (`voice: [file, at][]`), SFX.
 - `src/Stage.tsx`: browser window, camera and cursor. Every UI scene sits inside one.
 - `src/room/`: room kit. Toolbar on the left (the default); active speaker shown only by a green mic.
 - `src/ac/`: account-center kit (shared with `examples/ds-free-schedule-demo`).

@@ -36,9 +36,8 @@ Ordered roughly by priority. Each is sized to one session or one PR.
 - [x] **Harden agent video jobs.** Done in #156 (2026-11-02): 10 MB-safe renders, a 3x faster build, a
       cost event on every exit, `resume`, `prune`, `events`, `warnings`, per-host ETAs, MCP run end to end.
       Windows is reviewed but still unrun.
-- [ ] **Narration-linked cues for `Stage`.** Resolve a phrase in a scene's `.captions.json` to a frame
-      (`cue('click Save')`), so cursor clicks and camera moves follow the voiceover when it is regenerated
-      or re-timed, instead of being hand-set frame numbers. Pays off on every release-notes video.
+- [x] **Narration-linked cues for `Stage`.** Done: `voice()` / `cue('save')` in `lib/components/cues.ts`, with
+      `FreeCustomLink` in ds-release-notes as the worked example (render unchanged frame for frame).
 - [ ] **Chaptered long-form template.** 10–30 min YouTube videos: render chapter by chapter with a cache,
       one continuous ducked music bed, -14 LUFS, chapter timestamps and an `.srt`. Probably built on
       concept-explainer-short's 16:9 path. A contributor attempt (#127) had the right design.
