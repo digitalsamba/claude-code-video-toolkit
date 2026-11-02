@@ -19,11 +19,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import os
 import platform
+import subprocess
 import sys
 from pathlib import Path
 
 try:
+    import numpy as np
     from PIL import Image, ImageDraw, ImageFont
     from moviepy import (
         AudioFileClip,
@@ -31,10 +35,12 @@ try:
         CompositeAudioClip,
         CompositeVideoClip,
         ImageClip,
+        VideoClip,
         VideoFileClip,
         concatenate_videoclips,
         vfx,
     )
+    from moviepy.config import FFMPEG_BINARY
     from moviepy.audio.fx.AudioFadeOut import AudioFadeOut
     from moviepy.audio.fx.AudioLoop import AudioLoop
     from moviepy.audio.fx.MultiplyVolume import MultiplyVolume
@@ -51,6 +57,7 @@ FMT = CONFIG["format"]
 PALETTE = CONFIG["palette"]
 CAPTIONS = CONFIG.get("captions", {})
 TIMING = CONFIG.get("timing", {})
+ENCODE = CONFIG.get("encode", {})   # {"preset": "medium", "maxMB": null}; maxMB caps the file size
 
 W, H, FPS = FMT["width"], FMT["height"], FMT["fps"]
 START_PAD = TIMING.get("startPad", 0.3)
@@ -250,21 +257,72 @@ def placeholder_png(scene: dict, idx: int) -> str:
     return str(path)
 
 
-def ken_burns(img_path: str, duration: float, zoom_in: bool) -> ImageClip:
-    """Slow zoom on a still; base scale covers the frame at any source size."""
+KB_AMP = 0.07   # Ken Burns zoom range: the still drifts between 1.0x and 1.07x of a frame-covering fit
+
+
+def ken_burns(img_path: str, duration: float, zoom_in: bool) -> VideoClip:
+    """Slow zoom on a still. The source is scaled once to cover the frame at the deepest
+    zoom; each frame is then a single bilinear resize of a sub-pixel box out of it. That is
+    smoother than resizing the whole source per frame to a rounded size (no 1 px jitter)
+    and several times cheaper, which matters on small CPUs (a LANCZOS resize of a
+    1440x2560 card per frame was the build's biggest cost)."""
     with Image.open(img_path) as im:
-        base = max(W / im.width, H / im.height)
-    amp = 0.07
-    if zoom_in:
-        scale = lambda t: base * (1.0 + amp * (t / duration))
-    else:
-        scale = lambda t: base * (1.0 + amp * (1 - t / duration))
-    return (ImageClip(img_path).with_duration(duration)
-            .resized(scale).with_position(("center", "center")))
+        if im.mode in ("RGBA", "LA", "PA") or "transparency" in im.info:
+            # a transparent card shows the palette's ink behind it, as it did when this was
+            # an ImageClip with a mask over the ink background
+            flat = Image.new("RGBA", im.size, (*_rgb(PALETTE["ink"]), 255))
+            im = Image.alpha_composite(flat, im.convert("RGBA"))
+        im = im.convert("RGB")
+        base = max(W / im.width, H / im.height) * (1 + KB_AMP)
+        big = im.resize((max(W, math.ceil(im.width * base)), max(H, math.ceil(im.height * base))),
+                        Image.LANCZOS)
+    bw, bh = big.size
+    # the frame at zoom z (1..1+amp) is a window of the big image of size frame*(1+amp)/z
+    # (centred), resized to the frame; at the deepest zoom that window is the frame itself
+
+    def frame(t: float):
+        p = min(1.0, max(0.0, t / duration)) if duration > 0 else 0.0
+        z = 1.0 + KB_AMP * (p if zoom_in else 1 - p)
+        cw, ch = W * (1 + KB_AMP) / z, H * (1 + KB_AMP) / z
+        x0, y0 = (bw - cw) / 2, (bh - ch) / 2
+        return np.asarray(big.resize((W, H), Image.BILINEAR, box=(x0, y0, x0 + cw, y0 + ch)))
+
+    return VideoClip(frame_function=frame, duration=duration)
+
+
+def _boomerang_file(video_path: str) -> str | None:
+    """The clip played forward then backward, scaled and centre-cropped to the frame, made
+    once with ffmpeg and cached. Playing that file forward is cheap; the old path reversed
+    in moviepy, which re-seeks the decoder for every backward frame, and resized every
+    frame in Python. None when ffmpeg fails (the caller falls back to the old path)."""
+    src = Path(video_path)
+    TEXT_CACHE.mkdir(parents=True, exist_ok=True)
+    st = src.stat()
+    key = hashlib.sha1(f"boom|{src.resolve()}|{st.st_size}|{st.st_mtime_ns}|{W}x{H}".encode()).hexdigest()[:16]
+    out = TEXT_CACHE / f"clip_{key}.mp4"
+    if out.exists():
+        return str(out)
+    # reverse at the source size (an LTX clip is ~140 MB of frames), scale after
+    graph = (f"[0:v]split[f][b];[b]reverse[r];[f][r]concat=n=2:v=1:a=0,"
+             f"scale={W}:{H}:force_original_aspect_ratio=increase:flags=bicubic,crop={W}:{H},setsar=1[v]")
+    cmd = [FFMPEG_BINARY, "-v", "error", "-y", "-i", str(src), "-filter_complex", graph, "-map", "[v]",
+           "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "14", "-pix_fmt", "yuv420p", str(out)]
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, timeout=900)
+        return str(out)
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f"     [ffmpeg boomerang failed ({e}); building it in moviepy]")
+        out.unlink(missing_ok=True)
+        return None
 
 
 def boomerang_fill(video_path: str, duration: float):
     """Loop a short clip forward/backward until it covers `duration`."""
+    pre = _boomerang_file(video_path)
+    if pre:
+        loop = VideoFileClip(pre).without_audio()
+        segs = [loop] * max(1, math.ceil((duration + 0.1) / loop.duration))
+        return concatenate_videoclips(segs).subclipped(0, duration)
     fwd = VideoFileClip(video_path).without_audio()
     fwd = fwd.resized(max(W / fwd.w, H / fwd.h)).with_position(("center", "center"))
     rev = fwd.with_effects([vfx.TimeMirror()])
@@ -274,6 +332,18 @@ def boomerang_fill(video_path: str, duration: float):
         segs.append(nxt)
         total += nxt.duration
     return concatenate_videoclips(segs).subclipped(0, duration)
+
+
+def encode_params(total_s: float, max_mb: float | None, audio_kbps: int = 192) -> list[str]:
+    """x264 settings that keep the file under max_mb: CRF 23 as usual, with a VBV ceiling at
+    the bitrate the size allows (5% margin, audio set aside). Measured on a 50 s 16:9 render:
+    11.7 MB uncapped, 8.3 MB capped at 9.5 MB, SSIM 0.993 against the original. Discord's
+    bot upload limit is 10 MB, which is what jobs set this for."""
+    if not max_mb or total_s <= 0:
+        return []
+    kbps = int(max_mb * 8_000 * 0.95 / total_s) - audio_kbps
+    kbps = max(300, kbps)
+    return ["-crf", "23", "-maxrate", f"{kbps}k", "-bufsize", f"{kbps * 2}k"]
 
 
 def estimate_duration(text: str) -> float:
@@ -359,15 +429,18 @@ def build() -> None:
           + ("  (>3 min: fine for TikTok, too long for Shorts/Reels)" if total > 180 else ""))
 
     music_cfg = CONFIG.get("music", {})
-    music_path = HERE / music_cfg.get("file", "audio/music.mp3")
-    if music_path.exists():
+    music_file = music_cfg.get("file", "audio/music.mp3")     # null: no bed
+    music_path = HERE / music_file if music_file else None
+    if music_path and music_path.exists():
         audio.insert(0, AudioFileClip(str(music_path)).with_effects([
             AudioLoop(duration=total),
             MultiplyVolume(music_cfg.get("volume", 0.16)),
             AudioFadeOut(2.0),
         ]))
 
-    final = CompositeVideoClip(clips, size=(W, H)).with_duration(total)
+    # use_bgclip: clips[0] is the opaque ink background, so moviepy skips building a
+    # full-frame float mask for every frame (the overlays have masks, the output never does)
+    final = CompositeVideoClip(clips, size=(W, H), use_bgclip=True).with_duration(total)
     if audio:
         final = final.with_audio(CompositeAudioClip(audio))
     else:
@@ -376,7 +449,9 @@ def build() -> None:
     out = HERE / "out" / "short.mp4"
     out.parent.mkdir(exist_ok=True)
     final.write_videofile(str(out), fps=FPS, codec="libx264",
-                          audio_codec="aac", preset="medium", threads=8,
+                          audio_codec="aac", audio_bitrate="192k",
+                          preset=ENCODE.get("preset", "medium"), threads=os.cpu_count() or 4,
+                          ffmpeg_params=encode_params(total, ENCODE.get("maxMB")) or None,
                           logger="bar" if sys.stderr.isatty() else None)  # no bar spam in job logs
     print(f"wrote {out}")
 

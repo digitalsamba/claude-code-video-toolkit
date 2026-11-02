@@ -15,6 +15,8 @@ survives the caller going away.
     uv run tools/video_job.py result   JOB_ID [--json]
     uv run tools/video_job.py list     [--json]
     uv run tools/video_job.py cancel   JOB_ID [--json]
+    uv run tools/video_job.py resume   JOB_ID [--max-usd 3.00] [--json]   # carry on a failed job
+    uv run tools/video_job.py prune    [--keep 10] [--older-than 7] [--dry-run] [--json]
     uv run tools/video_job.py spec     --brief "..." [--format 9:16] [--duration 45]   # expander only
     uv run tools/video_job.py presets  [--json]
 
@@ -42,7 +44,8 @@ MEDIA_SPEND_LOG (default logs/media-spend.log) in the same JSON-lines shape long
 ledger reads. One job runs at a time (jobs/.lock).
 
 Exit codes: 0 ok, 1 error, 2 refused or not ready (over budget, no expander, job not
-done), 3 another job holds the lock.
+done), 3 another job holds the lock. Under --progress json every call, failed ones
+included, prints exactly one `cost` event on stderr.
 """
 from __future__ import annotations
 
@@ -50,9 +53,11 @@ import argparse
 import datetime as _dt
 import json
 import os
+import platform
 import re
 import shlex
 import shutil
+import statistics
 import subprocess
 import sys
 import time
@@ -70,7 +75,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = ROOT / "templates" / "concept-explainer-short"
-PRICES_VERSION = "2026-10-31"
+PRICES_VERSION = "2026-11-01"
 
 # ---------------------------------------------------------------------------
 # Unit prices (USD). The one table `estimate` reads. Sources: Ideogram list price
@@ -78,12 +83,16 @@ PRICES_VERSION = "2026-10-31"
 # (docs/ltx2.md benchmarks, 576x1024 or 1024x576 at 121 frames lands at the top of the
 # range); Qwen3-TTS and FLUX.2 on Modal A10G at $1.10/h; ElevenLabs TTS at the Creator
 # tier per-character rate; ElevenLabs Scribe at $0.40 per audio hour.
+# 2026-11-01: checked against the receipts of the last ten jobs on Lugh's host. LTX clips cost
+# a median $0.0825 (26 clips, $0.077-0.169 with cold starts), so 0.10, not 0.20; FLUX
+# backgrounds $0.0058 (11), so 0.0075, not 0.01. Ideogram DEFAULT ($0.06) and Scribe
+# (~$0.004 a job) matched the table.
 # ---------------------------------------------------------------------------
 PRICES = {
     "version": PRICES_VERSION,
     "ideogram_image": {"TURBO": 0.03, "DEFAULT": 0.06, "QUALITY": 0.10},
-    "ltx_clip": 0.20,
-    "flux_image": 0.01,
+    "ltx_clip": 0.10,
+    "flux_image": 0.0075,
     "voiceover": {"qwen3": 0.01, "elevenlabs_per_1k_chars": 0.20, "60db": 0.0},
     "captions_per_audio_second": {"scribe": 0.40 / 3600, "whisper": 0.0},
     "music_track": {"acemusic": 0.0, "modal": 0.03, "runpod": 0.03},
@@ -119,6 +128,7 @@ TITLE_CARD_SECONDS = 2.8
 WORDS_PER_SECOND = 2.4          # narration pace the template budgets with
 CHARS_PER_WORD = 5.8            # for ElevenLabs per-character pricing
 DEFAULT_MAX_USD = 2.00
+DEFAULT_MAX_MB = 9.5            # Discord's bot upload limit is 10 MB; jobs encode under this
 DEFAULT_LTX_FRAMES = 121        # ~5 s at 24 fps; the build boomerang-loops it
 # LTX-2 puts stray text, logos and anime styling in ~30% of clips unless told not to.
 DEFAULT_LTX_NEGATIVE = ("text, letters, words, captions, subtitles, logo, watermark, anime, cartoon, "
@@ -296,6 +306,19 @@ SPEC_EXAMPLE = {
 # Paths and small helpers
 # ---------------------------------------------------------------------------
 
+def max_mb(spec: dict | None = None) -> float | None:
+    """The size cap for the delivered MP4: spec.maxMB, else VIDEO_JOB_MAX_MB, else 9.5.
+    0 (or a negative number) turns the cap off."""
+    v = (spec or {}).get("maxMB")
+    if v is None:
+        v = os.environ.get("VIDEO_JOB_MAX_MB", DEFAULT_MAX_MB)
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        v = DEFAULT_MAX_MB
+    return v if v > 0 else None
+
+
 def jobs_dir() -> Path:
     return Path(os.environ.get("VIDEO_JOBS_DIR") or ROOT / "jobs")
 
@@ -321,9 +344,16 @@ def reserve_at_submit() -> bool:
     return bool(os.environ.get("LONGARM_WORKSPACE"))
 
 
+_cost_emitted = False
+
+
 def emit_cost_event(usd: float, msg: str) -> None:
     """The `cost` progress line longarm's video-spend.py wrapper turns into a receipt. Only
-    printed under --progress json, so plain CLI use stays quiet."""
+    printed under --progress json, so plain CLI use stays quiet. main() makes sure every
+    call under --progress json prints exactly one, errors included: longarm books a flat
+    $0.05 for a receipt with no cost, so a failed call used to cost the agent money."""
+    global _cost_emitted
+    _cost_emitted = True
     print(json.dumps({"ts": time.strftime("%H:%M:%S"), "stage": "cost",
                       "msg": f"Est. cost: ${usd:.4f} ({msg})", "pct": None, "elapsed": 0.0}),
           file=sys.stderr, flush=True)
@@ -341,7 +371,16 @@ def _slugify(text: str, fallback: str = "scene") -> str:
 def _write_json_atomic(path: Path, data) -> None:
     tmp = path.with_suffix(path.suffix + f".{os.getpid()}.tmp")
     tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    os.replace(tmp, path)
+    for attempt in range(10):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            # Windows refuses to replace a file another process has open (a status poll
+            # reading job.json as the worker writes it); the reader lets go in milliseconds
+            if attempt == 9:
+                raise
+            time.sleep(0.05 * (attempt + 1))
 
 
 def pid_alive(pid: int | None) -> bool:
@@ -349,15 +388,26 @@ def pid_alive(pid: int | None) -> bool:
     if not pid or pid <= 0:
         return False
     if os.name == "nt":
+        # Unverified on a real Windows box (none to hand); written against the Win32 docs.
+        # Explicit restype/argtypes: the default int restype truncates a 64-bit HANDLE.
+        # A process that exits with code 259 (STILL_ACTIVE) reads as alive; nothing in the
+        # pipeline exits with that code.
         import ctypes
-        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        from ctypes import wintypes
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        kernel32.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+        kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
         PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
         STILL_ACTIVE = 259
+        ERROR_ACCESS_DENIED = 5
         handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
         if not handle:
-            return False
+            # a live process we may not query (another user's) still exists
+            return ctypes.get_last_error() == ERROR_ACCESS_DENIED
         try:
-            code = ctypes.c_ulong()
+            code = wintypes.DWORD()
             if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
                 return False
             return code.value == STILL_ACTIVE
@@ -417,8 +467,18 @@ def auto_background_prompt(text: str, hint: str | None = None) -> str:
         # constraint was.") reads as nonsense to the image model
         first = re.split(r"(?<=[.!?])\s+", text.strip(), maxsplit=1)[0]
         hint = " ".join(first.split()[:18])
-    gist = hint.strip().rstrip(".!?,;:")
-    return f"Abstract cinematic background evoking: {gist}. {BACKGROUND_STYLE}"
+    return f"Abstract cinematic background evoking: {background_gist(hint)}. {BACKGROUND_STYLE}"
+
+
+def background_gist(text: str, max_words: int = 12) -> str:
+    """The narration as a theme, not a sentence to letter. FLUX printed 'listen & you'll hear
+    it coming' across a background whose prompt quoted a narration with a quotation, an
+    ampersand and slashes in it (2026-11-01), despite 'no text' in the style. Quoted phrases
+    go, symbols become spaces, and it is lower-cased and capped."""
+    t = re.sub(r"[\"\u201c\u201d][^\"\u201c\u201d]*[\"\u201c\u201d]", " ", text or "")
+    t = re.sub(r"[^A-Za-z0-9' ]+", " ", t.replace("\u2019", "'"))
+    words = [w.strip("'") for w in t.lower().split()]
+    return " ".join([w for w in words if w][:max_words])
 
 
 def load_voice_preset(name: str) -> dict:
@@ -431,7 +491,9 @@ def load_voice_preset(name: str) -> dict:
         return v
     if (ROOT / "brands" / name / "voice.json").exists():
         return {"brand": name}
-    raise SpecError(f"unknown voice preset {name!r}: no assets/voices/{name}.json and no brands/{name}/")
+    known = sorted(p.stem for p in (ROOT / "assets" / "voices").glob("*.json"))
+    raise SpecError(f"unknown voice preset {name!r}: no assets/voices/{name}.json and no brands/{name}/. "
+                    f"Presets here: {', '.join(known) or 'none'}; or leave --voice off for the default narrator")
 
 
 def normalize_spec(spec: dict) -> dict:
@@ -668,9 +730,26 @@ class NoExpander(RuntimeError):
     pass
 
 
-def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300) -> dict:
+EXPANDER_INSTRUCTIONS = (
+    "Write a spec JSON for a short explainer video. Keep total narration near words_budget; each scene's "
+    "'text' is the sentence or two the narrator says, in plain spoken English (never a headline in capitals). "
+    "Give every scene one visual, mixing three kinds: 'text' (a generated background with an animated "
+    "headline: {\"kind\": \"text\", \"headline\": \"2 TO 5 WORDS\", \"subline\": \"optional\"}), 'ltx' "
+    "(5 s of motion footage: {\"kind\": \"ltx\", \"prompt\": \"...\"}), and 'ideogram' (a designed card with "
+    "legible text: {\"kind\": \"ideogram\", \"caption\": {\"headline\": \"...\", \"object\": \"...\"}}; an "
+    "object written 'A -> B -> C' becomes a labelled flow diagram). An ltx prompt must name a real physical thing "
+    "a camera could film, how it moves and the light (e.g. 'slow push-in on a brass kettle, steam rising, warm "
+    "kitchen light'). It must not ask for any screen, window, interface, dashboard, terminal, code, chart, app, "
+    "or person, nor an idea (animation, abstract, diagram, network, particles, hologram, energy): those are "
+    "refused. Put ideas in a 'text' scene's headline instead. Scene 1 must hook in one sentence. Output only "
+    "the JSON object.")
+
+
+def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, attempts: int = 2) -> dict:
     """Run the VIDEO_JOB_EXPANDER command. It reads a JSON request on stdin and prints a
-    spec JSON on stdout (code fences tolerated). Any provider: the toolkit doesn't care."""
+    spec JSON on stdout (code fences tolerated). Any provider: the toolkit doesn't care.
+    A spec the validator refuses goes back to the expander once with the error attached
+    (`previous_error`, `previous_spec`), the same way an agent would fix its own."""
     cmd = os.environ.get("VIDEO_JOB_EXPANDER", "").strip()
     if not cmd:
         raise NoExpander(
@@ -683,27 +762,44 @@ def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300) -> d
         "words_budget": round(duration_s * WORDS_PER_SECOND),
         "spec_example": SPEC_EXAMPLE,
         "ideogram_caption_template": IDEOGRAM_CAPTION_TEMPLATE,
-        "instructions": (
-            "Write a spec JSON for a short explainer video. Keep total narration near "
-            "words_budget. Alternate visual kinds: 'ltx' (motion b-roll; prompt describes motion "
-            "and atmosphere, never on-screen text) and 'ideogram' (a designed card). Every ideogram "
-            "scene carries a 'caption' object filled from ideogram_caption_template (replace the "
-            "<...> placeholders, keep the headline under 6 words, all caps); never a plain prompt, "
-            "which adds filler text to the card. Scene 1 must hook in one sentence. Output only JSON."),
+        "instructions": EXPANDER_INSTRUCTIONS,
     }
-    args = shlex.split(cmd, posix=(os.name != "nt"))
-    r = subprocess.run(args, input=json.dumps(request), capture_output=True, text=True,
-                       timeout=timeout, cwd=str(ROOT))
-    if r.returncode != 0:
-        raise RuntimeError(f"expander exited {r.returncode}: {r.stderr.strip()[-800:]}")
-    text = r.stdout.strip()
-    m = re.search(r"\{.*\}", text, re.S)
-    if not m:
-        raise RuntimeError(f"expander printed no JSON object: {text[:300]!r}")
-    spec = json.loads(m.group(0))
-    spec.setdefault("format", fmt)
-    spec.setdefault("brief", brief)
-    return normalize_spec(spec)
+    args = split_command(cmd)
+    for attempt in range(max(1, attempts)):
+        r = subprocess.run(args, input=json.dumps(request), capture_output=True, text=True,
+                           timeout=timeout, cwd=str(ROOT), encoding="utf-8", errors="replace")
+        if r.returncode != 0:
+            raise RuntimeError(f"expander exited {r.returncode}: {r.stderr.strip()[-800:]}")
+        text = r.stdout.strip()
+        m = re.search(r"\{.*\}", text, re.S)
+        if not m:
+            raise RuntimeError(f"expander printed no JSON object: {text[:300]!r}")
+        spec = parse_spec_text(m.group(0))
+        spec.setdefault("format", fmt)
+        spec.setdefault("brief", brief)
+        try:
+            return normalize_spec(spec)
+        except SpecError as e:
+            if attempt + 1 >= max(1, attempts):
+                raise SpecError(f"the expander's spec was refused: {e}")
+            request["previous_spec"] = spec
+            request["previous_error"] = (f"Your previous spec was refused: {e} Return the corrected spec, "
+                                         "changing only what the error names.")
+    raise RuntimeError("unreachable")
+
+
+def split_command(cmd: str) -> list[str]:
+    """A command line as argv. POSIX rules everywhere except Windows, where backslashes in
+    paths must survive; shlex's non-POSIX mode keeps the quotes on a quoted token
+    ('"C:\\Python\\python.exe"'), so they are stripped here."""
+    if os.name != "nt":
+        return shlex.split(cmd)
+    out = []
+    for tok in shlex.split(cmd, posix=False):
+        if len(tok) >= 2 and tok[0] == tok[-1] and tok[0] in "\"'":
+            tok = tok[1:-1]
+        out.append(tok)
+    return out
 
 
 def _workspace_paths(rel: str) -> list[Path]:
@@ -849,11 +945,21 @@ def job_dir(job_id: str) -> Path:
     return jobs_dir() / job_id
 
 
+class JobUnreadable(SpecError):
+    pass
+
+
 def load_job(job_id: str) -> dict:
     path = job_dir(job_id) / "job.json"
     if not path.exists():
         raise FileNotFoundError(f"no such job: {job_id}")
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        job = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise JobUnreadable(f"job {job_id}'s job.json is unreadable ({e}); its log is {path.parent / 'job.log'}")
+    if not isinstance(job, dict) or job.get("id") != job_id:
+        raise JobUnreadable(f"job {job_id}'s job.json is not a job record")
+    return job
 
 
 def save_job(job: dict) -> None:
@@ -866,7 +972,25 @@ def log_line(job: dict, msg: str) -> None:
         f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
 
 
+MAX_EVENTS = 200
+
+
+def add_event(job: dict, kind: str, msg: str, save: bool = True, **fields) -> None:
+    """Append a timestamped event to job["events"] (the last MAX_EVENTS are kept), so status
+    can say what is happening and what just finished, not only which phase it is in."""
+    ev = {"ts": _now(), "kind": kind, "msg": msg}
+    ev.update({k: v for k, v in fields.items() if v is not None})
+    events = job.setdefault("events", [])
+    events.append(ev)
+    del events[:-MAX_EVENTS]
+    if save:
+        save_job(job)
+
+
 def set_phase(job: dict, phase: str, progress: int | None = None, **fields) -> None:
+    if job.get("phase") != phase:
+        job["phase_started_ts"] = time.time()
+        add_event(job, "phase", phase, save=False, error=fields.get("error"))
     job["phase"] = phase
     if progress is not None:
         job["progress"] = progress
@@ -886,7 +1010,9 @@ def settle_reservation(job: dict) -> float | None:
     returns the delta written, or None when there was nothing to settle."""
     if job.get("ledger") != "reserve" or job.get("phase") not in TERMINAL or "settled" in job:
         return None
-    reserved = float(job.get("estimate_usd") or 0.0)
+    # what the shared ledger holds for this job right now: the estimate at submit, the
+    # actual after a settle, plus whatever a resume reserved on top
+    reserved = float(job["ledger_usd"] if job.get("ledger_usd") is not None else job.get("estimate_usd") or 0.0)
     actual = float(job.get("actual_usd") or 0.0)
     delta = round(actual - reserved, 4)
     if delta:
@@ -898,6 +1024,7 @@ def settle_reservation(job: dict) -> float | None:
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
     job["settled"] = delta
+    job["ledger_usd"] = round(actual, 4)
     save_job(job)
     log_line(job, f"settled: reserved ${reserved:.2f} actual ${actual:.2f} ledger {delta:+.2f}")
     return delta
@@ -941,15 +1068,28 @@ def _read_lock() -> dict | None:
         return None
 
 
-def _lock_is_stale(holder: dict) -> bool:
+LOCK_GRACE_S = 120
+
+
+def _lock_is_stale(holder: dict, now: float | None = None) -> bool:
     """Stale when the job it names is finished, or its worker is known and dead, or no
-    worker ever reported in and the lock is old."""
+    worker ever reported in and the lock is old. A lock younger than LOCK_GRACE_S is never
+    stale while its job is still being set up: submit takes the lock before job.json
+    exists, and resume takes it while job.json still says failed."""
+    now = now if now is not None else time.time()
+    young = now - float(holder.get("ts", 0)) < LOCK_GRACE_S
     try:
         job = load_job(holder.get("job_id", ""))
-    except (FileNotFoundError, SpecError):
+    except FileNotFoundError:
+        return not young
+    except SpecError:
         return True
     if job.get("phase") in TERMINAL:
-        return True
+        # phase_started_ts of a terminal phase is when the job ended; a lock taken after
+        # that is a resume being set up
+        ended = float(job.get("phase_started_ts") or 0.0)
+        resuming = young and ended > 0 and float(holder.get("ts", 0)) > ended
+        return not resuming
     pid = job.get("worker_pid")
     if pid:
         return not pid_alive(pid)
@@ -1006,6 +1146,7 @@ def run_tool(job: dict, tool: str, args: list[str], cwd: Path | None = None,
     script = ROOT / "tools" / tool if not tool.endswith("build.py") else Path(tool)
     cmd = [sys.executable, str(script)] + args
     log_line(job, "run: " + " ".join(shlex.quote(a) for a in cmd[1:])[:600])
+    add_event(job, "tool", f"{Path(tool).name} started", tool=Path(tool).name)
     t0 = time.time()
     try:
         r = subprocess.run(cmd, cwd=str(cwd or ROOT), capture_output=True, text=True,
@@ -1027,7 +1168,17 @@ def run_tool(job: dict, tool: str, args: list[str], cwd: Path | None = None,
     if Path(tool).name not in ("build.py", "qc.py"):  # free local steps keep out of the ledger
         write_receipt(job, Path(tool).name, cost, elapsed, rc, args)
     log_line(job, f"done: {Path(tool).name} exit={rc} {elapsed}s cost={cost}")
+    add_event(job, "tool", f"{Path(tool).name} {'finished' if rc == 0 else f'failed (exit {rc})'} in {elapsed:.0f}s",
+              tool=Path(tool).name, seconds=elapsed, cost_usd=cost, exit=rc)
     return {"returncode": rc, "stdout": out, "stderr": err, "cost": cost, "elapsed": elapsed}
+
+
+def _error_tail(r: dict, limit: int = 600) -> str:
+    """The end of a failed tool's output without the JSON progress lines (heartbeats, cost)
+    that --progress json interleaves on stderr, so the error is the error."""
+    lines = [ln for ln in (r.get("stderr") or r.get("stdout") or "").splitlines()
+             if not ln.lstrip().startswith('{"ts"')]
+    return "\n".join(lines).strip()[-limit:]
 
 
 class BudgetExceeded(RuntimeError):
@@ -1081,7 +1232,14 @@ def create_project(job: dict, spec: dict) -> Path:
     _write_json_atomic(dest / "config.json", config)
 
     config["music"] = {**config.get("music", {}), "volume": 0.12}
+    if not spec["music"]["enabled"]:
+        # no bed asked for: drop the file key, or qc.py warns "audio/music.mp3 not found" and
+        # the agent passes on a problem that isn't one
+        config["music"]["file"] = None
     config["timing"] = {**config.get("timing", {}), "startPad": 0.0}   # frame 0 is the cover
+    # veryfast: a quarter of medium's CPU on small hosts at the same look for this content;
+    # maxMB keeps the file attachable (Discord's bot limit is 10 MB)
+    config["encode"] = {"preset": "veryfast", "maxMB": max_mb(spec)}
     _write_json_atomic(dest / "config.json", config)
 
     scenes = []
@@ -1096,10 +1254,86 @@ def create_project(job: dict, spec: dict) -> Path:
     return dest
 
 
+# What each step leaves on disk. A step whose outputs exist is skipped, which is what makes
+# `resume` safe: a job killed after its visuals reruns only the free steps after them.
+
+def _scene_mp3(proj: Path, s: dict) -> Path:
+    return proj / "audio" / "scenes" / f"{s['id']}_{s['slug']}.mp3"
+
+
+def _nonempty(p: Path) -> bool:
+    try:
+        return p.stat().st_size > 0
+    except OSError:
+        return False
+
+
+def voiceover_done(proj: Path, spec: dict) -> dict | None:
+    """The saved per-scene durations when every scene's MP3 exists, else None."""
+    try:
+        durations = json.loads((proj / "vo_durations.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if all(s["id"] in durations and _nonempty(_scene_mp3(proj, s)) for s in spec["scenes"]):
+        return durations
+    return None
+
+
+def _made(job: dict | None, rel: str) -> bool:
+    """A file counts as made only once its tool succeeded (job["made"]), so a partial file
+    left by a killed or failing tool is never reused. Jobs from before the list existed
+    trust the file."""
+    if job is None or "made" not in job:
+        return True
+    return rel in job["made"]
+
+
+def _mark_made(job: dict, rel: str) -> None:
+    made = job.setdefault("made", [])
+    if rel not in made:
+        made.append(rel)
+
+
+def asset_done(proj: Path, s: dict, job: dict | None = None) -> bool:
+    return bool(s.get("asset")) and _nonempty(proj / s["asset"]) and _made(job, s["asset"])
+
+
+def captions_done(proj: Path, spec: dict) -> bool:
+    return all(_nonempty(proj / "captions" / f"words_{s['id']}.json") for s in spec["scenes"])
+
+
+def music_done(proj: Path, job: dict | None = None) -> bool:
+    return _nonempty(proj / "audio" / "music.mp3") and _made(job, "audio/music.mp3")
+
+
+def remaining_estimates(job: dict, spec: dict) -> dict:
+    """step_estimates, less what is already on disk: what the job still has to buy. On a
+    fresh job this equals step_estimates; on a resumed one the cap is checked against only
+    the outputs still missing."""
+    est = step_estimates(spec)
+    proj = Path(job["project_dir"]) if job.get("project_dir") else None
+    if proj is None or not proj.exists():
+        return est
+    if voiceover_done(proj, spec) is not None:
+        est["voiceover"] = 0.0
+    missing = [s for s in spec["scenes"] if s["visual"]["kind"] != "none" and not asset_done(proj, s, job)]
+    est["visuals"] = round(sum(_visual_args(spec, s, proj)[2] for s in missing), 4)
+    if captions_done(proj, spec):
+        est["captions"] = 0.0
+    if music_done(proj, job):
+        est["music"] = 0.0
+    return est
+
+
 def step_voiceover(job: dict, spec: dict) -> dict:
     proj = _project(job)
     voice = spec["voice"]
     scene_dir = proj / "audio" / "scenes"
+    have = voiceover_done(proj, spec)
+    if have is not None:
+        prev = job.get("steps", {}).get("voiceover") or {}
+        add_event(job, "voiceover", f"reusing {len(have)} voiced scenes from the earlier run")
+        return {**prev, "durations": have, "narration_s": round(sum(have.values()), 2), "reused": True}
     for s in spec["scenes"]:
         (scene_dir / f"{s['id']}_{s['slug']}.txt").write_text(s["text"], encoding="utf-8")
     args = ["--provider", voice["provider"], "--scene-dir", str(scene_dir), "--json"]
@@ -1108,7 +1342,7 @@ def step_voiceover(job: dict, spec: dict) -> dict:
     if voice.get("brand"):
         args += ["--brand", voice["brand"]]
     if voice["provider"] == "qwen3":
-        args += ["--cloud", voice.get("cloud", "modal")]
+        args += ["--cloud", voice.get("cloud", "modal"), "--progress", "json"]   # relays the Modal cost
         if voice.get("refAudio"):
             ref = Path(voice["refAudio"])
             if not ref.is_absolute():
@@ -1125,7 +1359,7 @@ def step_voiceover(job: dict, spec: dict) -> dict:
     per_scene = step_estimates(spec).get("voiceover", 0.0)
     r = run_tool(job, "voiceover.py", args, fallback_cost=per_scene)
     if r["returncode"] != 0:
-        raise StepFailed(f"voiceover.py exited {r['returncode']}: {r['stderr'].strip()[-600:]}")
+        raise StepFailed(f"voiceover.py exited {r['returncode']}: {_error_tail(r)}")
     try:
         result = json.loads(r["stdout"])
     except ValueError:
@@ -1138,6 +1372,11 @@ def step_voiceover(job: dict, spec: dict) -> dict:
         sid = name.split("_", 1)[0]
         durations[sid] = item["duration_seconds"]
         pacing[sid] = {"wpm": item.get("wpm"), "pacing": item.get("pacing")}
+        wpm = item.get("wpm")
+        add_event(job, "voiced", f"scene {name}: {item['duration_seconds']:.1f}s"
+                  + (f" at {wpm:.0f} wpm" if isinstance(wpm, (int, float)) else "")
+                  + (f" ({item['pacing']})" if item.get("pacing") not in (None, "ok") else ""),
+                  save=False, scene=sid, seconds=item["duration_seconds"], wpm=wpm, pacing=item.get("pacing"))
     missing = [s["id"] for s in spec["scenes"] if s["id"] not in durations]
     if missing:
         raise StepFailed(f"no audio for scenes {missing}")
@@ -1195,17 +1434,32 @@ def step_visuals(job: dict, spec: dict) -> dict:
     proj = _project(job)
     todo = [s for s in spec["scenes"] if s["visual"]["kind"] != "none"]
     made, n = [], len(todo)
+    reused = 0
     for i, s in enumerate(todo):
         tool, args, unit = _visual_args(spec, s, proj)
+        if asset_done(proj, s, job):
+            reused += 1
+            made.append(s["asset"])
+            continue
         check_budget(job, f"visual {s['id']} ({tool})", unit)
         set_phase(job, "visuals", 30 + int(45 * i / max(n, 1)), step_detail=f"{s['id']}_{s['slug']} via {tool}")
-        r = run_tool(job, tool, args, fallback_cost=unit)
         out = proj / s["asset"]
+        out.unlink(missing_ok=True)          # never build on a partial file from an earlier try
+        r = run_tool(job, tool, args, fallback_cost=unit)
         if r["returncode"] != 0 or not out.exists():
+            out.unlink(missing_ok=True)
             raise StepFailed(f"{tool} for scene {s['id']} exited {r['returncode']}: "
-                             f"{(r['stderr'] or r['stdout']).strip()[-600:]}")
+                             f"{_error_tail(r)}")
+        _mark_made(job, s["asset"])
+        kind = s["visual"]["kind"]
+        job.setdefault("timings", {}).setdefault("assets", []).append(
+            {"kind": kind, "s": r["elapsed"], "ended": time.time()})
+        add_event(job, "asset", f"scene {s['id']} {kind} ready in {r['elapsed']:.0f}s", scene=s["id"],
+                  visual=kind, seconds=r["elapsed"], cost_usd=r["cost"], file=s["asset"])
         made.append(s["asset"])
-    return {"assets": made}
+    if reused:
+        add_event(job, "visuals", f"reused {reused} of {n} visuals from the earlier run")
+    return {"assets": made, "reused": reused or None}
 
 
 def _chunk_words(words: list[dict], max_words: int, max_chars: int) -> list[dict]:
@@ -1229,6 +1483,9 @@ def step_captions(job: dict, spec: dict, narration_s: float) -> dict:
     <scene>.captions.json; convert each into the template's captions/words_<id>.json."""
     proj = _project(job)
     scene_dir = proj / "audio" / "scenes"
+    if captions_done(proj, spec):
+        prev = job.get("steps", {}).get("captions") or {}
+        return {**prev, "reused": True}
     engine = spec["captions"]["engine"]
     args = [str(scene_dir), "--json"]
     if engine != "auto":
@@ -1237,8 +1494,10 @@ def step_captions(job: dict, spec: dict, narration_s: float) -> dict:
     unit = PRICES["captions_per_audio_second"]["scribe"] if paid else 0.0
     r = run_tool(job, "captions.py", args, fallback_cost=round(narration_s * unit, 4))
     if r["returncode"] != 0:
-        log_line(job, f"captions skipped: {(r['stderr'] or r['stdout']).strip()[-300:]}")
-        return {"skipped": True, "reason": (r["stderr"] or r["stdout"]).strip()[-300:]}
+        reason = _error_tail(r, 300)
+        log_line(job, f"captions skipped: {reason}")
+        add_event(job, "captions", "captions skipped: the video renders without them", reason=reason[-200:])
+        return {"skipped": True, "reason": reason}
     config = json.loads((proj / "config.json").read_text(encoding="utf-8"))
     caps = config.get("captions", {})
     written = 0
@@ -1246,26 +1505,40 @@ def step_captions(job: dict, spec: dict, narration_s: float) -> dict:
         src = scene_dir / f"{s['id']}_{s['slug']}.captions.json"
         if not src.exists():
             continue
+        # a word with no letters or digits ("/", "&", "-") reads as a stray mark in a pill
         words = [{"w": c["text"].strip(), "s": c["startMs"] / 1000.0, "e": c["endMs"] / 1000.0}
-                 for c in json.loads(src.read_text(encoding="utf-8")) if c.get("text", "").strip()]
+                 for c in json.loads(src.read_text(encoding="utf-8"))
+                 if any(ch.isalnum() for ch in c.get("text", ""))]
         chunks = _chunk_words(words, caps.get("maxWords", 3), caps.get("maxChars", 22))
         _write_json_atomic(proj / "captions" / f"words_{s['id']}.json", chunks)
         written += 1
-    return {"scenes": written, "engine": "scribe" if paid else "whisper"}
+    eng = "scribe" if paid else "whisper"
+    add_event(job, "captions", f"captions for {written} of {len(spec['scenes'])} scenes ({eng})", engine=eng)
+    if not written:
+        return {"skipped": True, "reason": "captions.py wrote no caption files", "engine": eng}
+    return {"scenes": written, "engine": eng}
 
 
 def step_music(job: dict, spec: dict, total_s: float) -> dict:
     proj = _project(job)
     music = spec["music"]
     out = proj / "audio" / "music.mp3"
+    if music_done(proj, job):
+        return {"file": "audio/music.mp3", "reused": True}
+    out.unlink(missing_ok=True)
     args = ["--prompt", music.get("prompt") or DEFAULT_MUSIC_PROMPT,
             "--duration", str(int(min(240, max(30, total_s + 8)))), "--output", str(out),
             "--progress", "json", "--json", "--cloud", music.get("provider") or "acemusic"]
     unit = PRICES["music_track"].get(music.get("provider", "acemusic"), 0.03)
     r = run_tool(job, "music_gen.py", args, fallback_cost=unit)
     if r["returncode"] != 0 or not out.exists():
-        log_line(job, "music skipped: " + (r["stderr"] or r["stdout"]).strip()[-300:])
-        return {"skipped": True}
+        out.unlink(missing_ok=True)      # build.py mixes any music.mp3 it finds; a partial one must go
+        reason = _error_tail(r, 300)
+        log_line(job, "music skipped: " + reason)
+        add_event(job, "music", "music skipped: the video renders without a bed", reason=reason[-200:])
+        return {"skipped": True, "reason": reason}
+    _mark_made(job, "audio/music.mp3")
+    add_event(job, "music", f"music bed ready ({music.get('provider') or 'acemusic'})")
     return {"file": "audio/music.mp3"}
 
 
@@ -1276,7 +1549,7 @@ def step_build(job: dict) -> Path:
     r = run_tool(job, str(proj / "build.py"), [], cwd=proj, timeout=1800)
     out = proj / "out" / "short.mp4"
     if r["returncode"] != 0 or not out.exists():
-        raise StepFailed(f"build.py exited {r['returncode']}: {(r['stderr'] or r['stdout']).strip()[-800:]}")
+        raise StepFailed(f"build.py exited {r['returncode']}: {_error_tail(r, 800)}")
     return out
 
 
@@ -1288,7 +1561,7 @@ def _qc(job: dict, render: Path, fix: bool) -> dict:
         return json.loads(r["stdout"])
     except ValueError:
         return {"passed": False, "errors": 1, "warnings": 0,
-                "findings": [{"level": "error", "area": "qc", "msg": f"qc.py exited {r['returncode']}: "
+                "findings": [{"level": "error", "check": "qc", "message": f"qc.py exited {r['returncode']}: "
                               f"{(r['stderr'] or r['stdout']).strip()[-400:]}"}]}
 
 
@@ -1304,6 +1577,10 @@ def step_qc(job: dict, render: Path) -> tuple[Path, dict]:
                "findings": [f for f in report.get("findings", []) if f.get("level") in ("error", "warn")][:30],
                "loudness_fixed": bool(fixed)}
     _write_json_atomic(job_dir(job["id"]) / "qc.json", report)
+    top = "; ".join((f.get("message") or f.get("msg") or "")[:120] for f in summary["findings"][:3])
+    add_event(job, "qc", f"QC {'passed' if summary['passed'] else 'failed'}: {summary['errors']} errors, "
+              f"{summary['warnings']} warnings" + (f" ({top})" if top else ""),
+              passed=summary["passed"], errors=summary["errors"], warnings=summary["warnings"])
     return final, summary
 
 
@@ -1322,6 +1599,11 @@ def step_publish(job: dict, spec: dict, final: Path) -> dict:
     shutil.copy2(final, dest)
     out = {"mp4": str(dest), "duration_s": _probe_duration(dest), "size_bytes": dest.stat().st_size,
            "url": None, "r2_key": None, "published": None}
+    cap = max_mb(spec)
+    mb = out["size_bytes"] / 1e6
+    out["over_size_cap"] = bool(cap and mb > cap)
+    add_event(job, "render", f"{mb:.1f} MB, {out['duration_s']}s" + (f" (over the {cap:g} MB cap)" if out["over_size_cap"] else ""),
+              size_bytes=out["size_bytes"], duration_s=out["duration_s"])
     sheet = dest.with_name(dest.stem + "-sheet.png")
     dur = out["duration_s"] or 30
     try:
@@ -1337,6 +1619,7 @@ def step_publish(job: dict, spec: dict, final: Path) -> dict:
         shutil.copy2(final, target)
         out["published"] = str(target)
         log_line(job, f"copied to {target}")
+        add_event(job, "publish", f"copied to {target}", path=str(target))
         if out.get("sheet"):
             ts = target.with_name(target.stem + "-sheet.png")
             shutil.copy2(sheet, ts)
@@ -1353,38 +1636,66 @@ def step_publish(job: dict, spec: dict, final: Path) -> dict:
     return out
 
 
+def _record_step(job: dict, step: str, t0: float, result) -> None:
+    """Per-step wall time for the host-calibrated ETA. A step that reused an earlier run's
+    outputs is not timed: it says nothing about how long the step takes here."""
+    if isinstance(result, dict) and result.get("reused") is True:
+        return
+    job.setdefault("timings", {}).setdefault("steps", {})[step] = round(time.time() - t0, 1)
+
+
 def run_pipeline(job: dict, spec: dict, steps: dict | None = None) -> dict:
-    """Drive the state machine. `steps` lets tests inject fakes for the paid steps."""
+    """Drive the state machine. `steps` lets tests inject fakes for the paid steps. Every
+    paid step skips outputs already on disk, so the same call resumes a broken job."""
     st = {"voiceover": step_voiceover, "visuals": step_visuals, "captions": step_captions,
           "music": step_music, "build": step_build, "qc": step_qc, "publish": step_publish}
     if steps:
         st.update(steps)
-    est = step_estimates(spec)
+    job.setdefault("steps", {})
+    job.setdefault("host", platform.node())
     try:
         if not job.get("project_dir"):
             job["project_dir"] = str(create_project(job, spec))
+        est = remaining_estimates(job, spec)
         check_budget(job, "voiceover", est.get("voiceover", 0.0))
         set_phase(job, "voiceover", 10)
+        t0 = time.time()
         vo = st["voiceover"](job, spec)
         job["steps"]["voiceover"] = vo
+        _record_step(job, "voiceover", t0, vo)
         check_budget(job, "visuals", est.get("visuals", 0.0))
         set_phase(job, "visuals", 30)
+        t0 = time.time()
         job["steps"]["visuals"] = st["visuals"](job, spec)
+        _record_step(job, "visuals", t0, job["steps"]["visuals"])
         if spec["captions"]["enabled"]:
             check_budget(job, "captions", est.get("captions", 0.0))
             set_phase(job, "captions", 75)
+            t0 = time.time()
             job["steps"]["captions"] = st["captions"](job, spec, vo.get("narration_s", 0.0))
+            _record_step(job, "captions", t0, job["steps"]["captions"])
         if spec["music"]["enabled"]:
             check_budget(job, "music", est.get("music", 0.0))
             set_phase(job, "music", 80)
+            t0 = time.time()
             job["steps"]["music"] = st["music"](job, spec, vo.get("narration_s", 0.0) + len(spec["scenes"]) * 1.2)
+            _record_step(job, "music", t0, job["steps"]["music"])
         set_phase(job, "build", 82)
+        t0 = time.time()
         render = st["build"](job)
+        _record_step(job, "build", t0, None)
         set_phase(job, "qc", 93)
+        t0 = time.time()
         final, qc = st["qc"](job, render)
         job["steps"]["qc"] = qc
+        _record_step(job, "qc", t0, None)
         set_phase(job, "publish", 98)
+        t0 = time.time()
         job["output"] = {**st["publish"](job, spec, final), "qc": qc}
+        _record_step(job, "publish", t0, None)
+        video_s = (job["output"] or {}).get("duration_s")
+        if video_s:
+            job["timings"]["video_s"] = video_s
         set_phase(job, "done", 100, finished=_now())
     except BudgetExceeded as e:
         set_phase(job, "failed", error=f"budget_exceeded: {e}", error_code="budget_exceeded", finished=_now())
@@ -1396,6 +1707,26 @@ def run_pipeline(job: dict, spec: dict, steps: dict | None = None) -> dict:
 # ---------------------------------------------------------------------------
 # submit / worker / status / result / list / cancel
 # ---------------------------------------------------------------------------
+
+def resolve_output(path: str | None) -> str | None:
+    """Where --output copies the finished MP4. It must name an .mp4 file. When
+    VIDEO_JOB_OUTPUT_ROOTS is set (os.pathsep-separated directories), it must also sit inside
+    one of them, so an agent can't be talked into writing anywhere on the host."""
+    if not path:
+        return None
+    p = Path(path).expanduser()
+    if not p.is_absolute():
+        p = Path.cwd() / p
+    p = p.resolve()
+    if p.suffix.lower() != ".mp4":
+        raise SpecError(f"--output must name an .mp4 file (got {path!r})")
+    roots = [Path(r).expanduser().resolve() for r in os.environ.get("VIDEO_JOB_OUTPUT_ROOTS", "").split(os.pathsep)
+             if r.strip()]
+    if roots and not any(p == r or r in p.parents for r in roots):
+        raise SpecError(f"--output {path!r} is outside the allowed directories "
+                        f"({', '.join(str(r) for r in roots)}); write it under one of those")
+    return str(p)
+
 
 def submit(spec: dict, max_usd: float, spec_source: str = "spec", brief: str | None = None,
            start_worker: bool = True, publish_to: str | None = None) -> dict:
@@ -1409,6 +1740,11 @@ def submit(spec: dict, max_usd: float, spec_source: str = "spec", brief: str | N
     if est["estimate_usd"] > max_usd + 1e-9:
         raise BudgetExceeded(f"estimate ${est['estimate_usd']:.2f} is over --max-usd ${max_usd:.2f}; "
                              "raise the cap, drop scenes, or use cheaper visuals (flux, TURBO)")
+    publish_to = resolve_output(publish_to)
+    try:   # before the lock, so a slow prune never holds it with no job.json behind it
+        pruned = auto_prune()
+    except Exception as e:  # noqa: BLE001 — housekeeping never blocks a submit
+        pruned = {"error": str(e)}
     job_id = new_job_id()
     acquire_lock(job_id)
     d = job_dir(job_id)
@@ -1420,31 +1756,49 @@ def submit(spec: dict, max_usd: float, spec_source: str = "spec", brief: str | N
         "brief": brief, "spec_source": spec_source, "spec_path": str(d / "spec.json"),
         "project_dir": None, "estimate_usd": est["estimate_usd"], "actual_usd": 0.0, "max_usd": max_usd,
         "steps": {}, "output": None, "error": None, "worker_pid": None, "log": str(d / "job.log"),
-        "publish_to": str(Path(publish_to).resolve()) if publish_to else None,
+        "publish_to": publish_to,
         "ledger": "reserve" if reserve_at_submit() else "actual",
+        "ledger_usd": est["estimate_usd"] if reserve_at_submit() else 0.0,
+        "made": [],
+        "host": platform.node(), "phase_started_ts": time.time(), "events": [], "timings": {},
     }
+    add_event(job, "submitted", f"{len(spec['scenes'])} scenes, {spec['format']}, est ${est['estimate_usd']:.2f}, "
+              f"cap ${max_usd:.2f}", save=False)
     save_job(job)
     log_line(job, f"submitted: {spec['title']!r} {spec['format']} {len(spec['scenes'])} scenes "
                   f"est ${est['estimate_usd']:.2f} cap ${max_usd:.2f}")
+    if pruned and (pruned.get("pruned") or pruned.get("error")):
+        log_line(job, f"auto-prune: {pruned}")
     if start_worker:
-        job["worker_pid"] = spawn_worker(job_id)
-        save_job(job)
+        _start(job)
     return job
 
 
+def _start(job: dict) -> None:
+    """Spawn the worker and record its pid in the job and the lock before returning, so a
+    second caller never sees a lock with nobody behind it."""
+    pid = spawn_worker(job["id"])
+    job["worker_pid"] = pid
+    save_job(job)
+    update_lock_pid(job["id"], pid)
+
+
 def spawn_worker(job_id: str) -> int:
-    """Detach the worker so it outlives the caller on every platform."""
+    """Detach the worker so it outlives the caller on every platform. POSIX: a new session,
+    so the worker leads its own process group and `cancel` can stop its tools with it.
+    Windows: DETACHED_PROCESS (no console) in a new process group."""
     log = open(job_dir(job_id) / "worker.out", "ab")
     kwargs: dict = {"stdin": subprocess.DEVNULL, "stdout": log, "stderr": subprocess.STDOUT,
                     "cwd": str(ROOT), "close_fds": True}
     if os.name == "nt":
-        kwargs["creationflags"] = (subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-                                   | getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        kwargs["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
     else:
         kwargs["start_new_session"] = True
     env = {**os.environ, "PYTHONUNBUFFERED": "1"}
-    p = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "_worker", job_id], env=env, **kwargs)
-    log.close()
+    try:
+        p = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "_worker", job_id], env=env, **kwargs)
+    finally:
+        log.close()
     return p.pid
 
 
@@ -1453,8 +1807,11 @@ def worker_main(job_id: str) -> int:
     job["worker_pid"] = os.getpid()
     update_lock_pid(job_id, os.getpid())
     save_job(job)
-    spec = json.loads(Path(job["spec_path"]).read_text(encoding="utf-8"))
     try:
+        try:
+            spec = json.loads(Path(job["spec_path"]).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            raise StepFailed(f"the job's spec.json is missing or unreadable ({e}); submit it again")
         run_pipeline(job, spec)
     except Exception as e:  # noqa: BLE001 — anything else is still a failed job, not a lost one
         set_phase(job, "failed", error=f"{type(e).__name__}: {e}", error_code="worker_crash", finished=_now())
@@ -1463,45 +1820,313 @@ def worker_main(job_id: str) -> int:
     return 0 if job.get("phase") == "done" else 1
 
 
+NEVER_STARTED_S = 120
+
+
 def refresh_status(job: dict) -> dict:
-    """Detect a worker that died without writing a terminal phase."""
-    if job.get("phase") not in TERMINAL and job.get("worker_pid") and not pid_alive(job["worker_pid"]):
-        set_phase(job, "failed", error="worker exited without finishing (see job.log)",
+    """Detect a worker that died without writing a terminal phase, or one that never
+    started (the submit died between taking the lock and spawning it)."""
+    if job.get("phase") in TERMINAL:
+        return job
+    if job.get("worker_pid") and not pid_alive(job["worker_pid"]):
+        set_phase(job, "failed", error="worker exited without finishing (see job.log); resume it to carry on",
                   error_code="worker_died", finished=_now())
+        release_lock(job["id"])
+    elif (not job.get("worker_pid") and job.get("phase") == "queued"
+          and time.time() - float(job.get("phase_started_ts") or (time.time() - _age_s(job.get("created"))))
+          > NEVER_STARTED_S):
+        set_phase(job, "failed", error="the worker never started; resume it or submit again",
+                  error_code="worker_never_started", finished=_now())
         release_lock(job["id"])
     return job
 
 
-# Typical seconds per step, measured 2026-10-31 on Modal (LTX warm; a cold start adds ~60 s).
-_STEP_SECONDS = {"voiceover": 70, "ltx": 170, "ideogram": 12, "flux": 20, "captions": 8,
+def _age_s(stamp: str | None, now: float | None = None) -> float:
+    """Seconds since an ISO-8601 UTC stamp written by _now(); 0 when unreadable."""
+    try:
+        t = _dt.datetime.strptime(stamp or "", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=_dt.timezone.utc).timestamp()
+    except ValueError:
+        return 0.0
+    return (now if now is not None else time.time()) - t
+
+
+def clear_stale_lock() -> None:
+    """Drop a lock whose holder is finished, dead, never started, or unreadable, so the
+    next agent isn't told lock_held by a job nobody is running."""
+    if not lock_path().exists():
+        return
+    holder = _read_lock()
+    if holder is None or _lock_is_stale(holder):
+        try:
+            lock_path().unlink()
+        except FileNotFoundError:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Resume and prune
+# ---------------------------------------------------------------------------
+
+RESUMABLE_PHASES = ("failed", "cancelled")
+
+
+def is_resumable(job: dict) -> bool:
+    """A failed or cancelled job whose project is still on disk. Every paid step skips the
+    outputs it finds, so a resume pays only for what is missing."""
+    if job.get("phase") not in RESUMABLE_PHASES or job.get("pruned"):
+        return False
+    proj, sp = job.get("project_dir"), job.get("spec_path")
+    if job.get("error_code") == "worker_never_started":
+        return bool(sp) and Path(sp).exists()
+    return bool(proj and sp) and Path(proj).exists() and Path(sp).exists()
+
+
+def resume(job_id: str, max_usd: float | None = None, start_worker: bool = True) -> dict:
+    """Restart a failed or cancelled job from its first missing output. Takes the lock like
+    submit. Under the reserve ledger the job had settled to its actual spend when it
+    stopped, so the rest of the estimate is booked again (job['resume_reserved_usd']) and
+    the job settles once more when it ends."""
+    job = refresh_status(load_job(job_id))
+    if job.get("phase") not in RESUMABLE_PHASES:
+        raise SpecError(f"job {job_id} is {job.get('phase')}; only a failed or cancelled job can be resumed")
+    if not is_resumable(job):
+        raise SpecError(f"job {job_id} can't be resumed: its project "
+                        f"{'was pruned' if job.get('pruned') else 'or spec is gone'}; submit it again")
+    if max_usd is not None:
+        job["max_usd"] = max_usd
+    acquire_lock(job_id)
+    extra = 0.0
+    if job.get("ledger") == "reserve" and "settled" in job:
+        extra = round(max(0.0, float(job.get("estimate_usd") or 0) - float(job.get("actual_usd") or 0)), 4)
+        job.pop("settled")
+        job["ledger_usd"] = round(float(job.get("ledger_usd") or job.get("actual_usd") or 0) + extra, 4)
+    job["resume_reserved_usd"] = extra
+    job["resumes"] = int(job.get("resumes") or 0) + 1
+    prior = job.get("error_code")
+    job.update(error=None, error_code=None, finished=None, worker_pid=None, step_detail=None)
+    set_phase(job, "queued", 0)
+    add_event(job, "resumed", f"resume #{job['resumes']} after {prior}", prior=prior)
+    log_line(job, f"resumed (after {prior}); cap ${job['max_usd']:.2f}, spent ${job.get('actual_usd', 0):.2f}")
+    if start_worker:
+        _start(job)
+    return job
+
+
+PRUNE_KEEP = 10
+PRUNE_PUBLISHED_DAYS = 7
+
+
+def _tree_bytes(path: Path) -> int:
+    total = 0
+    for p in path.rglob("*"):
+        try:
+            if p.is_file() and not p.is_symlink():
+                total += p.stat().st_size
+        except OSError:
+            pass
+    return total
+
+
+def prune(keep: int = PRUNE_KEEP, older_than_days: float | None = None, dry_run: bool = False,
+          now: float | None = None) -> dict:
+    """Delete the project/ tree (template copy, scene audio, clips, stills; 50+ MB a job) of
+    old finished jobs. Keeps job.json, the receipts, the logs, the final MP4 and its sheet,
+    so status and result still answer. Never touches a running job, the `keep` newest jobs,
+    or a job that published its MP4 in the last 7 days. A pruned job can't be resumed."""
+    now = now if now is not None else time.time()
+    out = {"pruned": [], "freed_bytes": 0, "skipped": {}, "dry_run": dry_run}
+    if not jobs_dir().exists():
+        return out
+    paths = sorted(jobs_dir().glob("*/job.json"), reverse=True)
+    for i, p in enumerate(paths):
+        jid = p.parent.name
+        proj = p.parent / "project"
+        if not proj.exists():
+            continue
+        if i < keep:
+            out["skipped"][jid] = "recent"
+            continue
+        try:
+            job = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            out["skipped"][jid] = "unreadable job.json"
+            continue
+        if job.get("phase") not in TERMINAL:
+            out["skipped"][jid] = "running"
+            continue
+        age_days = _age_s(job.get("finished") or job.get("updated") or job.get("created"), now) / 86400
+        if older_than_days is not None and age_days < older_than_days:
+            out["skipped"][jid] = "too new"
+            continue
+        if (job.get("output") or {}).get("published") and age_days < PRUNE_PUBLISHED_DAYS:
+            out["skipped"][jid] = "published in the last 7 days"
+            continue
+        size = _tree_bytes(proj)
+        if not dry_run:
+            shutil.rmtree(proj, ignore_errors=True)
+            job["pruned"] = _now()
+            _write_json_atomic(p, job)
+        out["pruned"].append(jid)
+        out["freed_bytes"] += size
+    return out
+
+
+def auto_prune() -> dict | None:
+    """The conservative prune `submit` runs: VIDEO_JOB_KEEP (default 10) newest kept, 0 = off."""
+    try:
+        keep = int(os.environ.get("VIDEO_JOB_KEEP", PRUNE_KEEP))
+    except ValueError:
+        keep = PRUNE_KEEP
+    if keep <= 0:
+        return None
+    return prune(keep=keep)
+
+
+# ---------------------------------------------------------------------------
+# ETA, calibrated per host
+# ---------------------------------------------------------------------------
+
+# Typical seconds per step, measured 2026-10-31 on Modal from a Mac (LTX warm). Used only
+# until this host has finished jobs of its own; build is seconds per second of video.
+_STEP_SECONDS = {"voiceover": 70, "ltx": 170, "ideogram": 12, "flux": 20, "text": 20, "captions": 8,
                  "music": 60, "build": 60, "qc": 10, "publish": 8}
+_BUILD_S_PER_VIDEO_S = 1.2
+LTX_COLD_START_S = 90            # Modal's LTX container scales to zero; a cold one adds this
+LTX_WARM_WINDOW_S = 600          # ... when the last LTX call ended longer ago than this
+ETA_HISTORY = 5
+ORDER = ["voiceover", "visuals", "captions", "music", "build", "qc", "publish"]
 
 
-def eta_seconds(job: dict) -> int | None:
-    """Rough time left, from the phase and the assets still to make. None when finished."""
+def _recent_jobs(host: str, exclude: str | None = None, limit: int = 40):
+    """job.json dicts from this host, newest first."""
+    if not jobs_dir().exists():
+        return
+    n = 0
+    for p in sorted(jobs_dir().glob("*/job.json"), reverse=True):
+        if p.parent.name == exclude:
+            continue
+        try:
+            j = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if j.get("host") != host:
+            continue
+        yield j
+        n += 1
+        if n >= limit:
+            return
+
+
+def host_history(host: str, exclude: str | None = None, limit: int = ETA_HISTORY) -> list[dict]:
+    """The timings of this host's last `limit` finished jobs."""
+    out = []
+    for j in _recent_jobs(host, exclude):
+        if j.get("phase") == "done" and j.get("timings"):
+            out.append(j["timings"])
+            if len(out) >= limit:
+                break
+    return out
+
+
+def step_model(history: list[dict]) -> dict:
+    """Seconds per step and per visual kind (medians of the history, the table without
+    one), and build seconds per second of video."""
+    def med(xs, default):
+        xs = [float(x) for x in xs if isinstance(x, (int, float))]
+        return statistics.median(xs) if xs else default
+    steps = {k: med([h.get("steps", {}).get(k) for h in history], _STEP_SECONDS[k])
+             for k in ("voiceover", "captions", "music", "qc", "publish")}
+    kinds = {k: med([a.get("s") for h in history for a in h.get("assets", []) if a.get("kind") == k],
+                    _STEP_SECONDS[k]) for k in ("ltx", "ideogram", "flux", "text")}
+    rates = [h["steps"]["build"] / h["video_s"] for h in history
+             if h.get("video_s") and isinstance(h.get("steps", {}).get("build"), (int, float))]
+    return {"steps": steps, "kinds": kinds, "build_rate": med(rates, _BUILD_S_PER_VIDEO_S)}
+
+
+def eta_seconds(job: dict, now: float | None = None, history: list[dict] | None = None,
+                last_ltx: float | None = -1.0) -> int | None:
+    """Seconds left: the steps still to run, priced from this host's recent jobs (the
+    table when it has none), the current step less the time already spent in it, and a
+    cold-start allowance when LTX clips are pending and the last one ended over 10 min ago.
+    None when finished. `history` and `last_ltx` are injectable for tests."""
     if job.get("phase") in TERMINAL:
         return None
     try:
         spec = json.loads(Path(job["spec_path"]).read_text(encoding="utf-8"))
-    except (OSError, ValueError, KeyError):
+    except (OSError, ValueError, KeyError, TypeError):
         return None
-    kinds = [s["visual"]["kind"] for s in spec.get("scenes", []) if s["visual"]["kind"] != "none"]
-    visuals = sum(_STEP_SECONDS.get(k, 20) for k in kinds)
-    order = ["voiceover", "visuals", "captions", "music", "build", "qc", "publish"]
-    costs = {"voiceover": _STEP_SECONDS["voiceover"], "visuals": visuals,
-             "captions": _STEP_SECONDS["captions"] if spec.get("captions", {}).get("enabled", True) else 0,
-             "music": _STEP_SECONDS["music"] if spec.get("music", {}).get("enabled") else 0,
-             "build": _STEP_SECONDS["build"], "qc": _STEP_SECONDS["qc"], "publish": _STEP_SECONDS["publish"]}
+    now = now if now is not None else time.time()
+    host = job.get("host") or platform.node()
+    recent = None
+    if history is None or last_ltx == -1.0:
+        recent = list(_recent_jobs(host))          # one pass over job.json files per poll
+    if history is None:
+        history = [j["timings"] for j in recent if j.get("id") != job.get("id")
+                   and j.get("phase") == "done" and j.get("timings")][:ETA_HISTORY]
+    m = step_model(history)
+    proj = Path(job["project_dir"]) if job.get("project_dir") else None
+    pending = [s for s in spec.get("scenes", []) if s["visual"]["kind"] != "none"
+               and not (proj and asset_done(proj, s, job))]
+    visuals = sum(m["kinds"].get(s["visual"]["kind"], _STEP_SECONDS["flux"]) for s in pending)
+    if any(s["visual"]["kind"] == "ltx" for s in pending):
+        if last_ltx == -1.0:
+            ends = [a.get("ended") for j in (recent or []) for a in (j.get("timings") or {}).get("assets", [])
+                    if a.get("kind") == "ltx" and a.get("ended")]
+            last_ltx = max(ends) if ends else None
+        if last_ltx is None or now - last_ltx > LTX_WARM_WINDOW_S:
+            visuals += LTX_COLD_START_S
+    try:
+        video_s = estimate(spec)["video_s_approx"]
+    except (SpecError, KeyError, ValueError):
+        video_s = 45.0
+    costs = {"voiceover": m["steps"]["voiceover"], "visuals": visuals,
+             "captions": m["steps"]["captions"] if spec.get("captions", {}).get("enabled", True) else 0,
+             "music": m["steps"]["music"] if spec.get("music", {}).get("enabled") else 0,
+             "build": m["build_rate"] * video_s, "qc": m["steps"]["qc"], "publish": m["steps"]["publish"]}
     phase = job.get("phase", "queued")
-    start = order.index(phase) if phase in order else 0
-    remaining = sum(costs[p] for p in order[start:])
-    if phase == "visuals" and job.get("step_detail"):
-        done = [k for k in kinds][:max(0, int((job.get("progress", 30) - 30) / 45 * len(kinds)))]
-        remaining -= sum(_STEP_SECONDS.get(k, 20) for k in done)
-    return max(15, int(remaining))
+    if phase not in ORDER:
+        return max(15, int(sum(costs.values())))
+    i = ORDER.index(phase)
+    later = sum(costs[p] for p in ORDER[i + 1:])
+    since = job.get("phase_started_ts") or now
+    if phase == "visuals":
+        ends = [a.get("ended") for a in (job.get("timings") or {}).get("assets", []) if a.get("ended")]
+        since = max([since] + [e for e in ends if e and e >= since])
+    current = max(0.0, costs[phase] - max(0.0, now - since))
+    return max(15, int(later + current))
+
+
+# ---------------------------------------------------------------------------
+# status / result / list / cancel
+# ---------------------------------------------------------------------------
+
+def job_warnings(job: dict) -> list[str]:
+    """Things the agent should tell its user even though the job succeeded."""
+    out = []
+    steps = job.get("steps") or {}
+    cap = steps.get("captions") or {}
+    if cap.get("skipped"):
+        why = (cap.get("reason") or "").strip().splitlines()
+        out.append("Captions were skipped, so the video has no burned captions"
+                   + (f" ({why[-1][:160]})" if why else "")
+                   + ". Set ELEVENLABS_API_KEY (Scribe) or run `uv sync --extra whisper` on the host to get them.")
+    music = steps.get("music") or {}
+    if music.get("skipped"):
+        out.append("The music bed was skipped; the video has narration only.")
+    pacing = (steps.get("voiceover") or {}).get("pacing") or {}
+    fast = sorted(sid for sid, p in pacing.items() if (p or {}).get("pacing") == "fast")
+    if fast:
+        out.append(f"Scene{'s' if len(fast) > 1 else ''} {', '.join(fast)} came out fast (over ~170 wpm); "
+                   "shorten the narration if it sounds rushed.")
+    output = job.get("output") or {}
+    if output.get("over_size_cap"):
+        out.append(f"The MP4 is {output.get('size_bytes', 0) / 1e6:.1f} MB, over the size cap, so it may not "
+                   "attach in chat; share the link instead.")
+    return out
 
 
 def status(job_id: str, log_lines: int = 15) -> dict:
+    clear_stale_lock()
     job = refresh_status(load_job(job_id))
     job["eta_s"] = eta_seconds(job)
     tail: list[str] = []
@@ -1509,7 +2134,8 @@ def status(job_id: str, log_lines: int = 15) -> dict:
         tail = (job_dir(job_id) / "job.log").read_text(encoding="utf-8").splitlines()[-log_lines:]
     except OSError:
         pass
-    return {**job, "done": job["phase"] in TERMINAL, "log_tail": tail}
+    return {**job, "done": job["phase"] in TERMINAL, "resumable": is_resumable(job),
+            "warnings": job_warnings(job), "log_tail": tail}
 
 
 def result(job_id: str) -> dict:
@@ -1526,8 +2152,9 @@ def result(job_id: str) -> dict:
             pass
     return {"id": job["id"], "phase": job["phase"], "progress": job.get("progress"), "title": job.get("title"),
             "format": job.get("format"), "mp4": out.get("mp4"), "published": out.get("published"), "url": out.get("url"),
-            "duration_s": out.get("duration_s"), "qc": out.get("qc"), "estimate_usd": job.get("estimate_usd"),
-            "actual_usd": job.get("actual_usd"), "error": job.get("error"), "error_code": job.get("error_code"),
+            "duration_s": out.get("duration_s"), "size_bytes": out.get("size_bytes"), "qc": out.get("qc"),
+            "estimate_usd": job.get("estimate_usd"), "actual_usd": job.get("actual_usd"), "error": job.get("error"),
+            "error_code": job.get("error_code"), "warnings": job_warnings(job), "resumable": is_resumable(job),
             "ready": job["phase"] == "done"}
 
 
@@ -1535,6 +2162,7 @@ def list_jobs() -> list[dict]:
     rows = []
     if not jobs_dir().exists():
         return rows
+    clear_stale_lock()
     for p in sorted(jobs_dir().glob("*/job.json"), reverse=True):
         try:
             j = refresh_status(json.loads(p.read_text(encoding="utf-8")))
@@ -1542,7 +2170,39 @@ def list_jobs() -> list[dict]:
             continue
         rows.append({k: j.get(k) for k in ("id", "phase", "progress", "title", "format", "estimate_usd",
                                             "actual_usd", "created", "error_code")})
+        rows[-1]["resumable"] = is_resumable(j)
     return rows
+
+
+def _is_our_worker(pid: int, job_id: str) -> bool:
+    """Whether pid is still this job's worker and not a recycled pid. POSIX asks ps for
+    the command line; elsewhere (or when ps is missing) the pid is trusted."""
+    if os.name == "nt":
+        return True
+    try:
+        r = subprocess.run(["ps", "-o", "command=", "-p", str(pid)], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return True
+    if r.returncode != 0:
+        return False
+    return "_worker" in r.stdout and job_id in r.stdout
+
+
+def _kill_tree(pid: int) -> None:
+    """Stop the worker and the tool it is running (ltx2.py, build.py and their ffmpeg).
+    POSIX: the worker leads its own process group (start_new_session), so signal the
+    group. Windows: taskkill /T walks the child tree."""
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True)
+        return
+    import signal
+    try:
+        if os.getpgid(pid) == pid:
+            os.killpg(pid, signal.SIGTERM)
+            return
+    except OSError:
+        pass
+    os.kill(pid, signal.SIGTERM)
 
 
 def cancel(job_id: str) -> dict:
@@ -1550,13 +2210,12 @@ def cancel(job_id: str) -> dict:
     if job["phase"] in TERMINAL:
         return job
     pid = job.get("worker_pid")
+    if pid and pid_alive(pid) and not _is_our_worker(pid, job_id):
+        log_line(job, f"cancel: pid {pid} is no longer this job's worker; not signalling it")
+        pid = None
     if pid and pid_alive(pid):
         try:
-            if os.name == "nt":
-                subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True)
-            else:
-                import signal
-                os.kill(pid, signal.SIGTERM)
+            _kill_tree(pid)
         except OSError as e:
             log_line(job, f"cancel: could not kill {pid}: {e}")
     set_phase(job, "cancelled", error="cancelled by caller", error_code="cancelled", finished=_now())
@@ -1617,17 +2276,48 @@ def _human_status(s: dict) -> str:
             f"est ${s.get('estimate_usd', 0):.2f} spent ${s.get('actual_usd', 0):.2f}")
     if s.get("step_detail") and s["phase"] not in TERMINAL:
         head += f"\n  now: {s['step_detail']}"
+    for ev in (s.get("events") or [])[-4:]:
+        head += f"\n  {ev.get('ts', '')[11:19]} {ev.get('msg', '')}"
     if s.get("eta_s"):
         head += f"\n  about {max(1, round(s['eta_s'] / 60))} min left"
     if s.get("error"):
         head += f"\n  error: {s['error']}"
+    if s.get("resumable"):
+        head += f"\n  resumable: uv run tools/video_job.py resume {s['id']}"
+    for w in s.get("warnings") or []:
+        head += f"\n  warning: {w}"
     if s.get("output", {}) and s["output"].get("mp4"):
         head += f"\n  mp4: {s['output']['mp4']}"
     return head
 
 
+def _wants_progress_json(argv: list[str]) -> bool:
+    for i, a in enumerate(argv):
+        if a == "--progress=json" or (a == "--progress" and i + 1 < len(argv) and argv[i + 1] == "json"):
+            return True
+    return False
+
+
 def main(argv: list[str] | None = None) -> int:
+    """Every exit path under --progress json prints one cost event, $0 unless something
+    was booked: argparse errors, refusals, missing jobs and crashes included."""
+    global _cost_emitted
     ensure_utf8_output()
+    argv = list(sys.argv[1:] if argv is None else argv)
+    _cost_emitted = False
+    progress_json = _wants_progress_json(argv)
+    rc = 1
+    try:
+        rc = _main(argv)
+    except SystemExit as e:          # argparse: --help (0) or a usage error (2)
+        rc = e.code if isinstance(e.code, int) else 1
+    finally:
+        if progress_json and not _cost_emitted:
+            emit_cost_event(0.0, "nothing generated" if rc == 0 else f"failed (exit {rc}), nothing generated")
+    return rc
+
+
+def _main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="Async video jobs: brief or spec in, QC-checked MP4 out.")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -1663,6 +2353,15 @@ def main(argv: list[str] | None = None) -> int:
         p = sub.add_parser(name)
         p.add_argument("job_id")
         p.add_argument("--json", action="store_true")
+    rs = sub.add_parser("resume", help="Carry on a failed or cancelled job from its first missing output")
+    rs.add_argument("job_id")
+    rs.add_argument("--max-usd", type=float, default=None, help="Raise (or set) the job's spend cap")
+    rs.add_argument("--json", action="store_true")
+    pr = sub.add_parser("prune", help="Delete old finished jobs' project trees (keeps job.json, receipts, MP4)")
+    pr.add_argument("--keep", type=int, default=PRUNE_KEEP, help=f"Newest jobs never pruned (default {PRUNE_KEEP})")
+    pr.add_argument("--older-than", type=float, default=None, metavar="DAYS", help="Only jobs finished this long ago")
+    pr.add_argument("--dry-run", action="store_true")
+    pr.add_argument("--json", action="store_true")
     sub.add_parser("list").add_argument("--json", action="store_true")
     st = sub.add_parser("settle", help="Write the ledger correction for finished reserve-mode jobs that never got one")
     st.add_argument("job_id", nargs="?")
@@ -1676,6 +2375,7 @@ def main(argv: list[str] | None = None) -> int:
                        help="json: emit a cost event on stderr (the estimate on submit, $0 otherwise)")
     args = ap.parse_args(argv)
     progress_json = getattr(args, "progress", "human") == "json"
+    as_json = getattr(args, "json", False)
 
     try:
         if args.cmd in ("estimate", "submit", "spec"):
@@ -1716,8 +2416,24 @@ def main(argv: list[str] | None = None) -> int:
                    args.json, f"submitted {job['id']}  est ${job['estimate_usd']:.2f}  "
                               f"(poll: uv run tools/video_job.py status {job['id']})")
             return 0
-        if progress_json and args.cmd in ("status", "result", "list", "cancel", "presets"):
+        if progress_json and args.cmd in ("status", "result", "list", "cancel", "presets", "prune"):
             emit_cost_event(0.0, f"{args.cmd}: no generation")
+        if args.cmd == "resume":
+            j = resume(args.job_id, max_usd=args.max_usd)
+            if progress_json:
+                emit_cost_event(j.get("resume_reserved_usd") or 0.0,
+                                f"{'reserved the rest of' if j.get('resume_reserved_usd') else 'resumed'} job {j['id']}")
+            _print({"id": j["id"], "phase": j["phase"], "resumes": j["resumes"], "actual_usd": j.get("actual_usd"),
+                    "estimate_usd": j.get("estimate_usd"), "max_usd": j.get("max_usd"),
+                    "poll": f"uv run tools/video_job.py status {j['id']} --json"},
+                   args.json, f"resumed {j['id']}  spent so far ${j.get('actual_usd') or 0:.2f}  "
+                              f"(poll: uv run tools/video_job.py status {j['id']})")
+            return 0
+        if args.cmd == "prune":
+            r = prune(keep=max(0, args.keep), older_than_days=args.older_than, dry_run=args.dry_run)
+            _print(r, args.json, f"{'would prune' if r['dry_run'] else 'pruned'} {len(r['pruned'])} jobs, "
+                                 f"{r['freed_bytes'] / 1e6:.0f} MB")
+            return 0
         if args.cmd == "status":
             s = status(args.job_id)
             _print(s, args.json, _human_status(s))
@@ -1767,10 +2483,20 @@ def main(argv: list[str] | None = None) -> int:
         _print({"error": str(e), "error_code": "no_expander"}, args.json, f"refused: {e}")
         return 2
     except LockHeld as e:
-        _print({"error": str(e), "error_code": "lock_held", "holder": e.holder}, args.json, f"busy: {e}")
+        _print({"error": str(e), "error_code": "lock_held", "holder": e.holder}, as_json, f"busy: {e}")
         return 3
-    except (SpecError, FileNotFoundError, ValueError) as e:
-        _print({"error": str(e), "error_code": "bad_request"}, args.json, f"error: {e}")
+    except JobUnreadable as e:
+        _print({"error": str(e), "error_code": "job_unreadable"}, as_json, f"error: {e}")
+        return 1
+    except FileNotFoundError as e:
+        code = "not_found" if str(e).startswith("no such job") else "bad_request"
+        _print({"error": str(e), "error_code": code}, as_json, f"error: {e}")
+        return 1
+    except (SpecError, ValueError) as e:
+        _print({"error": str(e), "error_code": "bad_request"}, as_json, f"error: {e}")
+        return 1
+    except Exception as e:  # noqa: BLE001 — an agent gets a JSON error, never a traceback
+        _print({"error": f"{type(e).__name__}: {e}", "error_code": "internal"}, as_json, f"error: {type(e).__name__}: {e}")
         return 1
     return 0
 

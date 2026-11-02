@@ -32,13 +32,39 @@ uv run tools/video_job.py submit   --spec spec.json --max-usd 1.00 --json
 uv run tools/video_job.py status   JOB_ID --json
 uv run tools/video_job.py result   JOB_ID --json                    # exit 2 until done
 uv run tools/video_job.py list     --json
-uv run tools/video_job.py cancel   JOB_ID
+uv run tools/video_job.py cancel   JOB_ID                           # stops the worker and the tool it runs
+uv run tools/video_job.py resume   JOB_ID [--max-usd 3.00]          # carry on a failed or cancelled job
+uv run tools/video_job.py prune    [--keep 10] [--older-than 7] [--dry-run]
 uv run tools/video_job.py presets  --json                           # prices, formats, kinds, example spec
 uv run tools/video_job.py spec     --brief "..."                    # run the expander only
 ```
 
-Exit codes: 0 ok, 1 bad request, 2 refused or not ready (`budget_exceeded`, `no_expander`, job not done),
-3 another job holds the lock (`lock_held`).
+Exit codes: 0 ok, 1 bad request (`bad_request`, `not_found`, `job_unreadable`, `internal`), 2 refused or
+not ready (`budget_exceeded`, `no_expander`, job not done, or a usage error), 3 another job holds the lock
+(`lock_held`). Errors under `--json` are a JSON object with `error` and `error_code`, never a traceback.
+
+### Resume
+
+A job that stops part-way (the worker or its container died, a tool failed, the cap tripped, or it was
+cancelled) keeps what it already bought. `status` says `resumable: true`, and `resume JOB_ID` restarts the worker
+from the first missing output: every paid step skips files already on disk (scene MP3s, each visual, captions,
+music), and the build, QC and publish rerun because they are free. The cap is checked against only what is still
+missing; pass `--max-usd` to raise it after a `budget_exceeded` stop. A pruned job can't be resumed.
+
+### Prune
+
+Each job keeps a full template copy with its assets (40 to 60 MB). `prune` deletes the `project/` tree of old
+finished jobs and keeps `job.json`, the receipts, the logs, the final MP4 and its contact sheet, so `status` and
+`result` still answer. It never touches a running job, the `--keep` newest, or a job that published its MP4 in the
+last 7 days. `submit` runs it with those defaults every time (`VIDEO_JOB_KEEP`, default 10; `0` turns it off).
+
+### File size
+
+The delivered MP4 is encoded under **9.5 MB** so it attaches in Discord, whose bot upload limit is 10 MB: CRF 23
+under a VBV ceiling at the bitrate the duration allows (`config.json → encode.maxMB` in the template). A 50 s
+16:9 render went from 11.7 MB to 8.3 MB at SSIM 0.993 against the uncapped file, with no visible difference on
+the text cards. `spec.maxMB` or `VIDEO_JOB_MAX_MB` changes the cap and `0` turns it off (for a YouTube upload,
+say). `result` carries `size_bytes`, and a file still over the cap shows up in `warnings`.
 
 ## The spec
 
@@ -124,14 +150,16 @@ for the duration, marked `spec_source: skeleton`), and `submit --brief` is refus
   anything is written.
 - The worker checks before each paid step and stops with `budget_exceeded` if actual spend plus that step's
   estimate would pass the cap. Visuals are checked per asset.
-- Actual cost comes from the tool's `cost` progress event when it emits one (LTX, FLUX via `cloud_gpu.py`),
-  otherwise the table price is booked. Qwen3 and Scribe calls therefore show the estimate as the actual.
+- Actual cost comes from the tool's `cost` progress event when it emits one (LTX, FLUX and Qwen3 via
+  `cloud_gpu.py`; `voiceover.py --progress json` relays Qwen3's), otherwise the table price is booked
+  (ElevenLabs voice, Ideogram).
 - Receipts: `jobs/<id>/receipts.jsonl` and `MEDIA_SPEND_LOG` (default `logs/media-spend.log`), one JSON line
   per tool call in the shape longarm's `video-spend.py` writes, plus `job_id`:
   `{"ts": "...Z", "tool": "ltx2.py", "cost_usd": 0.0712, "elapsed_s": 103.4, "exit": 0, "args": [...], "job_id": "..."}`.
 
-Measured on 2026-10-31, a 3-scene 30 s video (one LTX clip, two Ideogram cards, Qwen3 voice, Scribe
-captions) estimates at $0.35; see the PR that added this for the actual receipts.
+The table was checked on 2026-11-01 against the receipts of the last ten jobs on Lugh's host: LTX clips cost a
+median $0.0825 (the table said $0.20, now $0.10) and FLUX backgrounds $0.0058 ($0.01, now $0.0075). Estimates
+before that date were roughly double the actual spend.
 
 ## Job state
 
@@ -144,16 +172,27 @@ captions) estimates at $0.35; see the PR that added this for the actual receipts
 | `step_detail` | the asset being generated, e.g. `01_hook via ltx2.py` |
 | `estimate_usd`, `actual_usd`, `max_usd` | money |
 | `steps` | per-step summaries: VO durations and pacing, assets made, caption engine, QC verdict |
+| `events` | timestamped list (last 200): each phase, tool start and finish (seconds, cost), each scene voiced (wpm), each asset made, captions engine or skip, music, QC findings, render size, publish, resume |
+| `timings`, `host` | per-step and per-asset seconds and the build rate, which this host's ETAs are calibrated from |
+| `resumes`, `pruned` | how many times the job was resumed; when its project tree was pruned |
+| `made` | outputs whose tool succeeded; resume reuses only these, so a half-written file is bought again |
+| `ledger_usd` | reserve mode: what the shared ledger holds for this job right now (settles net to `actual_usd`) |
 | `output` | `mp4`, `url`, `r2_key`, `duration_s`, `size_bytes`, `qc` |
-| `error`, `error_code` | `budget_exceeded`, `step_failed`, `worker_died`, `worker_crash`, `cancelled` |
+| `error`, `error_code` | `budget_exceeded`, `step_failed`, `worker_died`, `worker_never_started`, `worker_crash`, `cancelled` |
 | `worker_pid` | the detached worker; `status` marks the job `worker_died` if it is gone before a terminal phase |
+
+`status` adds `eta_s`, `done`, `resumable`, `warnings` and `log_tail`; `result` adds `warnings` and
+`resumable`. `warnings` are sentences to pass on to the user: captions or music skipped (and how to get them),
+scenes voiced too fast, an MP4 over the size cap.
 
 Beside it: `job.log` (phases and the tail of every tool's output), `worker.out` (the worker's own stdout),
 `receipts.jsonl`, `spec.json`, `qc.json`, `project/` (the rendered template copy, re-renderable by hand) and
 the final MP4.
 
 The lock `jobs/.lock` names the running job. It is considered stale when that job is finished, its worker is
-dead, or no worker reported in within two minutes, so a crash never wedges the queue. Longarm's daily cap
+dead, or no worker reported in within two minutes, so a crash never wedges the queue. `submit` writes the
+worker's pid into the lock before it returns, and `status` or `list` clear a stale lock and fail a job whose
+worker never started (`worker_never_started`, resumable). Longarm's daily cap
 assumes serial spend, which the lock guarantees.
 
 ## Running under an agent runtime's tool call (longarm)
@@ -168,6 +207,13 @@ injected. `video_job.py` fits that:
   `VIDEO_JOB_RESERVE_AT_SUBMIT=1`) the worker keeps its actual per-tool receipts in
   `jobs/<id>/receipts.jsonl` only, so nothing is counted twice. `status`, `result`, `list` and
   `cancel` print a `$0.0000` cost event so they are not charged the wrapper's unknown-cost default.
+  **Every** call prints exactly one: a refused or failed call (bad spec, lock held, a usage error, a
+  crash) prints `$0.0000` too. Before 2026-11-01 failures printed none, and longarm booked its flat
+  $0.05 for each; 15 failed submits cost Lugh $0.75 that way. `resume` reserves the rest of the
+  estimate again (the job had settled to its actual spend when it stopped) and settles again at the end.
+- Ledger noise: every `status` poll still leaves a `$0` receipt line in the shared ledger. It costs the
+  cap nothing; filtering it out belongs in longarm's `video-spend.py` (skip a receipt whose only cost
+  event is `$0.0000` with `no generation` in the message), not here.
   The ledger path follows `MEDIA_SPEND_LOG`, else `$LONGARM_WORKSPACE/logs/media-spend.log`.
 - `--spec-json '<json>'` takes the spec inline. To fit a 3-scene spec in 4 KB, an `ideogram` scene
   can give the short caption form `{"headline": "...", "object": "...", "description": "..."}`, which
@@ -175,8 +221,15 @@ injected. `video_job.py` fits that:
 - `submit --output files/<name>.mp4` copies the finished MP4 there as well (longarm serves `files/`
   at a public URL and computes that URL itself from the `--output` argument; the file exists once
   `status` says `done`). `result` reports it as `published`.
-- `status` carries `eta_s`, a rough seconds-left figure from the phase and the assets still to make,
-  so an agent can say "about 3 minutes to go" instead of a percentage.
+- `status` carries `eta_s`, seconds left: each remaining step priced at the median of this host's
+  last 5 finished jobs (build as seconds per second of video, visuals per kind), the current step
+  less the time already spent in it, plus 90 s for a cold LTX container when the host's last clip
+  ended over 10 minutes ago. With no history it falls back to a table measured on a Mac. Lugh's host
+  builds about 10x slower than the Mac did before the 2026-11-01 speed-up, which is why the table
+  alone was wrong there. `events` says what is happening, so an agent can report "scene 3's clip is
+  rendering, two images done" rather than a phase name.
+- `--output` must name an `.mp4`. With `VIDEO_JOB_OUTPUT_ROOTS` set (directories separated by
+  `os.pathsep`), it must also be inside one of them.
 - The per-call cost bound of longarm's allowlist becomes the job's `--max-usd` (default 2.00, env
   `VIDEO_JOB_MAX_USD`); set it at or under the daily cap's call reserve policy you want.
 
@@ -206,17 +259,29 @@ claude mcp add video-toolkit -- uv run --directory /path/to/claude-code-video-to
 ```
 
 Any other client spawns that command and speaks MCP over stdin/stdout. Tools: `video_estimate`,
-`video_submit`, `video_status`, `video_result`, `video_list_presets`, plus `video_list` and `video_cancel`.
-Every result carries `ok` and, when false, `error_code`.
+`video_submit`, `video_status`, `video_result`, `video_list_presets`, plus `video_list`, `video_cancel` and
+`video_resume`. Every dict result carries `ok` and, when false, `error` and `error_code`; no tool raises.
 
 ## Tests
 
 ```bash
-uv run python -m unittest tests/python/test_video_job.py -v
+uv run python -m unittest tests/python/test_video_job.py tests/python/test_video_job_agents.py \
+    tests/python/test_video_job_hardening.py -v
 ```
 
-Covers the estimate, the state machine (with the paid steps faked), the lock, worker-death detection, the
-cap refusal, the mid-job budget stop, the receipt shape and the expander hook. No cloud keys or network.
+Covers the estimate, the state machine (with the paid steps faked), the lock and its two-minute window,
+worker-death detection, the cap refusal, the mid-job budget stop, the receipt shape, the expander hook, resume
+(with a fake `run_tool` that writes real files, so the skip-what-exists logic is what is tested), prune, the
+cost event on every exit, the ETA arithmetic, events and warnings, the size cap, and `cancel` stopping the
+worker's child processes. No cloud keys or network.
+
+### Windows
+
+The worker spawn (`DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP`), `pid_alive` (`OpenProcess` +
+`GetExitCodeProcess` with explicit ctypes types), `cancel` (`taskkill /T /F`), the `job.json` replace retry and
+the expander's command splitting were reviewed against the Python and Win32 docs but have **not been run on
+Windows**. Known caveats: a worker started from a console whose job object kills its children on close dies
+with that console, and a process that exits with code 259 reads as alive.
 
 ## Wiring an agent in
 

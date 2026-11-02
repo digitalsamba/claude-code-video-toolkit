@@ -336,7 +336,22 @@ Examples:
         action="store_true",
         help="Show what would be done without making API calls",
     )
+    parser.add_argument(
+        "--progress",
+        choices=["human", "json"],
+        default=None,
+        help="Qwen3 only: relay the cloud call's progress on stderr, including its "
+             "'cost' event (json: one JSON line per event, for agents and job runners)",
+    )
     return parser.parse_args()
+
+
+def _progress_reporter(args):
+    """A cloud_gpu ProgressReporter when --progress is set, else None (quiet, as before)."""
+    if not getattr(args, "progress", None):
+        return None
+    from cloud_gpu import ProgressReporter
+    return ProgressReporter(mode=args.progress)
 
 
 def read_script(script_path: str | None) -> str:
@@ -656,6 +671,7 @@ def generate_single_audio_qwen3(
     top_p: float | None = None,
     cloud: str = "runpod",
     max_wpm: float | None = None,
+    progress=None,
 ) -> dict:
     """Generate a single audio file from script text using Qwen3-TTS. Returns result dict."""
     from qwen3_tts import generate_audio
@@ -675,6 +691,7 @@ def generate_single_audio_qwen3(
         top_p=top_p,
         cloud=cloud,
         max_wpm=max_wpm,
+        progress=progress,
     )
 
 
@@ -690,6 +707,7 @@ def generate_batch_audio_qwen3(
     cloud: str = "runpod",
     timeout_per_scene: int = 120,
     max_wpm: float | None = None,
+    progress=None,
 ) -> list[dict]:
     """Generate multiple audio files in a single Qwen3-TTS call.
 
@@ -717,6 +735,7 @@ def generate_batch_audio_qwen3(
         cloud=cloud,
         timeout=timeout_per_scene,
         max_wpm=max_wpm,
+        progress=progress,
     )
 
     if not result.get("success"):
@@ -758,6 +777,7 @@ def process_scene_directory(
     top_p: float | None = None,
     cloud: str = "runpod",
     max_wpm: float | None = None,
+    progress=None,
 ) -> list[dict]:
     """Process all .txt files in directory, generate .mp3 for each."""
     txt_files = sorted(scene_dir.glob("*.txt"))
@@ -846,6 +866,7 @@ def process_scene_directory(
             top_p=top_p,
             cloud=cloud,
             max_wpm=max_wpm,
+            progress=progress,
         )
 
         for s, r in zip(scenes, batch_results):
@@ -879,6 +900,7 @@ def process_scene_directory(
                 top_p=top_p,
                 cloud=cloud,
                 max_wpm=max_wpm,
+                progress=progress,
             )
         elif provider == "60db":
             result = generate_single_audio_60db(
@@ -1284,6 +1306,7 @@ def main():
             top_p=args.top_p,
             cloud=args.cloud,
             max_wpm=args.max_wpm,
+            progress=_progress_reporter(args),
         )
 
         # Build final result
@@ -1402,6 +1425,7 @@ def main():
             top_p=args.top_p,
             cloud=args.cloud,
             max_wpm=args.max_wpm,
+            progress=_progress_reporter(args),
         )
     elif provider == "60db":
         result = generate_single_audio_60db(
