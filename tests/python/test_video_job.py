@@ -71,7 +71,8 @@ class TestEstimate(Isolated):
 
     def test_prices_follow_the_spec_knobs(self):
         cheap = vj.estimate(spec(ideogram={"speed": "TURBO"}, captions={"enabled": False}))
-        self.assertAlmostEqual(cheap["estimate_usd"], 3 * 0.01 + 2 * 0.03 + 0.20, places=4)
+        self.assertAlmostEqual(cheap["estimate_usd"], 3 * vj.PRICES["voiceover"]["qwen3"] + 2 * 0.03
+                               + vj.PRICES["ltx_clip"], places=4)
         el = vj.estimate(spec(voice={"provider": "elevenlabs"}))
         chars = sum(len(s["text"]) for s in vj.SPEC_EXAMPLE["scenes"])
         vo = next(r for r in el["breakdown"] if r["step"] == "voiceover")
@@ -173,9 +174,14 @@ class TestEstimate(Isolated):
 
     def test_background_gist_stops_at_the_first_sentence(self):
         p = vj.auto_background_prompt("We kept looking at the model. But the constraint was never the silicon.")
-        self.assertIn("evoking: We kept looking at the model.", p)
+        self.assertIn("evoking: we kept looking at the model.", p)
         self.assertNotIn("constraint", p)
         self.assertIn("evoking: a harbour at dawn.", vj.auto_background_prompt("ignored", "a harbour at dawn"))
+        leaky = vj.auto_background_prompt('So the old advice, "a watched pot never boils", has it backwards: '
+                                          "listen & you'll hear it coming. The quiet / not the noise / is the sign.")
+        self.assertNotIn("watched pot", leaky)                 # quoted phrases are what get lettered
+        self.assertNotIn("&", leaky)
+        self.assertIn("evoking: so the old advice has it backwards listen you'll hear it coming.", leaky)
 
     def test_card_object_written_as_a_chain_becomes_a_flow_diagram(self):
         flat = vj.spec_from_scene_args("t", ["one :: card: THE LOOP ; prompt -> agent -> video",
@@ -389,7 +395,8 @@ class TestCli(Isolated):
         self.assertEqual(source, "expander")
         self.assertEqual(s["title"], "Say hello")
         self.assertEqual(s["format"], "16:9")
-        self.assertEqual(vj.estimate(s)["estimate_usd"], round(2 * 0.01 + 0.01 + (4 / 2.4) * 0.40 / 3600, 4))
+        self.assertEqual(vj.estimate(s)["estimate_usd"], round(2 * vj.PRICES["voiceover"]["qwen3"]
+                                                               + vj.PRICES["flux_image"] + (4 / 2.4) * 0.40 / 3600, 4))
 
 
 if __name__ == "__main__":

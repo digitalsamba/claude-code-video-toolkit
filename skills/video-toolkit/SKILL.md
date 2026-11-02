@@ -158,8 +158,12 @@ uv run tools/video_job.py status JOB_ID --json
 Poll every 20 to 30 s. `phase` walks `queued → voiceover → visuals → captions → build → qc → publish → done`,
 or ends in `failed` (with `error` and `error_code`) or `cancelled`. `progress` is 0 to 100, `eta_s` is a rough
 seconds-left figure (say "about 3 minutes to go", not a percentage), `actual_usd` is spend so far,
-`step_detail` names the asset being generated, `log_tail` is the last few log lines. A typical 30 s video
-takes 5 to 10 minutes; the LTX clip is the slow step (2 to 4 minutes each, more on a cold start).
+`step_detail` names the asset being generated, `events` is a timestamped list of what started and finished
+(each scene voiced with its wpm, each clip or image made with its seconds and cost, QC, the render size), and
+`log_tail` is the last few log lines. Use the last two or three `events` to say what is happening ("two images
+done, the clip for scene 3 is rendering") rather than naming a phase. `eta_s` is calibrated from this host's
+recent jobs. A typical 30 s video takes 5 to 10 minutes; the LTX clip is the slow step (2 to 4 minutes each,
+more on a cold start).
 
 Tell the user the id and the estimate as soon as `submit` returns. Do not promise to keep watching from inside
 one turn: the job carries on without you, and `status` works from any fresh process. If your runtime has a
@@ -176,19 +180,27 @@ uv run tools/video_job.py result JOB_ID --json
 `url` is a 2 h presigned download link when Cloudflare R2 is configured, otherwise null and you deliver the
 file. `qc` is `tools/qc.py --render`: loudness was normalised to -14 LUFS, and it reports still stretches,
 black gaps and a silent track. Pass `qc.warnings` on to the user in a line; `qc.errors > 0` means look before
-you ship. Exit 2 means not ready yet.
+you ship. `warnings` (a list of sentences) is for the user too: captions or music skipped, a scene voiced too
+fast, a file over the size cap. Exit 2 means not ready yet. The MP4 is encoded under 9.5 MB so it attaches in
+chat (Discord's bot limit is 10 MB); `maxMB: 0` in the spec turns that off for a full-quality YouTube upload.
 
-Also: `list --json` (recent jobs), `cancel JOB_ID`, and every job keeps `jobs/<id>/job.log`, `receipts.jsonl`
+If a job ends `failed` or `cancelled` with `resumable: true`, run `resume JOB_ID` (add `--max-usd` after a
+`budget_exceeded` stop) rather than submitting again: it keeps the voice, visuals, captions and music already
+paid for and redoes only what is missing.
+
+Also: `list --json` (recent jobs), `cancel JOB_ID`, `prune` (old jobs' project trees; `submit` does this
+itself), and every job keeps `jobs/<id>/job.log`, `receipts.jsonl`
 (one JSON line per paid call: `ts, tool, cost_usd, elapsed_s, exit, args, job_id`) and the project copy it
 rendered from, so a human can open `jobs/<id>/project/` and re-render after edits.
 
 ### Spend
 
 Receipts also append to `MEDIA_SPEND_LOG` (default `logs/media-spend.log` in the toolkit) in the same shape
-longarm's `video-spend.py` writes, so one ledger covers single assets and jobs. Prices (`presets`): LTX clip
-~$0.20, Ideogram image $0.03 to $0.10, FLUX image ~$0.01, Qwen3 voice ~$0.01 a scene, captions ~$0.0001 a
-second. A 3-scene, 30 s video with one LTX clip is about $0.35; the first clip after idle pays a Modal cold
-start on top.
+longarm's `video-spend.py` writes, so one ledger covers single assets and jobs. Prices (`presets`, checked
+against receipts on 2026-11-01): LTX clip ~$0.10, Ideogram image $0.03 to $0.10, FLUX image under a cent,
+Qwen3 voice ~$0.01 a scene, captions ~$0.0001 a second. A 7-scene, 45 s video with two clips and two cards
+lands around $0.40 to $0.55; the first clip after idle pays a Modal cold start on top. Under `--progress json`
+every call prints one `cost` event, failures included ($0).
 
 ---
 
@@ -316,7 +328,7 @@ single tool runs.
 | `submit` exits 3, `lock_held` | Another job is running; `status` that id, or `cancel` it if it is stuck |
 | `submit` exits 2, `budget_exceeded` | Raise `--max-usd`, drop a scene, use `flux` or `"ideogram": {"speed": "TURBO"}` |
 | `submit --brief` exits 2, `no_expander` | Write the spec yourself and pass `--spec`, or set `VIDEO_JOB_EXPANDER` |
-| Job `failed`, `error_code: step_failed` | `status --json` has the error; `jobs/<id>/job.log` has the tool output. Modal cold starts can time out once: resubmit |
-| Job `failed`, `worker_died` | The worker process was killed; the project copy in `jobs/<id>/project/` is intact |
+| Job `failed`, `error_code: step_failed` | `status --json` has the error; `jobs/<id>/job.log` has the tool output. Modal cold starts can time out once: `resume JOB_ID` |
+| Job `failed`, `worker_died` or `worker_never_started` | The worker was killed (a container restart, say). `resume JOB_ID`: it reuses everything already made |
 | Cold start on Modal | First call after idle takes 1 to 3 minutes; the next is warm |
-| Captions missing from a job's video | No `ELEVENLABS_API_KEY` and no local whisper (`uv sync --extra whisper`); the job logs it and renders without |
+| Captions missing from a job's video | No `ELEVENLABS_API_KEY` and no local whisper (`uv sync --extra whisper`); the job renders without and says so in `warnings` |
