@@ -679,6 +679,15 @@
       "created": "2026-05-07",
       "updated": "2026-10-12"
     },
+    "subtitles": {
+      "path": "tools/subtitles.py",
+      "description": "Export existing word-caption JSON as a downloadable SRT or WebVTT track.",
+      "usage": "uv run tools/subtitles.py --help",
+      "status": "beta",
+      "documentation": "docs/subtitles.md",
+      "category": "utility",
+      "created": "2026-11-03"
+    },
     "captions": {
       "path": "tools/captions.py",
       "description": "Word-level <name>.captions.json beside each narration file for the <Captions> component. Transcribes with ElevenLabs Scribe or local whisper and aligns the scene's .txt script onto the timing, so captions spell names as written",
