@@ -881,6 +881,15 @@
       "created": "2026-06-09",
       "updated": "2026-06-09"
     },
+    "evidence": {
+      "path": "tools/evidence.py",
+      "description": "Check local quotations, data values, hashes and script coverage before producing a video.",
+      "usage": "uv run tools/evidence.py --help",
+      "status": "beta",
+      "documentation": "docs/evidence.md",
+      "category": "utility",
+      "created": "2026-11-03"
+    },
     "voice_prosody": {
       "path": "tools/voice_prosody.py",
       "description": "Measure pitch spread (F0 semitone sd, p5-p95) of any audio, and write a livelier clone reference: pitch contour expanded around the median and slowed (Praat PSOLA). A clone copies its reference's pace and intonation, so fix the clip rather than stretching the output",
