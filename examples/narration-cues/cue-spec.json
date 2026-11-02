@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "cues": {
+    "openSettings": { "phrase": "settings" },
+    "chooseCaptions": { "phrase": "choose captions" },
+    "applyChanges": { "phrase": "apply changes" }
+  }
+}
