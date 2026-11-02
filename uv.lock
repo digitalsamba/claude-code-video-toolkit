@@ -545,6 +545,9 @@ prosody = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "praat-parselmouth" },
 ]
+vision = [
+    { name = "opencv-contrib-python-headless" },
+]
 whisper = [
     { name = "openai-whisper" },
 ]
@@ -568,13 +571,14 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.25" },
     { name = "numpy", marker = "extra == 'prosody'", specifier = ">=1.24" },
     { name = "openai-whisper", marker = "extra == 'whisper'", specifier = ">=20240930" },
+    { name = "opencv-contrib-python-headless", marker = "extra == 'vision'", specifier = ">=4.10,<5" },
     { name = "pillow", specifier = ">=10.0" },
     { name = "praat-parselmouth", marker = "extra == 'prosody'", specifier = ">=0.4.3" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "requests", specifier = ">=2.28.0" },
     { name = "websocket-client", specifier = ">=1.6.0" },
 ]
-provides-extras = ["whisper", "prosody", "modal", "mcp", "youtube"]
+provides-extras = ["vision", "whisper", "prosody", "modal", "mcp", "youtube"]
 
 [[package]]
 name = "click"
@@ -2435,6 +2439,26 @@ dependencies = [
     { name = "triton", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'linux2'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/35/8e/d36f8880bcf18ec026a55807d02fe4c7357da9f25aebd92f85178000c0dc/openai_whisper-20250625.tar.gz", hash = "sha256:37a91a3921809d9f44748ffc73c0a55c9f366c85a3ef5c2ae0cc09540432eb96", size = 803191, upload-time = "2025-06-26T01:06:13.34Z" }
+
+[[package]]
+name = "opencv-contrib-python-headless"
+version = "4.14.0.94"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/47/36/cc620b8809235d50f3713b1b592fcd2f117e41322a10fb37e6d332b8e7b8/opencv_contrib_python_headless-4.14.0.94.tar.gz", hash = "sha256:6cd98a20010c80bf9e6a9cff6189dd2c10bd111fb0aa4d5c6361389514a0ff6c", size = 151872798, upload-time = "2026-07-28T19:22:29.226Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1e/60/8c2f1e48954d56e1d672b02ed18f577f9de24c2d29fb98e345b1b79d43a0/opencv_contrib_python_headless-4.14.0.94-cp37-abi3-macosx_13_0_arm64.whl", hash = "sha256:5f3b3eaa8390356da6b82828b6d63af10b24fa9ffdc056c5aceedc5457dad602", size = 52286804, upload-time = "2026-07-29T03:52:17.077Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/4f/45616c195dc9747a2eed832ac87f47c7ab034e0770465c92bd5bfd160b70/opencv_contrib_python_headless-4.14.0.94-cp37-abi3-macosx_14_0_x86_64.whl", hash = "sha256:e122e46efe6abf0023d297cb5691a56dfd7395cdff794711e36ea508f128d0e4", size = 39342631, upload-time = "2026-07-28T20:06:03.401Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/ef/f49b6fc1d443e0060503ec91c194d5a0bc1059f38d867d5ad618d63ebf9a/opencv_contrib_python_headless-4.14.0.94-cp37-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:0e7ae8c2cda93d2a2ae790d75f226afefb98b3755e9f5773a84d250171f3a1e2", size = 41061918, upload-time = "2026-07-28T19:15:15.378Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/14/c64ee2785ea78e8f63cba05a0fc1fc954864933a34420171dfaa4d0bc27b/opencv_contrib_python_headless-4.14.0.94-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:4c0a7f18921a010b7418b2059d934ab9206b20cc1b13bd9eac97307f5d973c3e", size = 63665343, upload-time = "2026-07-28T19:16:05.566Z" },
+    { url = "https://files.pythonhosted.org/packages/85/07/a98dfcb7609a5a9c8d5fb2ef7171374433f18590ae4672145a3a017752cd/opencv_contrib_python_headless-4.14.0.94-cp37-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:2a821a02a87a10961c9e37beffd22e81458d996ca80902080e6d737e3c719f1a", size = 43246994, upload-time = "2026-07-28T19:16:31.286Z" },
+    { url = "https://files.pythonhosted.org/packages/88/92/a4ad45bfd93398b6a57601b078d4821cfa542610a786fde293b8f77804ea/opencv_contrib_python_headless-4.14.0.94-cp37-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:3ee9718fc1eb2d4439c72ec6ad65831ff6d0802ff6eacab834905d67686f2a38", size = 68184831, upload-time = "2026-07-28T19:17:04.183Z" },
+    { url = "https://files.pythonhosted.org/packages/de/49/0d7ad65e9b3d90dc77ed53af1c2ba3feb05012029c00d028244308d32e0c/opencv_contrib_python_headless-4.14.0.94-cp37-abi3-win32.whl", hash = "sha256:69d97639c66454c69fbabf919cd163c2241930bca753c317c922f7cb4c7a67b6", size = 38934044, upload-time = "2026-07-28T18:32:46.512Z" },
+    { url = "https://files.pythonhosted.org/packages/44/95/a7bef7e3f059bcf450638a56485fb1d83ef3c3ebc06bae4a8f96ff30793d/opencv_contrib_python_headless-4.14.0.94-cp37-abi3-win_amd64.whl", hash = "sha256:498ee35b13a4f1274564634d4d45ed19edd7949db8b548b84fcbabacc54aa2ed", size = 47303290, upload-time = "2026-07-28T18:32:43.335Z" },
+]
 
 [[package]]
 name = "opentelemetry-api"
