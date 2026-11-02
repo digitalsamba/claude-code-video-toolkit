@@ -358,6 +358,15 @@
       "created": "2025-12-29",
       "updated": "2025-12-30"
     },
+    "browser_flow": {
+      "path": "playwright/scripts/flow.ts",
+      "description": "Record editable browser actions, replay them with supplied secrets, and export video plus click/target timing events.",
+      "usage": "pnpm --dir playwright flow --help",
+      "status": "beta",
+      "documentation": "docs/replayable-demos.md",
+      "category": "utility",
+      "created": "2026-11-03"
+    },
     "verify_setup": {
       "path": "tools/verify_setup.py",
       "description": "Verify toolkit setup - check prerequisites, cloud GPU, R2, and voice configuration",
