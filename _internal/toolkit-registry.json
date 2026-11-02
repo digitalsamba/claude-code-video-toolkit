@@ -643,6 +643,15 @@
       "created": "2026-06-08",
       "updated": "2026-06-08"
     },
+    "cues": {
+      "path": "tools/cues.py",
+      "description": "Export existing narration phrase timings as named JSON cues, with a validated FPS-aware consumer.",
+      "usage": "uv run tools/cues.py --help",
+      "status": "beta",
+      "documentation": "docs/narration-cue-json.md",
+      "category": "utility",
+      "created": "2026-11-03"
+    },
     "sync_timing": {
       "path": "tools/sync_timing.py",
       "description": "Sync scene durationSeconds in Remotion config with actual audio durations",
