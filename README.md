@@ -72,6 +72,8 @@ Then in Claude Code:
 
 ## Features
 
+See [speaker-timed replacement audio](docs/dubbing.md) for the standalone `dubbing.py` utility.
+
 ### Skills
 
 Claude Code has deep knowledge in:
