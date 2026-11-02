@@ -72,6 +72,8 @@ Then in Claude Code:
 
 ## Features
 
+See [transcript-based highlight cuts](docs/highlights.md) for the standalone `highlights.py` utility.
+
 ### Skills
 
 Claude Code has deep knowledge in:

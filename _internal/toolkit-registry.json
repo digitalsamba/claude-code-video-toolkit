@@ -222,6 +222,15 @@
     }
   },
   "tools": {
+    "highlights": {
+      "path": "tools/highlights.py",
+      "description": "Assemble sentence-aware transcript highlights and shorten internal pauses",
+      "usage": "uv run tools/highlights.py --help",
+      "status": "beta",
+      "created": "2026-10-31",
+      "category": "utility",
+      "updated": "2026-11-03"
+    },
     "voiceover": {
       "path": "tools/voiceover.py",
       "description": "Generate TTS voiceovers using ElevenLabs, Qwen3-TTS, or 60db",
