@@ -72,8 +72,6 @@ Then in Claude Code:
 
 ## Features
 
-See [tracked video reframing](docs/reframe.md) for the standalone `reframe.py` utility.
-
 ### Skills
 
 Claude Code has deep knowledge in:

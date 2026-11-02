@@ -222,15 +222,6 @@
     }
   },
   "tools": {
-    "reframe": {
-      "path": "tools/reframe.py",
-      "description": "Track a selected subject or detected face and render a smoothed crop",
-      "usage": "uv run tools/reframe.py --help",
-      "status": "beta",
-      "created": "2026-10-31",
-      "category": "utility",
-      "updated": "2026-11-03"
-    },
     "voiceover": {
       "path": "tools/voiceover.py",
       "description": "Generate TTS voiceovers using ElevenLabs, Qwen3-TTS, or 60db",
@@ -500,6 +491,16 @@
       "estimatedCost": "$0.01-0.05 per image",
       "created": "2026-01-04",
       "updated": "2026-10-12"
+    },
+    "reframe": {
+      "path": "tools/reframe.py",
+      "description": "Track a selected subject or detected face and render a smoothed crop",
+      "usage": "uv run tools/reframe.py --help",
+      "status": "beta",
+      "created": "2026-10-31",
+      "category": "utility",
+      "updated": "2026-11-03",
+      "documentation": "docs/reframe.md"
     },
     "sadtalker": {
       "path": "tools/sadtalker.py",
