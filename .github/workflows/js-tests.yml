@@ -1,0 +1,37 @@
+name: JS tests
+
+# Unit tests for the TypeScript in lib/components (narration cues) and the ds-release-notes
+# scene built on them. tests/js bundles the TypeScript with the template's own esbuild, so
+# the template's dependencies are installed first.
+
+on:
+  pull_request:
+    paths:
+      - 'lib/components/**'
+      - 'templates/ds-release-notes/**'
+      - 'tests/js/**'
+      - '.github/workflows/js-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: templates/ds-release-notes/package-lock.json
+      - name: Install the template's dependencies (esbuild, react, remotion)
+        run: npm ci
+        working-directory: templates/ds-release-notes
+      - name: Type-check the template
+        run: npx tsc --noEmit -p .
+        working-directory: templates/ds-release-notes
+      - name: node --test tests/js/*.test.mjs
+        run: node --test 'tests/js/*.test.mjs'

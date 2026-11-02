@@ -1,6 +1,6 @@
 // Tests for lib/components/cues.ts and the ds-release-notes scene built on it.
 //
-//   node --test tests/js/            (needs `npm install` in templates/ds-release-notes for esbuild)
+//   node --test 'tests/js/*.test.mjs'   (needs `npm install` in templates/ds-release-notes for esbuild)
 //
 // TypeScript is bundled on the fly with the template's own esbuild, so this runs on any
 // Node version without a TS loader.

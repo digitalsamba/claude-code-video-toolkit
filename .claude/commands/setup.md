@@ -39,7 +39,7 @@ Show a clear status overview before asking anything:
 Toolkit Setup
 
 Prerequisites:
-  [check] Node.js 20.x
+  [check] Node.js 24.x
   [check] Python 3.12
   [check] FFmpeg 7.1
   [check] Python deps installed (uv)
@@ -74,7 +74,7 @@ Check and report. Don't install anything automatically — just tell the user wh
 
 ### Required
 
-- **Node.js 18+**: `node --version`. If missing: "Install from https://nodejs.org/ — needed to render videos"
+- **Node.js 22+ (24 LTS recommended)**: `node --version`. If missing: "Install from https://nodejs.org/ — needed to render videos". If it is 18 or 20, it still works, but both are end of life: suggest `nvm install 24 && nvm alias default 24`
 - **Claude Code**: Already running if they're seeing this command
 
 ### Recommended
@@ -443,7 +443,7 @@ Mention: "You can also use /voice-clone later to clone your own voice for a pers
 Setup Complete!
 
 Prerequisites:
-  [check] Node.js 20.x
+  [check] Node.js 24.x
   [check] Python 3.12
   [check] FFmpeg 7.1
   [check] Python deps (uv)
