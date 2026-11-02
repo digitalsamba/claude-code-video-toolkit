@@ -72,8 +72,6 @@ Then in Claude Code:
 
 ## Features
 
-See [videos from csv or json charts](docs/data-video.md) for the standalone `data_video.py` utility.
-
 ### Skills
 
 Claude Code has deep knowledge in:
