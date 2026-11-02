@@ -222,15 +222,6 @@
     }
   },
   "tools": {
-    "audio_mix": {
-      "path": "tools/audio_mix.py",
-      "description": "Duck music under speech and place timestamped sound effects",
-      "usage": "uv run tools/audio_mix.py --help",
-      "status": "beta",
-      "created": "2026-10-31",
-      "category": "utility",
-      "updated": "2026-11-03"
-    },
     "voiceover": {
       "path": "tools/voiceover.py",
       "description": "Generate TTS voiceovers using ElevenLabs, Qwen3-TTS, or 60db",
@@ -331,6 +322,16 @@
       "status": "beta",
       "created": "2025-12-28",
       "updated": "2025-12-28"
+    },
+    "audio_mix": {
+      "path": "tools/audio_mix.py",
+      "description": "Duck music under speech and place timestamped sound effects",
+      "usage": "uv run tools/audio_mix.py --help",
+      "status": "beta",
+      "created": "2026-10-31",
+      "category": "utility",
+      "updated": "2026-11-03",
+      "documentation": "docs/audio-mix.md"
     },
     "dewatermark": {
       "path": "tools/dewatermark.py",

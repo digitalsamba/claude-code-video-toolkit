@@ -72,8 +72,6 @@ Then in Claude Code:
 
 ## Features
 
-See [speech-aware audio mixing](docs/audio-mix.md) for the standalone `audio_mix.py` utility.
-
 ### Skills
 
 Claude Code has deep knowledge in:
