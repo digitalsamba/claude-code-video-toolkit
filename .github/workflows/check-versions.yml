@@ -1,0 +1,44 @@
+name: Check versions
+
+# Every project that pins Remotion must be listed in .github/dependabot.yml, and every
+# pin must be exact and agree with the rest. Dependabot's monthly grouped PR only
+# touches the directories it is told about, so a project added later stays on the old
+# version without anyone noticing: templates/ds-release-notes, examples/ds-release-649
+# and examples/ds-free-schedule-demo all missed the 4.0.539 bump that way (#152, #154).
+#
+# Run the same check locally with:
+#   uv run scripts/check_versions.py --offline --remotion-only --strict
+
+on:
+  pull_request:
+    paths:
+      - '**/package.json'
+      - '.github/dependabot.yml'
+      - 'scripts/check_versions.py'
+      - '.github/workflows/check-versions.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '**/package.json'
+      - '.github/dependabot.yml'
+      - 'scripts/check_versions.py'
+      - '.github/workflows/check-versions.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  remotion-pins:
+    name: Remotion pins and Dependabot coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check pins and coverage
+        run: python scripts/check_versions.py --offline --remotion-only --strict

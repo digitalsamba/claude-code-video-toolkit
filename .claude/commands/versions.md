@@ -33,6 +33,11 @@ checks `uv.lock` against `pyproject.toml` plus outdated *direct* Python deps, an
 registry version with the latest GitHub release. Staleness alone is informational — bumps are
 deliberate (see "Bump policy" below). Caret ranges and internal mismatches are defects.
 
+It also checks that every pinned project is listed in `.github/dependabot.yml`. A project
+missing there is skipped by the monthly grouped bump and drifts behind. When you add a new
+Remotion template or example, add its directory to `dependabot.yml` in the same PR. CI runs
+`check_versions.py --offline --remotion-only --strict` and fails on a gap.
+
 #### Project Dependency Check (if in project)
 
 ```bash

@@ -19,9 +19,38 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 
 ## Current Status
 
-**Phase:** 3 - Templates & Brands (nearly complete) → moving into Phase 4
-**Focus:** Publishing & distribution, generator coverage (image/video/music), external contributions
-**Recent (v0.15–v0.18):** YouTube publishing (`/publish`), 60db TTS provider, Ideogram 4 T2I, LTX-2 Modal + style LoRAs, concept-explainer-short (9:16) template, TTS pacing QC, Qwen3 VoiceDesign
+**Release:** v0.24.0 (2026-11-01)
+**Phase:** 4 - Polish & Advanced
+**Focus:** making what shipped in v0.21–v0.24 solid (agent video jobs, synthetic UI demos), then the
+gaps contributors keep pointing at: long-form video and transcript-driven editing.
+**Recent (v0.20–v0.24):** SoulX talking heads, `qc.py` (loudness, picture and layout checks), burned
+captions, `cutdown.py`, `/thumbnail`, `modal_setup.py`, synthetic UI demos (`Stage` + `Cursor`) and the
+`ds-release-notes` template, clone prosody tools, agent video jobs (experimental), concept-explainer-short in 16:9.
+
+---
+
+## Next Up
+
+Ordered roughly by priority. Each is sized to one session or one PR.
+
+- [x] **Harden agent video jobs.** Done in #156 (2026-11-02): 10 MB-safe renders, a 3x faster build, a
+      cost event on every exit, `resume`, `prune`, `events`, `warnings`, per-host ETAs, MCP run end to end.
+      Windows is reviewed but still unrun.
+- [ ] **Narration-linked cues for `Stage`.** Resolve a phrase in a scene's `.captions.json` to a frame
+      (`cue('click Save')`), so cursor clicks and camera moves follow the voiceover when it is regenerated
+      or re-timed, instead of being hand-set frame numbers. Pays off on every release-notes video.
+- [ ] **Chaptered long-form template.** 10–30 min YouTube videos: render chapter by chapter with a cache,
+      one continuous ducked music bed, -14 LUFS, chapter timestamps and an `.srt`. Probably built on
+      concept-explainer-short's 16:9 path. A contributor attempt (#127) had the right design.
+- [ ] **Transcript-driven highlights for `cutdown.py`.** Pick whole sentences from the captions JSON by
+      keyword or score, so a short from a long render doesn't need hand-typed `--segment` times.
+- [ ] **Spec-driven release-notes job for Lugh.** A `ds-release-notes` path in `video_job.py`: the agent
+      writes scenes as "screen, action, target, narration" over the screen kits the template already has,
+      and gets the same submit/status/result flow. Covers only screens a kit already rebuilds. Until then
+      Lugh writes a release brief (`memory/release-videos/release-<N>.md` on longarm) and a Claude Code
+      session builds from it; build this once a few briefs show which scenes recur.
+- [ ] **`video_job.py wait`**: block up to a few minutes streaming stage lines, for agents with a
+      per-call time limit.
 
 ---
 
@@ -64,132 +93,48 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 - [x] Documentation (`docs/`)
 - [x] GitHub repo published
 
-### Phase 3: Templates & Brands 🔄 IN PROGRESS
+### Phase 3: Templates & Brands ✅ COMPLETE
 
-**Brand Profiles:**
-- [x] Default brand profile
-- [x] Digital Samba brand profile
-- [x] `/brand` command - list, edit, or create brands
+Open items moved to Phase 4 below.
 
-**Templates:**
-- [x] Product demo template
-- [x] `/video` command - unified project management
-- [x] `/template` command - list available templates
-- [x] Shared component library (`lib/`)
-- [ ] Tutorial template
-- [ ] Changelog/release notes template
+- [x] Brand profiles: default, Digital Samba, `/brand` command
+- [x] Templates: sprint-review, sprint-review-v2, product-demo, concept-explainer-short (9:16 and 16:9),
+      ds-release-notes (the changelog/release-notes template)
+- [x] `/video` and `/template` commands, shared component library (`lib/`)
+- [x] Transitions library (`lib/transitions/`) and gallery (`showcase/transitions/`)
+- [x] Brand loader (`lib/brand.ts`); `/video` generates `brand.ts`
+- [x] Multi-session project system: schema, filesystem reconciliation, per-project CLAUDE.md, `/skills`
+- [x] `/scene-review`, pre-render QC and asset validation (`tools/qc.py`)
+- [x] Qwen3-TTS: standalone tool, `--provider qwen3`, cloning, `/voice-clone`, VoiceDesign (v0.2)
+- [x] Modal as a second cloud GPU provider for every GPU tool; one-command setup (`tools/modal_setup.py`)
+- [x] Generators: FLUX.2 Klein, Ideogram 4 (and 4.5 opt-in), LTX-2.3 with style LoRAs, ACE-Step 1.5
+- [x] 60db TTS provider; TTS pacing QC and `--max-wpm`
+- [x] YouTube publishing (`/publish`, OAuth, scheduling, thumbnails)
+- [x] `/contribute`, `examples/`, CONTRIBUTORS.md, the Community add-ons list
+- [x] Exact Remotion pins, render-baseline A/B in CI, grouped monthly Dependabot bumps, and a CI check
+      that every pinned project is covered (#23)
 
-**Transitions Library:**
-- [x] Transitions library (`lib/transitions/`)
-- [x] Custom presentations: glitch, rgbSplit, zoomBlur, lightLeak, clockWipe, pixelate, checkerboard
-- [x] Re-exports official transitions: slide, fade, wipe, flip
-- [x] Transitions gallery showcase (`showcase/transitions/`)
-- [x] Documentation in Remotion skill and CLAUDE.md
+### Phase 4: Polish & Advanced 🔄 IN PROGRESS
 
-**Template-Brand Integration:**
-- [x] Brand loader utility (`lib/brand.ts`)
-- [x] Templates use `brand.ts` for theming
-- [x] `/video` generates brand.ts from selected brand
+**Shipped:**
+- [x] Social cut-downs: 9:16 / 1:1 / 4:5 (`tools/cutdown.py`)
+- [x] Burned word-level captions (`tools/captions.py` + `<Captions>`)
+- [x] Thumbnails (`/thumbnail`, Ideogram 4 from `project.json` + brand)
+- [x] `qc.py --render` picture checks and `--layout` text checks (overflow, WCAG contrast, minimum size)
+- [x] Talking heads: SoulX-FlashHead as the default (EchoMimicV3 tried and removed)
+- [x] Synthetic UI demos: `Stage` + `Cursor` in `lib/components`, the `synthetic-ui-demo` skill
+- [x] Clone prosody: `voice_prosody.py` measure/expand, `pick_takes.py`
+- [x] Agent video jobs (experimental): `video_job.py`, `video_mcp.py`, `skills/video-toolkit/`
 
-**Multi-Session Project System:**
-- [x] Project schema (`lib/project/types.ts`)
-- [x] Filesystem reconciliation
-- [x] Auto-generated CLAUDE.md per project
-- [x] `/skills` command
-
-**Review & Validation:**
-- [x] `/scene-review` command - dedicated scene-by-scene review with Remotion Studio
-  - [x] Starts Remotion Studio for visual verification
-  - [x] Walks through scenes one by one (not summary tables)
-  - [x] Generic - works with any template's config
-  - [x] `/video` delegates to `/scene-review` when phase is `review`
-  - [x] `/generate-voiceover` warns if review incomplete
-- [x] Pre-render review (timing, sync, polish) — `tools/qc.py`, adds loudness (LUFS / true peak)
-- [x] Asset validation (ffprobe checks) — `tools/qc.py`
-- [ ] Enhancement suggestions
-- Note: `/review` name clashes with Claude Code built-in PR review - using `/scene-review`
-
-**Qwen3-TTS Integration:**
-- [x] `tools/qwen3_tts.py` — standalone CLI tool
-- [x] `voiceover.py --provider qwen3` — per-scene generation
-- [x] Docker image: `ghcr.io/conalmullan/video-toolkit-qwen3-tts:latest`
-- [x] 9 built-in speakers, tone presets, voice cloning
-- [x] `/voice-clone` command — record, test, save cloned voice to brand
-- [x] Temperature/top_p generation params for expressiveness control
-- [ ] Make Qwen3-TTS the default provider (replacing ElevenLabs)
-
-**Modal Cloud GPU Provider:**
-- [x] `tools/cloud_gpu.py` — shared provider abstraction (RunPod + Modal)
-- [x] `tools/file_transfer.py` — shared R2/fallback upload/download
-- [x] `--cloud runpod|modal` flag on all cloud GPU tools
-- [x] `docker/modal-qwen3-tts/app.py` — deployed, tested
-- [x] `docker/modal-flux2/app.py` — deployed, tested
-- [x] `docker/modal-upscale/app.py` — deployed, tested
-- [x] `docker/modal-image-edit/app.py` — deployed, tested
-- [x] `docker/modal-music-gen/app.py` — deployed, tested
-- [x] `docker/modal-sadtalker/app.py` — deployed, tested
-- [x] `--runpod` deprecated in upscale.py and dewatermark.py (alias for `--cloud runpod`)
-- [x] `voiceover.py` passes `--cloud` through to Qwen3-TTS
-- [x] `dewatermark.py` migrated to `cloud_gpu.py` (removed ~393 lines of inline RunPod code)
-- [x] `docs/modal-setup.md` — setup guide for Modal deployment
-- [x] One-command Modal setup: `tools/modal_setup.py` deploys apps and writes their URLs to `.env` (`qwen3_tts.py --setup --cloud modal` delegates to it)
-
-**Sprint Review v2:**
-- [x] `sprint-review-v2` template — composable scene-based architecture
-- [x] Modular scene components
-
-**Generators & Providers (v0.11–v0.18):**
-- [x] FLUX.2 Klein text-to-image (`tools/flux2.py`, RunPod + Modal)
-- [x] Ideogram 4 text-to-image for in-image text (`tools/ideogram4.py`, hosted API)
-- [x] LTX-2 video generation (`tools/ltx2.py`, `tools/chain_video.py`, style LoRAs incl. crt-terminal)
-- [x] ACE-Step 1.5 music generation (`tools/music_gen.py`, acemusic API + Modal/RunPod)
-- [x] Qwen3-TTS VoiceDesign + shared-prompt cloning (v0.2)
-- [x] 60db TTS provider (`--provider 60db`, `tools/sixtydb_tts.py`)
-- [x] TTS pacing QC (`tools/pacing.py`, `--max-wpm`)
-- [ ] Edge-TTS provider (PR #46, needs rebase over 60db)
-- [ ] Make Qwen3-TTS the default provider (replacing ElevenLabs) — still open
-
-**Publishing:**
-- [x] YouTube upload (`tools/youtube_upload.py`, `/publish`) — OAuth, scheduling, thumbnails
-- [ ] Other destinations (LinkedIn, X, S3/R2 CDN)
-
-**Additional Templates (shipped):**
-- [x] `concept-explainer-short` — 9:16 vertical shorts, first Python/moviepy template
-- [ ] Monthly engineering-review template (ticket-driven, presenter-narrated) — in-tree but not yet ready to publish
-
-**Additional Components:**
-- [x] `FilmGrain` — SVG noise overlay for cinematic texture
-- [x] `MazeDecoration` — Animated isometric grid decoration
-
-**Contribution & Examples:**
-- [x] `/contribute` command
-- [x] `examples/` directory
-- [x] CONTRIBUTORS.md
-
-**Testing:**
-- [x] Test new project creation with scene-centric flow
-- [ ] Test project resumption (multi-session)
-- [ ] Verify filesystem reconciliation
-- [x] Verify CLAUDE.md auto-generation
-
-**Registry & Roadmap Alignment:**
-- [x] Update skill status table to include all current skills
-- [x] Add Qwen3-TTS to roadmap phases
-- [x] Document `remotion-official` skill sync from upstream (remotion-dev/skills) in roadmap
-- [x] Update Metrics section
-
-### Phase 4: Polish & Advanced
-
-**Output & Accessibility:**
-- [x] Social formats: 9:16 / 1:1 / 4:5 cut-downs (`tools/cutdown.py`)
+**Open:**
+- [ ] Make Qwen3-TTS the default voiceover provider (replacing ElevenLabs)
+- [ ] Other publish destinations (LinkedIn, X, S3/R2 CDN)
 - [ ] Multi-format output (WebM, GIF)
-- [x] Subtitle generation from voiceover scripts (`tools/captions.py` + `<Captions>`)
-- [x] Thumbnail auto-generation (`/thumbnail` — Ideogram 4 JSON caption from `project.json` + brand)
-
-**Skills:**
-- [ ] Video accessibility skill
-- [ ] Terminal recording skill (asciinema)
-- [ ] Video timing skill
+- [ ] Tutorial template
+- [ ] Monthly engineering-review template (ticket-driven, presenter-narrated) — in-tree but not yet ready to publish
+- [ ] Test project resumption (multi-session) and filesystem reconciliation end to end
+- [ ] Skills: video accessibility, terminal recording (asciinema), video timing
+- [ ] Qwen3-TTS v0.2 image on RunPod (built; push waiting on a registry token refresh)
 
 ---
 
@@ -213,11 +158,13 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 | frontend-design | stable | Visual design refinement |
 | qwen-edit | stable | AI image editing prompting patterns |
 | runpod | stable | Cloud GPU setup, Docker images, endpoint management |
-| modal | beta | Alternative cloud GPU provider — faster cold starts, all 6 tools deployed |
+| modal | beta | Alternative cloud GPU provider — faster cold starts, every GPU tool deployed |
 | acestep | stable | ACE-Step 1.5 music generation prompting |
 | ltx2 | beta | LTX-2 video generation prompting, style LoRAs |
 | moviepy | stable | Python composition, deterministic text overlay |
 | ideogram4 | beta | Structured JSON captions for in-image text |
+| synthetic-ui-demo | beta | Product screens rebuilt from source and driven by `Stage`; used for DS releases 649 and 650 |
+| video-toolkit | draft | Agent-facing skill for video jobs (`skills/video-toolkit/`); experimental |
 
 ---
 
@@ -243,8 +190,8 @@ An open-source, AI-native video production workspace for Claude Code, featuring:
 |----------|-------|-------|
 | Templates | 5 | sprint-review, sprint-review-v2, product-demo, concept-explainer-short, ds-release-notes |
 | Brands | 2 | default, digital-samba |
-| Skills | 13 | remotion, remotion-official, elevenlabs, ffmpeg, playwright-recording, frontend-design, qwen-edit, runpod, acestep, ltx2, moviepy, ideogram4, synthetic-ui-demo |
-| Tools | 29 | voiceover, qwen3_tts, sixtydb_tts, music, music_gen, sfx, redub, addmusic, sync_timing, qc, align_captions, captions, cutdown, dewatermark, locate_watermark, notebooklm_brand, image_edit, upscale, flux2, ideogram4, ltx2, chain_video, sadtalker, soulx, verify_setup, modal_setup, youtube_upload, voice_prosody, pick_takes |
+| Skills | 14 | remotion, remotion-official, elevenlabs, ffmpeg, playwright-recording, frontend-design, qwen-edit, runpod, acestep, ltx2, moviepy, ideogram4, synthetic-ui-demo, video-toolkit |
+| Tools | 31 | voiceover, qwen3_tts, sixtydb_tts, music, music_gen, sfx, redub, addmusic, sync_timing, qc, align_captions, captions, cutdown, dewatermark, locate_watermark, notebooklm_brand, image_edit, upscale, flux2, ideogram4, ltx2, chain_video, sadtalker, soulx, verify_setup, modal_setup, youtube_upload, voice_prosody, pick_takes, video_job, video_mcp |
 | Commands | 15 | setup, video, brand, template, skills, contribute, record-demo, generate-voiceover, scene-review, design, versions, redub, voice-clone, thumbnail, publish |
 | Components | 14 | AnimatedBackground, SlideTransition, Label, Vignette, FilmGrain, LogoWatermark, SplitScreen, NarratorPiP, Captions, Envelope, PointingHand, MazeDecoration, Stage, Cursor |
 | Transitions | 7 | glitch, rgbSplit, zoomBlur, lightLeak, clockWipe, pixelate, checkerboard |
