@@ -254,7 +254,8 @@ skip):
 - **Black gaps:** black for 0.5s or more mid-video, usually a gap between sequences or media that didn't load.
 - **Empty first frame:** background only. A warning on vertical and square renders, whose frame 0 is
   the Shorts/Reels cover, and info on landscape renders, which get a custom thumbnail.
-- **Audio:** a missing or silent audio track is an error.
+- **Audio:** a missing or silent audio track is an error. `--allow-silent` makes it info, for a deliverable that is
+  silent on purpose; the picture checks still run.
 
 Still stretches are warnings, not defects: a hold the narration needs is fine, but give it a next action
 (see `.claude/skills/remotion/motion-craft.md`).
