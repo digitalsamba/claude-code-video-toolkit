@@ -74,7 +74,8 @@ def scene_cuts(path: Path, threshold: float, fps: int = 8) -> list[float]:
             while j + 1 < len(blank) and blank[j + 1]:
                 j += 1
             if i > 0 and j < len(blank) - 1:  # a blank between content, not the very start or end
-                cuts.append(round((i + j + 1) / 2 / fps, 3))
+                # the scene ends where the blank starts; its fade-out runs into it, so step back past that
+                cuts.append(round(i / fps, 3))
             i = j + 1
         else:
             i += 1
