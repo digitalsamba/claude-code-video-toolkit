@@ -1,0 +1,65 @@
+[
+ {
+  "text": "This",
+  "startMs": 140,
+  "endMs": 260,
+  "timestampMs": 200,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 300,
+  "endMs": 400,
+  "timestampMs": 350,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 440,
+  "endMs": 520,
+  "timestampMs": 480,
+  "confidence": null
+ },
+ {
+  "text": " video",
+  "startMs": 560,
+  "endMs": 820,
+  "timestampMs": 690,
+  "confidence": null
+ },
+ {
+  "text": " toolkit's",
+  "startMs": 940,
+  "endMs": 1500,
+  "timestampMs": 1220,
+  "confidence": null
+ },
+ {
+  "text": " star",
+  "startMs": 1720,
+  "endMs": 2000,
+  "timestampMs": 1860,
+  "confidence": null
+ },
+ {
+  "text": " history",
+  "startMs": 2060,
+  "endMs": 2420,
+  "timestampMs": 2240,
+  "confidence": null
+ },
+ {
+  "text": " on",
+  "startMs": 2480,
+  "endMs": 2620,
+  "timestampMs": 2550,
+  "confidence": null
+ },
+ {
+  "text": " GitHub.",
+  "startMs": 2680,
+  "endMs": 3060,
+  "timestampMs": 2870,
+  "confidence": null
+ }
+]

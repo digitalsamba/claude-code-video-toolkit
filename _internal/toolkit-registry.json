@@ -1398,6 +1398,13 @@
       "created": "2026-11-02",
       "updated": "2026-11-02"
     },
+    "DataChart": {
+      "path": "lib/components/DataChart.tsx",
+      "description": "LineChart and BarChart drawn as SVG frame by frame: brand-themed (chartTheme, dark or light), a line that draws to narration keyframes with a y axis that grows with the data, cue-timed annotation bands and bar highlights, counting value labels. Labels are real text, so qc.py --layout checks them",
+      "status": "beta",
+      "created": "2026-11-04",
+      "updated": "2026-11-04"
+    },
     "MazeDecoration": {
       "path": "lib/components/MazeDecoration.tsx",
       "description": "Animated isometric grid decoration for video corners with wave animation",
@@ -1471,6 +1478,15 @@
       "stack": "python-moviepy",
       "complexity": "beginner",
       "created": "2026-04-08"
+    },
+    "data-chart-stars": {
+      "path": "examples/data-chart-stars/",
+      "description": "31s narrated chart video: the toolkit's GitHub star history as a line that draws word by word with Lugh's narration, then monthly gains as bars lit on cue. Built on lib/components DataChart; data refreshed by scripts/fetch_stars.py",
+      "template": "custom",
+      "stack": "remotion",
+      "complexity": "intermediate",
+      "contributor": "Digital Samba",
+      "created": "2026-11-04"
     },
     "ds-crt-stinger": {
       "path": "examples/ds-crt-stinger/",

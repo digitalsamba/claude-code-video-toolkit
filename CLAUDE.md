@@ -119,6 +119,13 @@ re-timed. For product walkthroughs and release-notes videos, prefer this to a Pl
 source is readable. The method and its gotchas are in `.claude/skills/synthetic-ui-demo/`. The reference builds
 are `examples/ds-free-schedule-demo` and `examples/ds-release-649`, and their screen kits stay in the examples.
 
+**Data charts:** `LineChart` and `BarChart` (`lib/components/DataChart.tsx`) draw charts as SVG in the brand
+(`chartTheme(brand.colors, brand.fonts, 'dark' | 'light')`) instead of embedding a Matplotlib MP4. The line draws to
+`keys` (`{ frame, x }` pairs, frames from `cue()`), so each stretch of data is drawn while the narration talks about
+it; annotation bands and bar highlights take cue frames too, and `lineHead()` gives the same position for a counter.
+Prefer this inside Remotion videos; keep the `data-viz-chart` Matplotlib pattern for pure-Python builds. Reference:
+`examples/data-chart-stars`.
+
 ## Python Tools
 
 Audio, video, and image tools in `tools/`. See registry `tools` section for the full catalog with descriptions, options, presets, and env vars. Every tool supports `--help`.

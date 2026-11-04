@@ -1,0 +1,58 @@
+[
+ {
+  "text": "But",
+  "startMs": 220,
+  "endMs": 300,
+  "timestampMs": 260,
+  "confidence": null
+ },
+ {
+  "text": " October",
+  "startMs": 360,
+  "endMs": 900,
+  "timestampMs": 630,
+  "confidence": null
+ },
+ {
+  "text": " was",
+  "startMs": 1020,
+  "endMs": 1140,
+  "timestampMs": 1080,
+  "confidence": null
+ },
+ {
+  "text": " our",
+  "startMs": 1180,
+  "endMs": 1320,
+  "timestampMs": 1250,
+  "confidence": null
+ },
+ {
+  "text": " strongest",
+  "startMs": 1420,
+  "endMs": 1820,
+  "timestampMs": 1620,
+  "confidence": null
+ },
+ {
+  "text": " month",
+  "startMs": 1920,
+  "endMs": 2120,
+  "timestampMs": 2020,
+  "confidence": null
+ },
+ {
+  "text": " since",
+  "startMs": 2200,
+  "endMs": 2440,
+  "timestampMs": 2320,
+  "confidence": null
+ },
+ {
+  "text": " June.",
+  "startMs": 2540,
+  "endMs": 2860,
+  "timestampMs": 2700,
+  "confidence": null
+ }
+]
