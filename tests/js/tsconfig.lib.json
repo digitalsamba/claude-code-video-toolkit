@@ -7,5 +7,5 @@
     "paths": { "*": ["node_modules/@types/*", "node_modules/*"] },
     "types": []
   },
-  "files": ["../../lib/components/DataChart.tsx", "../../lib/components/cues.ts", "../../lib/components/utils.ts"]
+  "files": ["../../lib/components/DataChart.tsx", "../../lib/components/PageTurns.tsx", "../../lib/components/cues.ts", "../../lib/components/utils.ts"]
 }

@@ -1436,6 +1436,13 @@
       "created": "2026-11-04",
       "updated": "2026-11-04"
     },
+    "PageTurns": {
+      "path": "lib/components/PageTurns.tsx",
+      "description": "One scene that turns into new pages in place, each on its narration cue: a hard edge sweeps across with the next page behind it (no fade). For showing the same thing again in a new way (one chart in three design sources, before and after a fix). Between scenes use @remotion/transitions wipe()",
+      "status": "beta",
+      "created": "2026-11-04",
+      "updated": "2026-11-04"
+    },
     "MazeDecoration": {
       "path": "lib/components/MazeDecoration.tsx",
       "description": "Animated isometric grid decoration for video corners with wave animation",

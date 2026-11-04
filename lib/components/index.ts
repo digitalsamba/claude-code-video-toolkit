@@ -66,6 +66,10 @@ export type {
   ChartTheme, LinePoint, HeadKey, ChartBand, ChartBar,
 } from './DataChart';
 
+// Turning one scene into new pages in place, on narration cues (between scenes: @remotion/transitions wipe())
+export { PageTurns, turnProgress } from './PageTurns';
+export type { PageTurnsProps, PageTurn } from './PageTurns';
+
 // Utilities
 export { hexToRgba, SIZE_PRESETS, POSITION_PRESETS } from './utils';
 export type { SizePreset, PositionPreset } from './utils';

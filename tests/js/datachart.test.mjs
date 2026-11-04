@@ -72,3 +72,14 @@ test('chartTheme maps brand colours for dark and light backgrounds', () => {
   assert.equal(light.muted, '#64748b');
   assert.equal(chartTheme({ ...colors, accent: undefined }, { primary: 'Inter' }).accent, '#ea580c');
 });
+
+const { turnProgress } = await load(path.join(ROOT, 'lib/components/PageTurns.tsx'));
+
+test('a page turn starts `lead` frames before its cue and finishes `turnFrames` later', () => {
+  assert.equal(turnProgress(93, 100), 0);          // at - lead - 1: not started
+  assert.equal(turnProgress(94, 100), 0);          // starts at at - lead
+  assert.equal(turnProgress(110, 100), 1);         // at - lead + turnFrames: done
+  const mid = turnProgress(100, 100);              // on the word: mostly turned (ease-out)
+  assert.ok(mid > 0.6 && mid < 1, `mid ${mid}`);
+  assert.equal(turnProgress(100, 100, 10, 0), 0);  // lead 0: starts on the word
+});

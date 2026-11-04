@@ -73,6 +73,12 @@ design skill, a brand guide                       rules on/off                ac
 - Every number on screen comes from the data file, and every number the narration says is checked
   against it at build time (see `examples/data-chart-stars` and the `check()` pattern).
 
+**Transitions.** An act change is a hard cut, or `wipe()` from `@remotion/transitions` when a moving edge helps;
+never a cross-fade between fields. When one scene shows the same thing again in a new way (the same chart in
+another design, a screen after the fix), turn it in place with `PageTurns` (`lib/components`), each turn on the
+word that names the new page. Effect transitions (`lib/transitions`: glitch, light leak, zoom blur) are a brand
+choice, not a default; record one under "Rules turned off" in `design.md`.
+
 **Motion** belongs to `.claude/skills/remotion/motion-craft.md`: timing in frames, read time, and the
 defaults that look generated. Each change on screen lands on the word that names it (`cue()`), so a
 held scene always has a next action, which is what `qc.py --render`'s still-stretch check looks for.

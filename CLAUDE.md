@@ -896,7 +896,13 @@ own video layer: it turns that direction into scenes and critiques the render. T
 `project.json` (`design.source`) and the decisions in `design.md` (format in `video-design/handoff.md`), so a
 different source changes the file, not the code. Known sources are in the registry's `designSources`; taste-skill
 is the recommended external one today, Anthropic's frontend-design is another, and "ours" (video-design's act
-palettes with the brand) is the default that needs nothing installed. Plug in your own design skill, or use ours. Sources are installed by the user and never copied into the toolkit.
+palettes with the brand) is the default that needs nothing installed. Plug in your own design skill, or use ours.
+
+**Turning a scene in place:** `PageTurns` (`lib/components/PageTurns.tsx`) turns one scene into new pages, each on
+its narration cue: a hard edge sweeps across with the next page behind it, and nothing fades. Use it when the same
+thing is shown again in a new way and the change is the point (one chart in three design sources, a screen before
+and after a fix). Between scenes, use `wipe()` from `@remotion/transitions`: a hard-edged cut is the default for an
+act change in `video-design`, and the effect transitions below are for when the brand calls for them. Sources are installed by the user and never copied into the toolkit.
 
 ### Usage
 - **During scene review** (`/scene-review`): choose "Refine"
