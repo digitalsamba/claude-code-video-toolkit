@@ -161,6 +161,10 @@ export type LineChartProps = {
   fontSize?: number;
   /** Show the series legend (default: when there is more than one series). */
   legend?: boolean;
+  /** Shading under filled lines: a fading gradient (default), a flat tint (`areaOpacity`), or none. */
+  area?: 'gradient' | 'flat' | 'none';
+  /** Opacity of a flat area (default 0.12). */
+  areaOpacity?: number;
 };
 
 // 1-2-5 steps, from 0.01 up to 5e7.
@@ -168,7 +172,7 @@ const STEPS = [-2, -1, 0, 1, 2, 3, 4, 5, 6, 7].flatMap((k) => [1, 2, 5].map((m) 
 
 export const LineChart: React.FC<LineChartProps> = ({
   points, series, keys, width, height, theme, xTicks = [], bands = [], followData = true, headroom = 1.25,
-  formatY = defaultFormat, fontSize = 28, legend,
+  formatY = defaultFormat, fontSize = 28, legend, area = 'gradient', areaOpacity = 0.12,
 }) => {
   const palette = [theme.primary, theme.accent, theme.muted];
   const lines = (series ?? [{ name: '', points: points ?? [] }]).map((l, i) => ({
@@ -285,7 +289,10 @@ export const LineChart: React.FC<LineChartProps> = ({
         })}
 
         <g clipPath={`url(#reveal-${id})`}>
-          {lines.map((l, i) => l.fill && <path key={`a${i}`} d={paths[i].area} fill={`url(#fill-${id}-${i})`} />)}
+          {area !== 'none' && lines.map((l, i) => l.fill && (
+            <path key={`a${i}`} d={paths[i].area}
+              fill={area === 'flat' ? l.color : `url(#fill-${id}-${i})`} fillOpacity={area === 'flat' ? areaOpacity : 1} />
+          ))}
           {[...lines.keys()].reverse().map((i) => (
             <path key={`l${i}`} d={paths[i].d} fill="none" stroke={lines[i].color} strokeWidth={i === 0 ? 5 : 4}
               strokeLinejoin="round" strokeLinecap="round" />
@@ -327,6 +334,8 @@ export type ChartBar = {
   highlightColor?: string;
   /** Small second line under the label ("to 4th"). */
   note?: string;
+  /** Frame this bar starts to grow (a cue). Default: `start` plus its place in the stagger. */
+  growAt?: number;
 };
 
 export type BarChartProps = {
@@ -341,10 +350,12 @@ export type BarChartProps = {
   /** Value label text (default: grouped integers). Called with the counting-up value. */
   formatValue?: (v: number) => string;
   fontSize?: number;
+  /** Corner radius of the bars (default: rounded, up to 10px; 0 for square columns). */
+  radius?: number;
 };
 
 export const BarChart: React.FC<BarChartProps> = ({
-  bars, width, height, theme, start, stagger = 6, formatValue = defaultFormat, fontSize = 34,
+  bars, width, height, theme, start, stagger = 6, formatValue = defaultFormat, fontSize = 34, radius,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -359,14 +370,14 @@ export const BarChart: React.FC<BarChartProps> = ({
       <g transform={`translate(0,${m.top})`}>
         <line x1={0} x2={width} y1={h} y2={h} stroke={theme.grid} strokeWidth={2} />
         {bars.map((b, i) => {
-          const t = spring({ frame: frame - start - i * stagger, fps, config: { damping: 14, mass: 0.9 } });
+          const t = spring({ frame: frame - (b.growAt ?? start + i * stagger), fps, config: { damping: 14, mass: 0.9 } });
           const hi = b.highlightAt === undefined ? 0 : clamp01(spring({ frame: frame - b.highlightAt, fps, config: { damping: 12 } }));
           const pop = 1 + 0.06 * Math.sin(Math.PI * hi);
           const bh = (b.value / max) * h * t * pop;
           const x = slot * i + (slot - bw * pop) / 2;
           return (
             <g key={b.label}>
-              <rect x={x} y={h - bh} width={bw * pop} height={Math.max(0, bh)} rx={Math.min(10, bw / 6)}
+              <rect x={x} y={h - bh} width={bw * pop} height={Math.max(0, bh)} rx={radius ?? Math.min(10, bw / 6)}
                 fill={interpolateColors(hi, [0, 1], [theme.muted, b.highlightColor ?? theme.primary])} opacity={0.45 + 0.55 * hi} />
               {t > 0.01 && <text x={slot * i + slot / 2} y={h - bh - fontSize * 0.6} textAnchor="middle"
                 fill={interpolateColors(hi, [0, 1], [theme.muted, theme.text])}
