@@ -1486,7 +1486,8 @@
       "stack": "remotion",
       "complexity": "intermediate",
       "contributor": "Digital Samba",
-      "created": "2026-11-04"
+      "created": "2026-11-04",
+      "demo": "https://demos.digitalsamba.com/video/data-chart-stars.mp4"
     },
     "ds-crt-stinger": {
       "path": "examples/ds-crt-stinger/",
