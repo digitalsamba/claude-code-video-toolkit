@@ -116,7 +116,13 @@
     }
   },
   "designSources": {
-    "_note": "Design skills that give video-design its direction. Installed by the user from their own repos, never copied into the toolkit. /design and /scene-review offer the installed ones; the project's choice is project.json design.source. List one by opening an issue (see .claude/skills/video-design/sources.md).",
+    "_note": "Plug in your own design skill, or use ours. Design skills give video-design its direction; they're installed by the user from their own repos, never copied into the toolkit. 'ours' is the toolkit's own: video-design's act palettes and rules with the project's brand, nothing to install. /design and /scene-review offer the installed ones plus ours; the project's choice is project.json design.source. List one by opening an issue (see .claude/skills/video-design/sources.md).",
+    "ours": {
+      "skill": "video-design",
+      "recommended": false,
+      "default": true,
+      "description": "The toolkit's own: video-design's act palettes (brand + bone + black, graphite, paper, loud two-act) and rules with the project's brand; nothing to install"
+    },
     "taste-skill": {
       "skill": "taste-skill:design-taste-frontend",
       "recommended": true,
@@ -131,12 +137,6 @@
       "description": "Anthropic's general visual direction for interfaces; written for web pages, so its effects (gradient meshes, glows) are turned down for video",
       "repo": "https://github.com/anthropics/skills",
       "install": "See the anthropics/skills README"
-    },
-    "brand": {
-      "skill": null,
-      "recommended": false,
-      "description": "No design skill: brands/<name>/brand.json gives colours and fonts, and video-design builds the acts and fields itself",
-      "install": "Nothing to install"
     }
   },
   "commands": {

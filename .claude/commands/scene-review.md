@@ -193,7 +193,7 @@ Ask what needs to change:
 ### Refine (video-design skill)
 For visual/aesthetic improvements beyond config changes:
 1. Use the project's design source (`project.json` `design.source`; if unset, offer the installed design skills
-   and "brand only", as in `/design` step 5), update `design.md`, then invoke `video-design`. Read
+   and "ours", as in `/design` step 5), update `design.md`, then invoke `video-design`. Read
    `.claude/skills/remotion/motion-craft.md` for motion (timing in frames, read time, the defaults that look
    generated)
 2. Read the slide component (e.g., `src/components/slides/TitleSlide.tsx`)

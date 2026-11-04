@@ -1,7 +1,8 @@
 # Design Refinement
 
 Focused design session for improving video scene visuals with the `video-design` skill, taking direction from the
-project's design source (taste-skill, Anthropic's frontend-design, the user's own design skill, or the brand alone).
+project's design source: plug in your own design skill (taste-skill, Anthropic's frontend-design, a team's own), or
+use ours (video-design's act palettes with the brand).
 
 ## Purpose
 
@@ -117,19 +118,19 @@ Common mood dimensions:
 
 1. **Design source.** If `project.json` has `design.source`, use it. Otherwise list the design skills installed in
    this session (their descriptions mention design, visual, aesthetics, palette or brand), recommended first, and
-   ask. The registry's `designSources` has the known ones and how to install them; "brand only" is always an option:
+   ask. The registry's `designSources` has the known ones and how to install them; "ours" is always an option:
 
    ```
    Which design source should set the direction?
-   1. taste-skill (recommended, installed)
-   2. frontend-design (installed)
-   3. Brand only (brands/{brand}/)
+   1. Ours: video-design's act palettes with brands/{brand}/ (nothing to install)
+   2. taste-skill (recommended, installed)
+   3. frontend-design (installed)
    ```
 
    Save the answer as `"design": {"source": "...", "file": "design.md"}` in `project.json` so later sessions
    don't ask again.
 2. **Get the direction** from that source (invoke the skill with the scene's purpose, mood, neighbours and brand),
-   or from the brand alone.
+   or, for ours, pick an act palette from `.claude/skills/video-design/palettes.md`.
 3. **Write or update `design.md`** in the project, in the shape in `.claude/skills/video-design/handoff.md`:
    acts, a field per act, ink, the one accent, the five type steps, rules turned off and why. If the project
    already has one, change only what this session decides.

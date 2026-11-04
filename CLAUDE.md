@@ -891,12 +891,12 @@ See `lib/transitions/README.md` for full documentation.
 ## Design: video-design and design sources
 
 How a video looks is split in two. A **design source** gives the direction (palette, type, an idea): any design
-skill the user trusts, or the brand alone. **`video-design`** (`.claude/skills/video-design/`) is the toolkit's
+skill the user trusts (plug in your own), or ours. **`video-design`** (`.claude/skills/video-design/`) is the toolkit's
 own video layer: it turns that direction into scenes and critiques the render. The project records its source in
 `project.json` (`design.source`) and the decisions in `design.md` (format in `video-design/handoff.md`), so a
 different source changes the file, not the code. Known sources are in the registry's `designSources`; taste-skill
-is the recommended one today, Anthropic's frontend-design and "brand only" are alternatives, and users can bring
-their own. Sources are installed by the user and never copied into the toolkit.
+is the recommended external one today, Anthropic's frontend-design is another, and "ours" (video-design's act
+palettes with the brand) is the default that needs nothing installed. Plug in your own design skill, or use ours. Sources are installed by the user and never copied into the toolkit.
 
 ### Usage
 - **During scene review** (`/scene-review`): choose "Refine"

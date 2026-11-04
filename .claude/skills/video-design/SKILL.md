@@ -19,7 +19,8 @@ design skill, a brand guide                       rules on/off                ac
 ```
 
 - **The design source** gives the direction: a palette, a typeface, an idea. Any skill that can do that
-  works, and none is required: with only a brand, this skill writes `design.md` itself. The project
+  works, and none is required: with ours (the default), this skill writes `design.md` itself from an act
+  palette and the brand. Plug in your own design skill, or use ours. The project
   records its choice in `project.json` (`design.source`). See `sources.md`.
 - **`design.md`** lives in the project. It is the contract: what the source decided, mapped onto the
   video's acts, plus any house rule turned off and why. A different source means a different
@@ -81,7 +82,7 @@ held scene always has a next action, which is what `qc.py --render`'s still-stre
 1. **Acts.** Write the video's acts (two to four) and which scenes each holds. This is the most
    important design decision and it is made in words.
 2. **Direction.** Use the project's design source if `project.json` names one; otherwise offer the
-   installed ones (`sources.md`), or work from the brand alone.
+   installed ones (`sources.md`), or use ours: an act palette from `palettes.md` with the brand.
 3. **`design.md`.** Fill it from the source's direction (`handoff.md`): a field per act, ink, the one
    accent, the five type steps, rules turned off with a reason.
 4. **Build** the scenes to it.

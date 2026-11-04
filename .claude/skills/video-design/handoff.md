@@ -13,7 +13,7 @@ that isn't here is a sign the file is missing a decision.
 # Design: <project>
 
 Source: <design source and what it dealt, e.g. "taste-skill, direction colour-chapters, palette
-orange-sky-lime (seed 1125998202), palette redrawn for brand"; or "brand only">
+orange-sky-lime (seed 1125998202), palette redrawn for brand"; or "ours: brand + bone + black">
 Brand: <brands/<name>>
 
 ## Acts

@@ -390,15 +390,15 @@ See [docs/kiro.md](docs/kiro.md) for what it installs, how it achieves Claude Co
 
 ## Design sources
 
-`/design` and `/scene-review` take their visual direction from a design skill you choose, then apply the
-toolkit's own video rules (`video-design`) and critique the render from a contact sheet. The choice is saved per
-project; nothing here depends on one particular skill.
+**Plug in your own design skill, or use ours.** `/design` and `/scene-review` take their visual direction from the
+source you choose, then apply the toolkit's own video rules (`video-design`) and critique the render from a contact
+sheet. The choice is saved per project; nothing here depends on one particular skill.
 
 | Source | What it's good for | Install |
 |--------|--------------------|---------|
-| [taste-skill](https://github.com/Leonxlnx/taste-skill) (recommended) | Dealt directions and palettes from 247 studied sites, measured house rules, a juror's critique (MIT) | `/plugin marketplace add Leonxlnx/taste-skill` then `/plugin install taste-skill@taste-skill` |
+| Ours (default) | `video-design`'s act palettes and rules, with your brand's colours and fonts | Nothing to install |
+| [taste-skill](https://github.com/Leonxlnx/taste-skill) (recommended plug-in) | Dealt directions and palettes from 247 studied sites, measured house rules, a juror's critique (MIT) | `/plugin marketplace add Leonxlnx/taste-skill` then `/plugin install taste-skill@taste-skill` |
 | [frontend-design](https://github.com/anthropics/skills) | Anthropic's general visual direction for interfaces (written for web pages) | See the anthropics/skills README |
-| Brand only | No skill: colours and fonts from `brands/<name>/brand.json` | Nothing to install |
 
 Bring your own: any design skill works if it can fill `design.md` (palette per act, ink, one accent, type).
 To list one here, open an issue with a link, its licence, and a contact sheet of `examples/data-chart-stars`

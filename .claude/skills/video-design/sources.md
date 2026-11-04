@@ -1,22 +1,24 @@
 # Design sources
 
-A design source is any skill, guide or person that decides how something should look: the palette, the
-type, the idea. The toolkit doesn't ship one and doesn't depend on one. It ships the video layer
-(`video-design`) and the handoff (`design.md`), so the source can be whatever the user trusts.
+**Plug in your own design skill, or use ours.** A design source is any skill, guide or person that decides
+how something should look: the palette, the type, the idea. The toolkit depends on none of them. Its own
+source, **ours**, is `video-design` itself (the act palettes in `palettes.md` with the project's brand), and
+any installed design skill can take its place, because everything goes through the handoff (`design.md`).
 
 ## Choosing one for a project
 
 1. If `project.json` has `design.source`, use it.
 2. Otherwise, look at the skills installed in this session and pick out the design ones (their
    descriptions mention design, visual, aesthetics, UI, palette or brand). Offer them, with the
-   recommended one first and "brand only" last.
+   "ours" (the toolkit's own) first, then the installed skills with the recommended one marked.
 3. Record the choice in `project.json`:
 
    ```json
    { "design": { "source": "taste-skill:design-taste-frontend", "file": "design.md" } }
    ```
 
-   `"source": "brand"` means no design skill: `video-design` works from `brands/<name>/` alone.
+   `"source": "ours"` means the toolkit's own: `video-design` picks an act palette from `palettes.md` and fills it
+   with `brands/<name>/`.
 
 Whatever the source, its output goes into `design.md` (`handoff.md`) before anything is built, and the
 rules in `SKILL.md` still apply on top. When a source contradicts one (a gradient, a glow, a third
@@ -29,9 +31,9 @@ These are listed in the registry (`_internal/toolkit-registry.json`, `designSour
 
 | Source | What it's good for | Install |
 | --- | --- | --- |
-| **taste-skill** (recommended) | Dealt directions and palettes from 247 studied sites, measured house rules, a juror's critique with caps. Its colour chapters, one-accent rule and critique translate well to video. MIT. | `/plugin marketplace add Leonxlnx/taste-skill` then `/plugin install taste-skill@taste-skill` ([repo](https://github.com/Leonxlnx/taste-skill)) |
+| **taste-skill** (recommended plug-in) | Dealt directions and palettes from 247 studied sites, measured house rules, a juror's critique with caps. Its colour chapters, one-accent rule and critique translate well to video. MIT. | `/plugin marketplace add Leonxlnx/taste-skill` then `/plugin install taste-skill@taste-skill` ([repo](https://github.com/Leonxlnx/taste-skill)) |
 | **frontend-design** (Anthropic) | General visual direction for interfaces: a bold aesthetic stance, type pairing. Written for web pages, so expect to turn down its effects (gradient meshes, glows) for video. | Anthropic's skills repo: [anthropics/skills](https://github.com/anthropics/skills) |
-| **Brand only** | No skill: `brands/<name>/brand.json` gives colours and fonts, and `video-design` builds the acts and fields itself. | Nothing to install |
+| **Ours** (the toolkit's own, the default) | `video-design`'s act palettes and rules, filled with `brands/<name>/brand.json`. | Nothing to install |
 | **Your own** | A team design system, an agency's house style, a skill you wrote. | See below |
 
 "Recommended" means it's the one we currently find gives the best results on video, not that the

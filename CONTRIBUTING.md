@@ -124,7 +124,8 @@ isn't that. If a maintainer wants to adopt it, we'll take it from there.
 
 ### Design skills
 
-The toolkit doesn't bundle a design skill. `/design` and `/scene-review` take direction from whichever one the
+Plug in your own design skill, or use ours: the toolkit's own source is `video-design` with the brand, and it bundles
+no third-party design skill. `/design` and `/scene-review` take direction from whichever one the
 user has installed (the README's "Design sources"), and `video-design` applies the video rules. To have yours
 listed, open an issue with a link, its licence (it must allow use in published videos), the `design.md` it
 produced for `examples/data-chart-stars`, and that example's contact sheet
