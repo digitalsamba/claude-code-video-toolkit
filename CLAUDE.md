@@ -221,6 +221,12 @@ for t in 1 2 3; do cp -r public/audio/phrases public/audio/takes/t$t; \
 uv run tools/pick_takes.py --takes-dir public/audio/takes --output public/audio/scenes --json
 ```
 
+**Pronunciation (Qwen3 has no phoneme tags):** short words that look like acronyms can come out spelled, so "ops
+escalations" became "O-P-S escalations". Fix it in the text: sentence case ("Ops"), or let a phrase carry it ("the ops
+team"). The `.txt` is also the caption text, so prefer a rewording to a respelling ("opps"). To check by transcript,
+copy the MP3s to a folder without their `.txt` and run `captions.py` there: the raw transcript shows letters as
+"OP-IS" or "OPS".
+
 Lugh's expressive reference lives at `assets/voices/lugh-ref-expressive.wav`. Measured on release 650: the raw
 clip gave clones at 1.7-2.1 st sd and 180-215 wpm; the expanded clip gave 3-4 st at 145-165 wpm with no stretch.
 Short closing sentences still rush; take selection handles most of it.
