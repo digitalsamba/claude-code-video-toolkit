@@ -1400,7 +1400,7 @@
     },
     "DataChart": {
       "path": "lib/components/DataChart.tsx",
-      "description": "LineChart and BarChart drawn as SVG frame by frame: brand-themed (chartTheme, dark or light), a line that draws to narration keyframes with a y axis that grows with the data, cue-timed annotation bands and bar highlights, counting value labels. Labels are real text, so qc.py --layout checks them",
+      "description": "LineChart (one line or several series with a legend), BarChart, Counter and SplitBar drawn as SVG frame by frame: brand-themed (chartTheme, dark or light), a line that draws to narration keyframes with a y axis that grows with the data, cue-timed bands, bar highlights (own colour per bar), counters and split-bar labels. Labels are real text, so qc.py --layout checks them",
       "status": "beta",
       "created": "2026-11-04",
       "updated": "2026-11-04"

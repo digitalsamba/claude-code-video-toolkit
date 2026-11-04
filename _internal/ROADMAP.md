@@ -48,10 +48,14 @@ Ordered roughly by priority. Each is sized to one session or one PR.
       and gets the same submit/status/result flow. Covers only screens a kit already rebuilds. Until then
       Lugh writes a release brief (`memory/release-videos/release-<N>.md` on longarm) and a Claude Code
       session builds from it; build this once a few briefs show which scenes recur.
-- [ ] **`<DataChart>` in `lib/components`.** First cut on `feat/datachart-component`: `LineChart` (narration
-      keyframes, growing y axis, cue-timed bands) and `BarChart` (staggered, cue-lit highlights), themed from a brand,
-      with `examples/data-chart-stars` as the narrated reference. Next: multi-series lines with a legend, a
-      big-number counter component, CSV loading, then try it in a sprint-review stats scene.
+- [x] **`<DataChart>` in `lib/components`.** `LineChart` (narration keyframes, growing y axis, cue-timed bands,
+      several series with a legend), `BarChart`, `Counter` and `SplitBar`, themed from a brand
+      (`examples/data-chart-stars`, #175 and the second cut). Still open: CSV loading.
+- [ ] **Data segments for recurring internal reviews.** One JSON per metric, refreshed by a fetch script, rendered
+      at two zooms from the same components: a **quarterly** view for townhalls (the whole period, trend and
+      milestones) and a **monthly** view for KPI reviews (one month by week or day, against the month before).
+      Only the narration lines that carry numbers get re-voiced, and the scene's data checks fail the render
+      when a refreshed number no longer matches what is said.
 - [ ] **`video_job.py wait`**: block up to a few minutes streaming stage lines, for agents with a
       per-call time limit.
 

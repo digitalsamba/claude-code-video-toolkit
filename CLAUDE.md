@@ -123,6 +123,8 @@ are `examples/ds-free-schedule-demo` and `examples/ds-release-649`, and their sc
 (`chartTheme(brand.colors, brand.fonts, 'dark' | 'light')`) instead of embedding a Matplotlib MP4. The line draws to
 `keys` (`{ frame, x }` pairs, frames from `cue()`), so each stretch of data is drawn while the narration talks about
 it; annotation bands and bar highlights take cue frames too, and `lineHead()` gives the same position for a counter.
+`series` puts several lines on one chart with a legend; `Counter` counts a number up from a cue; `SplitBar` shows shares of a
+whole (who did the work), and still labels a zero share so the narration can say it.
 Prefer this inside Remotion videos; keep the `data-viz-chart` Matplotlib pattern for pure-Python builds. Reference:
 `examples/data-chart-stars`.
 
