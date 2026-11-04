@@ -36,11 +36,13 @@ def ffprobe_duration(path: Path) -> float:
 
 
 def scene_cuts(path: Path, threshold: float, fps: int = 8) -> list[float]:
-    """Timestamps (s) of hard changes in the picture, colour included.
+    """Timestamps (s) of scene boundaries: hard changes in the picture, colour included, and blanks.
 
     ffmpeg's own scene score is mostly brightness, so a cut between two fields of the same lightness
-    (orange to sky blue) scores near zero. Instead compare tiny RGB thumbnails `fps` times a second:
-    the mean absolute difference per channel, 0-1, above `threshold` is a cut.
+    (orange to sky blue) scores near zero. Instead compare tiny RGB thumbnails `fps` times a second: the
+    mean absolute difference per channel, 0-1, above `threshold` is a cut. Scenes that share one ground
+    often fade their content out and the next one in, with no hard change at all; a run of near-uniform
+    frames (the bare ground) between two busier ones counts as a boundary too.
     """
     w, h = 32, 18
     proc = subprocess.run(
@@ -51,13 +53,32 @@ def scene_cuts(path: Path, threshold: float, fps: int = 8) -> list[float]:
     size = w * h * 3
     data = proc.stdout
     frames = [data[i:i + size] for i in range(0, len(data) - size + 1, size)]
+
+    def spread(f: bytes) -> float:
+        # mean distance of each pixel from the frame's mean colour, 0-1: near 0 on a bare field
+        n = len(f) // 3
+        mean = [sum(f[c::3]) / n for c in range(3)]
+        return sum(abs(f[i] - mean[i % 3]) for i in range(len(f))) / (len(f) * 255)
+
     cuts = []
     for i in range(1, len(frames)):
         a, b = frames[i - 1], frames[i]
         diff = sum(abs(x - y) for x, y in zip(a, b)) / (size * 255)
         if diff > threshold:
             cuts.append(round(i / fps, 3))
-    return cuts
+    blank = [spread(f) < 0.01 for f in frames]
+    i = 0
+    while i < len(blank):
+        if blank[i]:
+            j = i
+            while j + 1 < len(blank) and blank[j + 1]:
+                j += 1
+            if i > 0 and j < len(blank) - 1:  # a blank between content, not the very start or end
+                cuts.append(round((i + j + 1) / 2 / fps, 3))
+            i = j + 1
+        else:
+            i += 1
+    return sorted(cuts)
 
 
 def settled_times(cuts: list[float], duration: float, before: float, min_scene: float) -> list[float]:
