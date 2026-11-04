@@ -21,6 +21,14 @@
       "created": "2025-12-04",
       "updated": "2026-10-28"
     },
+    "video-design": {
+      "path": ".claude/skills/video-design/",
+      "description": "Visual design for videos: colour fields by act (two or three, ordered by lightness), one data accent, five type steps, two-line titles, chart and layout rules; a design.md handoff any design source can fill; a contact-sheet critique with a weighted score and caps",
+      "status": "beta",
+      "note": "Takes direction from the project's design source (designSources) or the brand alone. Parts adapted from taste-skill (MIT).",
+      "created": "2026-11-04",
+      "updated": "2026-11-04"
+    },
     "elevenlabs": {
       "path": ".claude/skills/elevenlabs/",
       "description": "ElevenLabs audio - TTS, voice cloning, music, SFX",
@@ -41,13 +49,6 @@
       "status": "beta",
       "created": "2025-12-08",
       "updated": "2025-12-10"
-    },
-    "frontend-design": {
-      "path": ".claude/skills/frontend-design/",
-      "description": "Visual design refinement for distinctive, production-grade aesthetics",
-      "status": "stable",
-      "created": "2025-12-10",
-      "updated": "2025-12-13"
     },
     "qwen-edit": {
       "path": ".claude/skills/qwen-edit/",
@@ -112,6 +113,30 @@
       "note": "Was skills/openclaw-video-toolkit (OpenClaw-only paths and yieldMs polling) until 2026-10-31",
       "created": "2026-04-14",
       "updated": "2026-10-31"
+    }
+  },
+  "designSources": {
+    "_note": "Design skills that give video-design its direction. Installed by the user from their own repos, never copied into the toolkit. /design and /scene-review offer the installed ones; the project's choice is project.json design.source. List one by opening an issue (see .claude/skills/video-design/sources.md).",
+    "taste-skill": {
+      "skill": "taste-skill:design-taste-frontend",
+      "recommended": true,
+      "description": "Dealt directions and palettes from 247 studied sites, measured house rules, a juror's critique with caps",
+      "license": "MIT",
+      "repo": "https://github.com/Leonxlnx/taste-skill",
+      "install": "/plugin marketplace add Leonxlnx/taste-skill && /plugin install taste-skill@taste-skill"
+    },
+    "frontend-design": {
+      "skill": "frontend-design",
+      "recommended": false,
+      "description": "Anthropic's general visual direction for interfaces; written for web pages, so its effects (gradient meshes, glows) are turned down for video",
+      "repo": "https://github.com/anthropics/skills",
+      "install": "See the anthropics/skills README"
+    },
+    "brand": {
+      "skill": null,
+      "recommended": false,
+      "description": "No design skill: brands/<name>/brand.json gives colours and fonts, and video-design builds the acts and fields itself",
+      "install": "Nothing to install"
     }
   },
   "commands": {
@@ -662,6 +687,12 @@
       "requires": "ffmpeg + ffprobe; --layout also needs Node, playwright/ (npm install) and Chrome or Playwright Chromium",
       "created": "2026-10-12",
       "updated": "2026-10-28"
+    },
+    "contact_sheet": {
+      "path": "tools/contact_sheet.py",
+      "description": "Contact sheet of a rendered video: one settled frame before each scene cut (colour-aware detection, so same-lightness cuts are found), tiled into one PNG for the video-design critique; --at for chosen times, --count for even spacing",
+      "status": "beta",
+      "created": "2026-11-04"
     },
     "align_captions": {
       "path": "tools/align_captions.py",

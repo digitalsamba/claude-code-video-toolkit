@@ -82,7 +82,7 @@ Claude Code has deep knowledge in:
 | **elevenlabs** | AI audio — text-to-speech, voice cloning, music, sound effects |
 | **ffmpeg** | Media processing — format conversion, compression, resizing |
 | **playwright-recording** | Browser automation — record demos as video |
-| **frontend-design** | Visual design refinement for distinctive, production-grade aesthetics |
+| **video-design** | Visual design for video: colour by act, one data accent, type steps, a contact-sheet critique; takes direction from any design skill ([design sources](#design-sources)) |
 | **qwen-edit** | AI image editing — prompting patterns and best practices |
 | **ideogram4** | AI image generation with best-in-class in-image text — title cards, thumbnails, exact brand colors |
 | **acestep** | AI music generation — prompts, lyrics, scene presets, video integration |
@@ -361,7 +361,7 @@ claude-code-video-toolkit/
 2. **Review script** — Edit `VOICEOVER-SCRIPT.md` to plan content and assets
 3. **Gather assets** — Record demos with `/record-demo` or add external videos
 4. **Scene review** — Run `/scene-review` to verify visuals in Remotion Studio
-5. **Design refinement** — Use `/design` to improve slide visuals with the frontend-design skill
+5. **Design refinement** — Use `/design` to improve scene visuals with `video-design`, directed by your chosen design source
 6. **Generate audio** — AI voiceover with `/generate-voiceover`
 7. **Configure** — Update config file with asset paths and timing
 8. **Preview** — `npm run studio` for live preview
@@ -387,6 +387,22 @@ uv run scripts/migrate_to_kiro.py --force
 ```
 
 See [docs/kiro.md](docs/kiro.md) for what it installs, how it achieves Claude Code-parity, and how to remove it.
+
+## Design sources
+
+`/design` and `/scene-review` take their visual direction from a design skill you choose, then apply the
+toolkit's own video rules (`video-design`) and critique the render from a contact sheet. The choice is saved per
+project; nothing here depends on one particular skill.
+
+| Source | What it's good for | Install |
+|--------|--------------------|---------|
+| [taste-skill](https://github.com/Leonxlnx/taste-skill) (recommended) | Dealt directions and palettes from 247 studied sites, measured house rules, a juror's critique (MIT) | `/plugin marketplace add Leonxlnx/taste-skill` then `/plugin install taste-skill@taste-skill` |
+| [frontend-design](https://github.com/anthropics/skills) | Anthropic's general visual direction for interfaces (written for web pages) | See the anthropics/skills README |
+| Brand only | No skill: colours and fonts from `brands/<name>/brand.json` | Nothing to install |
+
+Bring your own: any design skill works if it can fill `design.md` (palette per act, ink, one accent, type).
+To list one here, open an issue with a link, its licence, and a contact sheet of `examples/data-chart-stars`
+restyled with it. See [`.claude/skills/video-design/sources.md`](.claude/skills/video-design/sources.md).
 
 ## Community add-ons
 

@@ -153,6 +153,11 @@ export interface VideoProject {
   template: string;
   /** Brand profile name from brands/ */
   brand: string;
+  /**
+   * Where the look comes from (see .claude/skills/video-design/sources.md): the design skill that gave the
+   * direction (e.g. "taste-skill:design-taste-frontend"), or "brand" for none, and the project's design.md.
+   */
+  design?: { source: string; file?: string };
   /** ISO timestamp of creation */
   created: string;
   /** ISO timestamp of last update */

@@ -1,6 +1,7 @@
 # Design Refinement
 
-Focused design session for improving video scene visuals using the frontend-design skill.
+Focused design session for improving video scene visuals with the `video-design` skill, taking direction from the
+project's design source (taste-skill, Anthropic's frontend-design, the user's own design skill, or the brand alone).
 
 ## Purpose
 
@@ -64,7 +65,7 @@ Enter scene ID or number:
 
 ## Step 3: Understand Scene Context
 
-Before invoking frontend-design, gather specific context:
+Before asking the design source for direction, gather specific context:
 
 1. **Read the target slide component**
    - Find component file from scene type mapping
@@ -112,21 +113,30 @@ Common mood dimensions:
 
 ---
 
-## Step 5: Invoke frontend-design Skill
+## Step 5: Direction, then the video layer
 
-Use the Skill tool to invoke `frontend-design`.
+1. **Design source.** If `project.json` has `design.source`, use it. Otherwise list the design skills installed in
+   this session (their descriptions mention design, visual, aesthetics, palette or brand), recommended first, and
+   ask. The registry's `designSources` has the known ones and how to install them; "brand only" is always an option:
 
-Provide context gathered:
-- Scene purpose and content
-- Target mood
-- Adjacent scenes and their moods
-- Brand constraints (colors, fonts)
-- Technical constraints (Remotion/React, duration)
+   ```
+   Which design source should set the direction?
+   1. taste-skill (recommended, installed)
+   2. frontend-design (installed)
+   3. Brand only (brands/{brand}/)
+   ```
 
-Also read `.claude/skills/remotion/motion-craft.md`. frontend-design is written for web pages; that file holds
-the video-specific rules: motion timing in frames, read time for text, and the defaults that look generated.
-Where the two disagree (frontend-design suggests gradient meshes and decorative effects; motion-craft treats
-glows, particles and mesh gradients as off by default), follow motion-craft unless the brand calls for them.
+   Save the answer as `"design": {"source": "...", "file": "design.md"}` in `project.json` so later sessions
+   don't ask again.
+2. **Get the direction** from that source (invoke the skill with the scene's purpose, mood, neighbours and brand),
+   or from the brand alone.
+3. **Write or update `design.md`** in the project, in the shape in `.claude/skills/video-design/handoff.md`:
+   acts, a field per act, ink, the one accent, the five type steps, rules turned off and why. If the project
+   already has one, change only what this session decides.
+4. **Invoke `video-design`** to apply it. Its rules hold whatever the source said (colour changes only at a
+   narrative turn, one data accent, two-line titles, five sizes); motion follows
+   `.claude/skills/remotion/motion-craft.md`. Where a source suggests a gradient, glow or decorative effect, the
+   video rule wins unless the brand requires it, and the exception goes under "Rules turned off".
 
 ---
 
@@ -142,8 +152,8 @@ Work with user in a back-and-forth loop:
 6. **Repeat** until satisfied
 
 **Common refinement areas:**
-- Background (gradients, effects, atmosphere)
-- Typography (font choice, size, animation)
+- Colour by act (which field this scene's act has, and whether a change here marks a turn)
+- Typography (the five steps in design.md, line breaks, the title edge)
 - Color palette (mood, contrast, warmth/coolness)
 - Motion (timing, easing, entrance/exit)
 - Decorative elements (taken from the subject or brand; particles, floating shapes and glows only on purpose)
@@ -167,7 +177,17 @@ If adjacent scenes need adjustment, offer to refine them too.
 
 ---
 
-## Step 8: Document Changes
+## Step 8: Look at the whole video
+
+After a render, tile one settled frame per scene and critique it with `.claude/skills/video-design/critique.md`:
+
+```bash
+uv run tools/contact_sheet.py out/video.mp4
+```
+
+---
+
+## Step 9: Document Changes
 
 Update project.json (if exists) with refinement notes:
 
@@ -201,7 +221,7 @@ Add session entry:
 
 ## Design Principles for Video
 
-When working with frontend-design skill on video scenes:
+Whatever the design source, on video scenes (the full rules are in `.claude/skills/video-design/SKILL.md`):
 
 1. **Video scale** - Everything needs to be larger than web UI (viewers are farther from screen)
 2. **Motion matters** - Static designs that work on web may feel dead on video
@@ -275,15 +295,15 @@ User: Warm and celebratory - this was a big team effort
 
 Claude: Got it - warm, celebratory mood for a team achievement.
 
-Invoking frontend-design skill...
-
-[frontend-design provides direction]
+Design source for this project: taste-skill (saved in project.json).
+[taste-skill deals a direction; design.md records the acts, fields and type steps]
+Invoking video-design...
 
 I'll implement:
-1. Warm gradient (brand orange softened with cream tones)
-2. Gentle confetti particles (subtle, not overwhelming)
-3. Smooth text reveal with slight bounce
-4. Soft glow behind version number
+1. The title on the brand's identity field (orange), black ink, the version number at the figure size
+2. The title broken by hand onto two lines, on the video's one title edge
+3. The team names revealed on the narration's words, not one fade for everything
+4. The next scene (overview) on the record field, so the cut marks the turn from "what" to "how"
 
 [Makes changes]
 
