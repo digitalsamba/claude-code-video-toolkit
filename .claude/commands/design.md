@@ -116,19 +116,22 @@ Common mood dimensions:
 
 ## Step 5: Direction, then the video layer
 
-1. **Design source.** If `project.json` has `design.source`, use it. Otherwise list the design skills installed in
-   this session (their descriptions mention design, visual, aesthetics, palette or brand), recommended first, and
-   ask. The registry's `designSources` has the known ones and how to install them; "ours" is always an option:
+1. **Design source.** If `project.json` has `design.source`, use it. Otherwise ask, offering only: "ours", the
+   registry's `designSources` that are installed in this session (match each `skill` with or without a plugin
+   prefix), and "another design skill". Don't scan every installed skill for design words; that offers skills
+   that aren't design sources. A recommended source that isn't installed can be mentioned with its `install` line:
 
    ```
    Which design source should set the direction?
    1. Ours: video-design's act palettes with brands/{brand}/ (nothing to install)
    2. taste-skill (recommended, installed)
    3. frontend-design (installed)
+   4. Another design skill (name it)
    ```
 
-   Save the answer as `"design": {"source": "...", "file": "design.md"}` in `project.json` so later sessions
-   don't ask again.
+   Save the answer as `"design": {"source": "<registry key, or the skill's name if unlisted>", "file": "design.md"}`
+   in `project.json` (e.g. `"taste-skill"`), so later sessions don't ask again. The rules are in
+   `.claude/skills/video-design/sources.md`.
 2. **Get the direction** from that source (invoke the skill with the scene's purpose, mood, neighbours and brand),
    or, for ours, pick an act palette from `.claude/skills/video-design/palettes.md`.
 3. **Write or update `design.md`** in the project, in the shape in `.claude/skills/video-design/handoff.md`:

@@ -154,8 +154,8 @@ export interface VideoProject {
   /** Brand profile name from brands/ */
   brand: string;
   /**
-   * Where the look comes from (see .claude/skills/video-design/sources.md): the design skill that gave the
-   * direction (e.g. "taste-skill:design-taste-frontend"), or "ours" for the toolkit's own (video-design with the brand), and the project's design.md.
+   * Where the look comes from (see .claude/skills/video-design/sources.md): the registry `designSources` key
+   * ("ours", "taste-skill", "frontend-design"), or an unlisted skill's name as invoked, and the project's design.md.
    */
   design?: { source: string; file?: string };
   /** ISO timestamp of creation */

@@ -8,17 +8,25 @@ any installed design skill can take its place, because everything goes through t
 ## Choosing one for a project
 
 1. If `project.json` has `design.source`, use it.
-2. Otherwise, look at the skills installed in this session and pick out the design ones (their
-   descriptions mention design, visual, aesthetics, UI, palette or brand). Offer them, with the
-   "ours" (the toolkit's own) first, then the installed skills with the recommended one marked.
+2. Otherwise offer, in this order:
+   - **ours** (the toolkit's own, nothing to install);
+   - each source in the registry's `designSources` that is installed in this session, the recommended one
+     marked. A plugin skill shows up with its plugin's prefix, so match the registry's `skill` with or without
+     it (`frontend-design` is installed as `example-skills:frontend-design` from Anthropic's plugin);
+   - "another design skill": the user names one.
+
+   Don't offer every skill whose description mentions design or brand. That sweeps in skills that aren't design
+   sources, such as a brand-guidelines skill that applies another company's colours.
 3. Record the choice in `project.json`:
 
    ```json
-   { "design": { "source": "taste-skill:design-taste-frontend", "file": "design.md" } }
+   { "design": { "source": "taste-skill", "file": "design.md" } }
    ```
 
-   `"source": "ours"` means the toolkit's own: `video-design` picks an act palette from `palettes.md` and fills it
-   with `brands/<name>/`.
+   `source` is the registry key for a listed source (`ours`, `taste-skill`, `frontend-design`), so every session
+   saves the same value for the same choice; for an unlisted skill it is the skill's name as invoked (e.g.
+   `acme:house-style`). `"source": "ours"` means the toolkit's own: `video-design` picks an act palette from
+   `palettes.md` and fills it with `brands/<name>/`.
 
 Whatever the source, its output goes into `design.md` (`handoff.md`) before anything is built, and the
 rules in `SKILL.md` still apply on top. When a source contradicts one (a gradient, a glow, a third
