@@ -26,8 +26,8 @@ bone for white or a pale grey a full step away.
 ## Brand blue + cool grey + navy (a brand with a dark second colour)
 
 When the brand has a mid colour and a dark one, use both and skip bone: the mid colour opens and closes, a
-pale cool grey carries the product or the record, and the dark colour is the turn. Used for the DS Calendar
-launch (2026-11) with Digital Samba's own colours, after Robert's note that orange is not a DS colour.
+pale cool grey carries the product or the record, and the dark colour is the turn. Used with Digital Samba's
+own colours (product blue, wordmark navy and coral) for a product launch, 2026-11.
 
 | Field | Ground | Ink | Accent | Other |
 | --- | --- | --- | --- | --- |
