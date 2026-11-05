@@ -162,7 +162,7 @@ Open items moved to Phase 4 below.
 | elevenlabs | stable | Audio generation |
 | ffmpeg | beta | Asset conversion |
 | playwright-recording | beta | Browser demo capture |
-| frontend-design | stable | Visual design refinement |
+| video-design | beta | Colour by act, type and chart rules, design.md handoff from any design source, contact-sheet critique |
 | qwen-edit | stable | AI image editing prompting patterns |
 | runpod | stable | Cloud GPU setup, Docker images, endpoint management |
 | modal | beta | Alternative cloud GPU provider — faster cold starts, every GPU tool deployed |
@@ -197,7 +197,7 @@ Open items moved to Phase 4 below.
 |----------|-------|-------|
 | Templates | 5 | sprint-review, sprint-review-v2, product-demo, concept-explainer-short, ds-release-notes |
 | Brands | 2 | default, digital-samba |
-| Skills | 14 | remotion, remotion-official, elevenlabs, ffmpeg, playwright-recording, frontend-design, qwen-edit, runpod, acestep, ltx2, moviepy, ideogram4, synthetic-ui-demo, video-toolkit |
+| Skills | 14 | remotion, remotion-official, elevenlabs, ffmpeg, playwright-recording, video-design, qwen-edit, runpod, acestep, ltx2, moviepy, ideogram4, synthetic-ui-demo, video-toolkit |
 | Tools | 31 | voiceover, qwen3_tts, sixtydb_tts, music, music_gen, sfx, redub, addmusic, sync_timing, qc, align_captions, captions, cutdown, dewatermark, locate_watermark, notebooklm_brand, image_edit, upscale, flux2, ideogram4, ltx2, chain_video, sadtalker, soulx, verify_setup, modal_setup, youtube_upload, voice_prosody, pick_takes, video_job, video_mcp |
 | Commands | 15 | setup, video, brand, template, skills, contribute, record-demo, generate-voiceover, scene-review, design, versions, redub, voice-clone, thumbnail, publish |
 | Components | 14 | AnimatedBackground, SlideTransition, Label, Vignette, FilmGrain, LogoWatermark, SplitScreen, NarratorPiP, Captions, Envelope, PointingHand, MazeDecoration, Stage, Cursor |

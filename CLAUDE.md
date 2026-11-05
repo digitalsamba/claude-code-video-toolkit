@@ -639,11 +639,13 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --
 
 ## Video Production Workflow
 
-1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing)
+1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing); it sets the design
+   direction (`design.md`) before any scene is built
 2. **Review script** - Edit `VOICEOVER-SCRIPT.md` to plan content
 3. **Gather assets** - Record demos with `/record-demo` or add external videos
 4. **Scene review** - Run `/scene-review` to verify visuals in Remotion Studio
-5. **Design refinement** - Use `/design` or the "Refine" option in scene-review to improve slide visuals
+5. **Design refinement** - `/design` refines a scene within `design.md` (or the "Refine" option in scene-review),
+   changes the direction, or critiques the render
 6. **Generate audio** - Use `/generate-voiceover` for AI narration
 7. **Sync timing** - Run `uv run tools/sync_timing.py --apply` to update config durations
 8. **Preview** - `npm run studio` in project directory
@@ -888,27 +890,38 @@ Preview all transitions: `cd showcase/transitions && npm run studio`
 
 See `lib/transitions/README.md` for full documentation.
 
-## Design Refinement with frontend-design Skill
+## Design: video-design and design sources
 
-The `frontend-design` skill elevates slide visuals from generic to distinctive.
+How a video looks is split in two. A **design source** gives the direction (palette, type, an idea): any design
+skill the user trusts (plug in your own), or ours. **`video-design`** (`.claude/skills/video-design/`) is the toolkit's
+own video layer: it turns that direction into scenes and critiques the render. The project records its source in
+`project.json` (`design.source`) and the decisions in `design.md` (format in `video-design/handoff.md`), so a
+different source changes the file, not the code. Known sources are in the registry's `designSources`; taste-skill
+is the recommended external one today, Anthropic's frontend-design is another, and "ours" (video-design's act
+palettes with the brand) is the default that needs nothing installed. Plug in your own design skill, or use ours.
+
+**Turning a scene in place:** `PageTurns` (`lib/components/PageTurns.tsx`) turns one scene into new pages, each on
+its narration cue: a hard edge sweeps across with the next page behind it, and nothing fades. Use it when the same
+thing is shown again in a new way and the change is the point (one chart in three design sources, a screen before
+and after a fix). Between scenes, use `wipe()` from `@remotion/transitions`: a hard-edged cut is the default for an
+act change in `video-design`, and the effect transitions below are for when the brand calls for them. Sources are installed by the user and never copied into the toolkit.
 
 ### Usage
-- **During scene review** (`/scene-review`): Choose "Refine" for visual improvements
-- **Focused sessions** (`/design`): Deep-dive on a specific scene — `/design title`, `/design cta`
+- **During scene review** (`/scene-review`): choose "Refine"
+- **Focused sessions** (`/design`): `/design title`, `/design cta`
+- **Whole video:** `uv run tools/contact_sheet.py out/video.mp4` tiles one settled frame per scene for the
+  critique in `video-design/critique.md`
 
-### When to Use
-- Slide scenes that feel generic
-- When building visual contrast between scenes (e.g., calm title → harsh problem)
-- When animations feel too basic or too busy
+### The rules that hold whatever the source says
+- **Colour follows the story:** two or three fields, changing only at a narrative turn (a new act, not a new
+  scene), neighbours differing in lightness, hard cuts between them.
+- **One data accent:** the brand colour on the narrated bar, line or number; other data one neutral step, never a
+  tint of the ground.
+- **Type:** five sizes per video, titles on two lines at most (broken by hand), one title edge for every scene.
+- **No** rows of identical tiles, gradients, glows, shadows at rest, eyebrow labels.
 
-### Visual Narrative Arc
-Consider how visual intensity builds across scenes:
-- **Title**: Set the mood, plant visual seeds
-- **Problem**: Create tension (harsh contrast)
-- **Solution**: Relief and hope return
-- **Demo**: Neutral, content-focused
-- **Stats**: Build credibility
-- **CTA**: Climax - maximum visual energy
+Learned on Lugh's work (2026-11): a colour per scene read as noise ("not 100% sure about the different colors per
+scene"); three fields by act (brand orange, bone, near-black) made each turn in the story visible.
 
 ## Toolkit vs Project Work
 

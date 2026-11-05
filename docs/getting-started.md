@@ -164,7 +164,7 @@ If you prefer manual setup:
 | `/setup` | First-time setup - cloud GPU, file transfer, voice, prerequisites |
 | `/video` | Video projects - list, resume, or create new |
 | `/scene-review` | Scene-by-scene review in Remotion Studio |
-| `/design` | Focused design refinement session for a scene |
+| `/design` | Set a video's design direction (design.md) from a design source, refine a scene, or critique the render |
 | `/brand` | Brand profiles - list, edit, or create new |
 | `/template` | List available templates or create new ones |
 | `/record-demo` | Record browser interactions with Playwright |

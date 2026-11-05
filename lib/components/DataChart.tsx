@@ -48,6 +48,12 @@ export type ChartTheme = {
   /** The background the chart sits on (the head dot's ring). */
   bg: string;
   font: string;
+  /**
+   * Unhighlighted data, as one solid neutral step from the ground (e.g. #d9d4c7 on bone). When set, bars
+   * use it at full strength instead of `muted` at partial opacity, which over a coloured ground mixes
+   * into a colour nobody chose (45% black over lime is olive).
+   */
+  other?: string;
 };
 
 type ColorsLike = {
@@ -378,9 +384,10 @@ export const BarChart: React.FC<BarChartProps> = ({
           return (
             <g key={i}>
               <rect x={x} y={h - bh} width={bw * pop} height={Math.max(0, bh)} rx={radius ?? Math.min(10, bw / 6)}
-                fill={interpolateColors(hi, [0, 1], [theme.muted, b.highlightColor ?? theme.primary])} opacity={0.45 + 0.55 * hi} />
+                fill={interpolateColors(hi, [0, 1], [theme.other ?? theme.muted, b.highlightColor ?? theme.primary])}
+                opacity={theme.other ? 1 : 0.45 + 0.55 * hi} />
               {t > 0.01 && <text x={slot * i + slot / 2} y={h - bh - fontSize * 0.6} textAnchor="middle"
-                fill={interpolateColors(hi, [0, 1], [theme.muted, theme.text])}
+                fill={interpolateColors(hi, [0, 1], [theme.other ? theme.text : theme.muted, theme.text])}
                 fontSize={fontSize * (1.1 + 0.45 * hi)} fontWeight={700} opacity={clamp01(t * 3)} style={tabular}>
                 {formatValue(b.value * clamp01(t))}
               </text>}
@@ -455,7 +462,7 @@ export const SplitBar: React.FC<SplitBarProps> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const total = segments.reduce((a, s) => a + s.value, 0) || 1;
-  const palette = [theme.primary, theme.accent, theme.muted];
+  const palette = [theme.primary, theme.accent, theme.other ?? theme.muted];
   const grow = spring({ frame: frame - start, fps, config: { damping: 200 }, durationInFrames: 30 });
   let x = 0;
   const parts = segments.map((s, i) => {
