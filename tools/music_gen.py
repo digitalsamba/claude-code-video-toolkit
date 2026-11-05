@@ -1210,8 +1210,8 @@ Examples:
 
     # Musical control
     music_group = parser.add_argument_group("Musical Control")
-    music_group.add_argument("--duration", "-d", type=int, default=30,
-                             help="Duration in seconds (10-600, default: 30)")
+    music_group.add_argument("--duration", "-d", type=int, default=None,
+                             help="Duration in seconds (10-600, default: 30, or the input's length for --repaint and --cover)")
     music_group.add_argument("--bpm", type=int, help="Tempo in BPM (30-300)")
     music_group.add_argument("--key", dest="key_scale", help="Musical key (e.g., 'C Major', 'Am', 'F# minor')")
     music_group.add_argument("--time-sig", type=int, choices=[2, 3, 4, 6],
@@ -1288,6 +1288,13 @@ Examples:
                              "or json (JSON Lines to stderr for bots/agents)")
 
     args = parser.parse_args()
+
+    # Repaint and cover rework a track, so by default they keep its length; a fixed 30s default cut a
+    # 46s bed to 30s without saying so. Generation keeps 30s.
+    if args.duration is None:
+        src = args.input or args.reference
+        src_len = get_audio_duration(src) if (args.repaint or args.cover) and src and Path(src).exists() else None
+        args.duration = int(-(-src_len // 1)) if src_len else 30
 
     # Handle --list-presets
     if args.list_presets:
