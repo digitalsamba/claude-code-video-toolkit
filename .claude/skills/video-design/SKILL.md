@@ -61,9 +61,25 @@ design skill, a brand guide                       rules on/off                ac
 - No row of identical tiles (four black boxes for four steps). Use one shape with stops on it, a
   sentence, or a sequence that reveals on the narration.
 - No gradients, glows, drop shadows on things at rest, glass panels or decorative shapes. A flat field,
-  the product itself, or a real picture.
+  the product itself, a real picture, or a ground drawn from the subject (below).
 - Footnotes and sources: one line, at the note size, at the bottom left. A scene that needs three
   lines of notes needs a sentence of narration instead.
+
+**A ground from the subject.** A flat field is the default and often right. When it reads dull, don't decorate
+it: draw the subject's own structure on it. Ask what shape the thing already has: a calendar has a week grid, a
+song a beat grid or staff, code a line-number gutter, a map its contours, a chat its message column, a
+spreadsheet its cells. That shape, and nothing invented, becomes the ground.
+- Hairlines in the field's ink at 10-16% (a little less on dark fields). It should read on a phone and
+  disappear behind the type; if a viewer notices the lines before the words, halve them.
+- One motif for the whole video, the same on every type scene. Scenes with the product or a chart get no
+  ground: they are already the picture.
+- Things on the ground use the subject's own vocabulary (a calendar's event cards, a chat's bubbles), as
+  outlines in the ink, and land on the words that name them (`cue()`). They sit above and below the type,
+  never under its lines.
+- It can carry a turn: fill it while the narration lists, empty it on the question. That's the difference
+  between texture and an idea.
+- Record it in `design.md` under "Ground". Never noise, stock imagery, blobs or a generated background; those
+  are the decoration this replaces.
 
 **Charts** (`lib/components/DataChart.tsx`).
 - Flat area fill at 15% or less (`area="flat"`), square columns (`radius={0}`), no legend on a single
@@ -90,7 +106,7 @@ held scene always has a next action, which is what `qc.py --render`'s still-stre
 2. **Direction.** Use the project's design source if `project.json` names one; otherwise offer the
    installed ones (`sources.md`), or use ours: an act palette from `palettes.md` with the brand.
 3. **`design.md`.** Fill it from the source's direction (`handoff.md`): a field per act, ink, the one
-   accent, the five type steps, rules turned off with a reason.
+   accent, the five type steps, the ground (flat, or the subject's own shape), rules turned off with a reason.
 4. **Build** the scenes to it.
 5. **Check.** `uv run tools/qc.py --project <p> --layout` and `--render out/video.mp4`.
 6. **Look.** `uv run tools/contact_sheet.py out/video.mp4` tiles one settled frame per scene. Critique

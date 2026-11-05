@@ -36,6 +36,10 @@ Family: <Inter>, weights <800 / 400>
 Steps (1080p): display <220> · figure <112> · title <72> · label <36> · note <28>
 Display tracking <-0.04em>, leading <0.95>
 
+## Ground
+<flat> or <the subject's shape, e.g. "week grid: 7 columns and hour rows, ink 16%, type scenes only; meetings
+land as outlined event cards in the hook and empty on the question">
+
 ## Layout
 Title edge: x = <120>
 <anything else decided once: margins, where sources go>

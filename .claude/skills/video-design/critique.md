@@ -31,11 +31,14 @@ Make each pass on its own.
    has no hierarchy.
 9. **Sameness.** One word per scene's layout (statement, line chart, bars, figure + bar, ...). The same
    word three times in a row is the template showing; vary the composition, not the colour.
-10. **Tells.** Rows of identical tiles, gradients, glows, shadows at rest, eyebrow labels above titles,
+10. **Ground.** If the fields carry a pattern, is it the subject's own shape (`SKILL.md`, "A ground from the
+    subject") and quiet enough that the type reads first? Does anything on it sit under a line of type? A
+    pattern that could belong to any video is decoration: flat is better.
+11. **Tells.** Rows of identical tiles, gradients, glows, shadows at rest, eyebrow labels above titles,
     monospace labels, 01/02/03 numbering.
-11. **Phone.** At the size of a phone (shrink the sheet to a third), can every title and figure still be
+12. **Phone.** At the size of a phone (shrink the sheet to a third), can every title and figure still be
     read? Can the chart's point be seen without its labels?
-12. **Substance.** Does each frame carry what its narration claims, with the number visible? An empty
+13. **Substance.** Does each frame carry what its narration claims, with the number visible? An empty
     frame waiting for the narration is a hole, not a rest.
 
 ## The score
