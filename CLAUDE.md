@@ -422,8 +422,9 @@ Default provider is **acemusic** (official cloud API, free key from [acemusic.ai
 # Background music (acemusic cloud API by default)
 uv run tools/music_gen.py --prompt "Upbeat tech corporate" --duration 60 --bpm 128 --key "G Major" --output music.mp3
 
-# Generate 4 variations, pick the best
+# Generate 4 variations (bg_1.mp3 ... bg_4.mp3), then recommend one against the video
 uv run tools/music_gen.py --prompt "Subtle corporate tech" --duration 60 --variations 4 --output bg.mp3
+uv run tools/pick_music.py bg_*.mp3 --target 58 --cuts 12,31,50 --under voice --fade-out 1.5 --pick bg.mp3
 
 # Fast mode (disable thinking)
 uv run tools/music_gen.py --no-thinking --prompt "Quick draft" --duration 30 --output draft.mp3
@@ -457,6 +458,12 @@ uv run tools/music_gen.py --cloud modal --prompt "Background music" --duration 6
 # List presets
 uv run tools/music_gen.py --list-presets
 ```
+
+**Choosing between takes:** `pick_music.py` measures, it can't listen. It rules out a take shorter than the video,
+clipping, or with a gap mid-track, then prefers a calm bed under narration or text, some movement, a clean ending
+(or one the video's own `--fade-out` covers) and a note or level change on the act cuts, and says why against the
+runner-up. In a command, show that and ask the user to listen and choose, recommendation first; an agent with
+nobody to ask takes it and records the reasons.
 
 8 scene presets: `corporate-bg`, `upbeat-tech`, `ambient`, `dramatic`, `tension`, `hopeful`, `cta`, `lofi`. See `.claude/skills/acestep/` for prompt engineering patterns and video production integration guide.
 

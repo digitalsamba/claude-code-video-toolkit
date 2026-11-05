@@ -943,6 +943,22 @@
       "created": "2026-10-28",
       "updated": "2026-10-28"
     },
+    "pick_music": {
+      "path": "tools/pick_music.py",
+      "description": "Recommend one of several music takes (music_gen.py --variations N) with its reasons, for a person to confirm: rules out takes shorter than the video, clipping or with a mid-track dropout; scores calm under voice/text (onsets a second), movement (loudness spread), the ending (a fade, or a cut-off the video's own fade must cover) and whether a note or a level change lands on each act cut. Measured, not heard: commands show the recommendation and ask the user to listen; video_job-style agents take it and record why",
+      "usage": "uv run tools/pick_music.py public/audio/music_*.mp3 --target 44.5 --cuts 11.5,17.5,37.5 --under text --fade-out 1.5 [--pick public/audio/music.mp3] [--json]",
+      "status": "beta",
+      "category": "project",
+      "options": {
+        "target": "the video's length in seconds; a shorter take is ruled out",
+        "cuts": "comma-separated seconds of the video's turns",
+        "under": "voice | text | none: what the music sits under (voice and text prefer a calm bed)",
+        "fade-out": "seconds of music fade the video applies, so a take still playing at the end isn't penalised",
+        "pick": "copy the recommended take to this path"
+      },
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
+    },
     "video_job": {
       "path": "tools/video_job.py",
       "description": "Async video jobs for agents: a scene spec (or a brief via VIDEO_JOB_EXPANDER) in, a QC-checked MP4 out. submit returns in seconds with a job id and estimate; a detached worker runs voiceover -> visuals (Ideogram/LTX/FLUX) -> captions -> build (concept-explainer-short, 9:16 or 16:9) -> qc --fix -> publish (R2 URL when configured). State on disk under jobs/<id>/, one job at a time, --max-usd refused before any spend and enforced before each paid step, receipts in longarm's media-spend shape. Failed or cancelled jobs resume from their first missing output; status has timestamped events, warnings and a per-host ETA; renders are encoded under 9.5 MB for chat attachments",

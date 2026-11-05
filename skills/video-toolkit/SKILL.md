@@ -281,6 +281,7 @@ contact sheet.
 ```bash
 uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3 --progress json
 uv run tools/music_gen.py --prompt "lofi, warm keys, no vocals" --duration 45 --variations 3 --output bg.mp3
+uv run tools/pick_music.py bg_*.mp3 --target 45 --under voice --pick bg.mp3 --json   # takes the best, says why
 ```
 
 Presets: corporate-bg, upbeat-tech, ambient, dramatic, tension, hopeful, cta, lofi. Default provider is the
