@@ -188,6 +188,21 @@ def score(a: dict, under: str) -> tuple[float, list[str], list[str]]:
     return round(s, 2), good, bad
 
 
+def rank(files: list[Path], target: float | None, cuts: list[float], under: str, fade_out: float) -> list[dict]:
+    """Every take measured and scored, best first: eligible ones by score, a tie to the calmer take under voice
+    or text (else the one that moves more); ineligible ones after, by fewest defects."""
+    rows = []
+    for f in files:
+        m = analyse(Path(f), target, cuts, fade_out)
+        m["score"], m["good"], m["bad"] = score(m, under)
+        m["eligible"] = not m["defects"]
+        rows.append(m)
+    calm = under in CALM
+    rows.sort(key=lambda r: (not r["eligible"], len(r["defects"]), -r["score"],
+                             r["onsets_per_s"] if calm else -r["spread_db"]))
+    return rows
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("takes", nargs="+", help="the take files (e.g. music_1.mp3 music_2.mp3)")
@@ -206,17 +221,8 @@ def main() -> int:
         sys.exit(f"not found: {', '.join(missing)}")
     cuts = [float(c) for c in a.cuts.split(",") if c.strip()]
 
-    rows = []
-    for f in files:
-        m = analyse(f, a.target, cuts, a.fade_out)
-        m["score"], m["good"], m["bad"] = score(m, a.under)
-        m["eligible"] = not m["defects"]
-        rows.append(m)
-    # eligible first, then by score, then (a tie) the calmer take under voice or text, else the one that moves more;
-    # ineligible ones by fewest defects
+    rows = rank(files, a.target, cuts, a.under, a.fade_out)
     calm = a.under in CALM
-    rows.sort(key=lambda r: (not r["eligible"], len(r["defects"]), -r["score"],
-                             r["onsets_per_s"] if calm else -r["spread_db"]))
     best = rows[0]
     runner = rows[1] if len(rows) > 1 else None
 

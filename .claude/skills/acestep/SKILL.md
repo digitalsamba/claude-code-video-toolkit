@@ -70,7 +70,7 @@ If generated music sounds repetitive or lacks variety, try these in order:
 
 1. **Use acemusic cloud** (default) — XL Turbo 4B *plus* the 5Hz LM; Modal runs the same XL Turbo DiT but without the LM, RunPod is still 2B
 2. **Keep thinking mode on** (default for acemusic) — the 5Hz LM enriches sparse prompts into detailed musical descriptions
-3. **Generate variations** — `--variations 4` generates 4 takes; `pick_music.py` recommends one with its reasons (it measures, it can't hear: ask the user to listen before using it)
+3. **Generate variations** — `--variations 4` generates 4 takes; `pick_music.py` recommends one with its reasons (it measures, it can't hear), and `audition.py` puts each take under the finished picture so the user chooses by watching
 4. **Use stochastic inference** — `--infer-method sde` adds randomness (same seed gives different results)
 5. **Vary BPM and key across scenes** — don't use the same preset for every scene
 6. **Write sparser prompts** — "Upbeat indie rock" gives the model more creative freedom than a hyper-detailed description

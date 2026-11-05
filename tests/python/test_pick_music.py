@@ -119,6 +119,16 @@ class PickMusic(unittest.TestCase):
         self.assertTrue(hits[5.0])
         self.assertFalse(hits[12.0])
 
+    def test_a_tie_goes_to_the_calmer_take_and_says_so(self):
+        same = fade(plucks(20, 0.5))
+        a = self.take("a.wav", same)
+        b = self.take("b.wav", same)
+        with mock.patch.object(pm, "score", side_effect=lambda m, under: (1.0, [], [])):
+            with mock.patch.object(pm, "analyse", wraps=pm.analyse) as an:
+                _, r = run(a, b, "--under", "text")
+                self.assertEqual(an.call_count, 2)
+        self.assertTrue(any(w.startswith("ties with") and "calmer" in w for w in r["why"]), r["why"])
+
     def test_pick_copies_the_winner(self):
         clean = self.take("clean.wav", fade(plucks(20, 0.5)))
         dest = self.d / "out" / "music.wav"
