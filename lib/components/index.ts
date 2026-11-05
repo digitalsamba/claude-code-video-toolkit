@@ -60,8 +60,11 @@ export { voice, cueWords } from './cues';
 export type { Voice, VoicePhrase, CaptionWord, CueOptions } from './cues';
 
 // Data charts (SVG, brand-themed, cue-able; see examples/data-chart-stars)
-export { LineChart, BarChart, chartTheme, lineHead, headFrameAt } from './DataChart';
-export type { LineChartProps, BarChartProps, ChartTheme, LinePoint, HeadKey, ChartBand, ChartBar } from './DataChart';
+export { LineChart, BarChart, Counter, SplitBar, chartTheme, lineHead, headFrameAt } from './DataChart';
+export type {
+  LineChartProps, LineSeries, BarChartProps, CounterProps, SplitBarProps, SplitSegment,
+  ChartTheme, LinePoint, HeadKey, ChartBand, ChartBar,
+} from './DataChart';
 
 // Utilities
 export { hexToRgba, SIZE_PRESETS, POSITION_PRESETS } from './utils';

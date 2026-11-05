@@ -33,5 +33,7 @@ jobs:
       - name: Type-check the template
         run: npx tsc --noEmit -p .
         working-directory: templates/ds-release-notes
+      - name: Type-check the shared chart and cue code (lib/components)
+        run: templates/ds-release-notes/node_modules/.bin/tsc -p tests/js/tsconfig.lib.json
       - name: node --test tests/js/*.test.mjs
         run: node --test 'tests/js/*.test.mjs'

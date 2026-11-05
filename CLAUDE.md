@@ -123,6 +123,8 @@ are `examples/ds-free-schedule-demo` and `examples/ds-release-649`, and their sc
 (`chartTheme(brand.colors, brand.fonts, 'dark' | 'light')`) instead of embedding a Matplotlib MP4. The line draws to
 `keys` (`{ frame, x }` pairs, frames from `cue()`), so each stretch of data is drawn while the narration talks about
 it; annotation bands and bar highlights take cue frames too, and `lineHead()` gives the same position for a counter.
+`series` puts several lines on one chart with a legend; `Counter` counts a number up from a cue; `SplitBar` shows shares of a
+whole (who did the work), and still labels a zero share so the narration can say it.
 Prefer this inside Remotion videos; keep the `data-viz-chart` Matplotlib pattern for pure-Python builds. Reference:
 `examples/data-chart-stars`.
 
@@ -218,6 +220,12 @@ for t in 1 2 3; do cp -r public/audio/phrases public/audio/takes/t$t; \
     --ref-text "..." --scene-dir public/audio/takes/t$t; done
 uv run tools/pick_takes.py --takes-dir public/audio/takes --output public/audio/scenes --json
 ```
+
+**Pronunciation (Qwen3 has no phoneme tags):** short words that look like acronyms can come out spelled, so "ops
+escalations" became "O-P-S escalations". Fix it in the text: sentence case ("Ops"), or let a phrase carry it ("the ops
+team"). The `.txt` is also the caption text, so prefer a rewording to a respelling ("opps"). To check by transcript,
+copy the MP3s to a folder without their `.txt` and run `captions.py` there: the raw transcript shows letters as
+"OP-IS" or "OPS".
 
 Lugh's expressive reference lives at `assets/voices/lugh-ref-expressive.wav`. Measured on release 650: the raw
 clip gave clones at 1.7-2.1 st sd and 180-215 wpm; the expanded clip gave 3-4 st at 145-165 wpm with no stretch.
