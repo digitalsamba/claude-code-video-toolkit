@@ -959,6 +959,22 @@
       "created": "2026-11-05",
       "updated": "2026-11-05"
     },
+    "audition": {
+      "path": "tools/audition.py",
+      "description": "Put each music take under the finished picture for the user to watch and choose: one render serves every take, each mixed in with ffmpeg in seconds at the composition's volume and fades, trimmed to the video and normalised to -14 LUFS / -1.5 dBTP. Keeps the video's own audio (narration) unless --drop-audio; --recommend adds pick_music.py's measured pick and flags a tie the measures can't separate",
+      "usage": "uv run tools/audition.py --video out/video.nomusic.mp4 --music public/audio/bg_*.mp3 --volume 0.15 --fade-out 1.5 [--drop-audio] [--recommend --cuts 12,31,50 --under voice] [--json]",
+      "status": "beta",
+      "category": "project",
+      "options": {
+        "volume": "music gain, as in the composition",
+        "start / fade-in / fade-out": "where the music starts and its fades, seconds",
+        "drop-audio": "discard the render's own audio (an old music bed)",
+        "recommend": "add pick_music.py's pick; takes --cuts and --under",
+        "out-dir": "default <video dir>/audition"
+      },
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
+    },
     "video_job": {
       "path": "tools/video_job.py",
       "description": "Async video jobs for agents: a scene spec (or a brief via VIDEO_JOB_EXPANDER) in, a QC-checked MP4 out. submit returns in seconds with a job id and estimate; a detached worker runs voiceover -> visuals (Ideogram/LTX/FLUX) -> captions -> build (concept-explainer-short, 9:16 or 16:9) -> qc --fix -> publish (R2 URL when configured). State on disk under jobs/<id>/, one job at a time, --max-usd refused before any spend and enforced before each paid step, receipts in longarm's media-spend shape. Failed or cancelled jobs resume from their first missing output; status has timestamped events, warnings and a per-host ETA; renders are encoded under 9.5 MB for chat attachments",

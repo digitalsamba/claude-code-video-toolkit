@@ -462,8 +462,19 @@ uv run tools/music_gen.py --list-presets
 **Choosing between takes:** `pick_music.py` measures, it can't listen. It rules out a take shorter than the video,
 clipping, or with a gap mid-track, then prefers a calm bed under narration or text, some movement, a clean ending
 (or one the video's own `--fade-out` covers) and a note or level change on the act cuts, and says why against the
-runner-up. In a command, show that and ask the user to listen and choose, recommendation first; an agent with
-nobody to ask takes it and records the reasons.
+runner-up. An agent with nobody to ask takes its pick and records the reasons.
+
+**With a person, choose against the picture.** A take that sounds best alone may not be the one that sits best
+under the video, and clean takes often tie on the measures. The picture doesn't depend on the music, so one render
+serves every take: `audition.py` mixes each in with ffmpeg in seconds, at the composition's level and fades, and
+normalised to -14 LUFS. Show its measured pick first, then ask the user to watch every render and choose.
+
+```bash
+# a narrated video: render once with the music file moved aside (the templates skip it), then
+uv run tools/audition.py --video out/video.nomusic.mp4 --music public/audio/bg_*.mp3 --volume 0.15 --fade-out 1.5 \
+    --recommend --cuts 12,31,50 --under voice                  # -> out/audition/video.bg_1.mp4 ...
+# music only (the render's audio is the old bed): --drop-audio
+```
 
 8 scene presets: `corporate-bg`, `upbeat-tech`, `ambient`, `dramatic`, `tension`, `hopeful`, `cta`, `lofi`. See `.claude/skills/acestep/` for prompt engineering patterns and video production integration guide.
 
