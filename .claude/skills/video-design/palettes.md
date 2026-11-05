@@ -23,6 +23,20 @@ orange.
 Check the brand's lightness: a very light brand colour (yellow, mint) sits too close to bone; swap
 bone for white or a pale grey a full step away.
 
+## Brand blue + cool grey + navy (a brand with a dark second colour)
+
+When the brand has a mid colour and a dark one, use both and skip bone: the mid colour opens and closes, a
+pale cool grey carries the product or the record, and the dark colour is the turn. Used for the DS Calendar
+launch (2026-11) with Digital Samba's own colours, after Robert's note that orange is not a DS colour.
+
+| Field | Ground | Ink | Accent | Other |
+| --- | --- | --- | --- | --- |
+| identity | brand blue (`#3771e0`) | `#ffffff` | ink | — |
+| record | `#eef2f8` | navy (`#323e66`) | brand blue | `#c9d3e6` |
+| lab | navy (`#323e66`) | `#ffffff` | second accent (coral `#f06859`) | `#4a5684` |
+
+White on a mid blue only just passes AA at body sizes; keep text on the identity field at title size and up.
+
 ## Graphite, one accent (one field)
 
 For a short piece or a single act: no field changes at all, everything carried by one accent.
