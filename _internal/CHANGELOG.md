@@ -10,6 +10,7 @@ All notable changes to claude-code-video-toolkit.
 
 ### Added
 
+- **`tools/sfx_search.py`**: finds and downloads Creative Commons sound effects from Freesound through the Openverse API, with no key. Only commercially usable licenses by default, and each download gets an attribution file.
 - **`check_versions.py` checks Dependabot coverage**: every project that pins Remotion must be listed in `.github/dependabot.yml`, or the monthly grouped bump skips it. `--strict` fails on a gap, and a new `Check versions` workflow runs it on any PR that touches a `package.json` or `dependabot.yml` (`--remotion-only` skips the Python and toolkit checks).
 
 ### Changed
