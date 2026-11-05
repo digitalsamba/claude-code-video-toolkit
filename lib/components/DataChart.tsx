@@ -278,7 +278,7 @@ export const LineChart: React.FC<LineChartProps> = ({
           const bx = sx(b.from);
           const bw = Math.max(4, sx(b.to) - bx);
           return (
-            t > 0.02 && <g key={b.label} opacity={clamp01(t)}>
+            t > 0.02 && <g key={i} opacity={clamp01(t)}>
               <rect x={bx} y={0} width={bw} height={h} fill={theme.accent} opacity={0.14} />
               <text x={bx + bw / 2} y={fontSize - (1 - t) * 20} textAnchor="middle" fill={theme.text}
                 fontSize={fontSize * 1.3} fontWeight={700}>
@@ -310,7 +310,7 @@ export const LineChart: React.FC<LineChartProps> = ({
             {lines.map((l, i) => {
               const after = lines.slice(i + 1).reduce((acc, n) => acc + n.name.length * fontSize * 0.6 + fontSize * 2.4, 0);
               return (
-                <g key={l.name} transform={`translate(${-after - l.name.length * fontSize * 0.6},0)`}>
+                <g key={i} transform={`translate(${-after - l.name.length * fontSize * 0.6},0)`}>
                   <rect x={-fontSize * 1.5} y={-4} width={fontSize} height={8} rx={4} fill={l.color} />
                   <text x={0} dy="0.35em" fill={theme.text} fontSize={fontSize}>{l.name}</text>
                 </g>
@@ -376,7 +376,7 @@ export const BarChart: React.FC<BarChartProps> = ({
           const bh = (b.value / max) * h * t * pop;
           const x = slot * i + (slot - bw * pop) / 2;
           return (
-            <g key={b.label}>
+            <g key={i}>
               <rect x={x} y={h - bh} width={bw * pop} height={Math.max(0, bh)} rx={radius ?? Math.min(10, bw / 6)}
                 fill={interpolateColors(hi, [0, 1], [theme.muted, b.highlightColor ?? theme.primary])} opacity={0.45 + 0.55 * hi} />
               {t > 0.01 && <text x={slot * i + slot / 2} y={h - bh - fontSize * 0.6} textAnchor="middle"
@@ -464,7 +464,9 @@ export const SplitBar: React.FC<SplitBarProps> = ({
     x += w;
     return part;
   });
-  const labelH = fontSize * 2.6;
+  // Zero shares are labelled one under another at the right end, so two of them never overlap.
+  const zeros = parts.filter((p) => p.value === 0).length;
+  const labelH = fontSize * (2.6 + 1.2 * Math.max(0, zeros - 1));
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
 
   return (
@@ -474,7 +476,7 @@ export const SplitBar: React.FC<SplitBarProps> = ({
         <rect x={0} y={0} width={width * grow} height={height} rx={height / 2} />
       </clipPath>
       <g clipPath={`url(#split-${id})`}>
-        {parts.map((p) => <rect key={p.label} x={p.x} y={0} width={p.w} height={height} fill={p.color} />)}
+        {parts.map((p, i) => <rect key={i} x={p.x} y={0} width={p.w} height={height} fill={p.color} />)}
       </g>
       {parts.map((p, i) => {
         const t = clamp01(spring({ frame: frame - (p.showAt ?? start + 20 + i * 12), fps, config: { damping: 200 } }));
@@ -482,9 +484,10 @@ export const SplitBar: React.FC<SplitBarProps> = ({
         const zero = p.value === 0;
         // A zero share sits at the right end; others are centred under their segment.
         const cx = zero ? width : p.x + p.w / 2;
+        const row = zero ? parts.slice(0, i).filter((q) => q.value === 0).length : 0;
         const anchor = zero ? 'end' : 'middle';
         return (
-          <g key={p.label} opacity={t} transform={`translate(${cx},${height + fontSize * 1.3 + (1 - t) * 12})`}>
+          <g key={i} opacity={t} transform={`translate(${cx},${height + fontSize * (1.3 + 1.2 * row) + (1 - t) * 12})`}>
             <text textAnchor={anchor} fill={zero ? theme.muted : theme.text} fontSize={fontSize} fontWeight={700} style={tabular}>
               {p.label} {formatValue(p.value)}
             </text>
