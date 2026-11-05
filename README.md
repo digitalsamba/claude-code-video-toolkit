@@ -99,7 +99,7 @@ Claude Code has deep knowledge in:
 | `/setup` | First-time setup — cloud GPU, file transfer, voice, prerequisites |
 | `/video` | Video projects — list, resume, or create new |
 | `/scene-review` | Scene-by-scene review in Remotion Studio |
-| `/design` | Focused design refinement session for a scene |
+| `/design` | Set a video's design direction (design.md) from a design source, refine a scene, or critique the render |
 | `/brand` | Brand profiles — list, edit, or create new |
 | `/template` | List available templates or create new ones |
 | `/skills` | List installed skills or create new ones |
@@ -361,7 +361,7 @@ claude-code-video-toolkit/
 2. **Review script** — Edit `VOICEOVER-SCRIPT.md` to plan content and assets
 3. **Gather assets** — Record demos with `/record-demo` or add external videos
 4. **Scene review** — Run `/scene-review` to verify visuals in Remotion Studio
-5. **Design refinement** — Use `/design` to improve scene visuals with `video-design`, directed by your chosen design source
+5. **Design** — `/video` sets the design direction before scenes are built; `/design` changes it, refines a scene with `video-design`, or critiques the render
 6. **Generate audio** — AI voiceover with `/generate-voiceover`
 7. **Configure** — Update config file with asset paths and timing
 8. **Preview** — `npm run studio` for live preview

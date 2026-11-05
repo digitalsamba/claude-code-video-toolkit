@@ -639,11 +639,13 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --
 
 ## Video Production Workflow
 
-1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing)
+1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing); it sets the design
+   direction (`design.md`) before any scene is built
 2. **Review script** - Edit `VOICEOVER-SCRIPT.md` to plan content
 3. **Gather assets** - Record demos with `/record-demo` or add external videos
 4. **Scene review** - Run `/scene-review` to verify visuals in Remotion Studio
-5. **Design refinement** - Use `/design` or the "Refine" option in scene-review to improve slide visuals
+5. **Design refinement** - `/design` refines a scene within `design.md` (or the "Refine" option in scene-review),
+   changes the direction, or critiques the render
 6. **Generate audio** - Use `/generate-voiceover` for AI narration
 7. **Sync timing** - Run `uv run tools/sync_timing.py --apply` to update config durations
 8. **Preview** - `npm run studio` in project directory

@@ -198,10 +198,10 @@
     },
     "design": {
       "path": ".claude/commands/design.md",
-      "description": "Focused design refinement session for a scene",
+      "description": "Set a video's design direction (design.md) from a design source, refine a scene, or critique the render",
       "status": "stable",
       "created": "2025-12-10",
-      "updated": "2025-12-13"
+      "updated": "2026-11-05"
     },
     "versions": {
       "path": ".claude/commands/versions.md",

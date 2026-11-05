@@ -132,6 +132,8 @@ Resuming: my-release-video (sprint-review)
 2. **Generate voiceover** (after demos complete)
    Run `/generate-voiceover`
 
+(If the project has no `design.md`, add "Set the design direction: run `/design`" before building more scenes.)
+
 Ready to record the login flow?
 ```
 
@@ -268,7 +270,33 @@ Help refine:
 | Narration | Draft voiceover text |
 | Duration | Estimated seconds |
 
-### Phase 4: Project Creation
+### Phase 4: Design Direction
+
+Decide how the video looks before any scene is built, so the scenes are made from the design instead of from the
+template's defaults and restyled afterwards. The scene plan is enough to work from: what each scene says, where the
+story turns, and whether it's 16:9 or 9:16.
+
+1. **Design source.** Ask as in `/design` "Design source" (ours, the installed registry `designSources`, another
+   design skill). Skip the question when the brand or template already fixes the look (DS Release Notes carries
+   its own kits): record `"ours"` and go on.
+2. **Direction for the whole video.** Invoke the source with the scene plan, the audience, the format and the
+   brand (for ours, pick an act palette from `.claude/skills/video-design/palettes.md`). Then invoke `video-design`
+   to map it onto the plan: group the scenes into acts at the story's turns, a field per act, ink, the one accent,
+   the five type steps, a ground from the subject if a field would otherwise be dull.
+3. **Show it before writing it.** A short summary, one line per act, so the user can redirect cheaply:
+
+   ```
+   Design: taste-skill, direction "colour chapters"
+   Act 1 (scenes 1-2, the problem)   near-black field, bone ink, title 120px
+   Act 2 (scenes 3-5, the feature)   brand field, black ink, the product window on a hairline edge
+   Act 3 (scene 6, call to action)   bone field, black ink, the URL at the figure size
+   Accent: brand colour, on the one number the narration lands on
+   ```
+
+The answers are written in Phase 5: `design.md` (format in `.claude/skills/video-design/handoff.md`) and
+`project.json` `design`. `/design` can redo this step later, or run it for a project made without it.
+
+### Phase 5: Project Creation
 
 1. **Copy template:**
    ```bash
@@ -285,6 +313,7 @@ Help refine:
      "created": "{ISO timestamp}",
      "updated": "{ISO timestamp}",
      "phase": "planning",
+     "design": { "source": "{registry key, or the skill's name}", "file": "design.md" },
      "scenes": [...],
      "audio": {
        "voiceover": { "file": "audio/voiceover.mp3", "status": "needed" }
@@ -300,6 +329,9 @@ Help refine:
 4. **Write VOICEOVER-SCRIPT.md:**
    Full script with narration and asset markers
 
+   **Write design.md** from Phase 4, and build the slide scenes from it: its fields, ink, accent and type steps
+   replace the template's theme values where they differ (put them in the theme or brand config, not per scene).
+
 5. **Copy brand assets:**
    Logo from `brands/{brand}/assets/` to `public/images/`
 
@@ -312,7 +344,7 @@ Help refine:
    ```
    (Skip for concept-explainer-short — Python template, no npm.)
 
-### Phase 5: Asset Guidance
+### Phase 6: Asset Guidance
 
 After creation, actively guide asset creation:
 

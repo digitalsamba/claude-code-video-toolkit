@@ -1,21 +1,23 @@
-# Design Refinement
+# Design
 
-Focused design session for improving video scene visuals with the `video-design` skill, taking direction from the
-project's design source: plug in your own design skill (taste-skill, Anthropic's frontend-design, a team's own), or
-use ours (video-design's act palettes with the brand).
+Sets and refines how a video looks with the `video-design` skill, taking direction from the project's design
+source: plug in your own design skill (taste-skill, Anthropic's frontend-design, a team's own), or use ours
+(video-design's act palettes with the brand).
 
-## Purpose
-
-Deep-dive visual refinement for slides and components:
-- Elevate generic aesthetics to distinctive, memorable visuals
-- Ensure visual narrative coherence across scenes
-- Iterate on typography, color, motion, and atmosphere
+It works at any phase, including before a single scene is built:
+- **Direction** (the whole video): pick the design source and write `design.md` (acts, a field per act, ink, the
+  one accent, the type steps). `/video` runs this for a new project; `/design` runs it for a project made without
+  it, or to change direction.
+- **Refine** (one scene): restyle a scene within `design.md`.
+- **Critique** (the whole video): a contact sheet of the render, read against `design.md`.
 
 ## Usage
 
 ```
-/design              # Discover project, list scenes, choose one
-/design [scene-id]   # Jump directly to a specific scene
+/design              # No design.md yet: set the direction. Otherwise: choose direction, a scene, or critique
+/design direction    # Set or change the whole video's direction
+/design [scene-id]   # Refine one scene
+/design critique     # Contact sheet + critique of the latest render
 ```
 
 ---
@@ -35,9 +37,51 @@ First, find and understand the current project:
    - Brand/theme: `src/config/theme.ts`
 
 3. **Build scene inventory**
-   - List all scenes from config
+   - List all scenes from config, or from `project.json` / the scene plan if nothing is built yet
    - Identify which are slide-type (designable) vs demo-type (video playback)
    - Note each scene's purpose from config content
+
+4. **Pick the mode**
+   - `direction`, `critique` or a scene id given: do that.
+   - No argument and no `design.md`: **Direction** ("Design source", then "Direction for the whole video").
+     Refining a scene before the video has a direction restyles it twice.
+   - No argument and `design.md` exists: ask whether to change the direction, refine a scene (Step 2), or
+     critique the render (Step 8).
+
+---
+
+## Design source
+
+If `project.json` has `design.source`, use it. Otherwise ask, offering only: "ours", the
+registry's `designSources` that are installed in this session (match each `skill` with or without a plugin
+prefix), and "another design skill". Don't scan every installed skill for design words; that offers skills
+that aren't design sources. A recommended source that isn't installed can be mentioned with its `install` line:
+
+```
+Which design source should set the direction?
+1. Ours: video-design's act palettes with brands/{brand}/ (nothing to install)
+2. taste-skill (recommended, installed)
+3. frontend-design (installed)
+4. Another design skill (name it)
+```
+
+Save the answer as `"design": {"source": "<registry key, or the skill's name if unlisted>", "file": "design.md"}`
+in `project.json` (e.g. `"taste-skill"`), so later sessions don't ask again. The rules are in
+`.claude/skills/video-design/sources.md`.
+
+---
+
+## Direction for the whole video
+
+1. Choose the design source (above).
+2. Invoke the source with the scene plan (what each scene says, where the story turns), the audience, the format
+   (16:9 or 9:16) and the brand. For ours, pick an act palette from `.claude/skills/video-design/palettes.md`.
+3. Invoke `video-design` to map the direction onto the video: acts at the story's turns, a field per act, ink,
+   the one accent, the five type steps, a ground from the subject where a field would otherwise be dull.
+4. Show a one-line-per-act summary and let the user redirect before writing anything.
+5. Write `design.md` (`.claude/skills/video-design/handoff.md`) and `project.json` `design`, then put the values in
+   the theme or brand config so every scene picks them up. Scenes that are already built are then refined one at a
+   time (Step 2 onward), starting with the title, which sets the video's title edge.
 
 ---
 
@@ -116,22 +160,7 @@ Common mood dimensions:
 
 ## Step 5: Direction, then the video layer
 
-1. **Design source.** If `project.json` has `design.source`, use it. Otherwise ask, offering only: "ours", the
-   registry's `designSources` that are installed in this session (match each `skill` with or without a plugin
-   prefix), and "another design skill". Don't scan every installed skill for design words; that offers skills
-   that aren't design sources. A recommended source that isn't installed can be mentioned with its `install` line:
-
-   ```
-   Which design source should set the direction?
-   1. Ours: video-design's act palettes with brands/{brand}/ (nothing to install)
-   2. taste-skill (recommended, installed)
-   3. frontend-design (installed)
-   4. Another design skill (name it)
-   ```
-
-   Save the answer as `"design": {"source": "<registry key, or the skill's name if unlisted>", "file": "design.md"}`
-   in `project.json` (e.g. `"taste-skill"`), so later sessions don't ask again. The rules are in
-   `.claude/skills/video-design/sources.md`.
+1. **Design source:** as in "Design source" above (already saved in `project.json` after the first session).
 2. **Get the direction** from that source (invoke the skill with the scene's purpose, mood, neighbours and brand),
    or, for ours, pick an act palette from `.claude/skills/video-design/palettes.md`.
 3. **Write or update `design.md`** in the project, in the shape in `.claude/skills/video-design/handoff.md`:
