@@ -27,6 +27,11 @@ import tempfile
 from pathlib import Path
 
 
+# The container's duration can run past the last video frame (audio is longer), so a frame is never asked for
+# closer to the end than this; a seek beyond the last frame writes no image.
+END_MARGIN = 0.5
+
+
 def ffprobe_duration(path: Path) -> float:
     out = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
@@ -95,7 +100,7 @@ def settled_times(cuts: list[float], duration: float, before: float, min_scene: 
     times = []
     for start, end in zip(merged, merged[1:]):
         t = max(start + (end - start) / 2, end - before)
-        times.append(round(min(t, duration - 0.05), 3))
+        times.append(round(min(t, duration - END_MARGIN), 3))
     return times
 
 
@@ -156,9 +161,12 @@ def main() -> int:
 
     duration = ffprobe_duration(args.video)
     if args.at:
-        times = [float(t) for t in args.at.split(",") if t.strip()]
+        times = [min(max(0.0, float(t)), round(duration - END_MARGIN, 3)) for t in args.at.split(",") if t.strip()]
         how = "chosen times"
-    elif args.count:
+    elif args.count is not None:
+        if args.count < 1:
+            print("--count must be 1 or more", file=sys.stderr)
+            return 1
         times = [round(duration * (i + 0.5) / args.count, 3) for i in range(args.count)]
         how = f"{args.count} evenly spaced"
     else:
