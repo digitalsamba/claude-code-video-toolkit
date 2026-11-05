@@ -58,6 +58,18 @@ Ordered roughly by priority. Each is sized to one session or one PR.
       when a refreshed number no longer matches what is said.
 - [ ] **`video_job.py wait`**: block up to a few minutes streaming stage lines, for agents with a
       per-call time limit.
+- [ ] **Music that follows the picture.** Today music only matches the video's length (`--duration`), and
+      `pick_music.py` only checks after the fact whether a take happens to have a note on the act cuts. Three
+      ways, cheapest first:
+      1. *Picture to the music:* snap the flexible frames (act cuts, line entrances; never narration) to the
+         chosen take's beats within ±0.3s, from the onsets `pick_music.py` already finds.
+      2. *Tempo from the timeline:* choose the BPM so the act cuts fall on bar lines, or move the cuts to the
+         bars. Measure first how closely ACE-Step keeps the BPM it's asked for.
+      3. *The music turns when the picture turns:* the colour rule for sound. Generate the bed, then
+         `music_gen.py --repaint` a short window round each act cut (times from `design.md`'s acts) with a
+         prompt for the change. Least proven: repaint seams are unheard.
+      Judge each with `audition.py` renders, by ear, not by score. Pilot: `projects/still-wheel-hour` (no
+      voice, four acts with clear turns).
 
 ---
 
