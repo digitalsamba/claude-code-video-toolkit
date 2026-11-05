@@ -328,6 +328,14 @@
       "created": "2025-12-08",
       "updated": "2026-10-21"
     },
+    "sfx_search": {
+      "path": "tools/sfx_search.py",
+      "description": "Find and download Creative Commons sound effects via the Openverse API (Freesound, no key needed)",
+      "usage": "uv run tools/sfx_search.py --query whoosh --output sfx.mp3",
+      "status": "beta",
+      "created": "2026-11-06",
+      "updated": "2026-11-06"
+    },
     "redub": {
       "path": "tools/redub.py",
       "description": "Redub video with different voice (extract audio, transcribe, TTS, replace)",

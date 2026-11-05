@@ -151,7 +151,7 @@ This is especially critical for background commands where the working directory 
 
 | Type | Tools | When to Use |
 |------|-------|-------------|
-| **Project tools** | voiceover, music, music_gen, sfx, sync_timing, qc | During video creation workflow |
+| **Project tools** | voiceover, music, music_gen, sfx, sfx_search, sync_timing, qc | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark, cutdown | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (use `/publish` for the guided workflow) |
@@ -459,6 +459,24 @@ uv run tools/music_gen.py --list-presets
 ```
 
 8 scene presets: `corporate-bg`, `upbeat-tech`, `ambient`, `dramatic`, `tension`, `hopeful`, `cta`, `lofi`. See `.claude/skills/acestep/` for prompt engineering patterns and video production integration guide.
+
+### Stock Sound Effects (Openverse)
+
+`sfx.py` generates a sound with ElevenLabs; `sfx_search.py` finds a real recording on Freesound through the
+Openverse API. It's free and needs no key (20 requests/minute, 200/day).
+
+```bash
+uv run tools/sfx_search.py --query "camera shutter" --max-duration 3   # list matches
+uv run tools/sfx_search.py --query "whoosh" --output public/audio/whoosh.mp3   # top match
+uv run tools/sfx_search.py --id ID --output public/audio/whoosh.mp3    # one from the list
+```
+
+- **Licenses:** only `cc0,by` by default, the two that allow commercial use with no share-alike. `--license` widens
+  it, and an `nc` or `nd` download prints a warning.
+- **Credit CC BY sounds in the video.** Every download leaves a `<name>.attribution.txt` with the credit line.
+- Don't filter on `category=sound_effect`: Openverse leaves `category` empty on Freesound records, so it returns
+  nothing. The tool filters on `source=freesound` instead.
+- Files are Freesound's HQ MP3 previews, fine for a mix. Search in English.
 
 ### Social Cut-downs (16:9 → 9:16 / 1:1 / 4:5)
 
