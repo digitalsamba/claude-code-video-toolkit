@@ -26,6 +26,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 import video_job as vj  # noqa: E402
 
 KEYS = ("ELEVENLABS_API_KEY", "IDEOGRAM_API_KEY", "MODAL_LTX2_ENDPOINT_URL", "MODAL_QWEN3_TTS_ENDPOINT_URL",
+        "MODAL_FLUX2_ENDPOINT_URL", "MODAL_MUSIC_GEN_ENDPOINT_URL", "ACEMUSIC_API_KEY", "SIXTYDB_API_KEY",
+        "RUNPOD_API_KEY", "RUNPOD_FLUX2_ENDPOINT_ID", "RUNPOD_QWEN3_TTS_ENDPOINT_ID", "RUNPOD_ACESTEP_ENDPOINT_ID",
         "R2_ACCOUNT_ID", "VIDEO_JOB_EXPANDER", "VIDEO_JOB_MAX_USD", "VIDEO_JOB_WORKSPACE", "LONGARM_WORKSPACE")
 
 
@@ -43,6 +45,7 @@ class Isolated(unittest.TestCase):
         self._env = {k: os.environ.pop(k, None) for k in KEYS}
         os.environ["VIDEO_JOBS_DIR"] = str(self.tmp / "jobs")
         os.environ["MEDIA_SPEND_LOG"] = str(self.tmp / "logs" / "media-spend.log")
+        os.environ["VIDEO_JOB_SKIP_HOST_CHECK"] = "1"   # no keys here; test_video_job_host.py turns it back on
 
     def tearDown(self):
         for k, v in self._env.items():
@@ -52,6 +55,7 @@ class Isolated(unittest.TestCase):
                 os.environ[k] = v
         os.environ.pop("VIDEO_JOBS_DIR", None)
         os.environ.pop("MEDIA_SPEND_LOG", None)
+        os.environ.pop("VIDEO_JOB_SKIP_HOST_CHECK", None)
         shutil.rmtree(self.tmp, ignore_errors=True)
 
 

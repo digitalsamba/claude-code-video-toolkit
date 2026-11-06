@@ -128,6 +128,23 @@ diagram (2 to 4 boxes with arrows, across the frame in 16:9 and down it in 9:16)
 diagram" in prose gets a silhouette; the chain form is how a diagram is spelled.
 `--music "..."`, `--no-music`, `--draft` and `--no-title-card` set the rest.
 
+## What this host can make
+
+`host_capabilities()` reads the environment (`.env` included) and reports which visual kinds, voices and music
+providers this host can run, the local tools a run needs (ffmpeg, ffprobe, moviepy, numpy for a job; Node 18+
+as well for a session route) and so which route levels it can run (`routes`); `catalog` and `presets` carry it as
+`host`. A missing local tool is reported with `install` instead of `env`. `estimate` adds `host_missing`, and
+`submit` raises `Unavailable` (CLI exit 2, `error_code: unavailable`, MCP the same with `missing`) before anything is
+written or spent. Each entry names what needs it, every env var it needs, and an alternative (the other cloud
+for a qwen3 voice when that one is set up, an ideogram card instead of a clip). The music bed, captions and R2
+links are soft: the job runs without them and says so in `warnings`, and `estimate` lists a missing music provider
+in `host_missing` marked `"soft": true`. `resume` runs the same check. `VIDEO_JOB_SKIP_HOST_CHECK=1` turns it off
+(for `estimate` too) for a host whose tools find their keys some other way. A provider or cloud name the toolkit
+doesn't know is a `bad_request`.
+
+A host with hosted API keys only (ElevenLabs, Ideogram) and no GPU provider can make a job whose scenes are all
+ideogram cards. `text`, `flux` and scenes with no visual need FLUX.
+
 ## Brief → spec
 
 That step needs an LLM, and the toolkit doesn't hardwire one. Two ways:
@@ -275,7 +292,7 @@ Any other client spawns that command and speaks MCP over stdin/stdout. Tools: `v
 
 ```bash
 uv run python -m unittest tests/python/test_video_job.py tests/python/test_video_job_agents.py \
-    tests/python/test_video_job_hardening.py -v
+    tests/python/test_video_job_hardening.py tests/python/test_video_job_host.py -v
 ```
 
 Covers the estimate, the state machine (with the paid steps faked), the lock and its two-minute window,
