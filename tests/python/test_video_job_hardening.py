@@ -146,7 +146,7 @@ class TestResume(Isolated):
             ledger = vj.spend_log_path()
             ledger.parent.mkdir(parents=True, exist_ok=True)
 
-            def book(usd):   # what longarm's wrapper writes from our cost event
+            def book(usd):   # what a runtime's spend wrapper writes from our cost event
                 with open(ledger, "a") as f:
                     f.write(json.dumps({"tool": "video_job.py", "cost_usd": usd}) + "\n")
             book(job["estimate_usd"])

@@ -107,12 +107,12 @@
     },
     "video-toolkit": {
       "path": "skills/video-toolkit/",
-      "description": "Agent-facing skill for any runtime (OpenClaw, Codex, Hermes, longarm, MCP clients): the estimate -> submit -> poll status -> result flow of tools/video_job.py first, then the individual tools with current defaults (SoulX, Ideogram for text, qc.py before delivery, --max-wpm)",
+      "description": "Agent-facing skill for any runtime (OpenClaw, Codex, Hermes, a run_tool loop, MCP clients): a routes table first (which template, skill and example fits what the user asks, and whether it runs as a job or is a build; video_job.py catalog lists them from this registry), then the estimate -> submit -> poll status -> result flow of tools/video_job.py first, then the individual tools with current defaults (SoulX, Ideogram for text, qc.py before delivery, --max-wpm)",
       "status": "beta",
       "audience": "agents other than Claude Code; keeps the metadata.openclaw frontmatter so OpenClaw loads it",
       "note": "Was skills/openclaw-video-toolkit (OpenClaw-only paths and yieldMs polling) until 2026-10-31",
       "created": "2026-04-14",
-      "updated": "2026-10-31"
+      "updated": "2026-11-06"
     }
   },
   "designSources": {
@@ -977,7 +977,7 @@
     },
     "video_job": {
       "path": "tools/video_job.py",
-      "description": "Async video jobs for agents: a scene spec (or a brief via VIDEO_JOB_EXPANDER) in, a QC-checked MP4 out. submit returns in seconds with a job id and estimate; a detached worker runs voiceover -> visuals (Ideogram/LTX/FLUX) -> captions -> build (concept-explainer-short, 9:16 or 16:9) -> qc --fix -> publish (R2 URL when configured). State on disk under jobs/<id>/, one job at a time, --max-usd refused before any spend and enforced before each paid step, receipts in longarm's media-spend shape. Failed or cancelled jobs resume from their first missing output; status has timestamped events, warnings and a per-host ETA; renders are encoded under 9.5 MB for chat attachments",
+      "description": "Async video jobs for agents: a scene spec (or a brief via VIDEO_JOB_EXPANDER) in, a QC-checked MP4 out. submit returns in seconds with a job id and estimate; a detached worker runs voiceover -> visuals (Ideogram/LTX/FLUX) -> captions -> build (concept-explainer-short, 9:16 or 16:9) -> qc --fix -> publish (R2 URL when configured). State on disk under jobs/<id>/, one job at a time, --max-usd refused before any spend and enforced before each paid step, receipts as JSON lines in MEDIA_SPEND_LOG (or the agent workspace's logs/ when VIDEO_JOB_WORKSPACE is set). catalog lists what the toolkit makes, from this registry. Failed or cancelled jobs resume from their first missing output; status has timestamped events, warnings and a per-host ETA; renders are encoded under 9.5 MB for chat attachments",
       "usage": "uv run tools/video_job.py submit --spec spec.json --max-usd 1.00 --json; then status JOB_ID --json; result JOB_ID --json",
       "status": "beta",
       "category": "project",
@@ -992,6 +992,7 @@
         "prune",
         "spec",
         "presets",
+        "catalog",
         "settle"
       ],
       "options": {
@@ -1013,7 +1014,8 @@
         "VIDEO_JOB_MAX_MB",
         "VIDEO_JOB_KEEP",
         "VIDEO_JOB_OUTPUT_ROOTS",
-        "VIDEO_JOB_RESERVE_AT_SUBMIT"
+        "VIDEO_JOB_RESERVE_AT_SUBMIT",
+        "VIDEO_JOB_WORKSPACE"
       ],
       "exitCodes": {
         "0": "ok",
@@ -1023,11 +1025,11 @@
       },
       "tests": "uv run python -m unittest tests/python/test_video_job.py tests/python/test_video_job_agents.py tests/python/test_video_job_hardening.py",
       "created": "2026-10-31",
-      "updated": "2026-11-01"
+      "updated": "2026-11-06"
     },
     "video_mcp": {
       "path": "tools/video_mcp.py",
-      "description": "MCP server (stdio) for agents without a shell: video_estimate, video_submit, video_status, video_result, video_list_presets (+ video_list, video_cancel, video_resume). A thin wrapper over tools/video_job.py with no pipeline logic of its own",
+      "description": "MCP server (stdio) for agents without a shell: video_estimate, video_submit, video_status, video_result, video_list_presets, video_catalog (+ video_list, video_cancel, video_resume). A thin wrapper over tools/video_job.py with no pipeline logic of its own",
       "usage": "uv sync --extra mcp && uv run --extra mcp tools/video_mcp.py",
       "status": "beta",
       "category": "agent",
@@ -1048,7 +1050,7 @@
         }
       },
       "created": "2026-10-31",
-      "updated": "2026-11-01"
+      "updated": "2026-11-06"
     }
   },
   "optionalComponents": {
@@ -1253,21 +1255,24 @@
       "description": "Sprint review videos with demos, stats, and voiceover",
       "status": "stable",
       "created": "2025-12-04",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "agentSupport": "session"
     },
     "sprint-review-v2": {
       "path": "templates/sprint-review-v2/",
       "description": "Composable scene-based sprint review with film-quality upgrades",
       "status": "beta",
       "created": "2026-02-19",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "agentSupport": "session"
     },
     "product-demo": {
       "path": "templates/product-demo/",
       "description": "Marketing videos with dark tech aesthetic, stats, CTA",
       "status": "stable",
       "created": "2025-12-09",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "agentSupport": "session"
     },
     "concept-explainer-short": {
       "path": "templates/concept-explainer-short/",
@@ -1276,7 +1281,8 @@
       "status": "beta",
       "created": "2026-06-09",
       "updated": "2026-10-31",
-      "note": "The compositor tools/video_job.py drives; jobs copy it into jobs/<id>/project/"
+      "note": "The compositor tools/video_job.py drives; jobs copy it into jobs/<id>/project/",
+      "agentSupport": "job"
     },
     "ds-release-notes": {
       "path": "templates/ds-release-notes/",
@@ -1284,7 +1290,8 @@
       "status": "beta",
       "created": "2026-10-28",
       "updated": "2026-10-28",
-      "skill": "synthetic-ui-demo"
+      "skill": "synthetic-ui-demo",
+      "agentSupport": "session"
     }
   },
   "transitions": {
@@ -1551,7 +1558,7 @@
     },
     "data-chart-stars": {
       "path": "examples/data-chart-stars/",
-      "description": "31s narrated chart video: the toolkit's GitHub star history as a line that draws word by word with Lugh's narration, then monthly gains as bars lit on cue. Built on lib/components DataChart; data refreshed by scripts/fetch_stars.py",
+      "description": "31s narrated chart video: the toolkit's GitHub star history as a line that draws word by word with the narration, then monthly gains as bars lit on cue. Built on lib/components DataChart; data refreshed by scripts/fetch_stars.py",
       "template": "custom",
       "stack": "remotion",
       "complexity": "intermediate",
@@ -1578,7 +1585,7 @@
     },
     "ds-release-649": {
       "path": "examples/ds-release-649/",
-      "description": "80s synthetic release-notes video for Digital Samba 649: room, dashboard and account-center screens rebuilt from product code and driven by a scripted cursor and camera; Lugh voice (Qwen3 clone), FLUX.2 portraits",
+      "description": "80s synthetic release-notes video for Digital Samba 649: room, dashboard and account-center screens rebuilt from product code and driven by a scripted cursor and camera; a cloned Qwen3 narrator, FLUX.2 portraits",
       "template": "custom",
       "stack": "remotion",
       "complexity": "advanced",
@@ -1588,7 +1595,7 @@
     },
     "ds-free-schedule-demo": {
       "path": "examples/ds-free-schedule-demo/",
-      "description": "26s synthetic product demo of scheduling a call in the DS Free account center, with a SoulX Pro Lugh narrator tile",
+      "description": "26s synthetic product demo of scheduling a call in the DS Free account center, with a SoulX Pro narrator tile",
       "template": "custom",
       "stack": "remotion",
       "complexity": "intermediate",

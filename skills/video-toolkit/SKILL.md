@@ -17,12 +17,77 @@ This skill is written for **any agent runtime**: Claude Code, OpenClaw, Codex, H
 `run_tool` call, or an MCP client. Nothing here depends on how your runtime backgrounds work, because the long
 work runs in a detached job you poll.
 
+## Who this is for
+
+You are an agent: someone asks you for a video through a channel (a chat message, a Discord or Slack thread, an
+MCP client) and you make it without a person at your terminal. You report back in that channel. The person asking
+sees your messages and the finished video, never the toolkit.
+
+## What the toolkit can make: pick a route first
+
+Every route has one of two support levels. `catalog` gives it per template as `agent_support`.
+
+- **`job`: one prompt.** `video_job.py` runs it unattended from one spec. You write the scenes; it voices,
+  illustrates, captions, builds and QCs them; you post the MP4. Any runtime can do this, through the CLI or MCP.
+- **`session`: a working session.** Copy a template or example into `projects/<name>/`, edit its code with the
+  skill it names, render with Node, look at the result, fix it, render again. That needs a Claude Code (or
+  Codex-style) session in the toolkit, which is what the toolkit is built around. The session can be a person's, or
+  yours, if your runtime can run one headless with a shell and Node. Either way, the skill's review points (script,
+  a contact sheet, the render) go back to the person who asked, in their channel, before you spend more. Tell them
+  up front what the route needs from them (for a synthetic UI video: the app's source, the click path, the
+  narration).
+
+A route moves from `session` to `job` once its inputs fit in a message, a spec drives the build with no code
+written, QC can judge the result, and there's a cost cap. Offer a `job` when one would do.
+
+| The user asks for | Route | Support | Read first | See it |
+|---|---|---|---|---|
+| A short explainer on a topic (Shorts, Reels, a 16:9 explainer) from a brief | `concept-explainer-short` via `video_job.py` | job | this file | `examples/sky-blue-short` |
+| A walkthrough, feature demo or release-notes video of an app whose source you can read | synthetic UI: `templates/ds-release-notes`, components `Stage`, `Cursor`, `cues` | session | `.claude/skills/synthetic-ui-demo/SKILL.md` | `examples/ds-release-649`, `examples/ds-free-schedule-demo` |
+| The same, but you can't read the source | Playwright recording into `product-demo` | session | `.claude/skills/playwright-recording/` | |
+| A marketing or product launch video | `templates/product-demo` | session | the template's README | `examples/digital-samba-skill-demo` |
+| A sprint or monthly review | `templates/sprint-review`, `templates/sprint-review-v2` | session | the template's README | `examples/hello-world` |
+| A data story: a number or a trend drawn as the narration talks | `DataChart` (`LineChart`, `BarChart`, `Counter`, `SplitBar`) in Remotion; Matplotlib + moviepy without Node | session | `lib/components/DataChart.tsx`, `.claude/skills/moviepy/` | `examples/data-chart-stars`, `examples/data-viz-chart` |
+| A sub-30 s ad spot or a brand stinger | moviepy, audio-anchored | session | `.claude/skills/moviepy/` | `examples/quick-spot`, `examples/ds-crt-stinger` |
+| A presenter talking to camera | `soulx.py` (below), placed in a template with `NarratorPiP` | tool, or session | Talking heads, below | |
+| Change an existing video: new voice, music, vertical cut, watermark | `redub.py`, `addmusic.py`, `cutdown.py`, `dewatermark.py` | tool | QC, captions, cut-downs, below | |
+
+`ds-release-notes` is built for one product's screens, but the method isn't: keep its `Stage` and `Cursor`
+wiring and rebuild your own app's screens the way `.claude/skills/synthetic-ui-demo/` describes.
+
+**The catalogue lives on disk.** `uv run tools/video_job.py catalog` (MCP: `video_catalog`) lists every template
+with its demo videos and the skill that drives it, the example builds, components, brands, design sources and voice
+presets, read from `_internal/toolkit-registry.json`. When a user asks "what can you make?", answer from it, with
+the demo links, rather than from memory: the list grows each release. Skills under `.claude/skills/` are written
+for Claude Code, but they are plain markdown: open `SKILL.md` in the folder and follow it.
+
+**When asked "what can you make?"**, answer with the `job` routes first (what you can do from this message), then
+the `session` routes and what each needs from them, each with its demo link from `catalog`.
+
+### How it looks: brand, design source, transitions
+
+- **Brand** (`brands/<name>/brand.json` colours and fonts, `voice.json` a voice): pass `"brand": "<name>"` in a job
+  spec, or `--brand` to the image tools. `catalog` lists the brands on this host.
+- **Design direction** for a session: `.claude/skills/video-design/` turns a direction into scenes (colour by act,
+  type scale, one data accent) and critiques the render. The direction comes from a design source: `ours` (the
+  default, video-design's own palettes, nothing to install), `taste-skill` (recommended, installed separately) or
+  `frontend-design`. A project records its choice in `design.md`. After a render, `contact_sheet.py` tiles one
+  frame per scene for the critique.
+- **Turning a scene in place** (the same thing shown again in a new way): `PageTurns`. Between scenes, a hard
+  `wipe()`; the effect transitions in `lib/transitions/` are for brands that call for them.
+- **Other components** (`lib/components/`): `AnimatedBackground`, `SlideTransition`, `Label`, `Vignette`,
+  `LogoWatermark`, `SplitScreen`, `Envelope`, `PointingHand`, `MazeDecoration`, `FilmGrain`, `Captions`. Remotion
+  itself is documented in `.claude/skills/remotion-official/` (synced from upstream) and the toolkit's patterns in
+  `.claude/skills/remotion/`.
+
+The rest of this file is the job route, then the individual tools.
+
 ## Where the toolkit is
 
 Every command below runs **from the toolkit root**. Find it, in this order:
 
 1. `$VIDEO_TOOLKIT_ROOT` if set (also honoured by the toolkit's own scripts);
-2. `$VIDEO_TOOLKIT_DIR` (the name longarm uses);
+2. `$VIDEO_TOOLKIT_DIR` (an alias some runtimes set);
 3. a `claude-code-video-toolkit/` directory under your workspace or home.
 
 ```bash
@@ -74,11 +139,12 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
   object**, filled from the template below), `flux` (text-free generated background), `none`
   (placeholder, drafts only). A scene with no visual gets a generated background. Alternate motion
   and constructed scenes so there is a pattern interrupt every ~15 s.
-- `voice`: a preset name (`"lugh"`, from `assets/voices/lugh.json`) or an object. The title animates
+- `voice`: an object as above, or a preset name: `assets/voices/<name>.json` (a cloned voice; its reference
+  audio is gitignored, so the host needs its own copy) or a brand with a `voice.json`. `catalog` lists them. The title animates
   over the first scene and a soft music bed is mixed in by default; `"titleCard": false` and
   `"music": false` turn them off.
 - **No JSON at all:** `--scene "narration :: ltx: motion prompt"` per scene, `--scene "narration ::
-  text: HEADLINE ; subline"`, `--title`, `--voice lugh`. See the docs page for the full flat form.
+  text: HEADLINE ; subline"`, `--title`, `--voice <preset>`. See the docs page for the full flat form.
 - Scene 1 must hook in one sentence. Scene N is the call to action. Captions are burned from the script text,
   so write every scene exactly as it should appear.
 - Optional: `"music": {"enabled": true, "prompt": "..."}` (off by default), `"brand": "digital-samba"`,
@@ -128,7 +194,7 @@ Have only a brief and want the toolkit to write the spec? Set `VIDEO_JOB_EXPANDE
 script). Then `--brief "..."` works everywhere `--spec` does. Without it, `estimate --brief` still answers with a
 skeleton estimate; `submit --brief` is refused.
 
-Runtimes that pass an argv list and can't write files (longarm's `native__run_tool`, most MCP
+Runtimes that pass an argv list and can't write files (an allowlisted `run_tool`, most MCP
 bridges) take the spec inline: `--spec-json '<json>'`, with the short caption form
 `{"headline": "...", "object": "...", "description": "..."}` per ideogram scene so it fits in one
 argument. Add `--output files/<dated-name>.mp4` when your runtime serves a `files/` directory at
@@ -195,8 +261,10 @@ rendered from, so a human can open `jobs/<id>/project/` and re-render after edit
 
 ### Spend
 
-Receipts also append to `MEDIA_SPEND_LOG` (default `logs/media-spend.log` in the toolkit) in the same shape
-longarm's `video-spend.py` writes, so one ledger covers single assets and jobs. Prices (`presets`, checked
+Receipts also append to `MEDIA_SPEND_LOG` (default `logs/media-spend.log` in the toolkit) as JSON lines, one
+per paid call, so a runtime that keeps a spend ledger reads single assets and jobs from one file. If your runtime
+sets a workspace, export `VIDEO_JOB_WORKSPACE` to it: the ledger goes to its `logs/`, relative spec paths resolve
+there, and `submit` books the whole estimate at once so a daily cap counts it before the work starts. Prices (`presets`, checked
 against receipts on 2026-11-01): LTX clip ~$0.10, Ideogram image $0.03 to $0.10, FLUX image under a cent,
 Qwen3 voice ~$0.01 a scene, captions ~$0.0001 a second. A 7-scene, 45 s video with two clips and two cards
 lands around $0.40 to $0.55; the first clip after idle pays a Modal cold start on top. Under `--progress json`
@@ -210,19 +278,21 @@ Everything below is what `video_job.py` drives for you. Reach for it directly wh
 (an image, a clip, a song), a different template, or a talking head. Add `--progress json` to any cloud tool
 for JSON-lines progress on stderr, and `--json` for a machine-readable result on stdout.
 
-### Defaults that are current (2026-10-31)
+### Defaults that are current (2026-11-06)
 
 | Need | Use | Not |
 |---|---|---|
 | Legible text in an image (title card, thumbnail, quote card) | `ideogram4.py --json caption.json` | FLUX or LTX (both garble text) |
 | Text-free background for an overlay | `flux2.py --preset title-bg` | |
 | Motion b-roll, animate a still | `ltx2.py` (`--input` for image-to-video) | |
-| Voiceover | `voiceover.py --provider qwen3 --cloud modal --max-wpm 165` (free, self-hosted) or `--provider elevenlabs` | |
+| Voiceover | `voiceover.py --provider qwen3 --cloud modal --max-wpm 165` (free, self-hosted), `--provider elevenlabs`, or `--provider 60db` (`sixtydb_tts.py` standalone) | |
 | Talking head anyone will watch | `soulx.py` (SoulX-FlashHead Pro, Modal only) | `sadtalker.py` is drafts, or when Modal is down |
-| Music | `music_gen.py --preset corporate-bg` (acemusic key, free) | |
+| Music | `music_gen.py --variations 3`, then `pick_music.py` to rule takes out and `audition.py` to choose by watching | picking a take by ear alone |
+| Sound effects | `sfx.py` (ElevenLabs) | |
 | Before delivering any render | `qc.py --render out.mp4 --fix` | shipping unchecked |
 | Captions for a Remotion template | `captions.py public/audio/scenes` | burning the recogniser's own transcript |
 | Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` | |
+| Upload to YouTube | `youtube_upload.py` (OAuth, private by default) | |
 
 ### Voiceover
 
@@ -233,9 +303,10 @@ uv run tools/qwen3_tts.py --text "Hello" --ref-audio ref.wav --ref-text "exact t
 ```
 
 One `.txt` per scene in `--scene-dir`, one MP3 back per scene with `duration_seconds`, `wpm` and a `pacing`
-label. `--max-wpm 165` slows rushed takes with pitch-preserving atempo; a cloned voice copies its reference
+label. A brand's voice: `--brand <name>` reads `brands/<name>/voice.json`. `--max-wpm 165` slows rushed takes with pitch-preserving atempo; a cloned voice copies its reference
 clip's pace, so a flat or fast clone needs a better reference (`voice_prosody.py expand`), not a higher
-temperature. Speakers: Ryan, Aiden, Vivian, Serena, Uncle_Fu, Dylan, Eric, Ono_Anna, Sohee. Tones: neutral,
+temperature. For a cloned voice, generate one `.txt` per sentence three times and let `pick_takes.py` choose each
+sentence by pace and pitch spread (the toolkit's CLAUDE.md, "Clone Prosody", has the loop). Speakers: Ryan, Aiden, Vivian, Serena, Uncle_Fu, Dylan, Eric, Ono_Anna, Sohee. Tones: neutral,
 warm, professional, excited, calm, serious, storyteller, tutorial.
 
 ### Images
@@ -285,28 +356,47 @@ uv run tools/pick_music.py bg_*.mp3 --target 45 --under voice --pick bg.mp3 --js
 ```
 
 Presets: corporate-bg, upbeat-tech, ambient, dramatic, tension, hopeful, cta, lofi. Default provider is the
-acemusic API (free key); `--cloud modal` is the self-hosted fallback.
+acemusic API (free key); `--cloud modal` is the self-hosted fallback. Prompting and lyrics: `.claude/skills/acestep/`.
+
+`pick_music.py` measures and can't listen, and good takes often tie. With a person in the loop, render the video
+once without music and let them watch each take under it:
+
+```bash
+uv run tools/audition.py --video out/video.nomusic.mp4 --music bg_*.mp3 --volume 0.15 --fade-out 1.5 \
+    --recommend --under voice    # -> out/audition/video.bg_1.mp4 ..., each normalised to -14 LUFS
+```
+
+Sound effects: `uv run tools/sfx.py --prompt "soft whoosh" --output whoosh.mp3`.
 
 ### QC, captions, cut-downs
 
 ```bash
 uv run tools/qc.py --project projects/my-video                  # assets, timing, pacing, loudness
 uv run tools/qc.py --render out/video.mp4 --fix                  # -14 LUFS, writes video.loudnorm.mp4; frame checks
+uv run tools/qc.py --project projects/my-video --layout         # Remotion: text off canvas, too small, low contrast
+uv run tools/contact_sheet.py out/video.mp4                      # one frame per scene, to look at before delivering
 uv run tools/captions.py projects/my-video/public/audio/scenes  # word captions aligned to the script .txt
 uv run tools/cutdown.py --input out/video.mp4 --platform shorts  # 16:9 -> 9:16, blur-fit
 ```
 
 Run `qc.py --render` before every delivery: the templates mix voice and music without normalising, and
-YouTube turns quiet audio down, never up. It exits 1 on errors (cut-off narration, silent track).
+YouTube turns quiet audio down, never up. It exits 1 on errors (cut-off narration, silent track); a video that is
+silent on purpose passes with `--allow-silent`. In sprint-review configs, `align_captions.py` re-times hand-written
+`cap()` phrases to the audio.
+
+Fixing existing videos: `redub.py --input v.mp4 --voice-id ID --sync` (new voice, word-level re-timing),
+`addmusic.py` (a bed under a finished video), `locate_watermark.py` then `dewatermark.py` (ProPainter inpainting),
+`notebooklm_brand.py` (a NotebookLM video with your logo and outro). Publishing: `youtube_upload.py --video
+out.mp4 --title "..." --json-out` (one-time `--auth`, private unless told otherwise; `docs/youtube-upload.md`).
 
 ### Remotion templates (when a job's compositor isn't enough)
 
-`templates/product-demo` (marketing), `templates/sprint-review` and `sprint-review-v2`,
-`templates/ds-release-notes` (synthetic UI demos). Copy to `projects/<name>`, `npm install`, write the config,
+The routes table at the top says which template fits. Copy to `projects/<name>`, `npm install`, write the config,
 generate per-scene audio, update each scene's `durationSeconds` to `ceil(audio + 2)` (or run
 `uv run tools/sync_timing.py --apply`), `npm run render` from the project directory, then `qc.py --render`.
 Always `<OffthreadVideo>` and `<Audio>` from `remotion`, never a raw `<video>` tag. The toolkit's CLAUDE.md
-holds the full workflow.
+holds the full workflow. Cloud GPU setup and endpoint trouble: `.claude/skills/runpod/`, `docs/modal-setup.md`.
+Image edit prompting: `.claude/skills/qwen-edit/`.
 
 ### Progress JSON (stderr, one object per line)
 
@@ -317,8 +407,7 @@ holds the full workflow.
 ```
 
 Stages: `submit`, `queue`, `processing`, `waiting`, `item` (n of m, `pct` set), `cost`, `complete`, `error`.
-`video_job.py` reads the `cost` events for its receipts; longarm's `video-spend.py` wrapper does the same for
-single tool runs.
+`video_job.py` reads the `cost` events for its receipts; a runtime that wraps single tool runs can do the same.
 
 ## Error recovery
 

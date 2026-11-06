@@ -18,7 +18,7 @@ Claude Desktop / Claude Code (one line in the client's MCP config):
 
 Any other MCP client: spawn the same command and speak MCP over its stdin/stdout.
 
-Tools: video_estimate, video_submit, video_status, video_result, video_list_presets
+Tools: video_estimate, video_submit, video_status, video_result, video_list_presets, video_catalog
 (plus video_list, video_cancel and video_resume, which cost nothing to expose). Every tool
 returns a dict with `ok`; failures carry `error` and `error_code`, never an exception.
 """
@@ -50,7 +50,10 @@ mcp = FastMCP(
         "spec yourself (scenes with narration text and a visual prompt each) rather than passing "
         "a brief, unless the server has a VIDEO_JOB_EXPANDER configured. video_status has an "
         "`events` list (what started and finished) and `warnings` to pass on to the user; a failed "
-        "job with `resumable: true` can be carried on with video_resume, paying only for what is missing."
+        "job with `resumable: true` can be carried on with video_resume, paying only for what is missing. "
+        "Asked what you can make, or for a style this flow doesn't do (a product walkthrough rebuilt from an "
+        "app's source, a data chart, a sprint review), call video_catalog: templates with agent_support `job` "
+        "go through submit; `session` ones need a working session with the skill each one names."
     ),
 )
 
@@ -154,6 +157,16 @@ def video_resume(job_id: str, max_usd: float | None = None) -> dict:
 def video_list_presets() -> dict:
     """Unit prices, output formats, visual kinds, voice defaults and an example spec."""
     return {"ok": True, **vj.presets()}
+
+
+@mcp.tool()
+def video_catalog() -> dict:
+    """What the toolkit can make: templates (with demo videos and the skill that drives each), example
+    builds, components, brands, design sources and voice presets. `agent_support` is `job` (video_submit makes it) or `session`."""
+    try:
+        return {"ok": True, **vj.catalog()}
+    except Exception as e:  # noqa: BLE001
+        return _err(e, "internal")
 
 
 @mcp.tool()

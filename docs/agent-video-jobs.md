@@ -2,8 +2,15 @@
 
 `tools/video_job.py` lets any agent say "make a 45-second video about X" and get a finished, QC-checked MP4
 back without writing Remotion code and without holding a connection open. It was built for agents that call
-toolkit CLIs through an allowlisted `run_tool` with a hard per-call time limit (longarm's Lugh has 660 s), and
+toolkit CLIs through an allowlisted `run_tool` with a hard per-call time limit (ours had 660 s), and
 for MCP clients with no shell at all (`tools/video_mcp.py`). The agent-facing skill is `skills/video-toolkit/`.
+
+A job is one route of several. Product walkthroughs rebuilt from an app's source (synthetic UI), data charts,
+sprint reviews and marketing demos are **sessions**: a Claude Code-style working session copies a template, edits
+it with the skill it names and renders with Node, with the person who asked reviewing the drafts. The session can
+be theirs, or an agent's, if its runtime runs one headless. `video_job.py catalog` (MCP: `video_catalog`) lists every route from the registry, with
+demo videos, so an agent can answer "what can you make?" and pick one; the routes table at the top of the skill
+says which fits what a user asks for.
 
 ## How it works
 
@@ -90,7 +97,7 @@ say). `result` carries `size_bytes`, and a file still over the cap shows up in `
 | `scenes[].text` | Narration, verbatim. Captions burn this text. ~2.4 words a second. |
 | `scenes[].visual.kind` | `ltx` (5 s motion clip, looped), `text` (constructed: a generated background that drifts plus the scene's `headline` and optional `subline` animated in), `ideogram` (designed card with legible text), `flux` (text-free generated background), `none` (placeholder card). A scene with no `visual` gets `flux` with a prompt built from its narration, or `none` when the spec says `"draft": true`. Any non-ideogram kind may carry `headline`/`subline` too. |
 | `scenes[].visual.prompt` / `caption` | `prompt` for `ltx` and `flux`. For `ideogram`, always a JSON `caption`: `presets --json` prints `ideogram_caption_template` to fill in (a plain `prompt` works but adds filler text to the card). Optional per-scene `speed`, `numFrames`, `negativePrompt` (LTX gets a text-and-logo-excluding default), `seed`. An `ltx` prompt that names no style gets a live-action footage suffix; a top-level `ltxStyle` replaces it (`""` disables). |
-| `voice` | An object merged over the template's voice block (`provider`, `speaker`, `tone`, `refAudio` + `refText` for a clone, `maxWpm`, `brand`, `voiceId`), or a preset name: `assets/voices/<name>.json` (a clone; the audio file beside it is gitignored, copy it) or a brand with a `voice.json`. `--voice lugh` on the CLI. |
+| `voice` | An object merged over the template's voice block (`provider`, `speaker`, `tone`, `refAudio` + `refText` for a clone, `maxWpm`, `brand`, `voiceId`), or a preset name: `assets/voices/<name>.json` (a clone; the audio file beside it is gitignored, copy it) or a brand with a `voice.json`. `--voice <name>` on the CLI. |
 | `captions` | `{"enabled": true, "engine": "auto"}`. `auto` is Scribe when `ELEVENLABS_API_KEY` is set, else local whisper; neither available means the job renders without captions and says so. |
 | `music` | On by default (a subtle ambient bed from the free acemusic API, looped and ducked under the narration); `false`, a prompt string, or `{"enabled", "prompt", "provider"}`. Skipped with a log line when the key is missing. |
 | `titleCard` | On by default: the title animates in over the first scene for 2.8 s (so frame 0, the Shorts cover, is never empty). `false` to skip, or `{"text", "seconds"}`. |
@@ -105,10 +112,10 @@ For callers that can't reliably write nested JSON (an open model with no editor,
 terminal), scenes are plain strings, one per `--scene`:
 
 ```bash
-uv run tools/video_job.py submit --format 16:9 --voice lugh --title "The Real Bottleneck" --max-usd 2 \
+uv run tools/video_job.py submit --format 16:9 --title "The Real Bottleneck" --max-usd 2 \
   --scene "AI gets cheaper every month. Your PlayStation just doubled in price. :: ltx: slow push-in through a dark server room, blue lights pulsing" \
   --scene "Compute is the new scarce thing. :: text: COMPUTE IS THE SCARCE THING ; the price of intelligence falls, the price of silicon climbs" \
-  --scene "One prompt. One agent. A finished video. :: text: ONE PROMPT ; made by Lugh, start to finish"
+  --scene "One prompt. One agent. A finished video. :: text: ONE PROMPT ; made by an agent, start to finish"
 ```
 
 After the narration and ` :: `: `ltx: <motion prompt>`, `text: <HEADLINE> ; <subline>`,
@@ -154,10 +161,10 @@ for the duration, marked `spec_source: skeleton`), and `submit --brief` is refus
   `cloud_gpu.py`; `voiceover.py --progress json` relays Qwen3's), otherwise the table price is booked
   (ElevenLabs voice, Ideogram).
 - Receipts: `jobs/<id>/receipts.jsonl` and `MEDIA_SPEND_LOG` (default `logs/media-spend.log`), one JSON line
-  per tool call in the shape longarm's `video-spend.py` writes, plus `job_id`:
+  per tool call, plus `job_id`:
   `{"ts": "...Z", "tool": "ltx2.py", "cost_usd": 0.0712, "elapsed_s": 103.4, "exit": 0, "args": [...], "job_id": "..."}`.
 
-The table was checked on 2026-11-01 against the receipts of the last ten jobs on Lugh's host: LTX clips cost a
+The table was checked on 2026-11-01 against the receipts of the last ten jobs on a production agent host: LTX clips cost a
 median $0.0825 (the table said $0.20, now $0.10) and FLUX backgrounds $0.0058 ($0.01, now $0.0075). Estimates
 before that date were roughly double the actual spend.
 
@@ -192,51 +199,53 @@ the final MP4.
 The lock `jobs/.lock` names the running job. It is considered stale when that job is finished, its worker is
 dead, or no worker reported in within two minutes, so a crash never wedges the queue. `submit` writes the
 worker's pid into the lock before it returns, and `status` or `list` clear a stale lock and fail a job whose
-worker never started (`worker_never_started`, resumable). Longarm's daily cap
-assumes serial spend, which the lock guarantees.
+worker never started (`worker_never_started`, resumable). A runtime's daily
+cap can assume serial spend, which the lock guarantees.
 
-## Running under an agent runtime's tool call (longarm)
+## Running under an agent runtime's tool call
 
-Longarm's `native__run_tool` spawns toolkit tools through its `video-spend.py` wrapper with an argv
-list, no shell, no files the model can write, every argument capped at 4 KB, and `--progress json`
-injected. `video_job.py` fits that:
+The strictest runtime we've run it under spawns toolkit tools through a spend wrapper with an argv list, no
+shell, no files the model can write, every argument capped at 4 KB, `--progress json` injected, and a daily
+spend cap summed from a shared ledger. `video_job.py` fits that:
 
 - `--progress json` is accepted on every command. `submit` then prints one `cost` event on stderr
-  with the whole estimate, which the wrapper turns into a receipt, so longarm's daily cap books the
-  job as a **reservation** the moment it starts. In that mode (`LONGARM_WORKSPACE` set, or
+  with the whole estimate, which the wrapper turns into a receipt, so the runtime's daily cap books the
+  job as a **reservation** the moment it starts. In that mode (`VIDEO_JOB_WORKSPACE` set, or
   `VIDEO_JOB_RESERVE_AT_SUBMIT=1`) the worker keeps its actual per-tool receipts in
   `jobs/<id>/receipts.jsonl` only, so nothing is counted twice. `status`, `result`, `list` and
   `cancel` print a `$0.0000` cost event so they are not charged the wrapper's unknown-cost default.
   **Every** call prints exactly one: a refused or failed call (bad spec, lock held, a usage error, a
-  crash) prints `$0.0000` too. Before 2026-11-01 failures printed none, and longarm booked its flat
-  $0.05 for each; 15 failed submits cost Lugh $0.75 that way. `resume` reserves the rest of the
+  crash) prints `$0.0000` too. Before 2026-11-01 failures printed none, and a wrapper that books a
+  flat $0.05 for a receipt with no cost charged 15 failed submits $0.75 that way. `resume` reserves the rest of the
   estimate again (the job had settled to its actual spend when it stopped) and settles again at the end.
 - Ledger noise: every `status` poll still leaves a `$0` receipt line in the shared ledger. It costs the
-  cap nothing; filtering it out belongs in longarm's `video-spend.py` (skip a receipt whose only cost
+  cap nothing; filtering it out belongs in the runtime's wrapper (skip a receipt whose only cost
   event is `$0.0000` with `no generation` in the message), not here.
-  The ledger path follows `MEDIA_SPEND_LOG`, else `$LONGARM_WORKSPACE/logs/media-spend.log`.
+  The ledger path follows `MEDIA_SPEND_LOG`, else `$VIDEO_JOB_WORKSPACE/logs/media-spend.log`.
+  `VIDEO_JOB_WORKSPACE` is the agent's workspace: relative `@path` specs resolve there first, and it turns
+  reservation on. (`LONGARM_WORKSPACE` is read as an older name for it.)
 - `--spec-json '<json>'` takes the spec inline. To fit a 3-scene spec in 4 KB, an `ideogram` scene
   can give the short caption form `{"headline": "...", "object": "...", "description": "..."}`, which
   `normalize_spec` expands into the full template.
-- `submit --output files/<name>.mp4` copies the finished MP4 there as well (longarm serves `files/`
+- `submit --output files/<name>.mp4` copies the finished MP4 there as well (a runtime that serves `files/`
   at a public URL and computes that URL itself from the `--output` argument; the file exists once
   `status` says `done`). `result` reports it as `published`.
 - `status` carries `eta_s`, seconds left: each remaining step priced at the median of this host's
   last 5 finished jobs (build as seconds per second of video, visuals per kind), the current step
   less the time already spent in it, plus 90 s for a cold LTX container when the host's last clip
-  ended over 10 minutes ago. With no history it falls back to a table measured on a Mac. Lugh's host
-  builds about 10x slower than the Mac did before the 2026-11-01 speed-up, which is why the table
-  alone was wrong there. `events` says what is happening, so an agent can report "scene 3's clip is
+  ended over 10 minutes ago. With no history it falls back to a table measured on a Mac. A small
+  container host built about 10x slower than the Mac did before the 2026-11-01 speed-up, which is why
+  the table alone was wrong there. `events` says what is happening, so an agent can report "scene 3's clip is
   rendering, two images done" rather than a phase name.
 - `--output` must name an `.mp4`. With `VIDEO_JOB_OUTPUT_ROOTS` set (directories separated by
   `os.pathsep`), it must also be inside one of them.
-- The per-call cost bound of longarm's allowlist becomes the job's `--max-usd` (default 2.00, env
+- A runtime's per-call cost bound becomes the job's `--max-usd` (default 2.00, env
   `VIDEO_JOB_MAX_USD`); set it at or under the daily cap's call reserve policy you want.
 
-The brain's media venv needs `moviepy`, `numpy` and `elevenlabs` on top of the client libraries
-(the build and QC steps run locally in the container); `IDEOGRAM_API_KEY` goes in the toolkit's
-own `.env` on the host. The agent-facing contract for the api engine is a section in
-`identity.d/22-tools-media.api.md`; `skills/video-toolkit/SKILL.md` is the claude-cli counterpart.
+An agent's Python environment needs `moviepy`, `numpy` and `elevenlabs` on top of the client libraries
+(the build and QC steps run locally, in the agent's container if it has one); `IDEOGRAM_API_KEY` goes in the
+toolkit's own `.env` on the host. Give the agent `skills/video-toolkit/SKILL.md` as its skill, or paste its
+quick path into the system prompt of a runtime that has no skills.
 
 ## MCP server
 
@@ -285,6 +294,7 @@ with that console, and a process that exits with code 259 reads as alive.
 
 ## Wiring an agent in
 
-For longarm (separate work): allowlist `video_job.py` for `native__run_tool`, count the job's estimate as a
-reservation against the daily media cap, have a poller post the MP4 back to the thread, and ship
-`skills/video-toolkit/SKILL.md` as the workspace skill. Anything over ~$1 goes through an approval card.
+What a runtime needs, whatever it is: allowlist `video_job.py` (or connect `video_mcp.py`), count the job's
+estimate as a reservation against any spend cap (`VIDEO_JOB_WORKSPACE` does this), poll `status` and post the
+MP4 back to wherever the request came from, and ship `skills/video-toolkit/SKILL.md` as the agent's skill. Put
+an approval step in front of anything over the amount you're comfortable with (we use ~$1).
