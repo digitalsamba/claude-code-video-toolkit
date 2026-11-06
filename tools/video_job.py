@@ -666,6 +666,11 @@ def normalize_spec(spec: dict) -> dict:
     if voice["provider"] not in ("qwen3", "elevenlabs", "60db"):
         raise SpecError("spec.voice.provider must be qwen3, elevenlabs or 60db")
     voice.setdefault("maxWpm", 165)
+    if kit is not None and voice.get("refAudio") and not Path(voice["refAudio"]).is_absolute():
+        # a kit's cloned voice: its reference clip lives in the kit
+        in_kit = Path(kit["dir"]) / voice["refAudio"]
+        if in_kit.exists():
+            voice["refAudio"] = str(in_kit.resolve())
     out["voice"] = voice
     caps = out.get("captions") or {}
     caps.setdefault("enabled", True)
@@ -1555,6 +1560,8 @@ def step_voiceover(job: dict, spec: dict) -> dict:
     args = ["--provider", voice["provider"], "--scene-dir", str(scene_dir), "--json"]
     if voice.get("maxWpm"):
         args += ["--max-wpm", str(voice["maxWpm"])]
+    if voice.get("minTempo"):
+        args += ["--min-tempo", str(voice["minTempo"])]
     if voice.get("brand"):
         args += ["--brand", voice["brand"]]
     if voice["provider"] == "qwen3":
