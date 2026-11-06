@@ -1,0 +1,7 @@
+{
+  "description": "Example kit: the default brand, the stock voice, local backgrounds (no GPU). Copy the folder, add photos to assets/.",
+  "brand": "default",
+  "format": "9:16",
+  "backgrounds": "local",
+  "music": false
+}

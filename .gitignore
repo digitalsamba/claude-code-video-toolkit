@@ -91,6 +91,11 @@ projects/
 # Async video jobs (tools/video_job.py): state, logs, project copies and renders
 jobs/
 
+# Kits (tools/video_job.py): people's photos and voices stay local; only the README and the example are tracked
+kits/*
+!kits/README.md
+!kits/example/
+
 # Scratch directory (local experiment output — generated images, test renders,
 # one-off scripts). Tools that write to the repo root should target scratch/.
 scratch/

@@ -103,6 +103,8 @@ say). `result` carries `size_bytes`, and a file still over the cap shows up in `
 | `titleCard` | On by default: the title animates in over the first scene for 2.8 s (so frame 0, the Shorts cover, is never empty). `false` to skip, or `{"text", "seconds"}`. |
 | `ideogram.speed` | `TURBO` $0.03, `DEFAULT` $0.06, `QUALITY` $0.10 per image. |
 | `brand`, `palette` | A `brands/<name>` for voice and Ideogram colours; palette overrides for the placeholder cards and caption pills. |
+| `kit` | A kit name (`kits/README.md`): fills `brand`, `voice`, `format`, `backgrounds` and `music` when the spec doesn't set them, sets the palette from the kit's colours, and is where `file` paths are looked up first. Searched in `$VIDEO_JOB_WORKSPACE/kits/`, then the toolkit's `kits/`. |
+| `backgrounds` | `auto` (default): `text` scenes and scenes with no visual get a FLUX background when the host has FLUX, else a local one. `local`: a flat field in the kit's or brand's ground colour with grain, drawn by the job (free, no GPU). `flux`: always FLUX. A scene that names kind `flux` always uses FLUX. |
 
 Normalisation adds `id` (`01`, `02`...) and `asset` paths; `jobs/<id>/spec.json` is the normalised copy.
 
@@ -140,8 +142,10 @@ other cloud when that one is set up, an ideogram card instead of a clip, `"music
 are soft: the job runs without them and says so in `warnings`. `VIDEO_JOB_SKIP_HOST_CHECK=1` turns the check off
 for a host whose tools find their keys some other way.
 
-A host with hosted API keys only (ElevenLabs, Ideogram) and no GPU provider can make a job whose scenes are all
-ideogram cards. `text`, `flux` and scenes with no visual need FLUX.
+A host with no GPU provider can still make a job: `text` scenes and scenes with no visual get local backgrounds,
+`file` scenes use the person's own photos and clips, and `ideogram` cards need only an Ideogram key. The voice
+needs ElevenLabs or 60db (a key), or qwen3 on Modal or RunPod. Music is soft like captions: no provider, no bed,
+and a warning.
 
 ## Brief → spec
 
