@@ -114,7 +114,18 @@ FORMATS = {
     },
 }
 
-VISUAL_KINDS = ("ideogram", "ltx", "flux", "text", "none")
+VISUAL_KINDS = ("ideogram", "ltx", "flux", "text", "file", "none")
+# "file" is the person's own photo or clip (from a kit's assets or the agent workspace), Ken Burns on a still,
+# boomerang on a clip, with an optional headline. Costs nothing and needs no GPU.
+# How a scene is set (templates/concept-explainer-short/build.py): the visual full frame, the visual on a
+# stage over a flat field of the kit's colour (its design session's split-stage), or type alone on that field.
+LAYOUTS = ("full", "split", "type")
+BACKGROUNDS = ("auto", "flux", "local")
+# Where `text` scenes and scenes with no visual get their background: "flux" generates one (about a cent, needs
+# FLUX on Modal or RunPod), "local" draws a flat brand-colour field with grain here (free, no GPU), "auto" is flux
+# when this host has it, else local. A scene that names kind "flux" always means FLUX.
+IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp")
+CLIP_EXTS = (".mp4", ".mov", ".webm")
 # "text" is a constructed visual: a generated text-free background (FLUX) with the scene's
 # headline and an accent bar animated in by the build. Deterministic typography, motion
 # from the Ken Burns drift and the reveal, about a cent. "flux" is the same background
@@ -504,11 +515,275 @@ def load_voice_preset(name: str) -> dict:
                     f"Presets here: {', '.join(known) or 'none'}; or leave --voice off for the default narrator")
 
 
+def kit_dirs() -> list[Path]:
+    """Where kits live: the agent workspace's kits/ first (a runtime keeps each person's kit there), then
+    the toolkit's own kits/."""
+    ws = agent_workspace()
+    return ([ws / "kits"] if ws else []) + [ROOT / "kits"]
+
+
+def list_kits() -> list[dict]:
+    seen, out = set(), []
+    for d in kit_dirs():
+        for kj in sorted(d.glob("*/kit.json")):
+            name = kj.parent.name
+            if name in seen:
+                continue
+            seen.add(name)
+            try:
+                k = json.loads(kj.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            adir = kj.parent / (k.get("assets") or "assets")
+            described = k.get("describe") or {}
+            files = sorted(p.name for p in adir.iterdir()
+                           if p.is_file() and p.suffix.lower() in IMAGE_EXTS + CLIP_EXTS) if adir.is_dir() else []
+            design = k.get("design") or {}
+            recent = kit_recent_files(name)
+            out.append({"name": name, "description": k.get("description"), "path": str(kj.parent),
+                        "format": k.get("format"),
+                        "layouts": kit_layouts(k), "fields": sorted((design.get("fields") or {}).keys()),
+                        # what each file shows, so a model that can't see them can choose, and how many of the
+                        # last few videos made with this kit used it, so the next one can pick others
+                        "assets": [{"file": f, "shows": described.get(f), "usedRecently": recent.get(f, 0)}
+                                   for f in files]})
+    return out
+
+
+def kit_layouts(kit: dict) -> list[str]:
+    """The layouts a kit allows: its design's "layouts", else split and type when it has fields, else full."""
+    design = kit.get("design") or {}
+    allowed = design.get("layouts")
+    if allowed:
+        return [x for x in allowed if x in LAYOUTS]
+    return list(LAYOUTS) if design.get("fields") else ["full"]
+
+
+RECENT_VIDEOS = 3
+
+
+def kit_recent_files(kit_name: str, videos: int = RECENT_VIDEOS) -> dict[str, int]:
+    """file -> how many of the last `videos` finished jobs made with this kit showed it."""
+    counts: dict[str, int] = {}
+    seen = 0
+    for j in list_jobs()[:40]:
+        if seen >= videos:
+            break
+        if j.get("phase") != "done":
+            continue
+        try:
+            old = json.loads((job_dir(j["id"]) / "spec.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        k = old.get("kit")
+        if (k.get("name") if isinstance(k, dict) else k) != kit_name:
+            continue
+        seen += 1
+        for f in {str((sc.get("visual") or {}).get("path")) for sc in old.get("scenes", [])
+                  if isinstance(sc.get("visual"), dict) and sc["visual"].get("kind") == "file"}:
+            counts[f] = counts.get(f, 0) + 1
+    return counts
+
+
+def load_kit(ref: str) -> dict:
+    """A kit is set up once in a working session: kits/<name>/kit.json naming a brand, a voice, a
+    format, how backgrounds are made, and an assets folder of the person's own photos and clips.
+    `ref` is a kit name (searched in kit_dirs()) or a path to the kit folder."""
+    cands = [Path(ref)] if ("/" in ref or "\\" in ref) else [d / ref for d in kit_dirs()]
+    for c in cands:
+        if (c / "kit.json").exists():
+            try:
+                k = json.loads((c / "kit.json").read_text(encoding="utf-8"))
+            except ValueError as e:
+                raise SpecError(f"kit {ref!r}: kit.json is not valid JSON ({e})")
+            k["name"] = k.get("name") or c.name
+            k["dir"] = str(c.resolve())
+            k["assets"] = str((c / (k.get("assets") or "assets")).resolve())
+            return k
+    known = [k["name"] for k in list_kits()]
+    raise SpecError(f"unknown kit {ref!r}. Kits here: {', '.join(known) or 'none'}. A kit is a folder with a "
+                    "kit.json under kits/ (or the agent workspace's kits/); see kits/README.md")
+
+
+def brand_colors(spec: dict) -> dict:
+    """Colours from the kit's own brand.json, else brands/<brand>/brand.json, else {}."""
+    kit = spec.get("kit") or {}
+    for p in ([Path(kit["dir"]) / "brand.json"] if kit.get("dir") else []) + (
+            [ROOT / "brands" / spec["brand"] / "brand.json"] if spec.get("brand") else []):
+        if p.exists():
+            try:
+                return json.loads(p.read_text(encoding="utf-8")).get("colors") or {}
+            except ValueError:
+                return {}
+    return {}
+
+
+def _kit_design(kit: dict) -> dict:
+    """The kit's design block with its font and image paths made absolute (they are relative to the kit)."""
+    d = json.loads(json.dumps(kit["design"]))
+    base = Path(kit["dir"])
+
+    def absolute(p):
+        q = Path(p)
+        return str(q if q.is_absolute() else (base / q).resolve())
+    fonts = d.get("fonts") or {}
+    for role, f in list(fonts.items()):
+        if isinstance(f, str):
+            fonts[role] = {"path": absolute(f)}
+        elif isinstance(f, dict) and f.get("path"):
+            f["path"] = absolute(f["path"])
+    closing = d.get("closing") or {}
+    if closing.get("image"):
+        closing["image"] = absolute(closing["image"])
+    ground = d.get("ground") or {}
+    if ground.get("image"):
+        ground["image"] = absolute(ground["image"])
+    return d
+
+
+# What a model writes when it isn't paying attention. The general part of the support-reply lint Conal's
+# agents already run (ds-support reply_lint.py, from Jorge's blog pipeline): dashes and stock AI phrasing.
+# Narration is heard and burned as captions, so these are refused before any spend, with the reason.
+COPY_RULES = [
+    (re.compile(r"—|\s–\s|\s--\s"), "a dash; use a comma, a full stop or a new sentence"),
+    (re.compile(r"\bit'?s worth noting\b|\bit is (worth|important) (noting|to note)\b", re.I), "'it's worth noting'; say the point"),
+    (re.compile(r"\bin today'?s (fast-paced |busy |modern )?(world|age|landscape)\b|\bmoving forward\b"
+                r"|\bfirst and foremost\b|\blast but not least\b|\bwithout further ado\b|\ball in all\b"
+                r"|\bin conclusion\b|\bshed light on\b|\bpave the way\b|\bat the forefront\b|\bdeep[- ]dive\b"
+                r"|\bdelve\b|\btapestry\b|\bembark on a journey\b|\bunlock (your|the) (full )?potential\b"
+                r"|\bgame[- ]changer\b|\bnavigat(e|ing) the (complexities|world|landscape)\b"
+                r"|\bseamless(ly)?\b|\bresonate(s)? with\b|\btestament to\b", re.I),
+     "stock AI phrasing; say it the way a person would"),
+]
+
+
+def copy_findings(spec: dict) -> list[str]:
+    """Narration lint plus the repeat guard: refuse words lifted from an earlier finished job on this host."""
+    out = []
+    shown = [("the title", spec.get("title") or "")]
+    for s in spec["scenes"]:
+        ov = s.get("overlay") or {}
+        shown += [(f"scene {s['id']}", s["text"]), (f"scene {s['id']} headline", ov.get("headline") or ""),
+                  (f"scene {s['id']} subline", ov.get("subline") or "")]
+    for where, text in shown:
+        for rx, why in COPY_RULES:
+            m = rx.search(text)
+            if m:
+                out.append(f"{where}: '{m.group(0).strip()}' is {why}")
+    if ((spec.get("design") or {}).get("headline") or {}).get("case") == "sentence":
+        # the build lowers a headline typed in capitals, but can't tell Title Case from a name, so ask
+        for where, text in shown[:1] + [w for w in shown[1:] if w[0].endswith(("headline", "subline"))]:
+            if _title_case(text):
+                out.append(f"{where}: '{text}' is in Title Case; this kit writes titles and headlines in sentence "
+                           "case (capital on the first word and on names only)")
+    seen = {}
+    for j in list_jobs()[:40]:
+        if j.get("phase") != "done":
+            continue
+        try:
+            old = json.loads((job_dir(j["id"]) / "spec.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for sc in old.get("scenes", []):
+            k = _spoken_key(sc.get("text") or "")
+            if len(k.split()) >= 6:
+                seen.setdefault(k, j["id"])
+    for s in spec["scenes"]:
+        k = _spoken_key(s["text"])
+        if k in seen:
+            out.append(f"scene {s['id']} repeats a line from job {seen[k]} word for word; every video gets its own "
+                       "words, written from what this person asked for")
+    return out
+
+
+def _title_case(text: str) -> bool:
+    """Three or more words, and every word of four letters or more starts with a capital (not all capitals)."""
+    words = re.findall(r"[A-Za-z][A-Za-z'\-]*", text or "")
+    long_words = [w for w in words if len(w) >= 4]
+    if len(words) < 3 or len(long_words) < 2:
+        return False
+    letters = [c for c in text if c.isalpha()]
+    if letters and all(c.isupper() for c in letters):
+        return False
+    return all(w[0].isupper() for w in long_words) and any(w[0].isupper() for w in words[1:])
+
+
+def _flux_available() -> bool:
+    if os.environ.get("VIDEO_JOB_SKIP_HOST_CHECK", "").strip().lower() in ("1", "true", "yes", "on"):
+        return True      # not consulting the host: assume it has everything
+    return _has(_NEEDS[("visual", "flux", "modal")]) or _has(_NEEDS[("visual", "flux", "runpod")])
+
+
+def _hex_rgb(h: str, fallback=(10, 10, 20)) -> tuple:
+    h = (h or "").strip().lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    try:
+        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+    except ValueError:
+        return fallback
+
+
+def draw_local_background(out: Path, width: int, height: int, color: str, seed: int = 0) -> None:
+    """A flat colour field with fine grain: no GPU, no network, no gradient. The build's Ken Burns drift
+    moves the grain, and the headline reveal and captions carry the motion."""
+    import numpy as np
+    from PIL import Image
+    rng = np.random.default_rng(seed)
+    base = np.array(_hex_rgb(color), dtype=np.float32)
+    grain = rng.normal(0.0, 5.0, (height, width, 1)).astype(np.float32)
+    img = np.clip(base + grain, 0, 255).astype(np.uint8)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_suffix(".tmp.png")
+    Image.fromarray(img).save(tmp)
+    os.replace(tmp, out)
+
+
+def _resolve_file(scene_id: str, rel: str, kit: dict | None) -> Path:
+    p = Path(rel)
+    cands = [p] if p.is_absolute() else (([Path(kit["assets"]) / rel, Path(kit["dir"]) / rel] if kit else [])
+                                         + _workspace_paths(rel))
+    for c in cands:
+        if c.is_file():
+            if c.suffix.lower() not in IMAGE_EXTS + CLIP_EXTS:
+                raise SpecError(f"scene {scene_id}: {rel} is not an image or clip "
+                                f"({', '.join(IMAGE_EXTS + CLIP_EXTS)})")
+            return c.resolve()
+    where = "the kit's assets, " if kit else ""
+    raise SpecError(f"scene {scene_id}: no file {rel!r} in {where}the agent workspace or the toolkit")
+
+
 def normalize_spec(spec: dict) -> dict:
     """Fill defaults, derive ids and asset paths, and validate. Returns a new dict."""
     if not isinstance(spec, dict):
         raise SpecError("spec must be a JSON object")
     out = json.loads(json.dumps(spec))  # deep copy
+    kit = out.get("kit")
+    if isinstance(kit, str):
+        kit = load_kit(kit)
+    if kit is not None:
+        if not isinstance(kit, dict) or not kit.get("dir"):
+            raise SpecError("spec.kit must be a kit name")
+        out["kit"] = kit
+        for key in ("brand", "format", "backgrounds"):
+            if kit.get(key) and not out.get(key):
+                out[key] = kit[key]
+        if kit.get("voice") and not out.get("voice"):
+            out["voice"] = kit["voice"]
+        if "music" in kit and "music" not in out:
+            out["music"] = kit["music"]
+    if kit is not None and kit.get("design") and not out.get("design"):
+        out["design"] = _kit_design(kit)
+    bg = str(out.get("backgrounds") or "auto")
+    if bg not in BACKGROUNDS:
+        raise SpecError(f"spec.backgrounds must be one of {', '.join(BACKGROUNDS)}")
+    out["backgrounds"] = bg
+    bg_source = "local" if bg == "local" or (bg == "auto" and not _flux_available()) else "flux"
+    colors = brand_colors(out)
+    if colors and kit is not None and not out.get("palette"):
+        # a kit's video is theirs: its brand sets the accent and the ground
+        out["palette"] = {k: v for k, v in {"accent1": colors.get("primary"), "accent2": colors.get("accent"),
+                                            "ink": colors.get("bgDark") or colors.get("navyDark")}.items() if v}
     fmt = str(out.get("format") or "9:16")
     if fmt not in FORMATS:
         raise SpecError(f"format must be one of {', '.join(FORMATS)} (got {fmt!r})")
@@ -526,6 +801,11 @@ def normalize_spec(spec: dict) -> dict:
     if voice["provider"] not in ("qwen3", "elevenlabs", "60db"):
         raise SpecError("spec.voice.provider must be qwen3, elevenlabs or 60db")
     voice.setdefault("maxWpm", 165)
+    if kit is not None and voice.get("refAudio") and not Path(voice["refAudio"]).is_absolute():
+        # a kit's cloned voice: its reference clip lives in the kit
+        in_kit = Path(kit["dir"]) / voice["refAudio"]
+        if in_kit.exists():
+            voice["refAudio"] = str(in_kit.resolve())
     out["voice"] = voice
     caps = out.get("captions") or {}
     caps.setdefault("enabled", True)
@@ -570,8 +850,8 @@ def normalize_spec(spec: dict) -> dict:
         if isinstance(vis, str):
             vis = {"kind": vis}
         if vis is None:
-            # no visual named: a generated background (about a cent) unless this is a draft
-            vis = {"kind": "none"} if draft else {"kind": "flux", "prompt": auto_background_prompt(text)}
+            # no visual named: a background (generated or local, see BACKGROUNDS) unless this is a draft
+            vis = {"kind": "none"} if draft else {"kind": "flux", "prompt": auto_background_prompt(text), "auto": True}
         if not isinstance(vis, dict):
             raise SpecError(f"scene {s['id']}: visual must be an object")
         kind = vis.get("kind") or "none"
@@ -582,7 +862,24 @@ def normalize_spec(spec: dict) -> dict:
                 raise SpecError(f"scene {s['id']}: visual.text needs a headline")
             vis["headline"] = str(vis["headline"]).strip()
             vis["prompt"] = vis.get("prompt") or auto_background_prompt(text, vis.get("background"))
-        if kind != "none" and not (vis.get("prompt") or vis.get("caption")):
+        if kind == "file":
+            if not vis.get("path"):
+                raise SpecError(f"scene {s['id']}: visual.file needs a path (a photo or clip in the kit's assets "
+                                "or the agent workspace)")
+            vis["src"] = str(_resolve_file(s["id"], str(vis["path"]), kit))
+            # where the subject sits along the side the crop cuts (0-1), from the scene or the kit's focus map
+            fx = vis.get("focus", ((kit or {}).get("focus") or {}).get(str(vis["path"])))
+            if fx is not None:
+                try:
+                    s["focus"] = min(1.0, max(0.0, float(fx)))
+                except (TypeError, ValueError):
+                    raise SpecError(f"scene {s['id']}: focus must be a number from 0 to 1")
+        elif (kind == "text" or (kind == "flux" and vis.get("auto"))) and not vis.get("source"):
+            vis["source"] = bg_source
+            if bg_source == "local":
+                vis["color"] = vis.get("color") or (out.get("palette") or {}).get("ink") or \
+                    colors.get("bgDark") or colors.get("navyDark") or ""
+        if kind not in ("none", "file") and not (vis.get("prompt") or vis.get("caption")):
             raise SpecError(f"scene {s['id']}: visual.{kind} needs a prompt (or a caption for ideogram)")
         check_narration_is_spoken(s["id"], text, vis)
         if kind == "ltx" and len((vis.get("prompt") or "").split()) < 3 and not str(vis.get("prompt", "")).startswith("("):
@@ -625,6 +922,9 @@ def normalize_spec(spec: dict) -> dict:
             s["asset"] = f"clips/{s['id']}_{slug}.mp4"
         elif kind in ("ideogram", "flux", "text"):
             s["asset"] = f"images/{s['id']}_{slug}.png"
+        elif kind == "file":
+            ext = Path(vis["src"]).suffix.lower()
+            s["asset"] = (f"clips/{s['id']}_{slug}{ext}" if ext in CLIP_EXTS else f"images/{s['id']}_{slug}{ext}")
         else:
             s["asset"] = ""
         # an animated headline the build lays over the visual (text kind always; any
@@ -633,8 +933,36 @@ def normalize_spec(spec: dict) -> dict:
             s["overlay"] = {"headline": vis["headline"], "subline": (vis.get("subline") or "").strip()}
         elif kind != "ideogram" and vis.get("headline"):
             s["overlay"] = {"headline": str(vis["headline"]).strip(), "subline": (vis.get("subline") or "").strip()}
+        _scene_layout(s, kind, vis, out, kit)
     out["scenes"] = scenes
     return out
+
+
+def _scene_layout(s: dict, kind: str, vis: dict, spec: dict, kit: dict | None) -> None:
+    """Check and fill a scene's layout and field. A kit with fields sets its 'text' scenes as type on a field
+    unless the scene says otherwise; everything else stays full frame, as before."""
+    fields = (spec.get("design") or {}).get("fields") or {}
+    allowed = kit_layouts(kit) if kit is not None else (list(LAYOUTS) if fields else ["full"])
+    layout = s.get("layout") or vis.get("layout")
+    if layout is None:
+        layout = "type" if kind == "text" and "type" in allowed else "full"
+    if layout not in LAYOUTS:
+        raise SpecError(f"scene {s['id']}: layout must be one of {', '.join(LAYOUTS)}")
+    if layout not in allowed:
+        raise SpecError(f"scene {s['id']}: layout {layout!r} isn't set up here (this video can use "
+                        f"{', '.join(allowed)}); split and type need fields in the kit's design")
+    if layout == "split" and kind not in ("file", "ltx", "flux", "ideogram"):
+        raise SpecError(f"scene {s['id']}: a split scene shows a photo or clip on its stage; give it a file visual "
+                        "(or use layout 'type' for words alone)")
+    if layout == "type" and kind not in ("text", "none"):
+        raise SpecError(f"scene {s['id']}: a type scene is words alone on a field; make it a 'text' scene with a "
+                        "headline (or use 'split' to show the photo above the words)")
+    field = s.get("field") or vis.get("field")
+    if field is not None and field not in fields:
+        raise SpecError(f"scene {s['id']}: no field {field!r}; this kit's fields are {', '.join(fields) or 'none'}")
+    s["layout"] = layout
+    if field:
+        s["field"] = field
 
 
 def skeleton_spec(brief: str, fmt: str = "9:16", duration_s: int = 45) -> dict:
@@ -689,10 +1017,14 @@ def estimate(spec: dict) -> dict:
     if kinds["ltx"]:
         rows.append({"step": "visuals", "unit": "ltx clip", "count": kinds["ltx"],
                      "unit_usd": PRICES["ltx_clip"], "usd": kinds["ltx"] * PRICES["ltx_clip"]})
-    n_flux = kinds["flux"] + kinds["text"]
+    n_local = sum(1 for s in scenes if s["visual"].get("source") == "local")
+    n_flux = kinds["flux"] + kinds["text"] - n_local
     if n_flux:
         rows.append({"step": "visuals", "unit": "flux background", "count": n_flux,
                      "unit_usd": PRICES["flux_image"], "usd": n_flux * PRICES["flux_image"]})
+    if n_local or kinds["file"]:
+        rows.append({"step": "visuals", "unit": "local background or own file (no GPU)",
+                     "count": n_local + kinds["file"], "unit_usd": 0.0, "usd": 0.0})
 
     if spec["captions"]["enabled"]:
         engine = spec["captions"]["engine"]
@@ -753,7 +1085,19 @@ EXPANDER_INSTRUCTIONS = (
     "the JSON object.")
 
 
-def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, attempts: int = 2) -> dict:
+KIT_INSTRUCTIONS = (
+    " This video is for the person or product in `kit`: write in their voice and keep to its description. "
+    "Prefer their own footage: a scene can be {\"kind\": \"file\", \"path\": \"<a file from kit.assets>\", "
+    "\"headline\": \"optional\"}, choosing the file whose `shows` fits the sentence; use each file once, and "
+    "prefer files with usedRecently 0 (the last few videos showed the others). If kit.layouts has 'split' and "
+    "'type', vary how scenes are set: \"layout\": \"split\" puts the photo or clip above the words on a flat "
+    "field, a 'text' scene is set as type on a field, and \"field\": \"<one of kit.fields>\" picks the colour; "
+    "change the field only where the story turns, not every scene. Write titles and headlines in sentence case. "
+    "Don't use 'ltx' or 'ideogram' unless the kit has no fitting file.")
+
+
+def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, attempts: int = 2,
+                 kit: str | None = None) -> dict:
     """Run the VIDEO_JOB_EXPANDER command. It reads a JSON request on stdin and prints a
     spec JSON on stdout (code fences tolerated). Any provider: the toolkit doesn't care.
     A spec the validator refuses goes back to the expander once with the error attached
@@ -772,6 +1116,10 @@ def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, atte
         "ideogram_caption_template": IDEOGRAM_CAPTION_TEMPLATE,
         "instructions": EXPANDER_INSTRUCTIONS,
     }
+    if kit:
+        k = next((x for x in list_kits() if x["name"] == kit), None) or {"name": kit}
+        request["kit"] = {key: k.get(key) for key in ("name", "description", "format", "layouts", "fields", "assets")}
+        request["instructions"] = EXPANDER_INSTRUCTIONS + KIT_INSTRUCTIONS
     args = split_command(cmd)
     for attempt in range(max(1, attempts)):
         r = subprocess.run(args, input=json.dumps(request), capture_output=True, text=True,
@@ -785,6 +1133,8 @@ def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, atte
         spec = parse_spec_text(m.group(0))
         spec.setdefault("format", fmt)
         spec.setdefault("brief", brief)
+        if kit:
+            spec["kit"] = kit
         try:
             return normalize_spec(spec)
         except SpecError as e:
@@ -878,8 +1228,12 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: 
         "narration text :: flux: soft navy gradient"       -> text-free still
         "narration text :: text: ONE EXTRA DAY ; why February grows"
                                                           -> generated background + animated headline (; subline)
+        "narration text :: file: candle.mp4 ; Let it settle"  -> the person's own photo or clip (kits)
+        "narration text :: split: candle.mp4 ; Let it settle @ cream"
+                                                          -> their file above the words, on the kit's cream field
 
-    The separator is ' :: ' and the kind is the word before the first colon after it."""
+    The separator is ' :: ' and the kind is the word before the first colon after it. A trailing
+    ' @ <field>' names one of the kit's fields (split and text scenes)."""
     out_scenes = []
     for i, raw in enumerate(scenes):
         text, _, vis = raw.partition(" :: ")
@@ -888,6 +1242,10 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: 
         if not text:
             raise SpecError(f"--scene {i + 1}: narration text is empty")
         visual: dict = {"kind": "none"}
+        field = None
+        if " @ " in vis:
+            vis, _, field = vis.rpartition(" @ ")
+            vis, field = vis.strip(), field.strip()
         if vis:
             kind, _, rest = vis.partition(":")
             kind = kind.strip().lower()
@@ -911,10 +1269,24 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: 
                 visual = {"kind": "flux", "prompt": rest}
             elif kind in ("none", "placeholder"):
                 visual = {"kind": "none"}
+            elif kind in ("file", "photo", "image", "split"):
+                path, _, head = rest.partition(";")
+                headline, _, sub = head.partition(";")
+                if not path.strip():
+                    raise SpecError(f"--scene {i + 1}: file needs a path, e.g. 'file: photos/candle.jpg ; NEW RANGE'")
+                visual = {"kind": "file", "path": path.strip()}
+                if kind == "split":
+                    visual["layout"] = "split"
+                if headline.strip():
+                    visual["headline"] = headline.strip().strip('"')
+                    visual["subline"] = sub.strip()
             else:
-                raise SpecError(f"--scene {i + 1}: unknown visual '{kind}' (use ltx:, card:, flux: or none)")
+                raise SpecError(f"--scene {i + 1}: unknown visual '{kind}' (use ltx:, card:, text:, flux:, file:, "
+                                "split: or none)")
             if visual["kind"] in ("ltx", "flux") and not visual.get("prompt"):
                 raise SpecError(f"--scene {i + 1}: {kind} needs a prompt after the colon")
+        if field:
+            visual["field"] = field
         out_scenes.append({"text": text, "visual": visual})
     spec = {"title": title or out_scenes[0]["text"][:60], "format": fmt, "scenes": out_scenes,
             "draft": draft, "titleCard": title_card, "allowScreens": allow_screens}
@@ -926,17 +1298,24 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: 
 
 
 def resolve_spec(brief: str | None, spec_path: str | None, fmt: str, duration_s: int,
-                 allow_skeleton: bool) -> tuple[dict, str]:
-    """Returns (spec, source) where source is 'spec', 'expander' or 'skeleton'."""
+                 allow_skeleton: bool, kit: str | None = None) -> tuple[dict, str]:
+    """Returns (spec, source) where source is 'spec', 'expander' or 'skeleton'. `kit` names a kit the
+    spec uses unless it names its own."""
     if spec_path:
-        return normalize_spec(read_spec_file(spec_path)), "spec"
+        sp = read_spec_file(spec_path)
+        if kit and not sp.get("kit"):
+            sp["kit"] = kit
+        return normalize_spec(sp), "spec"
     if not brief:
         raise SpecError("pass --brief or --spec")
     try:
-        return expand_brief(brief, fmt, duration_s), "expander"
+        return expand_brief(brief, fmt, duration_s, kit=kit), "expander"
     except NoExpander:
         if allow_skeleton:
-            return normalize_spec(skeleton_spec(brief, fmt, duration_s)), "skeleton"
+            sk = skeleton_spec(brief, fmt, duration_s)
+            if kit:
+                sk["kit"] = kit
+            return normalize_spec(sk), "skeleton"
         raise
 
 
@@ -1249,6 +1628,8 @@ def create_project(job: dict, spec: dict) -> Path:
     config["voice"] = voice
     if spec.get("palette"):
         config["palette"] = {**config["palette"], **spec["palette"]}
+    if spec.get("design"):
+        config["design"] = spec["design"]
     _write_json_atomic(dest / "config.json", config)
 
     config["music"] = {**config.get("music", {}), "volume": 0.12}
@@ -1268,6 +1649,12 @@ def create_project(job: dict, spec: dict) -> Path:
                "asset": s["asset"], "text": s["text"]}
         if s.get("overlay"):
             row["overlay"] = s["overlay"]
+        if s.get("focus") is not None:
+            row["focus"] = s["focus"]
+        if s.get("layout") and s["layout"] != "full":
+            row["layout"] = s["layout"]
+        if s.get("field"):
+            row["field"] = s["field"]
         scenes.append(row)
     _write_json_atomic(dest / "scenes.json", {"title": spec["title"], "titleCard": spec.get("titleCard"),
                                               "scenes": scenes})
@@ -1359,6 +1746,8 @@ def step_voiceover(job: dict, spec: dict) -> dict:
     args = ["--provider", voice["provider"], "--scene-dir", str(scene_dir), "--json"]
     if voice.get("maxWpm"):
         args += ["--max-wpm", str(voice["maxWpm"])]
+    if voice.get("minTempo"):
+        args += ["--min-tempo", str(voice["minTempo"])]
     if voice.get("brand"):
         args += ["--brand", voice["brand"]]
     if voice["provider"] == "qwen3":
@@ -1405,11 +1794,14 @@ def step_voiceover(job: dict, spec: dict) -> dict:
 
 
 def _visual_args(spec: dict, s: dict, proj: Path) -> tuple[str, list[str], float]:
-    """(tool, args, fallback cost) for one scene's visual."""
+    """(tool, args, fallback cost) for one scene's visual. A file or local background is made here,
+    by step_visuals, with no tool and no cost."""
     fmt = FORMATS[spec["format"]]
     vis = s["visual"]
     out = proj / s["asset"]
     kind = vis["kind"]
+    if kind == "file" or vis.get("source") == "local":
+        return "", [], 0.0
     if kind == "ideogram":
         speed = vis.get("speed") or spec["ideogram"]["speed"]
         args = ["--output", str(out), "--resolution", vis.get("resolution") or fmt["ideogram"],
@@ -1456,11 +1848,29 @@ def step_visuals(job: dict, spec: dict) -> dict:
     made, n = [], len(todo)
     reused = 0
     for i, s in enumerate(todo):
-        tool, args, unit = _visual_args(spec, s, proj)
         if asset_done(proj, s, job):
             reused += 1
             made.append(s["asset"])
             continue
+        vis = s["visual"]
+        if vis["kind"] == "file" or vis.get("source") == "local":
+            out = proj / s["asset"]
+            out.parent.mkdir(parents=True, exist_ok=True)
+            if vis["kind"] == "file":
+                tmp = out.with_name(out.stem + ".tmp" + out.suffix)
+                shutil.copyfile(vis["src"], tmp)
+                os.replace(tmp, out)
+                what = f"your file {Path(vis['src']).name}"
+            else:
+                w, h = FORMATS[spec["format"]]["flux"]
+                draw_local_background(out, w, h, vis.get("color") or "#0A0A14", seed=int(s["id"]))
+                what = "a local background"
+            _mark_made(job, s["asset"])
+            add_event(job, "asset", f"scene {s['id']}: {what}", scene=s["id"], visual=vis["kind"], cost_usd=0.0,
+                      file=s["asset"])
+            made.append(s["asset"])
+            continue
+        tool, args, unit = _visual_args(spec, s, proj)
         check_budget(job, f"visual {s['id']} ({tool})", unit)
         set_phase(job, "visuals", 30 + int(45 * i / max(n, 1)), step_detail=f"{s['id']}_{s['slug']} via {tool}")
         out = proj / s["asset"]
@@ -1757,6 +2167,11 @@ def submit(spec: dict, max_usd: float, spec_source: str = "spec", brief: str | N
     if empty:
         raise SpecError(f"scenes {empty} have no narration text; a skeleton can be estimated but not submitted")
     check_host(spec)
+    if not spec.get("allowCopy"):
+        problems = copy_findings(spec)
+        if problems:
+            raise SpecError("the narration needs another pass before anything is spent: " + "; ".join(problems)
+                            + ". Rewrite those lines and submit again.")
     est = estimate(spec)
     if est["estimate_usd"] > max_usd + 1e-9:
         raise BudgetExceeded(f"estimate ${est['estimate_usd']:.2f} is over --max-usd ${max_usd:.2f}; "
@@ -2009,7 +2424,7 @@ def auto_prune() -> dict | None:
 
 # Typical seconds per step, measured 2026-10-31 on Modal from a Mac (LTX warm). Used only
 # until this host has finished jobs of its own; build is seconds per second of video.
-_STEP_SECONDS = {"voiceover": 70, "ltx": 170, "ideogram": 12, "flux": 20, "text": 20, "captions": 8,
+_STEP_SECONDS = {"voiceover": 70, "ltx": 170, "ideogram": 12, "flux": 20, "text": 20, "file": 1, "captions": 8,
                  "music": 60, "build": 60, "qc": 10, "publish": 8}
 _BUILD_S_PER_VIDEO_S = 1.2
 LTX_COLD_START_S = 90            # Modal's LTX container scales to zero; a cold one adds this
@@ -2256,9 +2671,14 @@ def presets() -> dict:
                     "what a scene with no visual gets",
             "text": "constructed visual: generated background + the scene's headline and an accent bar animated in "
                     "(headline, optional subline, optional background hint); about a cent",
+            "file": "the person's own photo or clip: visual.path in the kit's assets or the agent workspace "
+                    "(Ken Burns on a still, boomerang on a clip), optional headline/subline; free, no GPU",
             "none": "gradient placeholder card with the scene slug",
         },
         "host": host_capabilities(),
+        "backgrounds": {"auto": "flux when this host has FLUX, else local", "flux": "generated, about a cent",
+                        "local": "flat brand-colour field with grain, drawn here, free"},
+        "kits": list_kits(),
         "voice_defaults": {"provider": "qwen3", "speaker": "Ryan", "maxWpm": 165,
                            "providers": ["qwen3", "elevenlabs", "60db"],
                            "presets": sorted(p.stem for p in (ROOT / "assets" / "voices").glob("*.json"))},
@@ -2323,8 +2743,8 @@ def host_capabilities() -> dict:
     def ok(area, name, cloud=None):
         return _has(_NEEDS[(area, name, cloud)])
     flux = {"modal": ok("visual", "flux", "modal"), "runpod": ok("visual", "flux", "runpod")}
-    kinds = {"ltx": ok("visual", "ltx", "modal"), "flux": any(flux.values()), "text": any(flux.values()),
-             "ideogram": ok("visual", "ideogram"), "none": True}
+    kinds = {"ltx": ok("visual", "ltx", "modal"), "flux": any(flux.values()), "text": True,
+             "ideogram": ok("visual", "ideogram"), "file": True, "none": True}
     voices = {"qwen3": {"modal": ok("voice", "qwen3", "modal"), "runpod": ok("voice", "qwen3", "runpod")},
               "elevenlabs": ok("voice", "elevenlabs"), "60db": ok("voice", "60db")}
     music = {p: ok("music", p) for p in ("acemusic", "modal", "runpod")}
@@ -2351,7 +2771,7 @@ def host_capabilities() -> dict:
 
 def missing_for(spec: dict) -> list[dict]:
     """What a normalised spec needs that this host doesn't have. Empty means it can run here.
-    Captions and R2 are soft (the job runs without them and says so), so they're not listed."""
+    Captions, music and R2 are soft (the job runs without them and says so), so they're not listed."""
     out, seen = [], set()
     for tool in _job_tools_missing(_local_tools()):
         out.append({"needed_for": "building and checking the video on this host", "env": [], "install": tool,
@@ -2377,15 +2797,13 @@ def missing_for(spec: dict) -> list[dict]:
         kind = sc["visual"]["kind"]
         if kind == "ltx":
             need("visual", "ltx", "modal", "ltx clips", "or make those scenes ideogram cards")
-        elif kind in ("flux", "text"):
+        elif kind in ("flux", "text") and sc["visual"].get("source") != "local":
             cloud = sc["visual"].get("cloud", "modal")
-            need("visual", "flux", cloud, f"{kind} scenes and scenes with no visual (FLUX on {cloud})",
-                 "or give every scene an ideogram card")
+            need("visual", "flux", cloud, f"{kind} scenes (FLUX on {cloud})",
+                 'or "backgrounds": "local" for text scenes, an ideogram card, or a file')
         elif kind == "ideogram":
             need("visual", "ideogram", None, "ideogram cards")
-    m = spec.get("music") or {}
-    if m.get("enabled"):
-        need("music", m.get("provider", "acemusic"), None, "the music bed", 'or "music": false')
+    # music is soft, like captions: step_music skips a bed it can't make and the job says so in warnings
     return out
 
 
@@ -2438,6 +2856,7 @@ def catalog() -> dict:
         "brands": brands,
         "design_sources": design,
         "voice_presets": sorted(p.stem for p in (ROOT / "assets" / "voices").glob("*.json")),
+        "kits": list_kits(),
         "host": host_capabilities(),
         "skills": {k: {"path": v.get("path"), "description": v.get("description")} for k, v in skills.items()},
         "how_to_read_a_skill": "Skills are folders of markdown: open <path>/SKILL.md from the toolkit root and "
@@ -2528,6 +2947,8 @@ def _main(argv: list[str]) -> int:
                             "flow diagram), ' :: flux: prompt'. No JSON needed")
         p.add_argument("--title", help="Video title (flat form; default: the first scene's text)")
         p.add_argument("--voice", help="Voice preset: assets/voices/<name>.json (a clone) or a brand name")
+        p.add_argument("--kit", help="A kit (kits/README.md): its brand, voice, format and own photos fill the "
+                                     "spec, and 'file:' scenes look in its assets")
         p.add_argument("--music", help="Music bed prompt (default: a subtle ambient bed; it's free on acemusic)")
         p.add_argument("--no-music", action="store_true", help="No music bed")
         p.add_argument("--draft", action="store_true", help="Scenes without a visual get a plain placeholder instead of a generated background")
@@ -2576,17 +2997,25 @@ def _main(argv: list[str]) -> int:
 
     try:
         if args.cmd in ("estimate", "submit", "spec"):
-            fmt = args.format or "9:16"
+            kit = args.kit
+            kit_fmt = (load_kit(kit).get("format") if kit else None)
+            fmt = args.format or kit_fmt or "9:16"
             if args.scene:
                 music = False if args.no_music else (args.music or None)
-                spec, source = normalize_spec(spec_from_scene_args(
+                sp = spec_from_scene_args(
                     args.title, args.scene, fmt, voice=args.voice, music=music, draft=args.draft,
-                    title_card=not args.no_title_card, allow_screens=args.allow_screens)), "scenes"
+                    title_card=not args.no_title_card, allow_screens=args.allow_screens)
+                if kit:
+                    sp["kit"] = kit
+                spec, source = normalize_spec(sp), "scenes"
             elif args.spec_json:
-                spec, source = normalize_spec(parse_spec_text(args.spec_json)), "spec"
+                sp = parse_spec_text(args.spec_json)
+                if kit and not sp.get("kit"):
+                    sp["kit"] = kit
+                spec, source = normalize_spec(sp), "spec"
             else:
                 spec, source = resolve_spec(args.brief, args.spec, fmt, args.duration,
-                                            allow_skeleton=(args.cmd == "estimate"))
+                                            allow_skeleton=(args.cmd == "estimate"), kit=kit)
             if args.format and args.spec:
                 spec["format"] = args.format
                 spec = normalize_spec(spec)

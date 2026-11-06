@@ -504,7 +504,8 @@ class TestSmallSeams(Isolated):
         cfg = json.loads((Path(job["project_dir"]) / "config.json").read_text())
         self.assertEqual(cfg["encode"], {"preset": "veryfast", "maxMB": 9.5})
         self.assertEqual(cfg["music"]["file"], "audio/music.mp3")        # music on by default
-        quiet = vj.submit(spec(music=False), max_usd=5, start_worker=False)   # the first job is done
+        quiet = vj.submit({**spec(music=False), "allowCopy": True}, max_usd=5,
+                          start_worker=False)   # the first job is done; same words on purpose
         run(quiet, FakeTools())
         qcfg = json.loads((Path(quiet["project_dir"]) / "config.json").read_text())
         self.assertIsNone(qcfg["music"]["file"])         # so qc.py doesn't warn about a missing bed

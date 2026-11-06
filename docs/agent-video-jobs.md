@@ -103,6 +103,10 @@ say). `result` carries `size_bytes`, and a file still over the cap shows up in `
 | `titleCard` | On by default: the title animates in over the first scene for 2.8 s (so frame 0, the Shorts cover, is never empty). `false` to skip, or `{"text", "seconds"}`. |
 | `ideogram.speed` | `TURBO` $0.03, `DEFAULT` $0.06, `QUALITY` $0.10 per image. |
 | `brand`, `palette` | A `brands/<name>` for voice and Ideogram colours; palette overrides for the placeholder cards and caption pills. |
+| `kit` | A kit name (`kits/README.md`): fills `brand`, `voice`, `format`, `backgrounds` and `music` when the spec doesn't set them, sets the palette from the kit's colours, and is where `file` paths are looked up first. Searched in `$VIDEO_JOB_WORKSPACE/kits/`, then the toolkit's `kits/`. |
+| `design` | Usually from the kit: fonts, headline and caption style and a closing card for the compositor (`kits/README.md`). Font and image paths in a kit are relative to it. |
+| `allowCopy` | `true` skips the narration check (dashes, stock AI phrases, lines repeated from an earlier finished job). Only when the person asked for the same words. |
+| `backgrounds` | `auto` (default): `text` scenes and scenes with no visual get a FLUX background when the host has FLUX, else a local one. `local`: a flat field in the kit's or brand's ground colour with grain, drawn by the job (free, no GPU). `flux`: always FLUX. A scene that names kind `flux` always uses FLUX. |
 
 Normalisation adds `id` (`01`, `02`...) and `asset` paths; `jobs/<id>/spec.json` is the normalised copy.
 
@@ -126,6 +130,12 @@ in garbled text. Film a physical thing instead, or make it a `text:` scene; `--a
 An object written as a chain, `card: THE LOOP ; prompt -> agent -> video`, becomes a labelled flow
 diagram (2 to 4 boxes with arrows, across the frame in 16:9 and down it in 9:16). Asking for "a
 diagram" in prose gets a silhouette; the chain form is how a diagram is spelled.
+`file: <path> ; HEADLINE ; subline` is the person's own photo or clip, and `split: <path> ; Headline` sets it
+above the words on one of the kit's flat fields (a trailing ` @ <field>` picks which; `text:` takes it too, and in
+a kit with fields a `text:` scene is set as type on that field). `catalog` lists each kit's `layouts`, `fields`,
+and per asset `usedRecently`, so the next video can use different files (`kits/README.md`, "Layouts"). `--kit <name>` makes the video for someone
+with a kit: its format, voice, colours and music, and `file:` paths in its assets. It works with `--spec`,
+`--spec-json` and `--brief` too (the expander is then sent the kit's description and asset list).
 `--music "..."`, `--no-music`, `--draft` and `--no-title-card` set the rest.
 
 ## What this host can make
@@ -140,8 +150,10 @@ other cloud when that one is set up, an ideogram card instead of a clip, `"music
 are soft: the job runs without them and says so in `warnings`. `VIDEO_JOB_SKIP_HOST_CHECK=1` turns the check off
 for a host whose tools find their keys some other way.
 
-A host with hosted API keys only (ElevenLabs, Ideogram) and no GPU provider can make a job whose scenes are all
-ideogram cards. `text`, `flux` and scenes with no visual need FLUX.
+A host with no GPU provider can still make a job: `text` scenes and scenes with no visual get local backgrounds,
+`file` scenes use the person's own photos and clips, and `ideogram` cards need only an Ideogram key. The voice
+needs ElevenLabs or 60db (a key), or qwen3 on Modal or RunPod. Music is soft like captions: no provider, no bed,
+and a warning.
 
 ## Brief → spec
 
