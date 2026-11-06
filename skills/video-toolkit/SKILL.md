@@ -200,6 +200,17 @@ bridges) take the spec inline: `--spec-json '<json>'`, with the short caption fo
 argument. Add `--output files/<dated-name>.mp4` when your runtime serves a `files/` directory at
 a public URL; the file lands there once the job is done.
 
+### What this host can make
+
+Not every host has every provider. `catalog` and `presets` carry `host`: the visual kinds, voices and music
+providers this host has keys or endpoints for (`host.available_visual_kinds`). Offer only those. `estimate`
+lists anything the spec uses that's missing as `host_missing`, and `submit` refuses it (exit 2, `error_code:
+unavailable`, with `missing`: what, which env vars, and an alternative) before anything is written or spent.
+
+With hosted API keys only (no Modal or RunPod), a job can still run: an ElevenLabs voice and Ideogram cards for
+every scene. `ltx` needs Modal; `text`, `flux` and scenes with no visual need FLUX on Modal or RunPod; the default
+qwen3 voice needs either. Setting a host up: `uv run tools/verify_setup.py`, then `modal_setup.py --all`.
+
 ### 2. Estimate, then submit under a cap
 
 ```bash
@@ -416,6 +427,7 @@ Stages: `submit`, `queue`, `processing`, `waiting`, `item` (n of m, `pct` set), 
 | `No module named ...` | `uv sync` from the toolkit root, run tools with `uv run` |
 | `MODAL_*_ENDPOINT_URL not configured` | `uv run tools/verify_setup.py`; `uv run tools/modal_setup.py --list` |
 | `submit` exits 3, `lock_held` | Another job is running; `status` that id, or `cancel` it if it is stuck |
+| `submit` exits 2, `unavailable` | This host lacks a provider the spec uses. `missing` says which and suggests an alternative: switch the scene kind or voice, or set the host up |
 | `submit` exits 2, `budget_exceeded` | Raise `--max-usd`, drop a scene, use `flux` or `"ideogram": {"speed": "TURBO"}` |
 | `submit --brief` exits 2, `no_expander` | Write the spec yourself and pass `--spec`, or set `VIDEO_JOB_EXPANDER` |
 | Job `failed`, `error_code: step_failed` | `status --json` has the error; `jobs/<id>/job.log` has the tool output. Modal cold starts can time out once: `resume JOB_ID` |
