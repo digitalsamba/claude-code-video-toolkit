@@ -24,10 +24,15 @@ kits/<name>/
 | `music` | `false`, a prompt, or a music object |
 | `assets` | The assets folder, relative to the kit (default `assets`) |
 | `focus` | `{"candle.mp4": 0.85}`: where each asset's subject sits along the side a crop cuts, 0 (left or top) to 1 (right or bottom), default 0.5. A landscape clip in a 9:16 video keeps only its middle third, so set this for any subject off centre. A scene's own `visual.focus` overrides it |
+| `design` | The look decided in the design session (`video-design` with taste or ours), so every one-prompt video keeps it. `fonts`: `{"display": {"path": "fonts/Display.ttf", "weight": "Medium"}, "body": ..., "caption": ...}`, files inside the kit so every host renders the same. `headline`: `font`, `color`, `scale`, `scrim`, `shadow`, `accentBar`, `sublineFont`. `captions`: `font`, `case` (`upper` or `as-written`), `pill`. `closing`: a sign-off card added to the end of every video, `{"seconds", "background", "color", "image", "lines": [{"text", "font", "size": "display" \| "title" \| "label" \| "note", "color", "gapBefore"}]}`. Every key is optional |
 | `describe` | `{"candle.mp4": "a lit candle in a dark room, close"}`: what each asset shows. `catalog` lists every asset with this, so an agent that can't see the files can still choose one for each scene. Describe every file |
 
 The kit's colours (its `brand.json`, else the named brand's) set the accent and the ground of the video:
 headline accent bars, and the local backgrounds that `text` scenes and scenes with no visual get.
+
+A kit's `voice` can be a clone: `{"provider": "qwen3", "refAudio": "voice/ref.wav", "refText": "exact transcript",
+"maxWpm": 150, "minTempo": 0.8}`, with the reference inside the kit. A clone copies its reference's pace, so slow
+a presenter-paced recording with `voice_prosody.py expand --tempo 0.8` first (CLAUDE.md, "Clone Prosody").
 
 ## Where kits live
 

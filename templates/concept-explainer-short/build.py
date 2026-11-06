@@ -58,6 +58,14 @@ PALETTE = CONFIG["palette"]
 CAPTIONS = CONFIG.get("captions", {})
 TIMING = CONFIG.get("timing", {})
 ENCODE = CONFIG.get("encode", {})   # {"preset": "medium", "maxMB": null}; maxMB caps the file size
+# Optional look, usually from a kit made in a design session (video_job.py fills it from kit.json "design").
+# Every key is optional; without it the template looks as it always has.
+#   fonts:    {"display": {"path": ".../CrimsonPro.ttf", "weight": "Medium"}, "body": {...}, "caption": {...}}
+#   headline: {"font": "display", "color": "#hex", "scrim": true, "shadow": true, "accentBar": true}
+#   captions: {"font": "body", "case": "upper" | "as-written", "pill": true}
+#   closing:  {"seconds": 3.5, "background": "#hex", "color": "#hex", "image": "path",
+#              "lines": [{"text": "Mind yourself.", "font": "display", "size": "display", "color": "#hex"}]}
+DESIGN = CONFIG.get("design") or {}
 
 W, H, FPS = FMT["width"], FMT["height"], FMT["fps"]
 START_PAD = TIMING.get("startPad", 0.3)
@@ -77,7 +85,21 @@ _FONT_CANDIDATES = {
 }
 
 
-def _load_font(size: int):
+def _load_font(size: int, role: str | None = None):
+    spec = (DESIGN.get("fonts") or {}).get(role) if role else None
+    if isinstance(spec, str):
+        spec = {"path": spec}
+    if spec and spec.get("path"):
+        try:
+            font = ImageFont.truetype(spec["path"], size)
+            if spec.get("weight"):
+                try:
+                    font.set_variation_by_name(spec["weight"])
+                except (OSError, ValueError):
+                    pass       # not a variable font, or no such named weight: the file's default
+            return font
+        except OSError:
+            print(f"     [font {spec['path']} not loadable; using the default]")
     for path in _FONT_CANDIDATES.get(platform.system(), []):
         try:
             return ImageFont.truetype(path, size)
@@ -98,14 +120,18 @@ def render_caption_png(txt: str) -> str:
     area. PIL, not TextClip — moviepy 2.x TextClip clips ascenders."""
     size = CAPTIONS.get("size", 80)
     fill = CAPTIONS.get("fill", "#FFFFFF")
+    dc = DESIGN.get("captions") or {}
+    pill = dc.get("pill", True)
+    role = dc.get("font")
     TEXT_CACHE.mkdir(parents=True, exist_ok=True)
-    key = hashlib.sha1(f"{txt}|{size}|{fill}".encode()).hexdigest()[:16]
+    key = hashlib.sha1(f"{txt}|{size}|{fill}|{pill}|{json.dumps(DESIGN.get('fonts', {}).get(role) if role else None)}"
+                       .encode()).hexdigest()[:16]
     path = TEXT_CACHE / f"{key}.png"
     if path.exists():
         return str(path)
 
-    font = _load_font(size)
-    sw = max(4, size // 14)
+    font = _load_font(size, role)
+    sw = max(4, size // 14) if pill else max(2, size // 22)
     probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
     bbox = probe.textbbox((0, 0), txt, font=font, stroke_width=sw)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -113,8 +139,13 @@ def render_caption_png(txt: str) -> str:
 
     img = Image.new("RGBA", (tw + pad * 2, th + pad * 2), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle((0, 0, img.width - 1, img.height - 1),
-                           radius=img.height // 4, fill=(*_rgb(PALETTE["ink"]), 185))
+    if pill:
+        draw.rounded_rectangle((0, 0, img.width - 1, img.height - 1),
+                               radius=img.height // 4, fill=(*_rgb(PALETTE["ink"]), 185))
+    else:
+        # no pill: a soft shadow under the text keeps it legible over footage
+        draw.text((pad - bbox[0] + 2, pad - bbox[1] + 3), txt, font=font, fill=(0, 0, 0, 140),
+                  stroke_width=sw, stroke_fill=(0, 0, 0, 90))
     draw.text((pad - bbox[0], pad - bbox[1]), txt, font=font,
               fill=(*_rgb(fill), 255), stroke_width=sw,
               stroke_fill=(*_rgb(PALETTE["ink"]), 235))
@@ -141,14 +172,15 @@ def _wrap(draw, text: str, font, max_w: int) -> list[str]:
     return lines
 
 
-def headline_png(text: str, size: int, fill: str, max_w: int, shadow: bool = True) -> str:
+def headline_png(text: str, size: int, fill: str, max_w: int, shadow: bool = True, role: str | None = None) -> str:
     """Wrapped headline with a soft shadow, transparent background, cached."""
     TEXT_CACHE.mkdir(parents=True, exist_ok=True)
-    key = hashlib.sha1(f"hl|{text}|{size}|{fill}|{max_w}".encode()).hexdigest()[:16]
+    fspec = json.dumps((DESIGN.get("fonts") or {}).get(role)) if role else ""
+    key = hashlib.sha1(f"hl|{text}|{size}|{fill}|{max_w}|{shadow}|{fspec}".encode()).hexdigest()[:16]
     path = TEXT_CACHE / f"{key}.png"
     if path.exists():
         return str(path)
-    font = _load_font(size)
+    font = _load_font(size, role)
     probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
     lines = _wrap(probe, text, font, max_w)
     lh = int(size * 1.15)
@@ -197,17 +229,30 @@ def overlay_clips(headline: str, subline: str, start: float, duration: float, bi
     if duration <= 0.8:
         return out
     vertical = H > W
-    out.append(ImageClip(scrim_png(int(H * 0.62))).with_start(start).with_duration(duration)
-               .with_position((0, 0)).with_effects([vfx.FadeIn(0.45), vfx.FadeOut(0.35)]))
-    size = int(W * (0.085 if vertical else 0.052) * (1.25 if big else 1.0))
+    dh = DESIGN.get("headline") or {}
+    role = dh.get("font")
+    color = dh.get("color") or PALETTE["white"]
+    shadow = dh.get("shadow", True)
+    if dh.get("scrim", True):
+        out.append(ImageClip(scrim_png(int(H * 0.62))).with_start(start).with_duration(duration)
+                   .with_position((0, 0)).with_effects([vfx.FadeIn(0.45), vfx.FadeOut(0.35)]))
+    size = int(W * (0.085 if vertical else 0.052) * (1.25 if big else 1.0) * float(dh.get("scale", 1.0)))
     max_w = int(W * 0.84)
     y_top = int(H * (0.14 if vertical else 0.16))
-    hl = ImageClip(headline_png(headline, size, PALETTE["white"], max_w))
+    hl = ImageClip(headline_png(headline, size, color, max_w, shadow=shadow, role=role))
     rise = 36
     hl = (hl.with_start(start).with_duration(duration)
             .with_position(lambda t: ("center", y_top + int(rise * (1 - _ease_out(t, 0.7)))))
             .with_effects([vfx.FadeIn(0.45), vfx.FadeOut(0.35)]))
     out.append(hl)
+    if not dh.get("accentBar", True):
+        if subline:
+            sub = ImageClip(headline_png(subline, int(size * 0.56), color, max_w, shadow=shadow,
+                                         role=dh.get("sublineFont", role)))
+            out.append(sub.with_start(start + 0.45).with_duration(max(0.1, duration - 0.45))
+                       .with_position(("center", y_top + hl.h + size // 4))
+                       .with_effects([vfx.FadeIn(0.5), vfx.FadeOut(0.35)]))
+        return out
     bar_w = int(W * 0.14)
     bar_h = max(4, size // 12)
     bar_y = y_top + hl.h + size // 5
@@ -218,7 +263,8 @@ def overlay_clips(headline: str, subline: str, start: float, duration: float, bi
            .with_effects([vfx.FadeOut(0.35)]))
     out.append(bar)
     if subline:
-        sub = ImageClip(headline_png(subline, int(size * 0.56), PALETTE["white"], max_w, shadow=True))
+        sub = ImageClip(headline_png(subline, int(size * 0.56), color, max_w, shadow=shadow,
+                                     role=dh.get("sublineFont", role)))
         sub = (sub.with_start(start + 0.45).with_duration(max(0.1, duration - 0.45))
                   .with_position(("center", bar_y + bar_h + size // 3))
                   .with_effects([vfx.FadeIn(0.5), vfx.FadeOut(0.35)]))
@@ -253,6 +299,43 @@ def placeholder_png(scene: dict, idx: int) -> str:
     bbox = draw.textbbox((0, 0), hint, font=small)
     draw.text(((W - bbox[2] + bbox[0]) / 2, H * 0.52), hint,
               font=small, fill=_rgb(PALETTE["slate"]))
+    img.save(path)
+    return str(path)
+
+
+_CLOSING_SIZES = {"display": 0.092, "title": 0.068, "label": 0.046, "note": 0.038}
+
+
+def closing_png() -> str:
+    """The kit's sign-off card: lines set on the kit's ground, left-aligned on one edge like a page, with an
+    optional image above them. The same at the end of every video made with the kit."""
+    c = DESIGN.get("closing") or {}
+    TEXT_CACHE.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha1(f"close|{json.dumps(c, sort_keys=True)}|{json.dumps(DESIGN.get('fonts'), sort_keys=True)}|{W}x{H}"
+                       .encode()).hexdigest()[:16]
+    path = TEXT_CACHE / f"closing_{key}.png"
+    if path.exists():
+        return str(path)
+    bg = _rgb(c.get("background") or PALETTE["ink"])
+    img = Image.new("RGB", (W, H), bg)
+    draw = ImageDraw.Draw(img)
+    margin = int(W * 0.09)
+    y = int(H * (0.56 if H > W else 0.42))
+    if c.get("image") and Path(c["image"]).exists():
+        with Image.open(c["image"]) as pic:
+            pic = pic.convert("RGB")
+            pw = W - 2 * margin
+            ph = int(pic.height * pw / pic.width)
+            ph = min(ph, int(H * 0.3))
+            pic = pic.resize((pw, ph), Image.LANCZOS)
+            img.paste(pic, (margin, y - ph - int(H * 0.05)))
+    base = min(W, H) if H > W else H
+    for ln in c.get("lines") or []:
+        size = int(base * _CLOSING_SIZES.get(ln.get("size", "title"), 0.06) * (1.0 if H > W else 1.5))
+        font = _load_font(size, ln.get("font"))
+        y += int(size * float(ln.get("gapBefore", 0.25)))
+        draw.text((margin, y), ln["text"], font=font, fill=_rgb(ln.get("color") or c.get("color") or PALETTE["white"]))
+        y += int(size * 1.2)
     img.save(path)
     return str(path)
 
@@ -420,7 +503,9 @@ def build() -> None:
         if CAPTIONS.get("enabled", True) and words_file.exists():
             for ch in json.loads(words_file.read_text()):
                 clips.append(
-                    ImageClip(render_caption_png(ch["text"].upper()))
+                    ImageClip(render_caption_png(ch["text"].upper()
+                                                 if (DESIGN.get("captions") or {}).get("case", "upper") == "upper"
+                                                 else ch["text"]))
                     .with_duration(max(0.18, ch["end"] - ch["start"]))
                     .with_start(audio_start + ch["start"])
                     .with_position(("center", CAPTIONS.get("y", 1640)))
@@ -428,6 +513,12 @@ def build() -> None:
 
         cursor = content_start + content_dur
 
+    closing = DESIGN.get("closing")
+    if closing and closing.get("lines"):
+        secs = float(closing.get("seconds", 3.5))
+        clips.append(ImageClip(closing_png()).with_start(cursor).with_duration(secs + 0.4)
+                     .with_effects([vfx.FadeIn(0.6)]))
+        cursor += secs
     total = cursor + 0.4
     clips[0] = clips[0].with_duration(total)
     print(f"  total: {total:.2f}s"

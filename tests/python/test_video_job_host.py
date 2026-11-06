@@ -240,6 +240,48 @@ class TestKitsAndLocal(Isolated):
         self.assertEqual(n["scenes"][0]["overlay"]["subline"], "small batch")
 
 
+class TestCopyAndDesign(Isolated):
+    def test_dashes_and_stock_phrases_are_refused_before_spend(self):
+        sp = spec()
+        sp["scenes"][0]["text"] = "Light bends in the air — and it's worth noting the sky is blue."
+        with self.assertRaises(vj.SpecError) as ctx:
+            vj.submit(sp, max_usd=5, start_worker=False)
+        msg = str(ctx.exception)
+        self.assertIn("dash", msg)
+        self.assertIn("worth noting", msg)
+        self.assertFalse(any((self.tmp / "jobs").glob("*/job.json")))
+
+    def test_a_line_from_a_finished_job_is_refused(self):
+        job = vj.submit(spec(), max_usd=5, start_worker=False)
+        jf = vj.job_dir(job["id"]) / "job.json"
+        j = json.loads(jf.read_text()); j["phase"] = "done"; jf.write_text(json.dumps(j))
+        os.environ.pop("VIDEO_JOB_LOCK_FAKE", None)
+        vj.clear_stale_lock()
+        with self.assertRaises(vj.SpecError) as ctx:
+            vj.submit(spec(), max_usd=5, start_worker=False)
+        self.assertIn("repeats a line from job " + job["id"], str(ctx.exception))
+
+    def test_kit_design_reaches_the_build_config_with_absolute_paths(self):
+        ws = self.tmp / "ws"
+        kit = ws / "kits" / "k"
+        (kit / "fonts").mkdir(parents=True)
+        (kit / "fonts" / "Display.ttf").write_bytes(b"x")
+        (kit / "kit.json").write_text(json.dumps({"design": {
+            "fonts": {"display": {"path": "fonts/Display.ttf", "weight": "Medium"}},
+            "closing": {"lines": [{"text": "Mind yourself."}]}}}))
+        os.environ["VIDEO_JOB_WORKSPACE"] = str(ws)
+        try:
+            sp = vj.normalize_spec({**spec(), "kit": "k"})
+            self.assertEqual(sp["design"]["fonts"]["display"]["path"], str((kit / "fonts" / "Display.ttf").resolve()))
+            job = vj.submit({**spec(), "kit": "k"}, max_usd=5, start_worker=False)
+            s2 = json.loads((vj.job_dir(job["id"]) / "spec.json").read_text())
+            cfg = json.loads((vj.create_project(job, s2) / "config.json").read_text())
+            self.assertEqual(cfg["design"]["closing"]["lines"][0]["text"], "Mind yourself.")
+            vj.cancel(job["id"])
+        finally:
+            os.environ.pop("VIDEO_JOB_WORKSPACE", None)
+
+
 if __name__ == "__main__":
     import unittest
     unittest.main()

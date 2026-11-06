@@ -575,6 +575,70 @@ def brand_colors(spec: dict) -> dict:
     return {}
 
 
+def _kit_design(kit: dict) -> dict:
+    """The kit's design block with its font and image paths made absolute (they are relative to the kit)."""
+    d = json.loads(json.dumps(kit["design"]))
+    base = Path(kit["dir"])
+
+    def absolute(p):
+        q = Path(p)
+        return str(q if q.is_absolute() else (base / q).resolve())
+    fonts = d.get("fonts") or {}
+    for role, f in list(fonts.items()):
+        if isinstance(f, str):
+            fonts[role] = {"path": absolute(f)}
+        elif isinstance(f, dict) and f.get("path"):
+            f["path"] = absolute(f["path"])
+    closing = d.get("closing") or {}
+    if closing.get("image"):
+        closing["image"] = absolute(closing["image"])
+    return d
+
+
+# What a model writes when it isn't paying attention. The general part of the support-reply lint Conal's
+# agents already run (ds-support reply_lint.py, from Jorge's blog pipeline): dashes and stock AI phrasing.
+# Narration is heard and burned as captions, so these are refused before any spend, with the reason.
+COPY_RULES = [
+    (re.compile(r"—|\s–\s|\s--\s"), "a dash; use a comma, a full stop or a new sentence"),
+    (re.compile(r"\bit'?s worth noting\b|\bit is (worth|important) (noting|to note)\b", re.I), "'it's worth noting'; say the point"),
+    (re.compile(r"\bin today'?s (fast-paced |busy |modern )?(world|age|landscape)\b|\bmoving forward\b"
+                r"|\bfirst and foremost\b|\blast but not least\b|\bwithout further ado\b|\ball in all\b"
+                r"|\bin conclusion\b|\bshed light on\b|\bpave the way\b|\bat the forefront\b|\bdeep[- ]dive\b"
+                r"|\bdelve\b|\btapestry\b|\bembark on a journey\b|\bunlock (your|the) (full )?potential\b"
+                r"|\bgame[- ]changer\b|\bnavigat(e|ing) the (complexities|world|landscape)\b"
+                r"|\bseamless(ly)?\b|\bresonate(s)? with\b|\btestament to\b", re.I),
+     "stock AI phrasing; say it the way a person would"),
+]
+
+
+def copy_findings(spec: dict) -> list[str]:
+    """Narration lint plus the repeat guard: refuse words lifted from an earlier finished job on this host."""
+    out = []
+    for s in spec["scenes"]:
+        for rx, why in COPY_RULES:
+            m = rx.search(s["text"])
+            if m:
+                out.append(f"scene {s['id']}: '{m.group(0).strip()}' is {why}")
+    seen = {}
+    for j in list_jobs()[:40]:
+        if j.get("phase") != "done":
+            continue
+        try:
+            old = json.loads((job_dir(j["id"]) / "spec.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for sc in old.get("scenes", []):
+            k = _spoken_key(sc.get("text") or "")
+            if len(k.split()) >= 6:
+                seen.setdefault(k, j["id"])
+    for s in spec["scenes"]:
+        k = _spoken_key(s["text"])
+        if k in seen:
+            out.append(f"scene {s['id']} repeats a line from job {seen[k]} word for word; every video gets its own "
+                       "words, written from what this person asked for")
+    return out
+
+
 def _flux_available() -> bool:
     if os.environ.get("VIDEO_JOB_SKIP_HOST_CHECK", "").strip().lower() in ("1", "true", "yes", "on"):
         return True      # not consulting the host: assume it has everything
@@ -639,6 +703,8 @@ def normalize_spec(spec: dict) -> dict:
             out["voice"] = kit["voice"]
         if "music" in kit and "music" not in out:
             out["music"] = kit["music"]
+    if kit is not None and kit.get("design") and not out.get("design"):
+        out["design"] = _kit_design(kit)
     bg = str(out.get("backgrounds") or "auto")
     if bg not in BACKGROUNDS:
         raise SpecError(f"spec.backgrounds must be one of {', '.join(BACKGROUNDS)}")
@@ -1448,6 +1514,8 @@ def create_project(job: dict, spec: dict) -> Path:
     config["voice"] = voice
     if spec.get("palette"):
         config["palette"] = {**config["palette"], **spec["palette"]}
+    if spec.get("design"):
+        config["design"] = spec["design"]
     _write_json_atomic(dest / "config.json", config)
 
     config["music"] = {**config.get("music", {}), "volume": 0.12}
@@ -1981,6 +2049,11 @@ def submit(spec: dict, max_usd: float, spec_source: str = "spec", brief: str | N
     if empty:
         raise SpecError(f"scenes {empty} have no narration text; a skeleton can be estimated but not submitted")
     check_host(spec)
+    if not spec.get("allowCopy"):
+        problems = copy_findings(spec)
+        if problems:
+            raise SpecError("the narration needs another pass before anything is spent: " + "; ".join(problems)
+                            + ". Rewrite those lines and submit again.")
     est = estimate(spec)
     if est["estimate_usd"] > max_usd + 1e-9:
         raise BudgetExceeded(f"estimate ${est['estimate_usd']:.2f} is over --max-usd ${max_usd:.2f}; "
