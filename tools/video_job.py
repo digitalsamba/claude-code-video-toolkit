@@ -2622,8 +2622,8 @@ def _main(argv: list[str]) -> int:
                     emit_cost_event(0.0, "estimate only, nothing generated")
                 missing = missing_for(spec, include_soft=True)
                 human = _human_estimate(est, source) + "".join(
-                    f"\n  {'without it' if m.get('soft') else "can't run here"}: {m['needed_for']} needs "
-                    f"{needs_text(m)}" for m in missing)
+                    "\n  " + ("without it" if m.get("soft") else "can't run here")
+                    + f": {m['needed_for']} needs {needs_text(m)}" for m in missing)
                 _print({**est, "spec_source": source, "host_missing": missing}, args.json, human)
                 return 0
             job = submit(spec, args.max_usd, spec_source=source, brief=args.brief, publish_to=args.output)
