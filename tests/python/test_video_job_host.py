@@ -249,6 +249,10 @@ class TestCopyAndDesign(Isolated):
         msg = str(ctx.exception)
         self.assertIn("dash", msg)
         self.assertIn("worth noting", msg)
+        sp2 = spec(); sp2["title"] = "Turas — a daily walk"
+        with self.assertRaises(vj.SpecError) as ctx2:
+            vj.submit(sp2, max_usd=5, start_worker=False)
+        self.assertIn("the title", str(ctx2.exception))
         self.assertFalse(any((self.tmp / "jobs").glob("*/job.json")))
 
     def test_a_line_from_a_finished_job_is_refused(self):

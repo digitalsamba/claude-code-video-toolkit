@@ -61,7 +61,8 @@ ENCODE = CONFIG.get("encode", {})   # {"preset": "medium", "maxMB": null}; maxMB
 # Optional look, usually from a kit made in a design session (video_job.py fills it from kit.json "design").
 # Every key is optional; without it the template looks as it always has.
 #   fonts:    {"display": {"path": ".../CrimsonPro.ttf", "weight": "Medium"}, "body": {...}, "caption": {...}}
-#   headline: {"font": "display", "color": "#hex", "scrim": true, "shadow": true, "accentBar": true}
+#   headline: {"font": "display", "color": "#hex", "scrim": true, "shadow": true, "accentBar": true,
+#              "case": "as-written" | "sentence" | "upper"}
 #   captions: {"font": "body", "case": "upper" | "as-written", "pill": true}
 #   closing:  {"seconds": 3.5, "background": "#hex", "color": "#hex", "image": "path",
 #              "lines": [{"text": "Mind yourself.", "font": "display", "size": "display", "color": "#hex"}]}
@@ -222,6 +223,19 @@ def scrim_png(height: int) -> str:
     return str(path)
 
 
+def _set_case(text: str, case: str | None) -> str:
+    """A kit's headline case, applied whatever case the agent wrote in. 'sentence' lowers a line written in
+    capitals and capitalises its first letter; a mixed-case line keeps its own capitals (names, 'Turas')."""
+    if case == "upper":
+        return text.upper()
+    if case == "sentence" and text:
+        letters = [c for c in text if c.isalpha()]
+        if letters and all(c.isupper() for c in letters):
+            text = text.lower()
+        return text[0].upper() + text[1:]
+    return text
+
+
 def overlay_clips(headline: str, subline: str, start: float, duration: float, big: bool = False) -> list:
     """Animated headline block: headline slides up and fades in, an accent bar draws across
     beneath it, the subline follows. Sits in the upper half, clear of the caption band."""
@@ -230,6 +244,7 @@ def overlay_clips(headline: str, subline: str, start: float, duration: float, bi
         return out
     vertical = H > W
     dh = DESIGN.get("headline") or {}
+    headline = _set_case(headline, dh.get("case"))
     role = dh.get("font")
     color = dh.get("color") or PALETTE["white"]
     shadow = dh.get("shadow", True)

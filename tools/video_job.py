@@ -614,11 +614,16 @@ COPY_RULES = [
 def copy_findings(spec: dict) -> list[str]:
     """Narration lint plus the repeat guard: refuse words lifted from an earlier finished job on this host."""
     out = []
+    shown = [("the title", spec.get("title") or "")]
     for s in spec["scenes"]:
+        ov = s.get("overlay") or {}
+        shown += [(f"scene {s['id']}", s["text"]), (f"scene {s['id']} headline", ov.get("headline") or ""),
+                  (f"scene {s['id']} subline", ov.get("subline") or "")]
+    for where, text in shown:
         for rx, why in COPY_RULES:
-            m = rx.search(s["text"])
+            m = rx.search(text)
             if m:
-                out.append(f"scene {s['id']}: '{m.group(0).strip()}' is {why}")
+                out.append(f"{where}: '{m.group(0).strip()}' is {why}")
     seen = {}
     for j in list_jobs()[:40]:
         if j.get("phase") != "done":
