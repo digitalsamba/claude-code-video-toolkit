@@ -148,7 +148,8 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
   brand, a voice, a format and a folder of their own photos and clips. The spec fills those in from it, and
   `file` paths resolve in its assets. `catalog` lists the kits on this host, each with its assets and what each one
   shows; for someone with a kit, a request in a chat becomes a few `file` and `text` scenes, each `file` chosen
-  from that list to fit its sentence, with no code written.
+  from that list to fit its sentence, with no code written. The kit's `focus` keeps an off-centre subject in a
+  crop (a landscape clip in 9:16 keeps only its middle third); a scene can set `"focus": 0-1` itself.
 - `voice`: an object as above, or a preset name: `assets/voices/<name>.json` (a cloned voice; its reference
   audio is gitignored, so the host needs its own copy) or a brand with a `voice.json`. `catalog` lists them. The title animates
   over the first scene and a soft music bed is mixed in by default; `"titleCard": false` and

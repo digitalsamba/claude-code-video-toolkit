@@ -727,6 +727,13 @@ def normalize_spec(spec: dict) -> dict:
                 raise SpecError(f"scene {s['id']}: visual.file needs a path (a photo or clip in the kit's assets "
                                 "or the agent workspace)")
             vis["src"] = str(_resolve_file(s["id"], str(vis["path"]), kit))
+            # where the subject sits along the side the crop cuts (0-1), from the scene or the kit's focus map
+            fx = vis.get("focus", ((kit or {}).get("focus") or {}).get(str(vis["path"])))
+            if fx is not None:
+                try:
+                    s["focus"] = min(1.0, max(0.0, float(fx)))
+                except (TypeError, ValueError):
+                    raise SpecError(f"scene {s['id']}: focus must be a number from 0 to 1")
         elif (kind == "text" or (kind == "flux" and vis.get("auto"))) and not vis.get("source"):
             vis["source"] = bg_source
             if bg_source == "local":
@@ -1455,6 +1462,8 @@ def create_project(job: dict, spec: dict) -> Path:
                "asset": s["asset"], "text": s["text"]}
         if s.get("overlay"):
             row["overlay"] = s["overlay"]
+        if s.get("focus") is not None:
+            row["focus"] = s["focus"]
         scenes.append(row)
     _write_json_atomic(dest / "scenes.json", {"title": spec["title"], "titleCard": spec.get("titleCard"),
                                               "scenes": scenes})

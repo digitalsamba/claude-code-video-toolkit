@@ -260,7 +260,7 @@ def placeholder_png(scene: dict, idx: int) -> str:
 KB_AMP = 0.07   # Ken Burns zoom range: the still drifts between 1.0x and 1.07x of a frame-covering fit
 
 
-def ken_burns(img_path: str, duration: float, zoom_in: bool) -> VideoClip:
+def ken_burns(img_path: str, duration: float, zoom_in: bool, focus: float = 0.5) -> VideoClip:
     """Slow zoom on a still. The source is scaled once to cover the frame at the deepest
     zoom; each frame is then a single bilinear resize of a sub-pixel box out of it. That is
     smoother than resizing the whole source per frame to a rounded size (no 1 px jitter)
@@ -278,19 +278,21 @@ def ken_burns(img_path: str, duration: float, zoom_in: bool) -> VideoClip:
                         Image.LANCZOS)
     bw, bh = big.size
     # the frame at zoom z (1..1+amp) is a window of the big image of size frame*(1+amp)/z
-    # (centred), resized to the frame; at the deepest zoom that window is the frame itself
+    # (centred, or at `focus` 0-1 along the side that is cropped), resized to the frame; at the deepest
+    # zoom that window is the frame itself
+    f = min(1.0, max(0.0, float(focus)))
 
     def frame(t: float):
         p = min(1.0, max(0.0, t / duration)) if duration > 0 else 0.0
         z = 1.0 + KB_AMP * (p if zoom_in else 1 - p)
         cw, ch = W * (1 + KB_AMP) / z, H * (1 + KB_AMP) / z
-        x0, y0 = (bw - cw) / 2, (bh - ch) / 2
+        x0, y0 = (bw - cw) * f, (bh - ch) * f
         return np.asarray(big.resize((W, H), Image.BILINEAR, box=(x0, y0, x0 + cw, y0 + ch)))
 
     return VideoClip(frame_function=frame, duration=duration)
 
 
-def _boomerang_file(video_path: str) -> str | None:
+def _boomerang_file(video_path: str, focus: float = 0.5) -> str | None:
     """The clip played forward then backward, scaled and centre-cropped to the frame, made
     once with ffmpeg and cached. Playing that file forward is cheap; the old path reversed
     in moviepy, which re-seeks the decoder for every backward frame, and resized every
@@ -298,13 +300,15 @@ def _boomerang_file(video_path: str) -> str | None:
     src = Path(video_path)
     TEXT_CACHE.mkdir(parents=True, exist_ok=True)
     st = src.stat()
-    key = hashlib.sha1(f"boom|{src.resolve()}|{st.st_size}|{st.st_mtime_ns}|{W}x{H}".encode()).hexdigest()[:16]
+    f = min(1.0, max(0.0, float(focus)))
+    key = hashlib.sha1(f"boom|{src.resolve()}|{st.st_size}|{st.st_mtime_ns}|{W}x{H}|{f:.3f}".encode()).hexdigest()[:16]
     out = TEXT_CACHE / f"clip_{key}.mp4"
     if out.exists():
         return str(out)
     # reverse at the source size (an LTX clip is ~140 MB of frames), scale after
     graph = (f"[0:v]split[f][b];[b]reverse[r];[f][r]concat=n=2:v=1:a=0,"
-             f"scale={W}:{H}:force_original_aspect_ratio=increase:flags=bicubic,crop={W}:{H},setsar=1[v]")
+             f"scale={W}:{H}:force_original_aspect_ratio=increase:flags=bicubic,"
+             f"crop={W}:{H}:(in_w-{W})*{f:.3f}:(in_h-{H})*{f:.3f},setsar=1[v]")
     cmd = [FFMPEG_BINARY, "-v", "error", "-y", "-i", str(src), "-filter_complex", graph, "-map", "[v]",
            "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "14", "-pix_fmt", "yuv420p", str(out)]
     try:
@@ -316,9 +320,10 @@ def _boomerang_file(video_path: str) -> str | None:
         return None
 
 
-def boomerang_fill(video_path: str, duration: float):
-    """Loop a short clip forward/backward until it covers `duration`."""
-    pre = _boomerang_file(video_path)
+def boomerang_fill(video_path: str, duration: float, focus: float = 0.5):
+    """Loop a short clip forward/backward until it covers `duration`. `focus` (0-1) is where the crop
+    sits along the side that doesn't fit: 0 left/top, 0.5 centre, 1 right/bottom."""
+    pre = _boomerang_file(video_path, focus)
     if pre:
         loop = VideoFileClip(pre).without_audio()
         segs = [loop] * max(1, math.ceil((duration + 0.1) / loop.duration))
@@ -382,9 +387,9 @@ def build() -> None:
 
         asset = HERE / s["asset"] if s.get("asset") else None
         if asset and asset.exists() and asset.suffix.lower() in VIDEO_EXTS:
-            vis = boomerang_fill(str(asset), scene_dur)
+            vis = boomerang_fill(str(asset), scene_dur, s.get("focus", 0.5))
         elif asset and asset.exists() and asset.suffix.lower() in IMAGE_EXTS:
-            vis = ken_burns(str(asset), scene_dur, zoom_in)
+            vis = ken_burns(str(asset), scene_dur, zoom_in, s.get("focus", 0.5))
             zoom_in = not zoom_in
         else:
             if asset:
