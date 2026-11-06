@@ -118,7 +118,7 @@ class TestKitsAndLocal(Isolated):
         (kit / "kit.json").write_text(json.dumps({
             "description": "Small candle shop, warm and plain",
             "voice": {"provider": "elevenlabs", "voiceId": "v"}, "format": "9:16", "music": False,
-            "describe": {"jar.jpg": "an amber candle jar"}}))
+            "describe": {"jar.jpg": "an amber candle jar"}, "focus": {"jar.jpg": 0.8}}))
         os.environ["VIDEO_JOB_WORKSPACE"] = str(self.ws)
 
     def tearDown(self):
@@ -141,6 +141,7 @@ class TestKitsAndLocal(Isolated):
         self.assertTrue(first["visual"]["src"].endswith("jar.jpg"))
         self.assertEqual(first["asset"], "images/01_" + first["slug"] + ".jpg")
         self.assertEqual(first["overlay"]["headline"], "AUTUMN JARS")
+        self.assertEqual(first["focus"], 0.8)
         # no FLUX here: the text scene and the scene with no visual draw locally, in the kit's ground colour
         for sc in sp["scenes"][1:]:
             self.assertEqual(sc["visual"]["source"], "local")
