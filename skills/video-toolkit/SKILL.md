@@ -17,12 +17,24 @@ This skill is written for **any agent runtime**: Claude Code, OpenClaw, Codex, H
 `run_tool` call, or an MCP client. Nothing here depends on how your runtime backgrounds work, because the long
 work runs in a detached job you poll.
 
+## Who this is for
+
+You are an agent: someone asks you for a video through a channel (a chat message, a Discord or Slack thread, an
+MCP client) and you make it without a person at your terminal. You report back in that channel. The person asking
+sees your messages and the finished video, never the toolkit.
+
 ## What the toolkit can make: pick a route first
 
-There are two kinds of route. A **job** (`video_job.py`) runs unattended from one spec: you write scenes, it
-voices, illustrates, captions, builds and QCs them, and you collect an MP4. Every other route is a **build**: you
-copy a template or an example into `projects/<name>/`, edit its code and config with the skill it names, and render
-with Node. A build needs a shell, Node 24 and (usually) a person to look at the drafts.
+There are two kinds of route, and only one of them is autonomous today.
+
+- A **job** (`video_job.py`) runs unattended from one spec: you write the scenes, it voices, illustrates,
+  captions, builds and QCs them, and you post the MP4. This is the route for a request that arrives as one message.
+- A **build** is everything else: copy a template or an example into `projects/<name>/`, edit its code with the
+  skill it names, render with Node, look at the result, fix, render again. It needs a shell, Node 24 and judgment
+  at every step, and the method was written for a person working alongside the agent. Don't start one unattended.
+  Tell the person what the route is, what it needs from them (for a synthetic UI video: the app's source, the
+  click path, the narration) and that it is a working session, not a one-message request. Offer a job when a job
+  would do.
 
 | The user asks for | Route | Kind | Read first | See it |
 |---|---|---|---|---|
@@ -45,9 +57,8 @@ presets, read from `_internal/toolkit-registry.json`. When a user asks "what can
 the demo links, rather than from memory: the list grows each release. Skills under `.claude/skills/` are written
 for Claude Code, but they are plain markdown: open `SKILL.md` in the folder and follow it.
 
-**Tell the user what a build costs them.** A job is one message and a few minutes. A synthetic UI video is a
-session's work: the screens are rebuilt as React from the app's source, the cursor and camera are scripted to the
-narration, and someone has to look at the drafts. Say so before starting, and offer a job when a job would do.
+**When asked "what can you make?"**, answer with the job route first (it's what you can do from this message), then
+the builds as things you can set up with them, each with its demo link from `catalog`.
 
 ### How it looks: brand, design source, transitions
 
