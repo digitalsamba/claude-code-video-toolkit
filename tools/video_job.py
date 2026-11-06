@@ -40,8 +40,8 @@ and prints a spec JSON on stdout (any provider; e.g. `claude -p`).
 Cost: `estimate` is a pure function of the spec and the PRICES table below. `submit`
 refuses over --max-usd before any spend; the worker stops before the next paid step once
 actual spend would pass the cap. Receipts go to jobs/<id>/receipts.jsonl and to
-MEDIA_SPEND_LOG (default logs/media-spend.log) in the same JSON-lines shape longarm's
-ledger reads. One job runs at a time (jobs/.lock).
+MEDIA_SPEND_LOG (default logs/media-spend.log) as JSON lines (ts, tool, cost_usd,
+elapsed_s, exit, args), one per paid call. One job runs at a time (jobs/.lock).
 
 Exit codes: 0 ok, 1 error, 2 refused or not ready (over budget, no expander, job not
 done), 3 another job holds the lock. Under --progress json every call, failed ones
@@ -83,7 +83,7 @@ PRICES_VERSION = "2026-11-01"
 # (docs/ltx2.md benchmarks, 576x1024 or 1024x576 at 121 frames lands at the top of the
 # range); Qwen3-TTS and FLUX.2 on Modal A10G at $1.10/h; ElevenLabs TTS at the Creator
 # tier per-character rate; ElevenLabs Scribe at $0.40 per audio hour.
-# 2026-11-01: checked against the receipts of the last ten jobs on Lugh's host. LTX clips cost
+# 2026-11-01: checked against the receipts of the last ten jobs on a production agent host. LTX clips cost
 # a median $0.0825 (26 clips, $0.077-0.169 with cold starts), so 0.10, not 0.20; FLUX
 # backgrounds $0.0058 (11), so 0.0075, not 0.01. Ideogram DEFAULT ($0.06) and Scribe
 # (~$0.004 a job) matched the table.
@@ -323,35 +323,43 @@ def jobs_dir() -> Path:
     return Path(os.environ.get("VIDEO_JOBS_DIR") or ROOT / "jobs")
 
 
+def agent_workspace() -> Path | None:
+    """VIDEO_JOB_WORKSPACE: the calling agent's workspace, when its runtime sets one. Relative spec
+    paths resolve there first, the spend ledger defaults to its logs/, and submit reserves the whole
+    estimate. LONGARM_WORKSPACE is the older name, read until existing hosts set the new one."""
+    v = os.environ.get("VIDEO_JOB_WORKSPACE") or os.environ.get("LONGARM_WORKSPACE")
+    return Path(v) if v else None
+
+
 def spend_log_path() -> Path:
-    """MEDIA_SPEND_LOG, else the agent workspace's ledger when one is set (longarm exports
-    LONGARM_WORKSPACE into every tool call), else the toolkit's own logs/."""
+    """MEDIA_SPEND_LOG, else the agent workspace's logs/, else the toolkit's own logs/."""
     if os.environ.get("MEDIA_SPEND_LOG"):
         return Path(os.environ["MEDIA_SPEND_LOG"])
-    if os.environ.get("LONGARM_WORKSPACE"):
-        return Path(os.environ["LONGARM_WORKSPACE"]) / "logs" / "media-spend.log"
+    ws = agent_workspace()
+    if ws:
+        return ws / "logs" / "media-spend.log"
     return ROOT / "logs" / "media-spend.log"
 
 
 def reserve_at_submit() -> bool:
     """When true, `submit` books the whole estimate in the shared ledger as one receipt (a
     reservation the daily cap can count at once) and the worker keeps its per-tool receipts
-    in the job directory only. On by default under longarm, whose cap sums the ledger before
-    every call; off elsewhere so the ledger holds actuals."""
+    in the job directory only. On by default when an agent workspace is set (a runtime whose daily
+    cap sums the ledger before every call); off elsewhere so the ledger holds actuals."""
     v = os.environ.get("VIDEO_JOB_RESERVE_AT_SUBMIT")
     if v is not None:
         return v.strip().lower() in ("1", "true", "yes", "on")
-    return bool(os.environ.get("LONGARM_WORKSPACE"))
+    return agent_workspace() is not None
 
 
 _cost_emitted = False
 
 
 def emit_cost_event(usd: float, msg: str) -> None:
-    """The `cost` progress line longarm's video-spend.py wrapper turns into a receipt. Only
-    printed under --progress json, so plain CLI use stays quiet. main() makes sure every
-    call under --progress json prints exactly one, errors included: longarm books a flat
-    $0.05 for a receipt with no cost, so a failed call used to cost the agent money."""
+    """The `cost` progress line a runtime's spend wrapper turns into a receipt. Only printed under
+    --progress json, so plain CLI use stays quiet. main() makes sure every call under --progress
+    json prints exactly one, errors included: a wrapper that books a flat fee for a receipt with no
+    cost would otherwise charge the agent for every failed call."""
     global _cost_emitted
     _cost_emitted = True
     print(json.dumps({"ts": time.strftime("%H:%M:%S"), "stage": "cost",
@@ -805,8 +813,9 @@ def split_command(cmd: str) -> list[str]:
 def _workspace_paths(rel: str) -> list[Path]:
     """Where a relative spec path may live: the agent workspace first, then cwd, then here."""
     out = []
-    if os.environ.get("LONGARM_WORKSPACE"):
-        out.append(Path(os.environ["LONGARM_WORKSPACE"]) / rel)
+    ws = agent_workspace()
+    if ws:
+        out.append(ws / rel)
     out += [Path.cwd() / rel, ROOT / rel]
     return out
 
@@ -1032,7 +1041,7 @@ def settle_reservation(job: dict) -> float | None:
 
 def write_receipt(job: dict, tool: str, cost_usd: float | None, elapsed_s: float | None,
                   exit_code: int, args: list[str]) -> None:
-    """Same shape as longarm's video-spend.py ledger, plus job_id."""
+    """One JSON line per paid call (ts, tool, cost_usd, elapsed_s, exit, args), plus job_id."""
     entry = {"ts": _now(), "tool": tool, "cost_usd": cost_usd, "elapsed_s": elapsed_s,
              "exit": exit_code, "args": args, "job_id": job["id"]}
     paths = [job_dir(job["id"]) / "receipts.jsonl"]
@@ -2249,6 +2258,51 @@ def presets() -> dict:
     }
 
 
+def catalog() -> dict:
+    """What the toolkit can make, from _internal/toolkit-registry.json, for an agent to answer "what can you
+    make?" and pick a route. Only `concept-explainer-short` runs as a job (submit/status/result); every other
+    template is a build the agent does itself with a shell, Node and the named skill, so each route says how."""
+    reg = json.loads((ROOT / "_internal" / "toolkit-registry.json").read_text(encoding="utf-8"))
+    skills = reg.get("skills", {})
+
+    def skill_path(name):
+        return (skills.get(name) or {}).get("path")
+
+    examples = reg.get("examples", {})
+    templates = []
+    for key, t in reg.get("templates", {}).items():
+        demos = [{"name": k, "description": e.get("description"), "demo": e.get("demo"), "path": e.get("path")}
+                 for k, e in examples.items() if e.get("template") == key]
+        templates.append({
+            "name": key, "description": t.get("description"), "path": t.get("path"),
+            "runs_as_job": key == "concept-explainer-short",
+            "skill": t.get("skill"), "skill_path": skill_path(t.get("skill")) if t.get("skill") else None,
+            "examples": demos,
+        })
+    # Routes that aren't a template: a style built from shared components, with the skill and example to copy.
+    builds = []
+    for key, e in examples.items():
+        if e.get("template") in (None, "custom") and not e.get("showcaseOnly"):
+            builds.append({"name": key, "description": e.get("description"), "stack": e.get("stack"),
+                           "path": e.get("path"), "demo": e.get("demo")})
+    brands = sorted(p.parent.name for p in (ROOT / "brands").glob("*/brand.json"))
+    design = {k: {"description": v.get("description"), "skill": v.get("skill"), "default": v.get("default", False),
+                  "recommended": v.get("recommended", False)}
+              for k, v in reg.get("designSources", {}).items() if not k.startswith("_")}
+    return {
+        "version": reg.get("version"),
+        "templates": templates,
+        "example_builds": builds,
+        "components": {k: c.get("description") for k, c in reg.get("components", {}).items()},
+        "brands": brands,
+        "design_sources": design,
+        "voice_presets": sorted(p.stem for p in (ROOT / "assets" / "voices").glob("*.json")),
+        "skills": {k: {"path": v.get("path"), "description": v.get("description")} for k, v in skills.items()},
+        "how_to_read_a_skill": "Skills are folders of markdown: open <path>/SKILL.md from the toolkit root and "
+                               "follow it. They are written for Claude Code but any agent with a shell can use them.",
+    }
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -2325,7 +2379,7 @@ def _main(argv: list[str]) -> int:
         p.add_argument("--brief", help="One-paragraph description of the video")
         p.add_argument("--spec", help="Finished spec JSON file ('-' for stdin)")
         p.add_argument("--spec-json", help="The spec as a JSON string, or @path/to/spec.json (relative to the "
-                                           "agent workspace when LONGARM_WORKSPACE is set)")
+                                           "agent workspace when VIDEO_JOB_WORKSPACE is set)")
         p.add_argument("--scene", action="append", default=[], metavar="TEXT[ :: KIND: PROMPT]",
                        help="Flat form, repeatable, one per scene: narration, then optionally ' :: ltx: motion "
                             "prompt', ' :: card: HEADLINE ; object' (or 'HEADLINE ; A -> B -> C' for a "
@@ -2368,9 +2422,10 @@ def _main(argv: list[str]) -> int:
     st.add_argument("--all", action="store_true", help="Every finished job without a settlement")
     st.add_argument("--json", action="store_true")
     sub.add_parser("presets").add_argument("--json", action="store_true")
+    sub.add_parser("catalog", help="What the toolkit can make: templates, example builds, brands, design sources").add_argument("--json", action="store_true")
     w = sub.add_parser("_worker", help=argparse.SUPPRESS)
     w.add_argument("job_id")
-    for p in sub.choices.values():  # longarm's wrapper injects this on every call
+    for p in sub.choices.values():  # agent runtimes' wrappers inject this on every call
         p.add_argument("--progress", choices=["human", "json"], default="human",
                        help="json: emit a cost event on stderr (the estimate on submit, $0 otherwise)")
     args = ap.parse_args(argv)
@@ -2416,7 +2471,7 @@ def _main(argv: list[str]) -> int:
                    args.json, f"submitted {job['id']}  est ${job['estimate_usd']:.2f}  "
                               f"(poll: uv run tools/video_job.py status {job['id']})")
             return 0
-        if progress_json and args.cmd in ("status", "result", "list", "cancel", "presets", "prune"):
+        if progress_json and args.cmd in ("status", "result", "list", "cancel", "presets", "catalog", "prune"):
             emit_cost_event(0.0, f"{args.cmd}: no generation")
         if args.cmd == "resume":
             j = resume(args.job_id, max_usd=args.max_usd)
@@ -2456,6 +2511,9 @@ def _main(argv: list[str]) -> int:
             return 0
         if args.cmd == "presets":
             _print(presets(), True)
+            return 0
+        if args.cmd == "catalog":
+            _print(catalog(), True)
             return 0
         if args.cmd == "settle":
             if not args.job_id and not args.all:

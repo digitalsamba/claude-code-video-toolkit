@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import video_job as vj  # noqa: E402
 
 KEYS = ("ELEVENLABS_API_KEY", "IDEOGRAM_API_KEY", "MODAL_LTX2_ENDPOINT_URL", "MODAL_QWEN3_TTS_ENDPOINT_URL",
-        "R2_ACCOUNT_ID", "VIDEO_JOB_EXPANDER", "VIDEO_JOB_MAX_USD")
+        "R2_ACCOUNT_ID", "VIDEO_JOB_EXPANDER", "VIDEO_JOB_MAX_USD", "VIDEO_JOB_WORKSPACE", "LONGARM_WORKSPACE")
 
 
 def spec(**over) -> dict:
@@ -327,7 +327,7 @@ class TestStateMachine(Isolated):
         try:
             job = vj.submit(spec(), max_usd=5, start_worker=False)
             self.assertEqual(job["ledger"], "reserve")
-            # longarm books the estimate itself at submit; mimic that line in the shared ledger
+            # a reserving runtime books the estimate itself at submit; mimic that line in the shared ledger
             vj.spend_log_path().parent.mkdir(parents=True, exist_ok=True)
             with open(vj.spend_log_path(), "a") as f:
                 f.write(json.dumps({"ts": vj._now(), "tool": "video_job.py", "cost_usd": job["estimate_usd"],

@@ -1,0 +1,43 @@
+name: Agent docs
+
+# Agents outside Claude Code learn the toolkit from skills/video-toolkit/SKILL.md, not CLAUDE.md. In v0.25.0
+# a week of new tools, components and skills reached CLAUDE.md and the registry but not that skill. This fails
+# when a registry tool, template, component, skill or design source is neither mentioned in the skill nor
+# marked "agentSkip": "<reason>" in its registry entry. Stdlib only, a second to run.
+#
+# Run the same check locally with:
+#   python3 -m unittest tests/python/test_agent_docs.py -v
+
+on:
+  pull_request:
+    paths:
+      - '_internal/toolkit-registry.json'
+      - 'skills/video-toolkit/**'
+      - 'tests/python/test_agent_docs.py'
+      - '.github/workflows/agent-docs.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '_internal/toolkit-registry.json'
+      - 'skills/video-toolkit/**'
+      - 'tests/python/test_agent_docs.py'
+      - '.github/workflows/agent-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  skill-covers-registry:
+    name: agent skill covers the registry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Every registry entry is in the agent skill or skipped with a reason
+        run: python3 -m unittest tests/python/test_agent_docs.py -v
