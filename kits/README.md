@@ -43,6 +43,10 @@ own `kits/`. A runtime serving several people keeps each person's kit in its wor
 about users. Everything in this folder except this README and `example/` is gitignored, because kits hold people's
 photos and voices.
 
+A `file` scene's path may only lead into the kit, the agent workspace, the directory `submit` runs from or the
+toolkit. Anything else (an absolute path elsewhere, `../..`) is refused, so an agent taking requests from a channel
+can't put an arbitrary file from the host into a video. Copy a file into the kit's `assets/` to use it.
+
 ## Making one
 
 In Claude Code, in the toolkit: make the brand (`/brand`) and, if they want their own voice, clone it

@@ -323,6 +323,82 @@ class TestCopy(Isolated):
         self.assertIn("repeats a line from job " + job["id"], str(ctx.exception))
 
 
+class TestInputsAndReview(TestKitsAndLocal):
+    """Fixes from the PR review: where files may come from, what the worker re-reads, and the expander loop."""
+
+    def test_a_file_outside_the_kit_workspace_and_cwd_is_refused(self):
+        import tempfile
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as other:
+            secret = Path(other) / "private.jpg"
+            Image.new("RGB", (8, 8)).save(secret)
+            sp = self.kit_spec(); sp["scenes"][0]["visual"]["path"] = str(secret)
+            with self.assertRaises(vj.SpecError) as ctx:
+                vj.normalize_spec(sp)
+            self.assertIn("outside the kit", str(ctx.exception))
+            sp = self.kit_spec(); sp["kit"] = {"dir": other, "assets": other}
+            with self.assertRaises(vj.SpecError):             # a hand-made kit dict is read from its kit.json
+                vj.normalize_spec(sp)
+
+    def test_the_worker_keeps_the_path_submit_resolved(self):
+        n = vj.normalize_spec(self.kit_spec())
+        n["scenes"][0]["visual"]["path"] = "only-resolvable-at-submit.jpg"
+        vj._TRUSTED_SPEC = True
+        try:
+            again = vj.normalize_spec(n)
+        finally:
+            vj._TRUSTED_SPEC = False
+        self.assertEqual(again["scenes"][0]["visual"]["src"], n["scenes"][0]["visual"]["src"])
+        with self.assertRaises(vj.SpecError):
+            vj.normalize_spec(n)                                # outside the worker, it is resolved again
+
+    def test_source_and_focus_are_checked(self):
+        sp = self.kit_spec()
+        sp["scenes"][0]["visual"].pop("focus", None)
+        sp["scenes"][0]["focus"] = 0.2                           # scene-level, as the skill says
+        sp["scenes"][2]["visual"] = {"kind": "ideogram", "source": "local", "caption": {"headline": "FRIDAY"}}
+        sp["scenes"][2]["focus"] = "right"
+        n = vj.normalize_spec(sp)
+        self.assertEqual(n["scenes"][0]["focus"], 0.2)
+        self.assertNotIn("source", n["scenes"][2]["visual"])
+        self.assertNotIn("focus", n["scenes"][2])
+        sp["scenes"][1]["visual"]["source"] = "gpu"
+        with self.assertRaises(vj.SpecError):
+            vj.normalize_spec(sp)
+
+    def test_used_recently_counts_by_folder_and_file_name(self):
+        kj = self.ws / "kits" / "candles" / "kit.json"
+        k = json.loads(kj.read_text()); k["name"] = "The Candle Shop"; kj.write_text(json.dumps(k))
+        sp = self.kit_spec(); sp["scenes"][0]["visual"]["path"] = "assets/jar.jpg"
+        job = vj.submit(sp, max_usd=5, start_worker=False)
+        jf = vj.job_dir(job["id"]) / "job.json"
+        j = json.loads(jf.read_text()); j["phase"] = "done"; jf.write_text(json.dumps(j))
+        self.assertEqual(vj.catalog()["kits"][0]["assets"][0]["usedRecently"], 1)
+
+    def test_the_expander_is_asked_again_about_its_copy(self):
+        calls = []
+        real = vj.subprocess.run
+
+        def fake_run(args, input=None, **kw):
+            req = json.loads(input)
+            calls.append(req)
+            line = ("In today's fast-paced world, jars matter." if len(calls) == 1
+                    else "Poured by hand, one at a time.")
+            spec = {"title": "Jars", "scenes": [{"text": line, "visual": {"kind": "file", "path": "jar.jpg"}}]}
+            return type("R", (), {"returncode": 0, "stdout": json.dumps(spec), "stderr": ""})()
+        os.environ["VIDEO_JOB_EXPANDER"] = "fake"
+        vj.subprocess.run = fake_run
+        try:
+            sp = vj.expand_brief("a post about the autumn jars", "9:16", 20, kit=str(self.ws / "kits" / "candles"))
+        finally:
+            vj.subprocess.run = real
+            os.environ.pop("VIDEO_JOB_EXPANDER", None)
+        self.assertEqual(len(calls), 2)
+        self.assertIn("stock AI phrasing", calls[1]["previous_error"])
+        self.assertEqual(calls[0]["kit"]["description"], "Small candle shop, warm and plain")   # kit named by path
+        self.assertEqual(sp["scenes"][0]["text"], "Poured by hand, one at a time.")
+
+
 if __name__ == "__main__":
     import unittest
     unittest.main()

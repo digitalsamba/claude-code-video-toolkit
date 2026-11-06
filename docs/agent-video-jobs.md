@@ -103,7 +103,7 @@ say). `result` carries `size_bytes`, and a file still over the cap shows up in `
 | `titleCard` | On by default: the title animates in over the first scene for 2.8 s (so frame 0, the Shorts cover, is never empty). `false` to skip, or `{"text", "seconds"}`. |
 | `ideogram.speed` | `TURBO` $0.03, `DEFAULT` $0.06, `QUALITY` $0.10 per image. |
 | `brand`, `palette` | A `brands/<name>` for voice and Ideogram colours; palette overrides for the placeholder cards and caption pills. |
-| `kit` | A kit name (`kits/README.md`): fills `brand`, `voice`, `format`, `backgrounds` and `music` when the spec doesn't set them, sets the palette from the kit's colours, and is where `file` paths are looked up first. Searched in `$VIDEO_JOB_WORKSPACE/kits/`, then the toolkit's `kits/`. |
+| `kit` | A kit name (`kits/README.md`): fills `brand`, `voice`, `format`, `backgrounds` and `music` when the spec doesn't set them, sets the palette from the kit's colours, and is where `file` paths are looked up first. Searched in `$VIDEO_JOB_WORKSPACE/kits/`, then the toolkit's `kits/`. A `file` path must lead into the kit, the workspace, the submitting directory or the toolkit. |
 | `allowCopy` | `true` skips the copy check (dashes and stock AI phrases in the narration, title, headlines and sublines, and narration repeated from an earlier finished job). Only when the person asked for the same words. |
 | `backgrounds` | `auto` (default): `text` scenes and scenes with no visual get a FLUX background when the host has FLUX, else a local one. `local`: a flat field in the kit's or brand's ground colour with grain, drawn by the job (free, no GPU). `flux`: always FLUX. A scene that names kind `flux` always uses FLUX. |
 

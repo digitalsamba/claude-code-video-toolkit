@@ -563,10 +563,11 @@ def kit_recent_files(kit_name: str, videos: int = RECENT_VIDEOS) -> dict[str, in
         except (OSError, ValueError):
             continue
         k = old.get("kit")
-        if (k.get("name") if isinstance(k, dict) else k) != kit_name:
+        names = {k.get("name"), Path(k.get("dir") or "").name} if isinstance(k, dict) else {k}
+        if kit_name not in names:
             continue
         seen += 1
-        for f in {str((sc.get("visual") or {}).get("path")) for sc in old.get("scenes", [])
+        for f in {Path(str((sc.get("visual") or {}).get("path"))).name for sc in old.get("scenes", [])
                   if isinstance(sc.get("visual"), dict) and sc["visual"].get("kind") == "file"}:
             counts[f] = counts.get(f, 0) + 1
     return counts
@@ -651,7 +652,8 @@ def copy_findings(spec: dict) -> list[str]:
         k = _spoken_key(s["text"])
         if k in seen:
             out.append(f"scene {s['id']} repeats a line from job {seen[k]} word for word; every video gets its own "
-                       "words, written from what this person asked for")
+                       "words, written from what this person asked for (to re-cut that video in another format "
+                       "or voice, submit again with \"allowCopy\": true)")
     return out
 
 
@@ -686,12 +688,35 @@ def draw_local_background(out: Path, width: int, height: int, color: str, seed: 
     os.replace(tmp, out)
 
 
+# Set by worker_main: the spec it reads was normalised and checked by submit, so the file paths it already
+# resolved are kept (the worker runs from the toolkit root, not the submitter's directory).
+_TRUSTED_SPEC = False
+
+
+def _input_roots(kit: dict | None) -> list[Path]:
+    """The folders a spec may take a person's file from: the kit, the agent workspace, the submitter's
+    directory and the toolkit. Nothing outside them reaches a render, whatever path a spec names."""
+    roots = [Path(kit["dir"])] if kit else []
+    ws = agent_workspace()
+    if ws:
+        roots.append(ws)
+    return [r.resolve() for r in roots + [Path.cwd(), ROOT]]
+
+
+def _within(p: Path, roots: list[Path]) -> bool:
+    return any(p == r or r in p.parents for r in roots)
+
+
 def _resolve_file(scene_id: str, rel: str, kit: dict | None) -> Path:
     p = Path(rel)
     cands = [p] if p.is_absolute() else (([Path(kit["assets"]) / rel, Path(kit["dir"]) / rel] if kit else [])
                                          + _workspace_paths(rel))
+    roots = _input_roots(kit)
     for c in cands:
         if c.is_file():
+            if not _within(c.resolve(), roots):
+                raise SpecError(f"scene {scene_id}: {rel} is outside the kit, the agent workspace and this "
+                                "directory; copy it into the kit's assets")
             if c.suffix.lower() not in IMAGE_EXTS + CLIP_EXTS:
                 raise SpecError(f"scene {scene_id}: {rel} is not an image or clip "
                                 f"({', '.join(IMAGE_EXTS + CLIP_EXTS)})")
@@ -708,6 +733,8 @@ def normalize_spec(spec: dict) -> dict:
     kit = out.get("kit")
     if isinstance(kit, str):
         kit = load_kit(kit)
+    elif isinstance(kit, dict) and kit.get("dir") and not _TRUSTED_SPEC:
+        kit = load_kit(str(kit["dir"]))      # an already-normalised kit is read again from its own kit.json
     if kit is not None:
         if not isinstance(kit, dict) or not kit.get("dir"):
             raise SpecError("spec.kit must be a kit name")
@@ -811,19 +838,30 @@ def normalize_spec(spec: dict) -> dict:
             if not vis.get("path"):
                 raise SpecError(f"scene {s['id']}: visual.file needs a path (a photo or clip in the kit's assets "
                                 "or the agent workspace)")
-            vis["src"] = str(_resolve_file(s["id"], str(vis["path"]), kit))
-            # where the subject sits along the side the crop cuts (0-1), from the scene or the kit's focus map
-            fx = vis.get("focus", ((kit or {}).get("focus") or {}).get(str(vis["path"])))
+            if not (_TRUSTED_SPEC and vis.get("src") and Path(vis["src"]).is_file()):
+                vis["src"] = str(_resolve_file(s["id"], str(vis["path"]), kit))
+            # where the subject sits along the side the crop cuts (0-1): the visual's, the scene's, or the
+            # kit's focus map (keyed by the path as written or its file name)
+            fmap = (kit or {}).get("focus") or {}
+            fx = vis.get("focus", s.get("focus", fmap.get(str(vis["path"]), fmap.get(Path(str(vis["path"])).name))))
+            s.pop("focus", None)
             if fx is not None:
                 try:
                     s["focus"] = min(1.0, max(0.0, float(fx)))
                 except (TypeError, ValueError):
                     raise SpecError(f"scene {s['id']}: focus must be a number from 0 to 1")
-        elif (kind == "text" or (kind == "flux" and vis.get("auto"))) and not vis.get("source"):
-            vis["source"] = bg_source
-            if bg_source == "local":
+        else:
+            s.pop("focus", None)             # only a photo or clip of the person's own is cropped by focus
+            vis.pop("src", None)
+        if kind == "text" or (kind == "flux" and vis.get("auto")):
+            if vis.get("source") not in (None, "local", "flux"):
+                raise SpecError(f"scene {s['id']}: visual.source must be local or flux")
+            vis["source"] = vis.get("source") or bg_source
+            if vis["source"] == "local":
                 vis["color"] = vis.get("color") or (out.get("palette") or {}).get("ink") or \
                     colors.get("bgDark") or colors.get("navyDark") or ""
+        else:
+            vis.pop("source", None)          # a local field stands in only for a text scene's background
         if kind not in ("none", "file") and not (vis.get("prompt") or vis.get("caption")):
             raise SpecError(f"scene {s['id']}: visual.{kind} needs a prompt (or a caption for ideogram)")
         check_narration_is_spoken(s["id"], text, vis)
@@ -1031,7 +1069,9 @@ def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, atte
         "instructions": EXPANDER_INSTRUCTIONS,
     }
     if kit:
-        k = next((x for x in list_kits() if x["name"] == kit), None) or {"name": kit}
+        kdir = load_kit(kit)["dir"]
+        k = next((x for x in list_kits() if x["name"] == kit or str(Path(x["path"]).resolve()) == kdir),
+                 None) or {"name": kit}
         request["kit"] = {key: k.get(key) for key in ("name", "description", "format", "assets")}
         request["instructions"] = EXPANDER_INSTRUCTIONS + KIT_INSTRUCTIONS
     args = split_command(cmd)
@@ -1050,7 +1090,11 @@ def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, atte
         if kit:
             spec["kit"] = kit
         try:
-            return normalize_spec(spec)
+            n = normalize_spec(spec)
+            problems = copy_findings(n)
+            if problems:
+                raise SpecError("the narration needs another pass: " + "; ".join(problems))
+            return n
         except SpecError as e:
             if attempt + 1 >= max(1, attempts):
                 raise SpecError(f"the expander's spec was refused: {e}")
@@ -2139,6 +2183,8 @@ def spawn_worker(job_id: str) -> int:
 
 
 def worker_main(job_id: str) -> int:
+    global _TRUSTED_SPEC
+    _TRUSTED_SPEC = True
     job = load_job(job_id)
     job["worker_pid"] = os.getpid()
     update_lock_pid(job_id, os.getpid())

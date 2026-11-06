@@ -329,7 +329,9 @@ def boomerang_fill(video_path: str, duration: float, focus: float = 0.5):
         segs = [loop] * max(1, math.ceil((duration + 0.1) / loop.duration))
         return concatenate_videoclips(segs).subclipped(0, duration)
     fwd = VideoFileClip(video_path).without_audio()
-    fwd = fwd.resized(max(W / fwd.w, H / fwd.h)).with_position(("center", "center"))
+    fwd = fwd.resized(max(W / fwd.w, H / fwd.h))
+    f = min(1.0, max(0.0, float(focus)))
+    fwd = fwd.cropped(x1=round((fwd.w - W) * f), y1=round((fwd.h - H) * f), width=W, height=H)
     rev = fwd.with_effects([vfx.TimeMirror()])
     segs, total = [], 0.0
     while total < duration + 0.5:
