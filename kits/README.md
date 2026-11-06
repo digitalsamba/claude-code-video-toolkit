@@ -26,6 +26,13 @@ kits/<name>/
 | `focus` | `{"candle.mp4": 0.85}`: where each asset's subject sits along the side a crop cuts, 0 (left or top) to 1 (right or bottom), default 0.5. A landscape clip in a 9:16 video keeps only its middle third, so set this for any subject off centre. A scene's own `visual.focus` overrides it |
 | `describe` | `{"candle.mp4": "a lit candle in a dark room, close"}`: what each asset shows. `catalog` lists every asset with this, so an agent that can't see the files can still choose one for each scene. Describe every file |
 
+`catalog` also gives each asset a `usedRecently` count (how many of the last three videos made with this kit
+showed it), so an agent can choose the others and two videos for one person don't look the same.
+
+A kit's `voice` can be a clone: `{"provider": "qwen3", "refAudio": "voice/ref.wav", "refText": "exact transcript",
+"maxWpm": 150, "minTempo": 0.8}`, with the reference inside the kit. A clone copies its reference's pace, so slow
+a presenter-paced recording with `voice_prosody.py expand --tempo 0.8` first (CLAUDE.md, "Clone Prosody").
+
 The kit's colours (its `brand.json`, else the named brand's) set the accent and the ground of the video:
 headline accent bars, and the local backgrounds that `text` scenes and scenes with no visual get.
 

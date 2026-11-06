@@ -149,7 +149,7 @@ class TestKitsAndLocal(Isolated):
         self.assertEqual(vj.missing_for(sp), [])
         first_kit = vj.catalog()["kits"][0]
         self.assertEqual(first_kit["name"], "candles")   # workspace kits first
-        self.assertEqual(first_kit["assets"], [{"file": "jar.jpg", "shows": "an amber candle jar"}])
+        self.assertEqual(first_kit["assets"], [{"file": "jar.jpg", "shows": "an amber candle jar", "usedRecently": 0}])
 
     def test_estimate_charges_nothing_for_local_and_own_files(self):
         est = vj.estimate(self.kit_spec())
@@ -228,7 +228,7 @@ class TestKitsAndLocal(Isolated):
         finally:
             vj.subprocess.run = real
             os.environ.pop("VIDEO_JOB_EXPANDER", None)
-        self.assertEqual(seen["kit"]["assets"], [{"file": "jar.jpg", "shows": "an amber candle jar"}])
+        self.assertEqual(seen["kit"]["assets"], [{"file": "jar.jpg", "shows": "an amber candle jar", "usedRecently": 0}])
         self.assertIn("kit.assets", seen["instructions"])
         self.assertEqual(sp["kit"]["name"], "candles")
 
@@ -238,6 +238,38 @@ class TestKitsAndLocal(Isolated):
         n = vj.normalize_spec(sp)
         self.assertEqual(n["scenes"][0]["visual"]["kind"], "file")
         self.assertEqual(n["scenes"][0]["overlay"]["subline"], "small batch")
+
+    def test_files_from_recent_videos_are_counted(self):
+        job = vj.submit(self.kit_spec(), max_usd=5, start_worker=False)
+        jf = vj.job_dir(job["id"]) / "job.json"
+        j = json.loads(jf.read_text()); j["phase"] = "done"; jf.write_text(json.dumps(j))
+        self.assertEqual(vj.catalog()["kits"][0]["assets"][0]["usedRecently"], 1)
+
+
+class TestCopy(Isolated):
+    def test_dashes_and_stock_phrases_are_refused_before_spend(self):
+        sp = spec()
+        sp["scenes"][0]["text"] = "Light bends in the air — and it's worth noting the sky is blue."
+        with self.assertRaises(vj.SpecError) as ctx:
+            vj.submit(sp, max_usd=5, start_worker=False)
+        msg = str(ctx.exception)
+        self.assertIn("dash", msg)
+        self.assertIn("worth noting", msg)
+        sp2 = spec(); sp2["title"] = "Turas — a daily walk"
+        with self.assertRaises(vj.SpecError) as ctx2:
+            vj.submit(sp2, max_usd=5, start_worker=False)
+        self.assertIn("the title", str(ctx2.exception))
+        self.assertFalse(any((self.tmp / "jobs").glob("*/job.json")))
+
+    def test_a_line_from_a_finished_job_is_refused(self):
+        job = vj.submit(spec(), max_usd=5, start_worker=False)
+        jf = vj.job_dir(job["id"]) / "job.json"
+        j = json.loads(jf.read_text()); j["phase"] = "done"; jf.write_text(json.dumps(j))
+        os.environ.pop("VIDEO_JOB_LOCK_FAKE", None)
+        vj.clear_stale_lock()
+        with self.assertRaises(vj.SpecError) as ctx:
+            vj.submit(spec(), max_usd=5, start_worker=False)
+        self.assertIn("repeats a line from job " + job["id"], str(ctx.exception))
 
 
 if __name__ == "__main__":

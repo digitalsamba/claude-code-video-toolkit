@@ -150,6 +150,11 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
   shows; for someone with a kit, a request in a chat becomes a few `file` and `text` scenes, each `file` chosen
   from that list to fit its sentence, with no code written. The kit's `focus` keeps an off-centre subject in a
   crop (a landscape clip in 9:16 keeps only its middle third); a scene can set `"focus": 0-1` itself.
+  Prefer assets whose `usedRecently` is 0, so two videos for one person don't look the same.
+- **Copy is checked before any spend.** Dashes and stock AI phrasing ("it's worth noting", "delve",
+  "in today's world") in the narration, title, headlines or sublines are refused with the line named, and so is
+  narration copied word for word from an earlier finished video on this host. Rewrite the named lines and submit
+  again; `"allowCopy": true` only when the person asked for the same words.
 - `voice`: an object as above, or a preset name: `assets/voices/<name>.json` (a cloned voice; its reference
   audio is gitignored, so the host needs its own copy) or a brand with a `voice.json`. `catalog` lists them. The title animates
   over the first scene and a soft music bed is mixed in by default; `"titleCard": false` and

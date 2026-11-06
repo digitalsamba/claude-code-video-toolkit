@@ -533,13 +533,42 @@ def list_kits() -> list[dict]:
                 continue
             adir = kj.parent / (k.get("assets") or "assets")
             described = k.get("describe") or {}
+            recent = kit_recent_files(name)
             files = sorted(p.name for p in adir.iterdir()
                            if p.is_file() and p.suffix.lower() in IMAGE_EXTS + CLIP_EXTS) if adir.is_dir() else []
             out.append({"name": name, "description": k.get("description"), "path": str(kj.parent),
                         "format": k.get("format"),
-                        # what each file shows, so a model that can't see them can choose
-                        "assets": [{"file": f, "shows": described.get(f)} for f in files]})
+                        # what each file shows, so a model that can't see them can choose, and how many of the
+                        # last few videos made with this kit used it, so the next one can pick others
+                        "assets": [{"file": f, "shows": described.get(f), "usedRecently": recent.get(f, 0)}
+                                   for f in files]})
     return out
+
+
+RECENT_VIDEOS = 3
+
+
+def kit_recent_files(kit_name: str, videos: int = RECENT_VIDEOS) -> dict[str, int]:
+    """file -> how many of the last `videos` finished jobs made with this kit showed it."""
+    counts: dict[str, int] = {}
+    seen = 0
+    for j in list_jobs()[:40]:
+        if seen >= videos:
+            break
+        if j.get("phase") != "done":
+            continue
+        try:
+            old = json.loads((job_dir(j["id"]) / "spec.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        k = old.get("kit")
+        if (k.get("name") if isinstance(k, dict) else k) != kit_name:
+            continue
+        seen += 1
+        for f in {str((sc.get("visual") or {}).get("path")) for sc in old.get("scenes", [])
+                  if isinstance(sc.get("visual"), dict) and sc["visual"].get("kind") == "file"}:
+            counts[f] = counts.get(f, 0) + 1
+    return counts
 
 
 def load_kit(ref: str) -> dict:
@@ -575,6 +604,56 @@ def brand_colors(spec: dict) -> dict:
     return {}
 
 
+# What a model writes when it isn't paying attention: dashes and stock AI phrasing. Narration is heard and
+# burned as captions, and the title, headlines and sublines are on screen, so these are refused before any
+# spend, with the reason.
+COPY_RULES = [
+    (re.compile(r"—|\s–\s|\s--\s"), "a dash; use a comma, a full stop or a new sentence"),
+    (re.compile(r"\bit'?s worth noting\b|\bit is (worth|important) (noting|to note)\b", re.I), "'it's worth noting'; say the point"),
+    (re.compile(r"\bin today'?s (fast-paced |busy |modern )?(world|age|landscape)\b|\bmoving forward\b"
+                r"|\bfirst and foremost\b|\blast but not least\b|\bwithout further ado\b|\ball in all\b"
+                r"|\bin conclusion\b|\bshed light on\b|\bpave the way\b|\bat the forefront\b|\bdeep[- ]dive\b"
+                r"|\bdelve\b|\btapestry\b|\bembark on a journey\b|\bunlock (your|the) (full )?potential\b"
+                r"|\bgame[- ]changer\b|\bnavigat(e|ing) the (complexities|world|landscape)\b"
+                r"|\bseamless(ly)?\b|\bresonate(s)? with\b|\btestament to\b", re.I),
+     "stock AI phrasing; say it the way a person would"),
+]
+
+
+def copy_findings(spec: dict) -> list[str]:
+    """Copy lint on every word shown or spoken, plus the repeat guard: refuse lines lifted from an earlier
+    finished job on this host."""
+    out = []
+    shown = [("the title", spec.get("title") or "")]
+    for s in spec["scenes"]:
+        ov = s.get("overlay") or {}
+        shown += [(f"scene {s['id']}", s["text"]), (f"scene {s['id']} headline", ov.get("headline") or ""),
+                  (f"scene {s['id']} subline", ov.get("subline") or "")]
+    for where, text in shown:
+        for rx, why in COPY_RULES:
+            m = rx.search(text)
+            if m:
+                out.append(f"{where}: '{m.group(0).strip()}' is {why}")
+    seen = {}
+    for j in list_jobs()[:40]:
+        if j.get("phase") != "done":
+            continue
+        try:
+            old = json.loads((job_dir(j["id"]) / "spec.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for sc in old.get("scenes", []):
+            k = _spoken_key(sc.get("text") or "")
+            if len(k.split()) >= 6:
+                seen.setdefault(k, j["id"])
+    for s in spec["scenes"]:
+        k = _spoken_key(s["text"])
+        if k in seen:
+            out.append(f"scene {s['id']} repeats a line from job {seen[k]} word for word; every video gets its own "
+                       "words, written from what this person asked for")
+    return out
+
+
 def _flux_available() -> bool:
     if os.environ.get("VIDEO_JOB_SKIP_HOST_CHECK", "").strip().lower() in ("1", "true", "yes", "on"):
         return True      # not consulting the host: assume it has everything
@@ -602,7 +681,7 @@ def draw_local_background(out: Path, width: int, height: int, color: str, seed: 
     img = np.clip(base + grain, 0, 255).astype(np.uint8)
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix(".tmp.png")
-    Image.fromarray(img, "RGB").save(tmp)
+    Image.fromarray(img).save(tmp)
     os.replace(tmp, out)
 
 
@@ -925,7 +1004,8 @@ EXPANDER_INSTRUCTIONS = (
 KIT_INSTRUCTIONS = (
     " This video is for the person or product in `kit`: write in their voice and keep to its description. "
     "Prefer their own footage: a scene can be {\"kind\": \"file\", \"path\": \"<a file from kit.assets>\", "
-    "\"headline\": \"optional\"}, choosing the file whose `shows` fits the sentence; use each file once. "
+    "\"headline\": \"optional\"}, choosing the file whose `shows` fits the sentence; use each file once, and "
+    "prefer files with usedRecently 0 (the last few videos showed the others). "
     "Mix in 'text' scenes for the key line. Don't use 'ltx' or 'ideogram' unless the kit has no fitting file.")
 
 
@@ -1981,6 +2061,11 @@ def submit(spec: dict, max_usd: float, spec_source: str = "spec", brief: str | N
     if empty:
         raise SpecError(f"scenes {empty} have no narration text; a skeleton can be estimated but not submitted")
     check_host(spec)
+    if not spec.get("allowCopy"):
+        problems = copy_findings(spec)
+        if problems:
+            raise SpecError("the narration needs another pass before anything is spent: " + "; ".join(problems)
+                            + ". Rewrite those lines and submit again.")
     est = estimate(spec)
     if est["estimate_usd"] > max_usd + 1e-9:
         raise BudgetExceeded(f"estimate ${est['estimate_usd']:.2f} is over --max-usd ${max_usd:.2f}; "
