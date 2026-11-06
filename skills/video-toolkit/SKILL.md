@@ -207,7 +207,8 @@ providers this host has keys or endpoints for (`host.available_visual_kinds`), t
 (`host.local`: ffmpeg, Node, the Python packages), and which route levels it can run (`host.routes.job`,
 `host.routes.session`: a session also needs Node 18+). Offer only those. `estimate`
 lists anything the spec uses that's missing as `host_missing`, and `submit` refuses it (exit 2, `error_code:
-unavailable`, with `missing`: what, which env vars, and an alternative) before anything is written or spent.
+unavailable`, with `missing`: what, which env vars, and an alternative) before anything is written or spent. An
+entry marked `"soft": true` (a music bed with no music provider) isn't refused: the video is made without it.
 
 With hosted API keys only (no Modal or RunPod), a job can still run: an ElevenLabs voice and Ideogram cards for
 every scene. `ltx` needs Modal; `text`, `flux` and scenes with no visual need FLUX on Modal or RunPod; the default

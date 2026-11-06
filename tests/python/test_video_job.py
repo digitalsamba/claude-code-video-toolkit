@@ -45,7 +45,7 @@ class Isolated(unittest.TestCase):
         self._env = {k: os.environ.pop(k, None) for k in KEYS}
         os.environ["VIDEO_JOBS_DIR"] = str(self.tmp / "jobs")
         os.environ["MEDIA_SPEND_LOG"] = str(self.tmp / "logs" / "media-spend.log")
-        os.environ["VIDEO_JOB_SKIP_HOST_CHECK"] = "1"   # no keys here; test_host_capabilities turns it back on
+        os.environ["VIDEO_JOB_SKIP_HOST_CHECK"] = "1"   # no keys here; test_video_job_host.py turns it back on
 
     def tearDown(self):
         for k, v in self._env.items():

@@ -74,11 +74,12 @@ def video_estimate(spec: dict | None = None, brief: str | None = None, format: s
     """Cost estimate in USD for a video, with a per-step breakdown. Pass `spec` (preferred) or
     `brief`. Needs no API keys. With only a brief and no expander configured, the estimate is
     for the skeleton a brief of that length usually takes. `host_missing` lists providers the
-    spec uses that this host has no key or endpoint for (video_submit would refuse it)."""
+    spec uses that this host has no key or endpoint for (video_submit refuses those; entries marked
+    `soft` only mean the video is made without that part, e.g. no music bed)."""
     try:
         s, source = _resolve(spec, brief, format, duration_s, allow_skeleton=True)
         return {"ok": True, **vj.estimate(s), "spec_source": source,
-                "host_missing": vj.missing_for(vj.normalize_spec(s))}
+                "host_missing": vj.missing_for(vj.normalize_spec(s), include_soft=True)}
     except (vj.SpecError, ValueError, vj.NoExpander, RuntimeError) as e:
         return _err(e, "bad_request")
     except Exception as e:  # noqa: BLE001

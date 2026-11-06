@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import functools
 import json
 import os
 import platform
@@ -1194,13 +1195,18 @@ class BudgetExceeded(RuntimeError):
     pass
 
 
+def needs_text(m: dict) -> str:
+    """What a missing entry asks for: a program to install, or every env var it needs."""
+    return m.get("install") or ("set " + " and ".join(m["env"]) if m.get("env") else "a provider this toolkit knows")
+
+
 class Unavailable(RuntimeError):
     """The spec needs a provider this host has no key or endpoint for. Raised by submit before
     anything is written or spent; `missing` lists what and how to fix it."""
     def __init__(self, missing: list[dict]):
         self.missing = missing
         super().__init__("this host can't make this spec: " + "; ".join(
-            f"{m['needed_for']} needs {m.get('install') or ' or '.join(m['env'])}"
+            f"{m['needed_for']} needs {needs_text(m)}"
             + (f" ({m['hint']})" if m.get("hint") else "")
             for m in missing))
 
@@ -1913,6 +1919,10 @@ def resume(job_id: str, max_usd: float | None = None, start_worker: bool = True)
     if not is_resumable(job):
         raise SpecError(f"job {job_id} can't be resumed: its project "
                         f"{'was pruned' if job.get('pruned') else 'or spec is gone'}; submit it again")
+    try:
+        check_host(json.loads(Path(job["spec_path"]).read_text(encoding="utf-8")))
+    except (OSError, ValueError, KeyError):
+        pass          # is_resumable checked the spec is there; a host check never blocks on its own bookkeeping
     if max_usd is not None:
         job["max_usd"] = max_usd
     acquire_lock(job_id)
@@ -2271,7 +2281,7 @@ def presets() -> dict:
     }
 
 
-# What each provider needs on this host: any one of the env sets satisfies it. A new host runs
+# What each provider needs on this host: every env var in its list. A new host runs
 # `uv run tools/verify_setup.py` / `modal_setup.py` to fill these; the job never guesses.
 _NEEDS = {
     ("voice", "qwen3", "modal"): ["MODAL_QWEN3_TTS_ENDPOINT_URL"],
@@ -2292,12 +2302,12 @@ def _has(envs: list[str]) -> bool:
     return all(os.environ.get(e) for e in envs)
 
 
+@functools.lru_cache(maxsize=1)
 def _local_tools() -> dict:
     """The programs and packages a run needs on this machine, beyond keys. A job needs ffmpeg,
     ffprobe, moviepy and numpy (the build and QC run here); a session route also needs Node 18+
     (Remotion). verify_setup.py checks the same things in more detail."""
     import importlib.util
-    import shutil
     node = shutil.which("node")
     node_major = None
     if node:
@@ -2330,7 +2340,7 @@ def host_capabilities() -> dict:
     music = {p: ok("music", p) for p in ("acemusic", "modal", "runpod")}
     try:
         import importlib.util
-        whisper = importlib.util.find_spec("whisper") is not None or importlib.util.find_spec("faster_whisper") is not None
+        whisper = importlib.util.find_spec("whisper") is not None      # captions.py imports openai-whisper
     except Exception:  # noqa: BLE001
         whisper = False
     local = _local_tools()
@@ -2349,20 +2359,31 @@ def host_capabilities() -> dict:
     }
 
 
-def missing_for(spec: dict) -> list[dict]:
+def _skip_host_check() -> bool:
+    return os.environ.get("VIDEO_JOB_SKIP_HOST_CHECK", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def missing_for(spec: dict, include_soft: bool = False) -> list[dict]:
     """What a normalised spec needs that this host doesn't have. Empty means it can run here.
-    Captions and R2 are soft (the job runs without them and says so), so they're not listed."""
+    Captions, R2 and the music bed are soft (the job runs without them and says so), so they're
+    listed only with include_soft, marked "soft": true. VIDEO_JOB_SKIP_HOST_CHECK=1 lists nothing."""
+    if _skip_host_check():
+        return []
     out, seen = [], set()
     for tool in _job_tools_missing(_local_tools()):
         out.append({"needed_for": "building and checking the video on this host", "env": [], "install": tool,
                     "hint": "install it, then run uv run tools/verify_setup.py"})
 
-    def need(area, name, cloud, what, hint=""):
+    def need(area, name, cloud, what, hint="", soft=False):
         key = (area, name, cloud)
+        if key not in _NEEDS:
+            known = sorted({f"{n}" + (f" on {c}" if c else "") for a, n, c in _NEEDS if a == area})
+            raise SpecError(f"{what}: {area} {name!r}" + (f" on {cloud!r}" if cloud else "")
+                            + f" isn't one this toolkit knows (known: {', '.join(known)})")
         if key in seen or _has(_NEEDS[key]):
             return
         seen.add(key)
-        out.append({"needed_for": what, "env": _NEEDS[key], "hint": hint})
+        out.append({"needed_for": what, "env": _NEEDS[key], "hint": hint, **({"soft": True} if soft else {})})
 
     v = spec["voice"]
     if v["provider"] == "qwen3":
@@ -2384,16 +2405,15 @@ def missing_for(spec: dict) -> list[dict]:
         elif kind == "ideogram":
             need("visual", "ideogram", None, "ideogram cards")
     m = spec.get("music") or {}
-    if m.get("enabled"):
-        need("music", m.get("provider", "acemusic"), None, "the music bed", 'or "music": false')
+    if m.get("enabled") and include_soft:
+        need("music", m.get("provider", "acemusic"), None, "the music bed",
+             'the video renders with narration only; or "music": false', soft=True)
     return out
 
 
 def check_host(spec: dict) -> None:
     """Raise Unavailable when this host can't make the spec. VIDEO_JOB_SKIP_HOST_CHECK=1 turns it off
     (tests, and a host whose tools find their keys some other way)."""
-    if os.environ.get("VIDEO_JOB_SKIP_HOST_CHECK", "").strip().lower() in ("1", "true", "yes", "on"):
-        return
     missing = missing_for(spec)
     if missing:
         raise Unavailable(missing)
@@ -2600,10 +2620,10 @@ def _main(argv: list[str]) -> int:
             if args.cmd == "estimate":
                 if progress_json:
                     emit_cost_event(0.0, "estimate only, nothing generated")
-                missing = missing_for(normalize_spec(spec))
+                missing = missing_for(spec, include_soft=True)
                 human = _human_estimate(est, source) + "".join(
-                    f"\n  can't run here: {m['needed_for']} needs {m.get('install') or ' or '.join(m['env'])}"
-                    for m in missing)
+                    f"\n  {'without it' if m.get('soft') else "can't run here"}: {m['needed_for']} needs "
+                    f"{needs_text(m)}" for m in missing)
                 _print({**est, "spec_source": source, "host_missing": missing}, args.json, human)
                 return 0
             job = submit(spec, args.max_usd, spec_source=source, brief=args.brief, publish_to=args.output)

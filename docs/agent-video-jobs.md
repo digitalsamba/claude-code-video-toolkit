@@ -135,10 +135,12 @@ providers this host can run, the local tools a run needs (ffmpeg, ffprobe, movie
 as well for a session route) and so which route levels it can run (`routes`); `catalog` and `presets` carry it as
 `host`. A missing local tool is reported with `install` instead of `env`. `estimate` adds `host_missing`, and
 `submit` raises `Unavailable` (CLI exit 2, `error_code: unavailable`, MCP the same with `missing`) before anything is
-written or spent. Each entry names what needs it, the env vars that would satisfy it, and an alternative (the
-other cloud when that one is set up, an ideogram card instead of a clip, `"music": false`). Captions and R2 links
-are soft: the job runs without them and says so in `warnings`. `VIDEO_JOB_SKIP_HOST_CHECK=1` turns the check off
-for a host whose tools find their keys some other way.
+written or spent. Each entry names what needs it, every env var it needs, and an alternative (the other cloud
+for a qwen3 voice when that one is set up, an ideogram card instead of a clip). The music bed, captions and R2
+links are soft: the job runs without them and says so in `warnings`, and `estimate` lists a missing music provider
+in `host_missing` marked `"soft": true`. `resume` runs the same check. `VIDEO_JOB_SKIP_HOST_CHECK=1` turns it off
+(for `estimate` too) for a host whose tools find their keys some other way. A provider or cloud name the toolkit
+doesn't know is a `bad_request`.
 
 A host with hosted API keys only (ElevenLabs, Ideogram) and no GPU provider can make a job whose scenes are all
 ideogram cards. `text`, `flux` and scenes with no visual need FLUX.

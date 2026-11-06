@@ -28,10 +28,61 @@ def keys_only_spec() -> dict:
     return sp
 
 
+HAS_LOCAL_TOOLS = {"ffmpeg": True, "ffprobe": True, "node": 24,
+                   "python_packages": {"moviepy": True, "numpy": True}}
+
+
 class TestHost(Isolated):
     def setUp(self):
         super().setUp()
         os.environ.pop("VIDEO_JOB_SKIP_HOST_CHECK", None)
+        self._real_local_tools = vj._local_tools
+        vj._local_tools = lambda: HAS_LOCAL_TOOLS      # the key logic, not this machine's PATH
+
+    def tearDown(self):
+        vj._local_tools = self._real_local_tools
+        super().tearDown()
+
+    def test_music_is_soft(self):
+        os.environ["ELEVENLABS_API_KEY"] = "k"
+        os.environ["IDEOGRAM_API_KEY"] = "k"
+        sp = keys_only_spec(); sp.pop("music")             # music on by default, no ACEMUSIC_API_KEY
+        n = vj.normalize_spec(sp)
+        self.assertEqual(vj.missing_for(n), [])
+        soft = vj.missing_for(n, include_soft=True)
+        self.assertEqual([(m["needed_for"], m.get("soft")) for m in soft], [("the music bed", True)])
+        job = vj.submit(sp, max_usd=5, start_worker=False)
+        self.assertEqual(job["phase"], "queued")
+        vj.cancel(job["id"])
+
+    def test_unknown_provider_is_a_spec_error(self):
+        sp = keys_only_spec(); sp["music"] = {"provider": "suno"}
+        with self.assertRaises(vj.SpecError) as ctx:
+            vj.missing_for(vj.normalize_spec(sp), include_soft=True)
+        self.assertIn("suno", str(ctx.exception))
+
+    def test_message_names_every_var_needed(self):
+        sp = keys_only_spec(); sp["voice"] = {"provider": "qwen3", "cloud": "runpod", "speaker": "Ryan"}
+        os.environ["IDEOGRAM_API_KEY"] = "k"
+        os.environ["RUNPOD_API_KEY"] = "k"
+        with self.assertRaises(vj.Unavailable) as ctx:
+            vj.submit(sp, max_usd=5, start_worker=False)
+        self.assertIn("RUNPOD_QWEN3_TTS_ENDPOINT_ID and RUNPOD_API_KEY", str(ctx.exception))
+
+    def test_resume_checks_the_host_first(self):
+        os.environ["VIDEO_JOB_SKIP_HOST_CHECK"] = "1"
+        job = vj.submit(spec(), max_usd=5, start_worker=False)
+        jf = vj.job_dir(job["id"]) / "job.json"
+        j = json.loads(jf.read_text())
+        j.update(phase="failed", error_code="worker_never_started"); jf.write_text(json.dumps(j))
+        vj.clear_stale_lock()
+        os.environ.pop("VIDEO_JOB_SKIP_HOST_CHECK")
+        with self.assertRaises(vj.Unavailable):
+            vj.resume(job["id"], start_worker=False)
+
+    def test_skip_switch_quiets_estimate_too(self):
+        os.environ["VIDEO_JOB_SKIP_HOST_CHECK"] = "1"
+        self.assertEqual(vj.missing_for(vj.normalize_spec(spec()), include_soft=True), [])
 
     def test_bare_host_offers_only_placeholders(self):
         h = vj.host_capabilities()
