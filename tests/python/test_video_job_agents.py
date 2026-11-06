@@ -115,7 +115,7 @@ class TestAgentSeams(Isolated):
 
     def test_catalog_lists_routes_from_the_registry(self):
         cat = vj.catalog()
-        jobs = [t["name"] for t in cat["templates"] if t["runs_as_job"]]
+        jobs = [t["name"] for t in cat["templates"] if t["agent_support"] == "job"]
         self.assertEqual(jobs, ["concept-explainer-short"])
         ds = next(t for t in cat["templates"] if t["name"] == "ds-release-notes")
         self.assertEqual(ds["skill"], "synthetic-ui-demo")

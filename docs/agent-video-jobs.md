@@ -6,8 +6,9 @@ toolkit CLIs through an allowlisted `run_tool` with a hard per-call time limit (
 for MCP clients with no shell at all (`tools/video_mcp.py`). The agent-facing skill is `skills/video-toolkit/`.
 
 A job is one route of several. Product walkthroughs rebuilt from an app's source (synthetic UI), data charts,
-sprint reviews and marketing demos are **builds**: an agent copies a template, edits it with the skill it names
-and renders with Node. `video_job.py catalog` (MCP: `video_catalog`) lists every route from the registry, with
+sprint reviews and marketing demos are **sessions**: a Claude Code-style working session copies a template, edits
+it with the skill it names and renders with Node, with the person who asked reviewing the drafts. The session can
+be theirs, or an agent's, if its runtime runs one headless. `video_job.py catalog` (MCP: `video_catalog`) lists every route from the registry, with
 demo videos, so an agent can answer "what can you make?" and pick one; the routes table at the top of the skill
 says which fits what a user asks for.
 

@@ -623,7 +623,7 @@ attach in Discord. Brief → spec needs an LLM: agents write
 the spec themselves, or set `VIDEO_JOB_EXPANDER` to any command that turns a brief into one. Agents without a
 shell get the same calls from `tools/video_mcp.py` (MCP over stdio, `uv sync --extra mcp`). The
 agent-facing skill is `skills/video-toolkit/` (it opens with a routes table: which template or skill fits what the
-user asks, job or build; `video_job.py catalog` lists them from the registry); the full contract is in
+user asks, and whether it is a one-prompt `job` or a working `session`; `video_job.py catalog` lists them from the registry); the full contract is in
 `docs/agent-video-jobs.md`. **When you add a tool, template, component, skill or design source to the registry,
 mention it in that skill** or give its registry entry `"agentSkip": "<reason>"`: `tests/python/test_agent_docs.py`
 (CI: Agent docs) fails otherwise.

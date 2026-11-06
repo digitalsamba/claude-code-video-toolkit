@@ -1256,21 +1256,24 @@
       "description": "Sprint review videos with demos, stats, and voiceover",
       "status": "stable",
       "created": "2025-12-04",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "agentSupport": "session"
     },
     "sprint-review-v2": {
       "path": "templates/sprint-review-v2/",
       "description": "Composable scene-based sprint review with film-quality upgrades",
       "status": "beta",
       "created": "2026-02-19",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "agentSupport": "session"
     },
     "product-demo": {
       "path": "templates/product-demo/",
       "description": "Marketing videos with dark tech aesthetic, stats, CTA",
       "status": "stable",
       "created": "2025-12-09",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "agentSupport": "session"
     },
     "concept-explainer-short": {
       "path": "templates/concept-explainer-short/",
@@ -1279,7 +1282,8 @@
       "status": "beta",
       "created": "2026-06-09",
       "updated": "2026-10-31",
-      "note": "The compositor tools/video_job.py drives; jobs copy it into jobs/<id>/project/"
+      "note": "The compositor tools/video_job.py drives; jobs copy it into jobs/<id>/project/",
+      "agentSupport": "job"
     },
     "ds-release-notes": {
       "path": "templates/ds-release-notes/",
@@ -1287,7 +1291,8 @@
       "status": "beta",
       "created": "2026-10-28",
       "updated": "2026-10-28",
-      "skill": "synthetic-ui-demo"
+      "skill": "synthetic-ui-demo",
+      "agentSupport": "session"
     }
   },
   "transitions": {

@@ -25,27 +25,31 @@ sees your messages and the finished video, never the toolkit.
 
 ## What the toolkit can make: pick a route first
 
-There are two kinds of route, and only one of them is autonomous today.
+Every route has one of two support levels. `catalog` gives it per template as `agent_support`.
 
-- A **job** (`video_job.py`) runs unattended from one spec: you write the scenes, it voices, illustrates,
-  captions, builds and QCs them, and you post the MP4. This is the route for a request that arrives as one message.
-- A **build** is everything else: copy a template or an example into `projects/<name>/`, edit its code with the
-  skill it names, render with Node, look at the result, fix, render again. It needs a shell, Node 24 and judgment
-  at every step, and the method was written for a person working alongside the agent. Don't start one unattended.
-  Tell the person what the route is, what it needs from them (for a synthetic UI video: the app's source, the
-  click path, the narration) and that it is a working session, not a one-message request. Offer a job when a job
-  would do.
+- **`job`: one prompt.** `video_job.py` runs it unattended from one spec. You write the scenes; it voices,
+  illustrates, captions, builds and QCs them; you post the MP4. Any runtime can do this, through the CLI or MCP.
+- **`session`: a working session.** Copy a template or example into `projects/<name>/`, edit its code with the
+  skill it names, render with Node, look at the result, fix it, render again. That needs a Claude Code (or
+  Codex-style) session in the toolkit, which is what the toolkit is built around. The session can be a person's, or
+  yours, if your runtime can run one headless with a shell and Node. Either way, the skill's review points (script,
+  a contact sheet, the render) go back to the person who asked, in their channel, before you spend more. Tell them
+  up front what the route needs from them (for a synthetic UI video: the app's source, the click path, the
+  narration).
 
-| The user asks for | Route | Kind | Read first | See it |
+A route moves from `session` to `job` once its inputs fit in a message, a spec drives the build with no code
+written, QC can judge the result, and there's a cost cap. Offer a `job` when one would do.
+
+| The user asks for | Route | Support | Read first | See it |
 |---|---|---|---|---|
 | A short explainer on a topic (Shorts, Reels, a 16:9 explainer) from a brief | `concept-explainer-short` via `video_job.py` | job | this file | `examples/sky-blue-short` |
-| A walkthrough, feature demo or release-notes video of an app whose source you can read | synthetic UI: `templates/ds-release-notes`, components `Stage`, `Cursor`, `cues` | build | `.claude/skills/synthetic-ui-demo/SKILL.md` | `examples/ds-release-649`, `examples/ds-free-schedule-demo` |
-| The same, but you can't read the source | Playwright recording into `product-demo` | build | `.claude/skills/playwright-recording/` | |
-| A marketing or product launch video | `templates/product-demo` | build | the template's README | `examples/digital-samba-skill-demo` |
-| A sprint or monthly review | `templates/sprint-review`, `templates/sprint-review-v2` | build | the template's README | `examples/hello-world` |
-| A data story: a number or a trend drawn as the narration talks | `DataChart` (`LineChart`, `BarChart`, `Counter`, `SplitBar`) in Remotion; Matplotlib + moviepy without Node | build | `lib/components/DataChart.tsx`, `.claude/skills/moviepy/` | `examples/data-chart-stars`, `examples/data-viz-chart` |
-| A sub-30 s ad spot or a brand stinger | moviepy, audio-anchored | build | `.claude/skills/moviepy/` | `examples/quick-spot`, `examples/ds-crt-stinger` |
-| A presenter talking to camera | `soulx.py` (below), placed in a template with `NarratorPiP` | either | Talking heads, below | |
+| A walkthrough, feature demo or release-notes video of an app whose source you can read | synthetic UI: `templates/ds-release-notes`, components `Stage`, `Cursor`, `cues` | session | `.claude/skills/synthetic-ui-demo/SKILL.md` | `examples/ds-release-649`, `examples/ds-free-schedule-demo` |
+| The same, but you can't read the source | Playwright recording into `product-demo` | session | `.claude/skills/playwright-recording/` | |
+| A marketing or product launch video | `templates/product-demo` | session | the template's README | `examples/digital-samba-skill-demo` |
+| A sprint or monthly review | `templates/sprint-review`, `templates/sprint-review-v2` | session | the template's README | `examples/hello-world` |
+| A data story: a number or a trend drawn as the narration talks | `DataChart` (`LineChart`, `BarChart`, `Counter`, `SplitBar`) in Remotion; Matplotlib + moviepy without Node | session | `lib/components/DataChart.tsx`, `.claude/skills/moviepy/` | `examples/data-chart-stars`, `examples/data-viz-chart` |
+| A sub-30 s ad spot or a brand stinger | moviepy, audio-anchored | session | `.claude/skills/moviepy/` | `examples/quick-spot`, `examples/ds-crt-stinger` |
+| A presenter talking to camera | `soulx.py` (below), placed in a template with `NarratorPiP` | tool, or session | Talking heads, below | |
 | Change an existing video: new voice, music, vertical cut, watermark | `redub.py`, `addmusic.py`, `cutdown.py`, `dewatermark.py` | tool | QC, captions, cut-downs, below | |
 
 `ds-release-notes` is built for one product's screens, but the method isn't: keep its `Stage` and `Cursor`
@@ -57,14 +61,14 @@ presets, read from `_internal/toolkit-registry.json`. When a user asks "what can
 the demo links, rather than from memory: the list grows each release. Skills under `.claude/skills/` are written
 for Claude Code, but they are plain markdown: open `SKILL.md` in the folder and follow it.
 
-**When asked "what can you make?"**, answer with the job route first (it's what you can do from this message), then
-the builds as things you can set up with them, each with its demo link from `catalog`.
+**When asked "what can you make?"**, answer with the `job` routes first (what you can do from this message), then
+the `session` routes and what each needs from them, each with its demo link from `catalog`.
 
 ### How it looks: brand, design source, transitions
 
 - **Brand** (`brands/<name>/brand.json` colours and fonts, `voice.json` a voice): pass `"brand": "<name>"` in a job
   spec, or `--brand` to the image tools. `catalog` lists the brands on this host.
-- **Design direction** for a build: `.claude/skills/video-design/` turns a direction into scenes (colour by act,
+- **Design direction** for a session: `.claude/skills/video-design/` turns a direction into scenes (colour by act,
   type scale, one data accent) and critiques the render. The direction comes from a design source: `ours` (the
   default, video-design's own palettes, nothing to install), `taste-skill` (recommended, installed separately) or
   `frontend-design`. A project records its choice in `design.md`. After a render, `contact_sheet.py` tiles one

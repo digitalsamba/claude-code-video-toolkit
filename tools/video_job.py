@@ -2260,8 +2260,8 @@ def presets() -> dict:
 
 def catalog() -> dict:
     """What the toolkit can make, from _internal/toolkit-registry.json, for an agent to answer "what can you
-    make?" and pick a route. Only `concept-explainer-short` runs as a job (submit/status/result); every other
-    template is a build the agent does itself with a shell, Node and the named skill, so each route says how."""
+    make?" and pick a route. Each template's `agent_support` is `job` (one prompt: submit/status/result) or
+    `session` (a Claude Code-style working session with the named skill, reviewed by the person who asked)."""
     reg = json.loads((ROOT / "_internal" / "toolkit-registry.json").read_text(encoding="utf-8"))
     skills = reg.get("skills", {})
 
@@ -2275,7 +2275,7 @@ def catalog() -> dict:
                  for k, e in examples.items() if e.get("template") == key]
         templates.append({
             "name": key, "description": t.get("description"), "path": t.get("path"),
-            "runs_as_job": key == "concept-explainer-short",
+            "agent_support": t.get("agentSupport", "session"),   # job: one prompt; session: a working session
             "skill": t.get("skill"), "skill_path": skill_path(t.get("skill")) if t.get("skill") else None,
             "examples": demos,
         })
