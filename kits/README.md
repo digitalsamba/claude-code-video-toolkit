@@ -23,6 +23,7 @@ kits/<name>/
 | `backgrounds` | `auto` (default), `flux` or `local` (see `docs/agent-video-jobs.md`) |
 | `music` | `false`, a prompt, or a music object |
 | `assets` | The assets folder, relative to the kit (default `assets`) |
+| `describe` | `{"candle.mp4": "a lit candle in a dark room, close"}`: what each asset shows. `catalog` lists every asset with this, so an agent that can't see the files can still choose one for each scene. Describe every file |
 
 The kit's colours (its `brand.json`, else the named brand's) set the accent and the ground of the video:
 headline accent bars, and the local backgrounds that `text` scenes and scenes with no visual get.
@@ -46,4 +47,10 @@ uv run tools/video_job.py estimate --json --spec-json '{"title": "Test", "kit": 
   {"text": "A sentence about why it matters.", "visual": {"kind": "text", "headline": "TWO WORDS"}}]}'
 ```
 
-`host_missing` in the answer lists anything this host can't do for the kit.
+`host_missing` in the answer lists anything this host can't do for the kit. An agent's one-line version:
+
+```bash
+uv run tools/video_job.py submit --kit <name> --title "Samhain" --output files/samhain.mp4 \
+  --scene "The year turns dark now, and that is a kind of rest. :: file: standing-stones.mp4 ; Samhain" \
+  --scene "Tonight, light one candle and let the day go. :: file: candle.mp4"
+```

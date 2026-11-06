@@ -531,7 +531,14 @@ def list_kits() -> list[dict]:
                 k = json.loads(kj.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 continue
-            out.append({"name": name, "description": k.get("description"), "path": str(kj.parent)})
+            adir = kj.parent / (k.get("assets") or "assets")
+            described = k.get("describe") or {}
+            files = sorted(p.name for p in adir.iterdir()
+                           if p.is_file() and p.suffix.lower() in IMAGE_EXTS + CLIP_EXTS) if adir.is_dir() else []
+            out.append({"name": name, "description": k.get("description"), "path": str(kj.parent),
+                        "format": k.get("format"),
+                        # what each file shows, so a model that can't see them can choose
+                        "assets": [{"file": f, "shows": described.get(f)} for f in files]})
     return out
 
 
@@ -903,7 +910,15 @@ EXPANDER_INSTRUCTIONS = (
     "the JSON object.")
 
 
-def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, attempts: int = 2) -> dict:
+KIT_INSTRUCTIONS = (
+    " This video is for the person or product in `kit`: write in their voice and keep to its description. "
+    "Prefer their own footage: a scene can be {\"kind\": \"file\", \"path\": \"<a file from kit.assets>\", "
+    "\"headline\": \"optional\"}, choosing the file whose `shows` fits the sentence; use each file once. "
+    "Mix in 'text' scenes for the key line. Don't use 'ltx' or 'ideogram' unless the kit has no fitting file.")
+
+
+def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, attempts: int = 2,
+                 kit: str | None = None) -> dict:
     """Run the VIDEO_JOB_EXPANDER command. It reads a JSON request on stdin and prints a
     spec JSON on stdout (code fences tolerated). Any provider: the toolkit doesn't care.
     A spec the validator refuses goes back to the expander once with the error attached
@@ -922,6 +937,10 @@ def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, atte
         "ideogram_caption_template": IDEOGRAM_CAPTION_TEMPLATE,
         "instructions": EXPANDER_INSTRUCTIONS,
     }
+    if kit:
+        k = next((x for x in list_kits() if x["name"] == kit), None) or {"name": kit}
+        request["kit"] = {key: k.get(key) for key in ("name", "description", "format", "assets")}
+        request["instructions"] = EXPANDER_INSTRUCTIONS + KIT_INSTRUCTIONS
     args = split_command(cmd)
     for attempt in range(max(1, attempts)):
         r = subprocess.run(args, input=json.dumps(request), capture_output=True, text=True,
@@ -935,6 +954,8 @@ def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, atte
         spec = parse_spec_text(m.group(0))
         spec.setdefault("format", fmt)
         spec.setdefault("brief", brief)
+        if kit:
+            spec["kit"] = kit
         try:
             return normalize_spec(spec)
         except SpecError as e:
@@ -1085,17 +1106,24 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: 
 
 
 def resolve_spec(brief: str | None, spec_path: str | None, fmt: str, duration_s: int,
-                 allow_skeleton: bool) -> tuple[dict, str]:
-    """Returns (spec, source) where source is 'spec', 'expander' or 'skeleton'."""
+                 allow_skeleton: bool, kit: str | None = None) -> tuple[dict, str]:
+    """Returns (spec, source) where source is 'spec', 'expander' or 'skeleton'. `kit` names a kit the
+    spec uses unless it names its own."""
     if spec_path:
-        return normalize_spec(read_spec_file(spec_path)), "spec"
+        sp = read_spec_file(spec_path)
+        if kit and not sp.get("kit"):
+            sp["kit"] = kit
+        return normalize_spec(sp), "spec"
     if not brief:
         raise SpecError("pass --brief or --spec")
     try:
-        return expand_brief(brief, fmt, duration_s), "expander"
+        return expand_brief(brief, fmt, duration_s, kit=kit), "expander"
     except NoExpander:
         if allow_skeleton:
-            return normalize_spec(skeleton_spec(brief, fmt, duration_s)), "skeleton"
+            sk = skeleton_spec(brief, fmt, duration_s)
+            if kit:
+                sk["kit"] = kit
+            return normalize_spec(sk), "skeleton"
         raise
 
 
@@ -1564,11 +1592,14 @@ def step_voiceover(job: dict, spec: dict) -> dict:
 
 
 def _visual_args(spec: dict, s: dict, proj: Path) -> tuple[str, list[str], float]:
-    """(tool, args, fallback cost) for one scene's visual."""
+    """(tool, args, fallback cost) for one scene's visual. A file or local background is made here,
+    by step_visuals, with no tool and no cost."""
     fmt = FORMATS[spec["format"]]
     vis = s["visual"]
     out = proj / s["asset"]
     kind = vis["kind"]
+    if kind == "file" or vis.get("source") == "local":
+        return "", [], 0.0
     if kind == "ideogram":
         speed = vis.get("speed") or spec["ideogram"]["speed"]
         args = ["--output", str(out), "--resolution", vis.get("resolution") or fmt["ideogram"],
@@ -2709,6 +2740,8 @@ def _main(argv: list[str]) -> int:
                             "flow diagram), ' :: flux: prompt'. No JSON needed")
         p.add_argument("--title", help="Video title (flat form; default: the first scene's text)")
         p.add_argument("--voice", help="Voice preset: assets/voices/<name>.json (a clone) or a brand name")
+        p.add_argument("--kit", help="A kit (kits/README.md): its brand, voice, format and own photos fill the "
+                                     "spec, and 'file:' scenes look in its assets")
         p.add_argument("--music", help="Music bed prompt (default: a subtle ambient bed; it's free on acemusic)")
         p.add_argument("--no-music", action="store_true", help="No music bed")
         p.add_argument("--draft", action="store_true", help="Scenes without a visual get a plain placeholder instead of a generated background")
@@ -2757,17 +2790,25 @@ def _main(argv: list[str]) -> int:
 
     try:
         if args.cmd in ("estimate", "submit", "spec"):
-            fmt = args.format or "9:16"
+            kit = args.kit
+            kit_fmt = (load_kit(kit).get("format") if kit else None)
+            fmt = args.format or kit_fmt or "9:16"
             if args.scene:
                 music = False if args.no_music else (args.music or None)
-                spec, source = normalize_spec(spec_from_scene_args(
+                sp = spec_from_scene_args(
                     args.title, args.scene, fmt, voice=args.voice, music=music, draft=args.draft,
-                    title_card=not args.no_title_card, allow_screens=args.allow_screens)), "scenes"
+                    title_card=not args.no_title_card, allow_screens=args.allow_screens)
+                if kit:
+                    sp["kit"] = kit
+                spec, source = normalize_spec(sp), "scenes"
             elif args.spec_json:
-                spec, source = normalize_spec(parse_spec_text(args.spec_json)), "spec"
+                sp = parse_spec_text(args.spec_json)
+                if kit and not sp.get("kit"):
+                    sp["kit"] = kit
+                spec, source = normalize_spec(sp), "spec"
             else:
                 spec, source = resolve_spec(args.brief, args.spec, fmt, args.duration,
-                                            allow_skeleton=(args.cmd == "estimate"))
+                                            allow_skeleton=(args.cmd == "estimate"), kit=kit)
             if args.format and args.spec:
                 spec["format"] = args.format
                 spec = normalize_spec(spec)

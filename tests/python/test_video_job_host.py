@@ -117,7 +117,8 @@ class TestKitsAndLocal(Isolated):
         (kit / "brand.json").write_text(json.dumps({"colors": {"primary": "#C2410C", "bgDark": "#1C1917"}}))
         (kit / "kit.json").write_text(json.dumps({
             "description": "Small candle shop, warm and plain",
-            "voice": {"provider": "elevenlabs", "voiceId": "v"}, "format": "9:16", "music": False}))
+            "voice": {"provider": "elevenlabs", "voiceId": "v"}, "format": "9:16", "music": False,
+            "describe": {"jar.jpg": "an amber candle jar"}}))
         os.environ["VIDEO_JOB_WORKSPACE"] = str(self.ws)
 
     def tearDown(self):
@@ -145,7 +146,9 @@ class TestKitsAndLocal(Isolated):
             self.assertEqual(sc["visual"]["source"], "local")
             self.assertEqual(sc["visual"]["color"], "#1C1917")
         self.assertEqual(vj.missing_for(sp), [])
-        self.assertEqual([k["name"] for k in vj.catalog()["kits"]][0], "candles")   # workspace kits first
+        first_kit = vj.catalog()["kits"][0]
+        self.assertEqual(first_kit["name"], "candles")   # workspace kits first
+        self.assertEqual(first_kit["assets"], [{"file": "jar.jpg", "shows": "an amber candle jar"}])
 
     def test_estimate_charges_nothing_for_local_and_own_files(self):
         est = vj.estimate(self.kit_spec())
@@ -174,6 +177,14 @@ class TestKitsAndLocal(Isolated):
         self.assertLess(abs(r - 0x1C) + abs(g - 0x19) + abs(b - 0x17), 12)
         vj.cancel(job["id"])
 
+    def test_resume_arithmetic_prices_own_files_and_local_backgrounds_at_zero(self):
+        # the worker prices what is left before each run (caught by a real job: ValueError: file)
+        job = vj.submit(self.kit_spec(), max_usd=5, start_worker=False)
+        spec = json.loads((vj.job_dir(job["id"]) / "spec.json").read_text())
+        job["project_dir"] = str(vj.create_project(job, spec))
+        self.assertEqual(vj.remaining_estimates(job, spec)["visuals"], 0.0)
+        vj.cancel(job["id"])
+
     def test_explicit_backgrounds_flux_still_needs_flux(self):
         sp = self.kit_spec()
         sp["backgrounds"] = "flux"
@@ -188,6 +199,37 @@ class TestKitsAndLocal(Isolated):
         with self.assertRaises(vj.SpecError) as ctx:
             vj.normalize_spec({**self.kit_spec(), "kit": "nobody"})
         self.assertIn("candles", str(ctx.exception))
+
+    def test_cli_kit_flag_takes_the_kit_format_voice_and_files(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = vj.main(["spec", "--kit", "candles", "--title", "Jars",
+                          "--scene", "Poured by hand, one at a time. :: file: jar.jpg ; AUTUMN JARS"])
+        self.assertEqual(rc, 0)
+        sp = json.loads(out.getvalue())
+        self.assertEqual(sp["kit"]["name"], "candles")
+        self.assertEqual(sp["voice"]["provider"], "elevenlabs")
+        self.assertTrue(sp["scenes"][0]["visual"]["src"].endswith("jar.jpg"))
+
+    def test_expander_is_told_the_kit_and_its_assets(self):
+        seen = {}
+        real = vj.subprocess.run
+
+        def fake_run(args, input=None, **kw):
+            seen.update(json.loads(input))
+            spec = {"title": "Jars", "scenes": [{"text": "Poured by hand, one at a time.",
+                                                 "visual": {"kind": "file", "path": "jar.jpg"}}]}
+            return type("R", (), {"returncode": 0, "stdout": json.dumps(spec), "stderr": ""})()
+        os.environ["VIDEO_JOB_EXPANDER"] = "fake"
+        vj.subprocess.run = fake_run
+        try:
+            sp = vj.expand_brief("a post about the autumn jars", "9:16", 20, kit="candles")
+        finally:
+            vj.subprocess.run = real
+            os.environ.pop("VIDEO_JOB_EXPANDER", None)
+        self.assertEqual(seen["kit"]["assets"], [{"file": "jar.jpg", "shows": "an amber candle jar"}])
+        self.assertIn("kit.assets", seen["instructions"])
+        self.assertEqual(sp["kit"]["name"], "candles")
 
     def test_flat_form_file_scene(self):
         sp = vj.spec_from_scene_args("Jars", ["Poured by hand. :: file: jar.jpg ; AUTUMN JARS ; small batch"], "9:16")
