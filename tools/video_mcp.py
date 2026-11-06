@@ -62,22 +62,28 @@ def _err(e: Exception, code: str) -> dict[str, Any]:
     return {"ok": False, "error": str(e), "error_code": code}
 
 
-def _resolve(spec: dict | None, brief: str | None, fmt: str, duration_s: int, allow_skeleton: bool):
+def _resolve(spec: dict | None, brief: str | None, fmt: str, duration_s: int, allow_skeleton: bool,
+             kit: str | None = None):
     if spec:
+        if kit and not spec.get("kit"):
+            spec = {**spec, "kit": kit}
+        if fmt and not spec.get("format"):
+            spec = {**spec, "format": fmt}
         return vj.normalize_spec(spec), "spec"
-    return vj.resolve_spec(brief, None, fmt, duration_s, allow_skeleton=allow_skeleton)
+    fmt = fmt or (vj.load_kit(kit).get("format") if kit else None) or "9:16"   # the kit's format unless asked
+    return vj.resolve_spec(brief, None, fmt, duration_s, allow_skeleton=allow_skeleton, kit=kit)
 
 
 @mcp.tool()
-def video_estimate(spec: dict | None = None, brief: str | None = None, format: str = "9:16",
-                   duration_s: int = 45) -> dict:
+def video_estimate(spec: dict | None = None, brief: str | None = None, format: str | None = None,
+                   duration_s: int = 45, kit: str | None = None) -> dict:
     """Cost estimate in USD for a video, with a per-step breakdown. Pass `spec` (preferred) or
-    `brief`. Needs no API keys. With only a brief and no expander configured, the estimate is
+    `brief`, and `kit` to make it for someone with a kit (video_catalog lists them). Needs no API keys. With only a brief and no expander configured, the estimate is
     for the skeleton a brief of that length usually takes. `host_missing` lists providers the
     spec uses that this host has no key or endpoint for (video_submit refuses those; entries marked
     `soft` only mean the video is made without that part, e.g. no music bed)."""
     try:
-        s, source = _resolve(spec, brief, format, duration_s, allow_skeleton=True)
+        s, source = _resolve(spec, brief, format, duration_s, allow_skeleton=True, kit=kit)
         return {"ok": True, **vj.estimate(s), "spec_source": source,
                 "host_missing": vj.missing_for(vj.normalize_spec(s), include_soft=True)}
     except (vj.SpecError, ValueError, vj.NoExpander, RuntimeError) as e:
@@ -87,14 +93,14 @@ def video_estimate(spec: dict | None = None, brief: str | None = None, format: s
 
 
 @mcp.tool()
-def video_submit(spec: dict | None = None, brief: str | None = None, format: str = "9:16",
-                 duration_s: int = 45, max_usd: float = vj.DEFAULT_MAX_USD) -> dict:
+def video_submit(spec: dict | None = None, brief: str | None = None, format: str | None = None,
+                 duration_s: int = 45, max_usd: float = vj.DEFAULT_MAX_USD, kit: str | None = None) -> dict:
     """Start a video job and return at once with its id and estimate. Refused (ok=false,
     error_code budget_exceeded) when the estimate is over max_usd, or (unavailable, with `missing`) when this
     host has no key or endpoint for a provider the spec uses, both before any spend; busy
     (error_code lock_held) when another job is running. Poll video_status afterwards."""
     try:
-        s, source = _resolve(spec, brief, format, duration_s, allow_skeleton=False)
+        s, source = _resolve(spec, brief, format, duration_s, allow_skeleton=False, kit=kit)
         job = vj.submit(s, max_usd, spec_source=source, brief=brief)
         return {"ok": True, "id": job["id"], "phase": job["phase"], "estimate_usd": job["estimate_usd"],
                 "max_usd": job["max_usd"], "title": job["title"], "format": job["format"], "scenes": job["scenes"]}

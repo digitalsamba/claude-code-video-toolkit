@@ -43,6 +43,7 @@ written, QC can judge the result, and there's a cost cap. Offer a `job` when one
 | The user asks for | Route | Support | Read first | See it |
 |---|---|---|---|---|
 | A short explainer on a topic (Shorts, Reels, a 16:9 explainer) from a brief | `concept-explainer-short` via `video_job.py` | job | this file | `examples/sky-blue-short` |
+| A post or short video for someone who has a kit (a small business, a coach, a product team) | `video_job.py` with `"kit"`: their photos as `file` scenes, `text` scenes in their colours | job | `kits/README.md` | |
 | A walkthrough, feature demo or release-notes video of an app whose source you can read | synthetic UI: `templates/ds-release-notes`, components `Stage`, `Cursor`, `cues` | session | `.claude/skills/synthetic-ui-demo/SKILL.md` | `examples/ds-release-649`, `examples/ds-free-schedule-demo` |
 | The same, but you can't read the source | Playwright recording into `product-demo` | session | `.claude/skills/playwright-recording/` | |
 | A marketing or product launch video | `templates/product-demo` | session | the template's README | `examples/digital-samba-skill-demo` |
@@ -136,15 +137,32 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
 - `visual.kind`: `ltx` (5 s motion b-roll, prompt the motion and atmosphere, never on-screen text),
   `text` (constructed: a generated background that drifts, with `headline` and optional `subline`
   animated in; about a cent), `ideogram` (a designed card with legible text: **always a `caption`
-  object**, filled from the template below), `flux` (text-free generated background), `none`
-  (placeholder, drafts only). A scene with no visual gets a generated background. Alternate motion
+  object**, filled from the template below), `flux` (text-free generated background), `file` (the
+  person's own photo or clip: `"path"` in their kit's assets or your workspace, optional `headline`;
+  free), `none` (placeholder, drafts only). A scene with no visual gets a background. Alternate motion
   and constructed scenes so there is a pattern interrupt every ~15 s.
+- `backgrounds`: where `text` scenes and scenes with no visual get their background. `auto` (default) generates
+  one with FLUX when this host has it, else draws a flat brand-colour field with grain here (free, no GPU);
+  `flux` or `local` to choose.
+- `kit`: a kit name. A kit is set up once in a working session for one person or product (`kits/README.md`): a
+  brand, a voice, a format and a folder of their own photos and clips. The spec fills those in from it, and
+  `file` paths resolve in its assets. `catalog` lists the kits on this host, each with its assets and what each one
+  shows; for someone with a kit, a request in a chat becomes a few `file` and `text` scenes, each `file` chosen
+  from that list to fit its sentence, with no code written. The kit's `focus` keeps an off-centre subject in a
+  crop (a landscape clip in 9:16 keeps only its middle third); a scene can set `"focus": 0-1` itself.
+  Prefer assets whose `usedRecently` is 0, so two videos for one person don't look the same.
+- **Copy is checked before any spend.** Dashes and stock AI phrasing ("it's worth noting", "delve",
+  "in today's world") in the narration, title, headlines or sublines are refused with the line named, and so is
+  narration copied word for word from an earlier finished video on this host. Rewrite the named lines and submit
+  again; `"allowCopy": true` only when the person asked for the same words.
 - `voice`: an object as above, or a preset name: `assets/voices/<name>.json` (a cloned voice; its reference
   audio is gitignored, so the host needs its own copy) or a brand with a `voice.json`. `catalog` lists them. The title animates
   over the first scene and a soft music bed is mixed in by default; `"titleCard": false` and
   `"music": false` turn them off.
 - **No JSON at all:** `--scene "narration :: ltx: motion prompt"` per scene, `--scene "narration ::
-  text: HEADLINE ; subline"`, `--title`, `--voice <preset>`. See the docs page for the full flat form.
+  text: HEADLINE ; subline"`, `--scene "narration :: file: candle.mp4 ; HEADLINE"`, `--title`, `--voice <preset>`,
+  `--kit <name>` (MCP: `kit`; it works with `--brief` too, and the expander is given the kit's assets). See the
+  docs page for the full flat form.
 - Scene 1 must hook in one sentence. Scene N is the call to action. Captions are burned from the script text,
   so write every scene exactly as it should appear.
 - Optional: `"music": {"enabled": true, "prompt": "..."}` (off by default), `"brand": "digital-samba"`,
@@ -210,9 +228,10 @@ lists anything the spec uses that's missing as `host_missing`, and `submit` refu
 unavailable`, with `missing`: what, which env vars, and an alternative) before anything is written or spent. An
 entry marked `"soft": true` (a music bed with no music provider) isn't refused: the video is made without it.
 
-With hosted API keys only (no Modal or RunPod), a job can still run: an ElevenLabs voice and Ideogram cards for
-every scene. `ltx` needs Modal; `text`, `flux` and scenes with no visual need FLUX on Modal or RunPod; the default
-qwen3 voice needs either. Setting a host up: `uv run tools/verify_setup.py`, then `modal_setup.py --all`.
+With no GPU provider at all, a job still runs: `text` scenes and scenes with no visual get local backgrounds,
+`file` scenes use the person's own photos, and `ideogram` cards need only an Ideogram key. A voice needs ElevenLabs
+or 60db (a key), or qwen3 on Modal or RunPod. `ltx` needs Modal; a scene that names `flux` needs FLUX. Music is
+optional: without a provider the job runs without a bed and says so. Setting a host up: `uv run tools/verify_setup.py`, then `modal_setup.py --all`.
 
 ### 2. Estimate, then submit under a cap
 
