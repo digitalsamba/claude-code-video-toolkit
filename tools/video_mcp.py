@@ -73,10 +73,12 @@ def video_estimate(spec: dict | None = None, brief: str | None = None, format: s
                    duration_s: int = 45) -> dict:
     """Cost estimate in USD for a video, with a per-step breakdown. Pass `spec` (preferred) or
     `brief`. Needs no API keys. With only a brief and no expander configured, the estimate is
-    for the skeleton a brief of that length usually takes."""
+    for the skeleton a brief of that length usually takes. `host_missing` lists providers the
+    spec uses that this host has no key or endpoint for (video_submit would refuse it)."""
     try:
         s, source = _resolve(spec, brief, format, duration_s, allow_skeleton=True)
-        return {"ok": True, **vj.estimate(s), "spec_source": source}
+        return {"ok": True, **vj.estimate(s), "spec_source": source,
+                "host_missing": vj.missing_for(vj.normalize_spec(s))}
     except (vj.SpecError, ValueError, vj.NoExpander, RuntimeError) as e:
         return _err(e, "bad_request")
     except Exception as e:  # noqa: BLE001
@@ -87,7 +89,8 @@ def video_estimate(spec: dict | None = None, brief: str | None = None, format: s
 def video_submit(spec: dict | None = None, brief: str | None = None, format: str = "9:16",
                  duration_s: int = 45, max_usd: float = vj.DEFAULT_MAX_USD) -> dict:
     """Start a video job and return at once with its id and estimate. Refused (ok=false,
-    error_code budget_exceeded) when the estimate is over max_usd, before any spend; busy
+    error_code budget_exceeded) when the estimate is over max_usd, or (unavailable, with `missing`) when this
+    host has no key or endpoint for a provider the spec uses, both before any spend; busy
     (error_code lock_held) when another job is running. Poll video_status afterwards."""
     try:
         s, source = _resolve(spec, brief, format, duration_s, allow_skeleton=False)
@@ -96,6 +99,8 @@ def video_submit(spec: dict | None = None, brief: str | None = None, format: str
                 "max_usd": job["max_usd"], "title": job["title"], "format": job["format"], "scenes": job["scenes"]}
     except vj.BudgetExceeded as e:
         return _err(e, "budget_exceeded")
+    except vj.Unavailable as e:
+        return {**_err(e, "unavailable"), "missing": e.missing}
     except vj.LockHeld as e:
         return {**_err(e, "lock_held"), "holder": e.holder}
     except vj.NoExpander as e:

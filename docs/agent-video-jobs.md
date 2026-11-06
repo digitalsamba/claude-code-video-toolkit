@@ -128,6 +128,19 @@ diagram (2 to 4 boxes with arrows, across the frame in 16:9 and down it in 9:16)
 diagram" in prose gets a silhouette; the chain form is how a diagram is spelled.
 `--music "..."`, `--no-music`, `--draft` and `--no-title-card` set the rest.
 
+## What this host can make
+
+`host_capabilities()` reads the environment (`.env` included) and reports which visual kinds, voices and music
+providers this host can run; `catalog` and `presets` carry it as `host`. `estimate` adds `host_missing`, and
+`submit` raises `Unavailable` (CLI exit 2, `error_code: unavailable`, MCP the same with `missing`) before anything is
+written or spent. Each entry names what needs it, the env vars that would satisfy it, and an alternative (the
+other cloud when that one is set up, an ideogram card instead of a clip, `"music": false`). Captions and R2 links
+are soft: the job runs without them and says so in `warnings`. `VIDEO_JOB_SKIP_HOST_CHECK=1` turns the check off
+for a host whose tools find their keys some other way.
+
+A host with hosted API keys only (ElevenLabs, Ideogram) and no GPU provider can make a job whose scenes are all
+ideogram cards. `text`, `flux` and scenes with no visual need FLUX.
+
 ## Brief → spec
 
 That step needs an LLM, and the toolkit doesn't hardwire one. Two ways:
@@ -275,7 +288,7 @@ Any other client spawns that command and speaks MCP over stdin/stdout. Tools: `v
 
 ```bash
 uv run python -m unittest tests/python/test_video_job.py tests/python/test_video_job_agents.py \
-    tests/python/test_video_job_hardening.py -v
+    tests/python/test_video_job_hardening.py tests/python/test_video_job_host.py -v
 ```
 
 Covers the estimate, the state machine (with the paid steps faked), the lock and its two-minute window,

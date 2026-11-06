@@ -978,7 +978,7 @@
     },
     "video_job": {
       "path": "tools/video_job.py",
-      "description": "Async video jobs for agents: a scene spec (or a brief via VIDEO_JOB_EXPANDER) in, a QC-checked MP4 out. submit returns in seconds with a job id and estimate; a detached worker runs voiceover -> visuals (Ideogram/LTX/FLUX) -> captions -> build (concept-explainer-short, 9:16 or 16:9) -> qc --fix -> publish (R2 URL when configured). State on disk under jobs/<id>/, one job at a time, --max-usd refused before any spend and enforced before each paid step, receipts as JSON lines in MEDIA_SPEND_LOG (or the agent workspace's logs/ when VIDEO_JOB_WORKSPACE is set). catalog lists what the toolkit makes, from this registry. Failed or cancelled jobs resume from their first missing output; status has timestamped events, warnings and a per-host ETA; renders are encoded under 9.5 MB for chat attachments",
+      "description": "Async video jobs for agents: a scene spec (or a brief via VIDEO_JOB_EXPANDER) in, a QC-checked MP4 out. submit returns in seconds with a job id and estimate; a detached worker runs voiceover -> visuals (Ideogram/LTX/FLUX) -> captions -> build (concept-explainer-short, 9:16 or 16:9) -> qc --fix -> publish (R2 URL when configured). State on disk under jobs/<id>/, one job at a time, --max-usd refused before any spend and enforced before each paid step, receipts as JSON lines in MEDIA_SPEND_LOG (or the agent workspace's logs/ when VIDEO_JOB_WORKSPACE is set). catalog lists what the toolkit makes, from this registry. Failed or cancelled jobs resume from their first missing output; status has timestamped events, warnings and a per-host ETA; renders are encoded under 9.5 MB for chat attachments; catalog/presets report what this host can make (host), and submit refuses a provider it has no key or endpoint for (unavailable) before any spend",
       "usage": "uv run tools/video_job.py submit --spec spec.json --max-usd 1.00 --json; then status JOB_ID --json; result JOB_ID --json",
       "status": "beta",
       "category": "project",
@@ -1016,7 +1016,8 @@
         "VIDEO_JOB_KEEP",
         "VIDEO_JOB_OUTPUT_ROOTS",
         "VIDEO_JOB_RESERVE_AT_SUBMIT",
-        "VIDEO_JOB_WORKSPACE"
+        "VIDEO_JOB_WORKSPACE",
+        "VIDEO_JOB_SKIP_HOST_CHECK"
       ],
       "exitCodes": {
         "0": "ok",
@@ -1024,7 +1025,7 @@
         "2": "refused or not ready (budget_exceeded, no_expander, job not done)",
         "3": "lock_held"
       },
-      "tests": "uv run python -m unittest tests/python/test_video_job.py tests/python/test_video_job_agents.py tests/python/test_video_job_hardening.py",
+      "tests": "uv run python -m unittest tests/python/test_video_job.py tests/python/test_video_job_agents.py tests/python/test_video_job_hardening.py tests/python/test_video_job_host.py",
       "created": "2026-10-31",
       "updated": "2026-11-06"
     },

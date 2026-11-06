@@ -1194,6 +1194,16 @@ class BudgetExceeded(RuntimeError):
     pass
 
 
+class Unavailable(RuntimeError):
+    """The spec needs a provider this host has no key or endpoint for. Raised by submit before
+    anything is written or spent; `missing` lists what and how to fix it."""
+    def __init__(self, missing: list[dict]):
+        self.missing = missing
+        super().__init__("this host can't make this spec: " + "; ".join(
+            f"{m['needed_for']} needs {' or '.join(m['env'])}" + (f" ({m['hint']})" if m.get("hint") else "")
+            for m in missing))
+
+
 class StepFailed(RuntimeError):
     pass
 
@@ -1745,6 +1755,7 @@ def submit(spec: dict, max_usd: float, spec_source: str = "spec", brief: str | N
     empty = [s["id"] for s in spec["scenes"] if not s["text"]]
     if empty:
         raise SpecError(f"scenes {empty} have no narration text; a skeleton can be estimated but not submitted")
+    check_host(spec)
     est = estimate(spec)
     if est["estimate_usd"] > max_usd + 1e-9:
         raise BudgetExceeded(f"estimate ${est['estimate_usd']:.2f} is over --max-usd ${max_usd:.2f}; "
@@ -2246,6 +2257,7 @@ def presets() -> dict:
                     "(headline, optional subline, optional background hint); about a cent",
             "none": "gradient placeholder card with the scene slug",
         },
+        "host": host_capabilities(),
         "voice_defaults": {"provider": "qwen3", "speaker": "Ryan", "maxWpm": 165,
                            "providers": ["qwen3", "elevenlabs", "60db"],
                            "presets": sorted(p.stem for p in (ROOT / "assets" / "voices").glob("*.json"))},
@@ -2256,6 +2268,102 @@ def presets() -> dict:
         "expander_env": "VIDEO_JOB_EXPANDER",
         "jobs_dir": str(jobs_dir()),
     }
+
+
+# What each provider needs on this host: any one of the env sets satisfies it. A new host runs
+# `uv run tools/verify_setup.py` / `modal_setup.py` to fill these; the job never guesses.
+_NEEDS = {
+    ("voice", "qwen3", "modal"): ["MODAL_QWEN3_TTS_ENDPOINT_URL"],
+    ("voice", "qwen3", "runpod"): ["RUNPOD_QWEN3_TTS_ENDPOINT_ID", "RUNPOD_API_KEY"],
+    ("voice", "elevenlabs", None): ["ELEVENLABS_API_KEY"],
+    ("voice", "60db", None): ["SIXTYDB_API_KEY"],
+    ("visual", "ltx", "modal"): ["MODAL_LTX2_ENDPOINT_URL"],
+    ("visual", "flux", "modal"): ["MODAL_FLUX2_ENDPOINT_URL"],
+    ("visual", "flux", "runpod"): ["RUNPOD_FLUX2_ENDPOINT_ID", "RUNPOD_API_KEY"],
+    ("visual", "ideogram", None): ["IDEOGRAM_API_KEY"],
+    ("music", "acemusic", None): ["ACEMUSIC_API_KEY"],
+    ("music", "modal", None): ["MODAL_MUSIC_GEN_ENDPOINT_URL"],
+    ("music", "runpod", None): ["RUNPOD_ACESTEP_ENDPOINT_ID", "RUNPOD_API_KEY"],
+}
+
+
+def _has(envs: list[str]) -> bool:
+    return all(os.environ.get(e) for e in envs)
+
+
+def host_capabilities() -> dict:
+    """What this host can make right now, from its environment (.env is loaded at import). An agent
+    should offer only these; submit refuses the rest before any spend."""
+    def ok(area, name, cloud=None):
+        return _has(_NEEDS[(area, name, cloud)])
+    flux = {"modal": ok("visual", "flux", "modal"), "runpod": ok("visual", "flux", "runpod")}
+    kinds = {"ltx": ok("visual", "ltx", "modal"), "flux": any(flux.values()), "text": any(flux.values()),
+             "ideogram": ok("visual", "ideogram"), "none": True}
+    voices = {"qwen3": {"modal": ok("voice", "qwen3", "modal"), "runpod": ok("voice", "qwen3", "runpod")},
+              "elevenlabs": ok("voice", "elevenlabs"), "60db": ok("voice", "60db")}
+    music = {p: ok("music", p) for p in ("acemusic", "modal", "runpod")}
+    try:
+        import importlib.util
+        whisper = importlib.util.find_spec("whisper") is not None or importlib.util.find_spec("faster_whisper") is not None
+    except Exception:  # noqa: BLE001
+        whisper = False
+    return {
+        "visual_kinds": kinds,
+        "flux_clouds": flux,
+        "voices": voices,
+        "music": music,
+        "captions": "scribe" if os.environ.get("ELEVENLABS_API_KEY") else ("whisper" if whisper else None),
+        "r2_links": bool(os.environ.get("R2_ACCOUNT_ID")),
+        "available_visual_kinds": [k for k, v in kinds.items() if v],
+        "setup": "uv run tools/verify_setup.py; Modal endpoints: uv run tools/modal_setup.py --all",
+    }
+
+
+def missing_for(spec: dict) -> list[dict]:
+    """What a normalised spec needs that this host doesn't have. Empty means it can run here.
+    Captions and R2 are soft (the job runs without them and says so), so they're not listed."""
+    out, seen = [], set()
+
+    def need(area, name, cloud, what, hint=""):
+        key = (area, name, cloud)
+        if key in seen or _has(_NEEDS[key]):
+            return
+        seen.add(key)
+        out.append({"needed_for": what, "env": _NEEDS[key], "hint": hint})
+
+    v = spec["voice"]
+    if v["provider"] == "qwen3":
+        cloud = v.get("cloud", "modal")
+        other = "runpod" if cloud == "modal" else "modal"
+        hint = (f'or set "cloud": "{other}" in voice' if _has(_NEEDS[("voice", "qwen3", other)])
+                else 'or use "provider": "elevenlabs" with ELEVENLABS_API_KEY')
+        need("voice", "qwen3", cloud, f"the qwen3 voice on {cloud}", hint)
+    else:
+        need("voice", v["provider"], None, f"the {v['provider']} voice")
+    for sc in spec["scenes"]:
+        kind = sc["visual"]["kind"]
+        if kind == "ltx":
+            need("visual", "ltx", "modal", "ltx clips", "or make those scenes ideogram cards")
+        elif kind in ("flux", "text"):
+            cloud = sc["visual"].get("cloud", "modal")
+            need("visual", "flux", cloud, f"{kind} scenes and scenes with no visual (FLUX on {cloud})",
+                 "or give every scene an ideogram card")
+        elif kind == "ideogram":
+            need("visual", "ideogram", None, "ideogram cards")
+    m = spec.get("music") or {}
+    if m.get("enabled"):
+        need("music", m.get("provider", "acemusic"), None, "the music bed", 'or "music": false')
+    return out
+
+
+def check_host(spec: dict) -> None:
+    """Raise Unavailable when this host can't make the spec. VIDEO_JOB_SKIP_HOST_CHECK=1 turns it off
+    (tests, and a host whose tools find their keys some other way)."""
+    if os.environ.get("VIDEO_JOB_SKIP_HOST_CHECK", "").strip().lower() in ("1", "true", "yes", "on"):
+        return
+    missing = missing_for(spec)
+    if missing:
+        raise Unavailable(missing)
 
 
 def catalog() -> dict:
@@ -2297,6 +2405,7 @@ def catalog() -> dict:
         "brands": brands,
         "design_sources": design,
         "voice_presets": sorted(p.stem for p in (ROOT / "assets" / "voices").glob("*.json")),
+        "host": host_capabilities(),
         "skills": {k: {"path": v.get("path"), "description": v.get("description")} for k, v in skills.items()},
         "how_to_read_a_skill": "Skills are folders of markdown: open <path>/SKILL.md from the toolkit root and "
                                "follow it. They are written for Claude Code but any agent with a shell can use them.",
@@ -2458,7 +2567,10 @@ def _main(argv: list[str]) -> int:
             if args.cmd == "estimate":
                 if progress_json:
                     emit_cost_event(0.0, "estimate only, nothing generated")
-                _print({**est, "spec_source": source}, args.json, _human_estimate(est, source))
+                missing = missing_for(normalize_spec(spec))
+                human = _human_estimate(est, source) + "".join(
+                    f"\n  can't run here: {m['needed_for']} needs {' or '.join(m['env'])}" for m in missing)
+                _print({**est, "spec_source": source, "host_missing": missing}, args.json, human)
                 return 0
             job = submit(spec, args.max_usd, spec_source=source, brief=args.brief, publish_to=args.output)
             if progress_json:
@@ -2536,6 +2648,9 @@ def _main(argv: list[str]) -> int:
             return worker_main(args.job_id)
     except BudgetExceeded as e:
         _print({"error": str(e), "error_code": "budget_exceeded"}, args.json, f"refused: {e}")
+        return 2
+    except Unavailable as e:
+        _print({"error": str(e), "error_code": "unavailable", "missing": e.missing}, args.json, f"refused: {e}")
         return 2
     except NoExpander as e:
         _print({"error": str(e), "error_code": "no_expander"}, args.json, f"refused: {e}")
