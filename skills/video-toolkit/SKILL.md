@@ -146,14 +146,17 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
   `flux` or `local` to choose.
 - `kit`: a kit name. A kit is set up once in a working session for one person or product (`kits/README.md`): a
   brand, a voice, a format and a folder of their own photos and clips. The spec fills those in from it, and
-  `file` paths resolve in its assets. `catalog` lists the kits on this host; for someone with a kit, a request
-  in a chat becomes a few `file` and `text` scenes, with no code written.
+  `file` paths resolve in its assets. `catalog` lists the kits on this host, each with its assets and what each one
+  shows; for someone with a kit, a request in a chat becomes a few `file` and `text` scenes, each `file` chosen
+  from that list to fit its sentence, with no code written.
 - `voice`: an object as above, or a preset name: `assets/voices/<name>.json` (a cloned voice; its reference
   audio is gitignored, so the host needs its own copy) or a brand with a `voice.json`. `catalog` lists them. The title animates
   over the first scene and a soft music bed is mixed in by default; `"titleCard": false` and
   `"music": false` turn them off.
 - **No JSON at all:** `--scene "narration :: ltx: motion prompt"` per scene, `--scene "narration ::
-  text: HEADLINE ; subline"`, `--title`, `--voice <preset>`. See the docs page for the full flat form.
+  text: HEADLINE ; subline"`, `--scene "narration :: file: candle.mp4 ; HEADLINE"`, `--title`, `--voice <preset>`,
+  `--kit <name>` (MCP: `kit`; it works with `--brief` too, and the expander is given the kit's assets). See the
+  docs page for the full flat form.
 - Scene 1 must hook in one sentence. Scene N is the call to action. Captions are burned from the script text,
   so write every scene exactly as it should appear.
 - Optional: `"music": {"enabled": true, "prompt": "..."}` (off by default), `"brand": "digital-samba"`,
