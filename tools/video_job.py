@@ -117,6 +117,9 @@ FORMATS = {
 VISUAL_KINDS = ("ideogram", "ltx", "flux", "text", "file", "none")
 # "file" is the person's own photo or clip (from a kit's assets or the agent workspace), Ken Burns on a still,
 # boomerang on a clip, with an optional headline. Costs nothing and needs no GPU.
+# How a scene is set (templates/concept-explainer-short/build.py): the visual full frame, the visual on a
+# stage over a flat field of the kit's colour (its design session's split-stage), or type alone on that field.
+LAYOUTS = ("full", "split", "type")
 BACKGROUNDS = ("auto", "flux", "local")
 # Where `text` scenes and scenes with no visual get their background: "flux" generates one (about a cent, needs
 # FLUX on Modal or RunPod), "local" draws a flat brand-colour field with grain here (free, no GPU), "auto" is flux
@@ -535,11 +538,51 @@ def list_kits() -> list[dict]:
             described = k.get("describe") or {}
             files = sorted(p.name for p in adir.iterdir()
                            if p.is_file() and p.suffix.lower() in IMAGE_EXTS + CLIP_EXTS) if adir.is_dir() else []
+            design = k.get("design") or {}
+            recent = kit_recent_files(name)
             out.append({"name": name, "description": k.get("description"), "path": str(kj.parent),
                         "format": k.get("format"),
-                        # what each file shows, so a model that can't see them can choose
-                        "assets": [{"file": f, "shows": described.get(f)} for f in files]})
+                        "layouts": kit_layouts(k), "fields": sorted((design.get("fields") or {}).keys()),
+                        # what each file shows, so a model that can't see them can choose, and how many of the
+                        # last few videos made with this kit used it, so the next one can pick others
+                        "assets": [{"file": f, "shows": described.get(f), "usedRecently": recent.get(f, 0)}
+                                   for f in files]})
     return out
+
+
+def kit_layouts(kit: dict) -> list[str]:
+    """The layouts a kit allows: its design's "layouts", else split and type when it has fields, else full."""
+    design = kit.get("design") or {}
+    allowed = design.get("layouts")
+    if allowed:
+        return [x for x in allowed if x in LAYOUTS]
+    return list(LAYOUTS) if design.get("fields") else ["full"]
+
+
+RECENT_VIDEOS = 3
+
+
+def kit_recent_files(kit_name: str, videos: int = RECENT_VIDEOS) -> dict[str, int]:
+    """file -> how many of the last `videos` finished jobs made with this kit showed it."""
+    counts: dict[str, int] = {}
+    seen = 0
+    for j in list_jobs()[:40]:
+        if seen >= videos:
+            break
+        if j.get("phase") != "done":
+            continue
+        try:
+            old = json.loads((job_dir(j["id"]) / "spec.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        k = old.get("kit")
+        if (k.get("name") if isinstance(k, dict) else k) != kit_name:
+            continue
+        seen += 1
+        for f in {str((sc.get("visual") or {}).get("path")) for sc in old.get("scenes", [])
+                  if isinstance(sc.get("visual"), dict) and sc["visual"].get("kind") == "file"}:
+            counts[f] = counts.get(f, 0) + 1
+    return counts
 
 
 def load_kit(ref: str) -> dict:
@@ -624,6 +667,12 @@ def copy_findings(spec: dict) -> list[str]:
             m = rx.search(text)
             if m:
                 out.append(f"{where}: '{m.group(0).strip()}' is {why}")
+    if ((spec.get("design") or {}).get("headline") or {}).get("case") == "sentence":
+        # the build lowers a headline typed in capitals, but can't tell Title Case from a name, so ask
+        for where, text in shown[:1] + [w for w in shown[1:] if w[0].endswith(("headline", "subline"))]:
+            if _title_case(text):
+                out.append(f"{where}: '{text}' is in Title Case; this kit writes titles and headlines in sentence "
+                           "case (capital on the first word and on names only)")
     seen = {}
     for j in list_jobs()[:40]:
         if j.get("phase") != "done":
@@ -642,6 +691,18 @@ def copy_findings(spec: dict) -> list[str]:
             out.append(f"scene {s['id']} repeats a line from job {seen[k]} word for word; every video gets its own "
                        "words, written from what this person asked for")
     return out
+
+
+def _title_case(text: str) -> bool:
+    """Three or more words, and every word of four letters or more starts with a capital (not all capitals)."""
+    words = re.findall(r"[A-Za-z][A-Za-z'\-]*", text or "")
+    long_words = [w for w in words if len(w) >= 4]
+    if len(words) < 3 or len(long_words) < 2:
+        return False
+    letters = [c for c in text if c.isalpha()]
+    if letters and all(c.isupper() for c in letters):
+        return False
+    return all(w[0].isupper() for w in long_words) and any(w[0].isupper() for w in words[1:])
 
 
 def _flux_available() -> bool:
@@ -671,7 +732,7 @@ def draw_local_background(out: Path, width: int, height: int, color: str, seed: 
     img = np.clip(base + grain, 0, 255).astype(np.uint8)
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix(".tmp.png")
-    Image.fromarray(img, "RGB").save(tmp)
+    Image.fromarray(img).save(tmp)
     os.replace(tmp, out)
 
 
@@ -869,8 +930,36 @@ def normalize_spec(spec: dict) -> dict:
             s["overlay"] = {"headline": vis["headline"], "subline": (vis.get("subline") or "").strip()}
         elif kind != "ideogram" and vis.get("headline"):
             s["overlay"] = {"headline": str(vis["headline"]).strip(), "subline": (vis.get("subline") or "").strip()}
+        _scene_layout(s, kind, vis, out, kit)
     out["scenes"] = scenes
     return out
+
+
+def _scene_layout(s: dict, kind: str, vis: dict, spec: dict, kit: dict | None) -> None:
+    """Check and fill a scene's layout and field. A kit with fields sets its 'text' scenes as type on a field
+    unless the scene says otherwise; everything else stays full frame, as before."""
+    fields = (spec.get("design") or {}).get("fields") or {}
+    allowed = kit_layouts(kit) if kit is not None else (list(LAYOUTS) if fields else ["full"])
+    layout = s.get("layout") or vis.get("layout")
+    if layout is None:
+        layout = "type" if kind == "text" and "type" in allowed else "full"
+    if layout not in LAYOUTS:
+        raise SpecError(f"scene {s['id']}: layout must be one of {', '.join(LAYOUTS)}")
+    if layout not in allowed:
+        raise SpecError(f"scene {s['id']}: layout {layout!r} isn't set up here (this video can use "
+                        f"{', '.join(allowed)}); split and type need fields in the kit's design")
+    if layout == "split" and kind not in ("file", "ltx", "flux", "ideogram"):
+        raise SpecError(f"scene {s['id']}: a split scene shows a photo or clip on its stage; give it a file visual "
+                        "(or use layout 'type' for words alone)")
+    if layout == "type" and kind not in ("text", "none"):
+        raise SpecError(f"scene {s['id']}: a type scene is words alone on a field; make it a 'text' scene with a "
+                        "headline (or use 'split' to show the photo above the words)")
+    field = s.get("field") or vis.get("field")
+    if field is not None and field not in fields:
+        raise SpecError(f"scene {s['id']}: no field {field!r}; this kit's fields are {', '.join(fields) or 'none'}")
+    s["layout"] = layout
+    if field:
+        s["field"] = field
 
 
 def skeleton_spec(brief: str, fmt: str = "9:16", duration_s: int = 45) -> dict:
@@ -996,8 +1085,12 @@ EXPANDER_INSTRUCTIONS = (
 KIT_INSTRUCTIONS = (
     " This video is for the person or product in `kit`: write in their voice and keep to its description. "
     "Prefer their own footage: a scene can be {\"kind\": \"file\", \"path\": \"<a file from kit.assets>\", "
-    "\"headline\": \"optional\"}, choosing the file whose `shows` fits the sentence; use each file once. "
-    "Mix in 'text' scenes for the key line. Don't use 'ltx' or 'ideogram' unless the kit has no fitting file.")
+    "\"headline\": \"optional\"}, choosing the file whose `shows` fits the sentence; use each file once, and "
+    "prefer files with usedRecently 0 (the last few videos showed the others). If kit.layouts has 'split' and "
+    "'type', vary how scenes are set: \"layout\": \"split\" puts the photo or clip above the words on a flat "
+    "field, a 'text' scene is set as type on a field, and \"field\": \"<one of kit.fields>\" picks the colour; "
+    "change the field only where the story turns, not every scene. Write titles and headlines in sentence case. "
+    "Don't use 'ltx' or 'ideogram' unless the kit has no fitting file.")
 
 
 def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, attempts: int = 2,
@@ -1022,7 +1115,7 @@ def expand_brief(brief: str, fmt: str, duration_s: int, timeout: int = 300, atte
     }
     if kit:
         k = next((x for x in list_kits() if x["name"] == kit), None) or {"name": kit}
-        request["kit"] = {key: k.get(key) for key in ("name", "description", "format", "assets")}
+        request["kit"] = {key: k.get(key) for key in ("name", "description", "format", "layouts", "fields", "assets")}
         request["instructions"] = EXPANDER_INSTRUCTIONS + KIT_INSTRUCTIONS
     args = split_command(cmd)
     for attempt in range(max(1, attempts)):
@@ -1132,8 +1225,12 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: 
         "narration text :: flux: soft navy gradient"       -> text-free still
         "narration text :: text: ONE EXTRA DAY ; why February grows"
                                                           -> generated background + animated headline (; subline)
+        "narration text :: file: candle.mp4 ; Let it settle"  -> the person's own photo or clip (kits)
+        "narration text :: split: candle.mp4 ; Let it settle @ cream"
+                                                          -> their file above the words, on the kit's cream field
 
-    The separator is ' :: ' and the kind is the word before the first colon after it."""
+    The separator is ' :: ' and the kind is the word before the first colon after it. A trailing
+    ' @ <field>' names one of the kit's fields (split and text scenes)."""
     out_scenes = []
     for i, raw in enumerate(scenes):
         text, _, vis = raw.partition(" :: ")
@@ -1142,6 +1239,10 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: 
         if not text:
             raise SpecError(f"--scene {i + 1}: narration text is empty")
         visual: dict = {"kind": "none"}
+        field = None
+        if " @ " in vis:
+            vis, _, field = vis.rpartition(" @ ")
+            vis, field = vis.strip(), field.strip()
         if vis:
             kind, _, rest = vis.partition(":")
             kind = kind.strip().lower()
@@ -1165,19 +1266,24 @@ def spec_from_scene_args(title: str | None, scenes: list[str], fmt: str, voice: 
                 visual = {"kind": "flux", "prompt": rest}
             elif kind in ("none", "placeholder"):
                 visual = {"kind": "none"}
-            elif kind in ("file", "photo", "image"):
+            elif kind in ("file", "photo", "image", "split"):
                 path, _, head = rest.partition(";")
                 headline, _, sub = head.partition(";")
                 if not path.strip():
                     raise SpecError(f"--scene {i + 1}: file needs a path, e.g. 'file: photos/candle.jpg ; NEW RANGE'")
                 visual = {"kind": "file", "path": path.strip()}
+                if kind == "split":
+                    visual["layout"] = "split"
                 if headline.strip():
                     visual["headline"] = headline.strip().strip('"')
                     visual["subline"] = sub.strip()
             else:
-                raise SpecError(f"--scene {i + 1}: unknown visual '{kind}' (use ltx:, card:, text:, flux:, file: or none)")
+                raise SpecError(f"--scene {i + 1}: unknown visual '{kind}' (use ltx:, card:, text:, flux:, file:, "
+                                "split: or none)")
             if visual["kind"] in ("ltx", "flux") and not visual.get("prompt"):
                 raise SpecError(f"--scene {i + 1}: {kind} needs a prompt after the colon")
+        if field:
+            visual["field"] = field
         out_scenes.append({"text": text, "visual": visual})
     spec = {"title": title or out_scenes[0]["text"][:60], "format": fmt, "scenes": out_scenes,
             "draft": draft, "titleCard": title_card, "allowScreens": allow_screens}
@@ -1542,6 +1648,10 @@ def create_project(job: dict, spec: dict) -> Path:
             row["overlay"] = s["overlay"]
         if s.get("focus") is not None:
             row["focus"] = s["focus"]
+        if s.get("layout") and s["layout"] != "full":
+            row["layout"] = s["layout"]
+        if s.get("field"):
+            row["field"] = s["field"]
         scenes.append(row)
     _write_json_atomic(dest / "scenes.json", {"title": spec["title"], "titleCard": spec.get("titleCard"),
                                               "scenes": scenes})

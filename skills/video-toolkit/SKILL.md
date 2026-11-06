@@ -151,7 +151,11 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
   from that list to fit its sentence, with no code written. The kit's `focus` keeps an off-centre subject in a
   crop (a landscape clip in 9:16 keeps only its middle third); a scene can set `"focus": 0-1` itself. The kit
   also carries the look from its design session (fonts, headline and caption style, a closing card), so you
-  don't style a kit video: write its words and choose its files.
+  don't style a kit video: write its words, choose its files and, when the kit lists `layouts`, how each scene is
+  set: `full` (the file fills the frame), `split` (the file above the words on a flat field of the kit's colour)
+  or `type` (words alone on a field); `"field"` picks the colour, changed only where the story turns. Prefer
+  assets whose `usedRecently` is 0, so two videos for one person don't look the same. Write titles and headlines
+  in sentence case when the kit does (a Title Case one is refused).
 - **Narration is checked before any spend.** Dashes and stock AI phrasing ("it's worth noting", "delve",
   "in today's world") are refused with the line named, and so is a line copied word for word from an earlier
   finished video on this host. Rewrite the named lines and submit again; `"allowCopy": true` only when the
@@ -161,7 +165,7 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
   over the first scene and a soft music bed is mixed in by default; `"titleCard": false` and
   `"music": false` turn them off.
 - **No JSON at all:** `--scene "narration :: ltx: motion prompt"` per scene, `--scene "narration ::
-  text: HEADLINE ; subline"`, `--scene "narration :: file: candle.mp4 ; HEADLINE"`, `--title`, `--voice <preset>`,
+  text: HEADLINE ; subline"`, `--scene "narration :: file: candle.mp4 ; HEADLINE"`, `--scene "narration :: split: candle.mp4 ; Headline @ cream"`, `--title`, `--voice <preset>`,
   `--kit <name>` (MCP: `kit`; it works with `--brief` too, and the expander is given the kit's assets). See the
   docs page for the full flat form.
 - Scene 1 must hook in one sentence. Scene N is the call to action. Captions are burned from the script text,

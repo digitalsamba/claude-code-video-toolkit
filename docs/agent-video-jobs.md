@@ -130,7 +130,10 @@ in garbled text. Film a physical thing instead, or make it a `text:` scene; `--a
 An object written as a chain, `card: THE LOOP ; prompt -> agent -> video`, becomes a labelled flow
 diagram (2 to 4 boxes with arrows, across the frame in 16:9 and down it in 9:16). Asking for "a
 diagram" in prose gets a silhouette; the chain form is how a diagram is spelled.
-`file: <path> ; HEADLINE ; subline` is the person's own photo or clip. `--kit <name>` makes the video for someone
+`file: <path> ; HEADLINE ; subline` is the person's own photo or clip, and `split: <path> ; Headline` sets it
+above the words on one of the kit's flat fields (a trailing ` @ <field>` picks which; `text:` takes it too, and in
+a kit with fields a `text:` scene is set as type on that field). `catalog` lists each kit's `layouts`, `fields`,
+and per asset `usedRecently`, so the next video can use different files (`kits/README.md`, "Layouts"). `--kit <name>` makes the video for someone
 with a kit: its format, voice, colours and music, and `file:` paths in its assets. It works with `--spec`,
 `--spec-json` and `--brief` too (the expander is then sent the kit's description and asset list).
 `--music "..."`, `--no-music`, `--draft` and `--no-title-card` set the rest.

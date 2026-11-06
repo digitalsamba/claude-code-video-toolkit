@@ -24,7 +24,7 @@ kits/<name>/
 | `music` | `false`, a prompt, or a music object |
 | `assets` | The assets folder, relative to the kit (default `assets`) |
 | `focus` | `{"candle.mp4": 0.85}`: where each asset's subject sits along the side a crop cuts, 0 (left or top) to 1 (right or bottom), default 0.5. A landscape clip in a 9:16 video keeps only its middle third, so set this for any subject off centre. A scene's own `visual.focus` overrides it |
-| `design` | The look decided in the design session (`video-design` with taste or ours), so every one-prompt video keeps it. `fonts`: `{"display": {"path": "fonts/Display.ttf", "weight": "Medium"}, "body": ..., "caption": ...}`, files inside the kit so every host renders the same. `headline`: `font`, `color`, `scale`, `scrim`, `shadow`, `accentBar`, `sublineFont`, `case` (`as-written`, `sentence` or `upper`, applied whatever the agent typed). `captions`: `font`, `case` (`upper` or `as-written`), `pill`. `closing`: a sign-off card added to the end of every video, `{"seconds", "background", "color", "image", "lines": [{"text", "font", "size": "display" \| "title" \| "label" \| "note", "color", "gapBefore"}]}`. Every key is optional |
+| `design` | The look decided in the design session (`video-design` with taste or ours), so every one-prompt video keeps it. `fonts`: `{"display": {"path": "fonts/Display.ttf", "weight": "Medium"}, "body": ..., "caption": ...}`, files inside the kit so every host renders the same. `headline`: `font`, `color`, `scale`, `scrim`, `shadow`, `accentBar`, `sublineFont`, `case` (`as-written`, `sentence` or `upper`, applied whatever the agent typed). `captions`: `font`, `case` (`upper` or `as-written`), `pill`. `closing`: a sign-off card added to the end of every video, `{"seconds", "background", "color", "image", "lines": [{"text", "font", "size": "display" \| "title" \| "label" \| "note", "color", "gapBefore"}]}`. `fields`: the flat grounds of the design (`{"burgundy": {"ground": "#56140F", "ink": "#FFFCF1"}, ...}`), which turn on two more layouts (below); `layouts` limits which a kit allows. Every key is optional |
 | `describe` | `{"candle.mp4": "a lit candle in a dark room, close"}`: what each asset shows. `catalog` lists every asset with this, so an agent that can't see the files can still choose one for each scene. Describe every file |
 
 The kit's colours (its `brand.json`, else the named brand's) set the accent and the ground of the video:
@@ -33,6 +33,25 @@ headline accent bars, and the local backgrounds that `text` scenes and scenes wi
 A kit's `voice` can be a clone: `{"provider": "qwen3", "refAudio": "voice/ref.wav", "refText": "exact transcript",
 "maxWpm": 150, "minTempo": 0.8}`, with the reference inside the kit. A clone copies its reference's pace, so slow
 a presenter-paced recording with `voice_prosody.py expand --tempo 0.8` first (CLAUDE.md, "Clone Prosody").
+
+## Layouts: the same assets, set differently
+
+A kit with a few assets makes the same-looking video every time if every scene is a clip full frame with a
+headline over it. With `design.fields`, a scene can be set three ways (`"layout"` on the scene or its visual):
+
+| Layout | What it shows |
+| --- | --- |
+| `full` | The photo or clip fills the frame, the headline over it (the default for `file` scenes) |
+| `split` | The photo or clip on a stage (top 55% in 9:16, left half in 16:9), a flat field below it with the headline and captions on one left edge: the split-stage direction from taste |
+| `type` | Words alone on a field, the headline large (the default for `text` scenes when the kit has fields) |
+
+`"field": "<name>"` picks the ground (default: the first). Change it where the story turns, not every scene
+(video-design: colour follows the story). In the one-line form: `split: candle.mp4 ; Let it settle @ cream`,
+`text: Five minutes ; a warm drink @ gold`.
+
+`catalog` also gives each asset a `usedRecently` count (how many of the last three videos made with this kit
+showed it), so an agent can choose the others, and a kit whose headline `case` is `sentence` refuses a Title Case
+title or headline before spend.
 
 ## Where kits live
 
@@ -58,5 +77,5 @@ uv run tools/video_job.py estimate --json --spec-json '{"title": "Test", "kit": 
 ```bash
 uv run tools/video_job.py submit --kit <name> --title "Samhain" --output files/samhain.mp4 \
   --scene "The year turns dark now, and that is a kind of rest. :: file: standing-stones.mp4 ; Samhain" \
-  --scene "Tonight, light one candle and let the day go. :: file: candle.mp4"
+  --scene "Tonight, light one candle and let the day go. :: split: candle.mp4 ; Let it go @ cream"
 ```

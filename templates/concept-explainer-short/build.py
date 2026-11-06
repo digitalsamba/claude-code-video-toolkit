@@ -66,7 +66,14 @@ ENCODE = CONFIG.get("encode", {})   # {"preset": "medium", "maxMB": null}; maxMB
 #   captions: {"font": "body", "case": "upper" | "as-written", "pill": true}
 #   closing:  {"seconds": 3.5, "background": "#hex", "color": "#hex", "image": "path",
 #              "lines": [{"text": "Mind yourself.", "font": "display", "size": "display", "color": "#hex"}]}
+#   fields:   {"burgundy": {"ground": "#56140F", "ink": "#FFFCF1"}, "cream": {...}}  flat grounds for the
+#             split and type layouts; a scene names one with "field" (default: the first)
+# A scene's "layout" (scenes.json) picks how it is set:
+#   full   the visual fills the frame, headline over it (the default, as always)
+#   split  the visual in the top 55% (the stage), a flat field below with the headline set on one left edge
+#   type   no visual: a flat field, the headline large on the left edge, the subline under it
 DESIGN = CONFIG.get("design") or {}
+FIELDS = DESIGN.get("fields") or {}
 
 W, H, FPS = FMT["width"], FMT["height"], FMT["fps"]
 START_PAD = TIMING.get("startPad", 0.3)
@@ -116,23 +123,25 @@ def _rgb(hex_color: str) -> tuple:
     return tuple(int(hex_color.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def render_caption_png(txt: str) -> str:
+def render_caption_png(txt: str, ink: str | None = None) -> str:
     """Caption text on a dark rounded pill, cached, width-capped to the safe
-    area. PIL, not TextClip — moviepy 2.x TextClip clips ascenders."""
+    area. PIL, not TextClip — moviepy 2.x TextClip clips ascenders. With `ink` the caption sits on a
+    flat field (split and type layouts): set plainly in that colour, no pill, shadow or stroke."""
     size = CAPTIONS.get("size", 80)
-    fill = CAPTIONS.get("fill", "#FFFFFF")
+    fill = ink or CAPTIONS.get("fill", "#FFFFFF")
     dc = DESIGN.get("captions") or {}
-    pill = dc.get("pill", True)
+    pill = dc.get("pill", True) and not ink
     role = dc.get("font")
     TEXT_CACHE.mkdir(parents=True, exist_ok=True)
-    key = hashlib.sha1(f"{txt}|{size}|{fill}|{pill}|{json.dumps(DESIGN.get('fonts', {}).get(role) if role else None)}"
+    key = hashlib.sha1(f"{txt}|{size}|{fill}|{pill}|{bool(ink)}|"
+                       f"{json.dumps(DESIGN.get('fonts', {}).get(role) if role else None)}"
                        .encode()).hexdigest()[:16]
     path = TEXT_CACHE / f"{key}.png"
     if path.exists():
         return str(path)
 
     font = _load_font(size, role)
-    sw = max(4, size // 14) if pill else max(2, size // 22)
+    sw = 0 if ink else (max(4, size // 14) if pill else max(2, size // 22))
     probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
     bbox = probe.textbbox((0, 0), txt, font=font, stroke_width=sw)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -143,7 +152,7 @@ def render_caption_png(txt: str) -> str:
     if pill:
         draw.rounded_rectangle((0, 0, img.width - 1, img.height - 1),
                                radius=img.height // 4, fill=(*_rgb(PALETTE["ink"]), 185))
-    else:
+    elif not ink:
         # no pill: a soft shadow under the text keeps it legible over footage
         draw.text((pad - bbox[0] + 2, pad - bbox[1] + 3), txt, font=font, fill=(0, 0, 0, 140),
                   stroke_width=sw, stroke_fill=(0, 0, 0, 90))
@@ -173,29 +182,31 @@ def _wrap(draw, text: str, font, max_w: int) -> list[str]:
     return lines
 
 
-def headline_png(text: str, size: int, fill: str, max_w: int, shadow: bool = True, role: str | None = None) -> str:
-    """Wrapped headline with a soft shadow, transparent background, cached."""
+def headline_png(text: str, size: int, fill: str, max_w: int, shadow: bool = True, role: str | None = None,
+                 align: str = "center", stroke: bool = True) -> str:
+    """Wrapped headline with a soft shadow, transparent background, cached. align="left" and stroke=False
+    set it on a flat field (split and type layouts)."""
     TEXT_CACHE.mkdir(parents=True, exist_ok=True)
     fspec = json.dumps((DESIGN.get("fonts") or {}).get(role)) if role else ""
-    key = hashlib.sha1(f"hl|{text}|{size}|{fill}|{max_w}|{shadow}|{fspec}".encode()).hexdigest()[:16]
+    key = hashlib.sha1(f"hl|{text}|{size}|{fill}|{max_w}|{shadow}|{fspec}|{align}|{stroke}".encode()).hexdigest()[:16]
     path = TEXT_CACHE / f"{key}.png"
     if path.exists():
         return str(path)
     font = _load_font(size, role)
     probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
     lines = _wrap(probe, text, font, max_w)
-    lh = int(size * 1.15)
+    lh = int(size * (1.15 if align == "center" else 1.08))
     widths = [probe.textbbox((0, 0), ln, font=font)[2] for ln in lines]
-    pad = size // 3
-    img = Image.new("RGBA", (max(widths) + pad * 2, lh * len(lines) + pad * 2), (0, 0, 0, 0))
+    pad = size // 3 if align == "center" else 0
+    img = Image.new("RGBA", (max(widths) + pad * 2, lh * len(lines) + pad * 2 + size // 4), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     for i, ln in enumerate(lines):
-        x = (img.width - widths[i]) // 2
+        x = (img.width - widths[i]) // 2 if align == "center" else 0
         y = pad + i * lh
         if shadow:
             draw.text((x + 3, y + 4), ln, font=font, fill=(0, 0, 0, 150))
         draw.text((x, y), ln, font=font, fill=(*_rgb(fill), 255),
-                  stroke_width=max(1, size // 40), stroke_fill=(*_rgb(PALETTE["ink"]), 120))
+                  stroke_width=max(1, size // 40) if stroke else 0, stroke_fill=(*_rgb(PALETTE["ink"]), 120))
     img.save(path)
     return str(path)
 
@@ -287,6 +298,42 @@ def overlay_clips(headline: str, subline: str, start: float, duration: float, bi
     return out
 
 
+def field_for(scene: dict) -> dict:
+    """The scene's flat field: {"ground", "ink"} from the design's fields, else the palette's ink and white."""
+    if FIELDS:
+        f = FIELDS.get(scene.get("field") or "") or next(iter(FIELDS.values()))
+        return {"ground": f.get("ground") or PALETTE["ink"], "ink": f.get("ink") or PALETTE["white"]}
+    return {"ground": PALETTE["ink"], "ink": PALETTE["white"]}
+
+
+def field_text_clips(headline: str, subline: str, start: float, duration: float, ink: str, top: int,
+                     big: bool = False, left: int = 0) -> list:
+    """Headline and subline set on a flat field, on one left edge like a page (the split-stage direction):
+    the lines rise a little and fade in, nothing else moves."""
+    out = []
+    if duration <= 0.8 or not headline:
+        return out
+    dh = DESIGN.get("headline") or {}
+    headline = _set_case(headline, dh.get("case"))
+    role = dh.get("font")
+    base = min(W, H)
+    size = int(base * (0.105 if big else 0.074) * float(dh.get("scale", 1.0)))
+    margin = left + int(min(W, H) * 0.089)        # x = 96 at 1080 wide
+    max_w = W - margin - int(min(W, H) * 0.089)
+    hl = ImageClip(headline_png(headline, size, ink, max_w, shadow=False, role=role, align="left", stroke=False))
+    rise = 24
+    out.append(hl.with_start(start).with_duration(duration)
+                 .with_position(lambda t: (margin, top + int(rise * (1 - _ease_out(t, 0.6)))))
+                 .with_effects([vfx.FadeIn(0.4), vfx.FadeOut(0.35)]))
+    if subline:
+        sub = ImageClip(headline_png(subline, int(size * 0.55), ink, max_w, shadow=False,
+                                     role=dh.get("sublineFont", role), align="left", stroke=False))
+        out.append(sub.with_start(start + 0.4).with_duration(max(0.1, duration - 0.4))
+                      .with_position((margin, top + hl.h + size // 4))
+                      .with_effects([vfx.FadeIn(0.45), vfx.FadeOut(0.35)]))
+    return out
+
+
 def placeholder_png(scene: dict, idx: int) -> str:
     """Gradient card with the scene slug — used when the asset is missing so
     the project renders before any Ideogram/LTX generation has happened."""
@@ -358,12 +405,14 @@ def closing_png() -> str:
 KB_AMP = 0.07   # Ken Burns zoom range: the still drifts between 1.0x and 1.07x of a frame-covering fit
 
 
-def ken_burns(img_path: str, duration: float, zoom_in: bool, focus: float = 0.5) -> VideoClip:
+def ken_burns(img_path: str, duration: float, zoom_in: bool, focus: float = 0.5,
+              size: tuple | None = None) -> VideoClip:
     """Slow zoom on a still. The source is scaled once to cover the frame at the deepest
     zoom; each frame is then a single bilinear resize of a sub-pixel box out of it. That is
     smoother than resizing the whole source per frame to a rounded size (no 1 px jitter)
     and several times cheaper, which matters on small CPUs (a LANCZOS resize of a
     1440x2560 card per frame was the build's biggest cost)."""
+    W, H = size or (globals()["W"], globals()["H"])
     with Image.open(img_path) as im:
         if im.mode in ("RGBA", "LA", "PA") or "transparency" in im.info:
             # a transparent card shows the palette's ink behind it, as it did when this was
@@ -390,11 +439,12 @@ def ken_burns(img_path: str, duration: float, zoom_in: bool, focus: float = 0.5)
     return VideoClip(frame_function=frame, duration=duration)
 
 
-def _boomerang_file(video_path: str, focus: float = 0.5) -> str | None:
+def _boomerang_file(video_path: str, focus: float = 0.5, size: tuple | None = None) -> str | None:
     """The clip played forward then backward, scaled and centre-cropped to the frame, made
     once with ffmpeg and cached. Playing that file forward is cheap; the old path reversed
     in moviepy, which re-seeks the decoder for every backward frame, and resized every
     frame in Python. None when ffmpeg fails (the caller falls back to the old path)."""
+    W, H = size or (globals()["W"], globals()["H"])
     src = Path(video_path)
     TEXT_CACHE.mkdir(parents=True, exist_ok=True)
     st = src.stat()
@@ -418,10 +468,11 @@ def _boomerang_file(video_path: str, focus: float = 0.5) -> str | None:
         return None
 
 
-def boomerang_fill(video_path: str, duration: float, focus: float = 0.5):
+def boomerang_fill(video_path: str, duration: float, focus: float = 0.5, size: tuple | None = None):
     """Loop a short clip forward/backward until it covers `duration`. `focus` (0-1) is where the crop
     sits along the side that doesn't fit: 0 left/top, 0.5 centre, 1 right/bottom."""
-    pre = _boomerang_file(video_path, focus)
+    W, H = size or (globals()["W"], globals()["H"])
+    pre = _boomerang_file(video_path, focus, size)
     if pre:
         loop = VideoFileClip(pre).without_audio()
         segs = [loop] * max(1, math.ceil((duration + 0.1) / loop.duration))
@@ -483,10 +534,30 @@ def build() -> None:
         print(f"  {s['id']} {s['slug']:16s} {content_start:7.2f} → "
               f"{content_start + content_dur:7.2f}  (vo {vo_dur:.2f}s)")
 
+        layout = s.get("layout") or "full"
         asset = HERE / s["asset"] if s.get("asset") else None
-        if asset and asset.exists() and asset.suffix.lower() in VIDEO_EXTS:
+        has_media = bool(asset and asset.exists() and asset.suffix.lower() in VIDEO_EXTS | IMAGE_EXTS)
+        if layout == "split" and not has_media:
+            layout = "type"
+        # the first scene is on screen from frame 0 (that frame is the cover on Shorts/Reels)
+        fx = [vfx.FadeOut(XFADE)] if idx == 0 and START_PAD == 0 else [vfx.FadeIn(XFADE), vfx.FadeOut(XFADE)]
+        field = field_for(s) if layout != "full" else None
+        stage_h = int(H * 0.55) if H > W else H
+        if layout in ("split", "type"):
+            ground = ColorClip((W, H), color=_rgb(field["ground"])).with_duration(scene_dur)
+            parts = [ground]
+            if layout == "split":
+                stage = (W, stage_h) if H > W else (W // 2, H)
+                if asset.suffix.lower() in VIDEO_EXTS:
+                    media = boomerang_fill(str(asset), scene_dur, s.get("focus", 0.5), size=stage)
+                else:
+                    media = ken_burns(str(asset), scene_dur, zoom_in, s.get("focus", 0.5), size=stage)
+                    zoom_in = not zoom_in
+                parts.append(media.with_position((0, 0)))
+            vis = CompositeVideoClip(parts, size=(W, H)).with_duration(scene_dur)
+        elif has_media and asset.suffix.lower() in VIDEO_EXTS:
             vis = boomerang_fill(str(asset), scene_dur, s.get("focus", 0.5))
-        elif asset and asset.exists() and asset.suffix.lower() in IMAGE_EXTS:
+        elif has_media:
             vis = ken_burns(str(asset), scene_dur, zoom_in, s.get("focus", 0.5))
             zoom_in = not zoom_in
         else:
@@ -494,12 +565,26 @@ def build() -> None:
                 print(f"     [missing {s['asset']} — placeholder card]")
             vis = ken_burns(placeholder_png(s, idx), scene_dur, zoom_in)
             zoom_in = not zoom_in
-        # the first scene is on screen from frame 0 (that frame is the cover on Shorts/Reels)
-        fx = [vfx.FadeOut(XFADE)] if idx == 0 and START_PAD == 0 else [vfx.FadeIn(XFADE), vfx.FadeOut(XFADE)]
         clips.append(vis.with_start(scene_start).with_effects(fx))
 
         ov = s.get("overlay") or {}
-        if idx == 0 and title_card and title_card.get("text"):
+        if layout != "full":
+            # text on the field: below the stage (split), or from a third of the way down (type)
+            if layout == "split":
+                top = stage_h + int(H * 0.04) if H > W else int(H * 0.2)
+            else:
+                top = int(H * 0.3)
+            left = W // 2 if layout == "split" and H <= W else 0    # landscape split: the field is the right half
+            if idx == 0 and title_card and title_card.get("text"):
+                secs = min(float(title_card.get("seconds", 2.8)), content_dur - 0.4)
+                clips += field_text_clips(title_card["text"], "", content_start, secs, field["ink"], top, big=True, left=left)
+                if ov.get("headline"):
+                    clips += field_text_clips(ov["headline"], ov.get("subline", ""), content_start + secs + 0.1,
+                                              content_dur - secs - 0.5, field["ink"], top, big=layout == "type", left=left)
+            elif ov.get("headline"):
+                clips += field_text_clips(ov["headline"], ov.get("subline", ""), content_start + 0.35,
+                                          content_dur - 0.7, field["ink"], top, big=layout == "type", left=left)
+        elif idx == 0 and title_card and title_card.get("text"):
             secs = min(float(title_card.get("seconds", 2.8)), content_dur - 0.4)
             clips += overlay_clips(title_card["text"], "", content_start, secs, big=True)
             if ov.get("headline"):
@@ -514,16 +599,21 @@ def build() -> None:
                          .with_effects([MultiplyVolume(1.1)])
                          .with_start(audio_start))
 
+        # on a field, captions share the headline's left edge (less the caption image's own padding)
+        cap_x = "center"
+        if field:
+            cap_x = (W // 2 if layout == "split" and H <= W else 0) + int(min(W, H) * 0.089) \
+                - max(24, CAPTIONS.get("size", 80) // 4)
         words_file = HERE / "captions" / f"words_{s['id']}.json"
         if CAPTIONS.get("enabled", True) and words_file.exists():
             for ch in json.loads(words_file.read_text()):
                 clips.append(
                     ImageClip(render_caption_png(ch["text"].upper()
                                                  if (DESIGN.get("captions") or {}).get("case", "upper") == "upper"
-                                                 else ch["text"]))
+                                                 else ch["text"], ink=field["ink"] if field else None))
                     .with_duration(max(0.18, ch["end"] - ch["start"]))
                     .with_start(audio_start + ch["start"])
-                    .with_position(("center", CAPTIONS.get("y", 1640)))
+                    .with_position((cap_x, CAPTIONS.get("y", 1640)))
                 )
 
         cursor = content_start + content_dur

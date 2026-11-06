@@ -149,7 +149,7 @@ class TestKitsAndLocal(Isolated):
         self.assertEqual(vj.missing_for(sp), [])
         first_kit = vj.catalog()["kits"][0]
         self.assertEqual(first_kit["name"], "candles")   # workspace kits first
-        self.assertEqual(first_kit["assets"], [{"file": "jar.jpg", "shows": "an amber candle jar"}])
+        self.assertEqual(first_kit["assets"], [{"file": "jar.jpg", "shows": "an amber candle jar", "usedRecently": 0}])
 
     def test_estimate_charges_nothing_for_local_and_own_files(self):
         est = vj.estimate(self.kit_spec())
@@ -228,7 +228,7 @@ class TestKitsAndLocal(Isolated):
         finally:
             vj.subprocess.run = real
             os.environ.pop("VIDEO_JOB_EXPANDER", None)
-        self.assertEqual(seen["kit"]["assets"], [{"file": "jar.jpg", "shows": "an amber candle jar"}])
+        self.assertEqual(seen["kit"]["assets"], [{"file": "jar.jpg", "shows": "an amber candle jar", "usedRecently": 0}])
         self.assertIn("kit.assets", seen["instructions"])
         self.assertEqual(sp["kit"]["name"], "candles")
 
@@ -238,6 +238,82 @@ class TestKitsAndLocal(Isolated):
         n = vj.normalize_spec(sp)
         self.assertEqual(n["scenes"][0]["visual"]["kind"], "file")
         self.assertEqual(n["scenes"][0]["overlay"]["subline"], "small batch")
+
+
+class TestLayoutsAndVariety(TestKitsAndLocal):
+    """A kit whose design session left flat fields: split and type layouts, recent files, sentence case."""
+
+    def setUp(self):
+        super().setUp()
+        kj = self.ws / "kits" / "candles" / "kit.json"
+        k = json.loads(kj.read_text())
+        k["design"] = {"headline": {"case": "sentence"},
+                       "fields": {"amber": {"ground": "#C2410C", "ink": "#FFF7ED"},
+                                  "cream": {"ground": "#FFF7ED", "ink": "#1C1917"}}}
+        kj.write_text(json.dumps(k))
+
+    def test_layouts_are_checked_and_reach_the_build(self):
+        sp = self.kit_spec()
+        sp["scenes"][0]["visual"]["layout"] = "split"
+        sp["scenes"][0]["visual"]["field"] = "cream"
+        sp["scenes"][0]["visual"]["headline"] = "Autumn jars"
+        sp = vj.normalize_spec(sp)
+        self.assertEqual([s["layout"] for s in sp["scenes"]], ["split", "type", "full"])
+        self.assertEqual(sp["scenes"][0]["field"], "cream")
+        job = vj.submit(self.kit_spec() | {"scenes": [dict(sc) for sc in self.kit_spec()["scenes"]]},
+                        max_usd=5, start_worker=False)
+        rows = json.loads((vj.create_project(job, json.loads((vj.job_dir(job["id"]) / "spec.json").read_text()))
+                           / "scenes.json").read_text())["scenes"]
+        self.assertEqual(rows[1]["layout"], "type")
+        self.assertNotIn("layout", rows[0])
+        kit = vj.catalog()["kits"][0]
+        self.assertEqual(kit["layouts"], ["full", "split", "type"])
+        self.assertEqual(kit["fields"], ["amber", "cream"])
+
+    def test_bad_layouts_are_refused_with_the_reason(self):
+        for vis, words in (({"kind": "file", "path": "jar.jpg", "layout": "type"}, "words alone"),
+                           ({"kind": "text", "headline": "Forty hours", "layout": "split"}, "photo or clip"),
+                           ({"kind": "file", "path": "jar.jpg", "layout": "split", "field": "teal"}, "no field"),
+                           ({"kind": "file", "path": "jar.jpg", "layout": "diagonal"}, "layout must be")):
+            sp = self.kit_spec()
+            sp["scenes"][0]["visual"] = vis
+            with self.assertRaises(vj.SpecError) as ctx:
+                vj.normalize_spec(sp)
+            self.assertIn(words, str(ctx.exception))
+
+    def test_a_kit_without_fields_stays_full_frame(self):
+        kj = self.ws / "kits" / "candles" / "kit.json"
+        k = json.loads(kj.read_text()); k.pop("design"); kj.write_text(json.dumps(k))
+        sp = vj.normalize_spec(self.kit_spec())
+        self.assertEqual({s["layout"] for s in sp["scenes"]}, {"full"})
+        sp = self.kit_spec(); sp["scenes"][0]["visual"]["layout"] = "split"
+        with self.assertRaises(vj.SpecError) as ctx:
+            vj.normalize_spec(sp)
+        self.assertIn("isn't set up here", str(ctx.exception))
+
+    def test_flat_form_split_and_field(self):
+        sp = vj.spec_from_scene_args("New jars", ["Poured by hand. :: split: jar.jpg ; Autumn jars @ cream",
+                                                  "Forty hours each. :: text: Forty hours @ amber"], "9:16")
+        sp["kit"] = "candles"
+        sp = vj.normalize_spec(sp)
+        self.assertEqual((sp["scenes"][0]["layout"], sp["scenes"][0]["field"]), ("split", "cream"))
+        self.assertEqual(sp["scenes"][0]["overlay"]["headline"], "Autumn jars")
+        self.assertEqual((sp["scenes"][1]["layout"], sp["scenes"][1]["field"]), ("type", "amber"))
+
+    def test_files_from_recent_videos_are_counted(self):
+        job = vj.submit(self.kit_spec(), max_usd=5, start_worker=False)
+        jf = vj.job_dir(job["id"]) / "job.json"
+        j = json.loads(jf.read_text()); j["phase"] = "done"; jf.write_text(json.dumps(j))
+        self.assertEqual(vj.catalog()["kits"][0]["assets"][0]["usedRecently"], 1)
+
+    def test_title_case_is_refused_when_the_kit_writes_sentence_case(self):
+        sp = self.kit_spec(); sp["title"] = "A Five-Minute Evening Wind-Down"
+        with self.assertRaises(vj.SpecError) as ctx:
+            vj.submit(sp, max_usd=5, start_worker=False)
+        self.assertIn("Title Case", str(ctx.exception))
+        for ok in ("Turas, a daily walk to start", "A five-minute evening wind-down", "Mind yourself, Orla Marie",
+                   "THE LIGHT'S GONE"):
+            self.assertFalse(vj._title_case(ok), ok)
 
 
 class TestCopyAndDesign(Isolated):
