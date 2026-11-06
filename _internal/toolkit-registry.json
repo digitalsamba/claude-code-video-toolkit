@@ -112,8 +112,7 @@
       "audience": "agents other than Claude Code; keeps the metadata.openclaw frontmatter so OpenClaw loads it",
       "note": "Was skills/openclaw-video-toolkit (OpenClaw-only paths and yieldMs polling) until 2026-10-31",
       "created": "2026-04-14",
-      "updated": "2026-11-06",
-      "agentDocsCheck": "tests/python/test_agent_docs.py (CI: .github/workflows/agent-docs.yml) fails when a registry tool, template, component, skill or design source is neither mentioned in this skill nor marked \"agentSkip\": \"<reason>\""
+      "updated": "2026-11-06"
     }
   },
   "designSources": {
