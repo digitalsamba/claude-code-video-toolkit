@@ -1200,7 +1200,8 @@ class Unavailable(RuntimeError):
     def __init__(self, missing: list[dict]):
         self.missing = missing
         super().__init__("this host can't make this spec: " + "; ".join(
-            f"{m['needed_for']} needs {' or '.join(m['env'])}" + (f" ({m['hint']})" if m.get("hint") else "")
+            f"{m['needed_for']} needs {m.get('install') or ' or '.join(m['env'])}"
+            + (f" ({m['hint']})" if m.get("hint") else "")
             for m in missing))
 
 
@@ -2291,6 +2292,31 @@ def _has(envs: list[str]) -> bool:
     return all(os.environ.get(e) for e in envs)
 
 
+def _local_tools() -> dict:
+    """The programs and packages a run needs on this machine, beyond keys. A job needs ffmpeg,
+    ffprobe, moviepy and numpy (the build and QC run here); a session route also needs Node 18+
+    (Remotion). verify_setup.py checks the same things in more detail."""
+    import importlib.util
+    import shutil
+    node = shutil.which("node")
+    node_major = None
+    if node:
+        try:
+            out = subprocess.run([node, "--version"], capture_output=True, text=True, timeout=10).stdout
+            node_major = int(out.strip().lstrip("v").split(".")[0])
+        except Exception:  # noqa: BLE001
+            node_major = None
+    pkgs = {m: importlib.util.find_spec(m) is not None for m in ("moviepy", "numpy")}
+    return {"ffmpeg": bool(shutil.which("ffmpeg")), "ffprobe": bool(shutil.which("ffprobe")),
+            "node": node_major, "python_packages": pkgs}
+
+
+def _job_tools_missing(local: dict) -> list[str]:
+    miss = [b for b in ("ffmpeg", "ffprobe") if not local[b]]
+    miss += [f"python package {m} (uv sync)" for m, ok in local["python_packages"].items() if not ok]
+    return miss
+
+
 def host_capabilities() -> dict:
     """What this host can make right now, from its environment (.env is loaded at import). An agent
     should offer only these; submit refuses the rest before any spend."""
@@ -2307,7 +2333,11 @@ def host_capabilities() -> dict:
         whisper = importlib.util.find_spec("whisper") is not None or importlib.util.find_spec("faster_whisper") is not None
     except Exception:  # noqa: BLE001
         whisper = False
+    local = _local_tools()
     return {
+        "routes": {"job": not _job_tools_missing(local),
+                   "session": not _job_tools_missing(local) and (local["node"] or 0) >= 18},
+        "local": local,
         "visual_kinds": kinds,
         "flux_clouds": flux,
         "voices": voices,
@@ -2323,6 +2353,9 @@ def missing_for(spec: dict) -> list[dict]:
     """What a normalised spec needs that this host doesn't have. Empty means it can run here.
     Captions and R2 are soft (the job runs without them and says so), so they're not listed."""
     out, seen = [], set()
+    for tool in _job_tools_missing(_local_tools()):
+        out.append({"needed_for": "building and checking the video on this host", "env": [], "install": tool,
+                    "hint": "install it, then run uv run tools/verify_setup.py"})
 
     def need(area, name, cloud, what, hint=""):
         key = (area, name, cloud)
@@ -2569,7 +2602,8 @@ def _main(argv: list[str]) -> int:
                     emit_cost_event(0.0, "estimate only, nothing generated")
                 missing = missing_for(normalize_spec(spec))
                 human = _human_estimate(est, source) + "".join(
-                    f"\n  can't run here: {m['needed_for']} needs {' or '.join(m['env'])}" for m in missing)
+                    f"\n  can't run here: {m['needed_for']} needs {m.get('install') or ' or '.join(m['env'])}"
+                    for m in missing)
                 _print({**est, "spec_source": source, "host_missing": missing}, args.json, human)
                 return 0
             job = submit(spec, args.max_usd, spec_source=source, brief=args.brief, publish_to=args.output)

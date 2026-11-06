@@ -78,6 +78,25 @@ class TestHost(Isolated):
         self.assertEqual(res["error_code"], "unavailable")
         self.assertTrue(res["missing"])
 
+    def test_routes_follow_the_local_tools(self):
+        h = vj.host_capabilities()
+        self.assertIn("job", h["routes"])
+        real = vj._local_tools
+        vj._local_tools = lambda: {"ffmpeg": False, "ffprobe": True, "node": None,
+                                   "python_packages": {"moviepy": True, "numpy": True}}
+        try:
+            h = vj.host_capabilities()
+            self.assertEqual(h["routes"], {"job": False, "session": False})
+            os.environ["ELEVENLABS_API_KEY"] = "k"
+            os.environ["IDEOGRAM_API_KEY"] = "k"
+            miss = vj.missing_for(vj.normalize_spec(keys_only_spec()))
+            self.assertEqual([m["install"] for m in miss], ["ffmpeg"])
+            vj._local_tools = lambda: {"ffmpeg": True, "ffprobe": True, "node": 16,
+                                       "python_packages": {"moviepy": True, "numpy": True}}
+            self.assertEqual(vj.host_capabilities()["routes"], {"job": True, "session": False})
+        finally:
+            vj._local_tools = real
+
     def test_skip_switch(self):
         os.environ["VIDEO_JOB_SKIP_HOST_CHECK"] = "1"
         vj.check_host(vj.normalize_spec(spec()))   # no raise

@@ -131,7 +131,9 @@ diagram" in prose gets a silhouette; the chain form is how a diagram is spelled.
 ## What this host can make
 
 `host_capabilities()` reads the environment (`.env` included) and reports which visual kinds, voices and music
-providers this host can run; `catalog` and `presets` carry it as `host`. `estimate` adds `host_missing`, and
+providers this host can run, the local tools a run needs (ffmpeg, ffprobe, moviepy, numpy for a job; Node 18+
+as well for a session route) and so which route levels it can run (`routes`); `catalog` and `presets` carry it as
+`host`. A missing local tool is reported with `install` instead of `env`. `estimate` adds `host_missing`, and
 `submit` raises `Unavailable` (CLI exit 2, `error_code: unavailable`, MCP the same with `missing`) before anything is
 written or spent. Each entry names what needs it, the env vars that would satisfy it, and an alternative (the
 other cloud when that one is set up, an ideogram card instead of a clip, `"music": false`). Captions and R2 links

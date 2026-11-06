@@ -203,7 +203,9 @@ a public URL; the file lands there once the job is done.
 ### What this host can make
 
 Not every host has every provider. `catalog` and `presets` carry `host`: the visual kinds, voices and music
-providers this host has keys or endpoints for (`host.available_visual_kinds`). Offer only those. `estimate`
+providers this host has keys or endpoints for (`host.available_visual_kinds`), the local tools it has
+(`host.local`: ffmpeg, Node, the Python packages), and which route levels it can run (`host.routes.job`,
+`host.routes.session`: a session also needs Node 18+). Offer only those. `estimate`
 lists anything the spec uses that's missing as `host_missing`, and `submit` refuses it (exit 2, `error_code:
 unavailable`, with `missing`: what, which env vars, and an alternative) before anything is written or spent.
 
