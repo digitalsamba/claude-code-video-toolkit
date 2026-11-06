@@ -635,6 +635,9 @@ def _kit_design(kit: dict) -> dict:
     closing = d.get("closing") or {}
     if closing.get("image"):
         closing["image"] = absolute(closing["image"])
+    ground = d.get("ground") or {}
+    if ground.get("image"):
+        ground["image"] = absolute(ground["image"])
     return d
 
 

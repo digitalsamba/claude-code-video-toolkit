@@ -347,12 +347,14 @@ class TestCopyAndDesign(Isolated):
         (kit / "fonts").mkdir(parents=True)
         (kit / "fonts" / "Display.ttf").write_bytes(b"x")
         (kit / "kit.json").write_text(json.dumps({"design": {
+            "ground": {"image": "motifs/m.png"},
             "fonts": {"display": {"path": "fonts/Display.ttf", "weight": "Medium"}},
             "closing": {"lines": [{"text": "Mind yourself."}]}}}))
         os.environ["VIDEO_JOB_WORKSPACE"] = str(ws)
         try:
             sp = vj.normalize_spec({**spec(), "kit": "k"})
             self.assertEqual(sp["design"]["fonts"]["display"]["path"], str((kit / "fonts" / "Display.ttf").resolve()))
+            self.assertEqual(sp["design"]["ground"]["image"], str((kit / "motifs" / "m.png").resolve()))
             job = vj.submit({**spec(), "kit": "k"}, max_usd=5, start_worker=False)
             s2 = json.loads((vj.job_dir(job["id"]) / "spec.json").read_text())
             cfg = json.loads((vj.create_project(job, s2) / "config.json").read_text())

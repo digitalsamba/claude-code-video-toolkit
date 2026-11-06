@@ -68,6 +68,11 @@ ENCODE = CONFIG.get("encode", {})   # {"preset": "medium", "maxMB": null}; maxMB
 #              "lines": [{"text": "Mind yourself.", "font": "display", "size": "display", "color": "#hex"}]}
 #   fields:   {"burgundy": {"ground": "#56140F", "ink": "#FFFCF1"}, "cream": {...}}  flat grounds for the
 #             split and type layouts; a scene names one with "field" (default: the first)
+#   ground:   {"image": ".../motif.png", "opacity": 0.12, "width": 1.3, "at": [0.82, 0.86]}  one line drawing from
+#             the subject (video-design, "A ground from the subject"), drawn in the field's ink on every type
+#             scene: its alpha is the line, `width` its size as a share of the frame width, `at` its centre
+#   closing.image may be a transparent logo: "imageWidth" (share of the frame width) and "tint" (a colour for
+#             its lines, e.g. the card's ink) set it
 # A scene's "layout" (scenes.json) picks how it is set:
 #   full   the visual fills the frame, headline over it (the default, as always)
 #   split  the visual in the top 55% (the stage), a flat field below with the headline set on one left edge
@@ -306,6 +311,33 @@ def field_for(scene: dict) -> dict:
     return {"ground": PALETTE["ink"], "ink": PALETTE["white"]}
 
 
+def ground_png(ink: str) -> str | None:
+    """The design's motif as a full-frame transparent layer: the drawing's lines in `ink` at a low opacity,
+    placed large and cropped by the frame, so it reads behind the words without competing with them."""
+    g = DESIGN.get("ground") or {}
+    src = g.get("image")
+    if not src or not Path(src).exists():
+        return None
+    TEXT_CACHE.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha1(f"ground|{json.dumps(g, sort_keys=True)}|{ink}|{W}x{H}".encode()).hexdigest()[:16]
+    path = TEXT_CACHE / f"ground_{key}.png"
+    if path.exists():
+        return str(path)
+    with Image.open(src) as im:
+        alpha = im.convert("RGBA").getchannel("A")
+    size = int(W * float(g.get("width", 1.3)))
+    alpha = alpha.resize((size, max(1, int(alpha.height * size / alpha.width))), Image.LANCZOS)
+    op = float(g.get("opacity", 0.12))
+    alpha = alpha.point(lambda a: int(a * op))
+    cx, cy = g.get("at") or [0.82, 0.86]
+    full = Image.new("L", (W, H), 0)
+    full.paste(alpha, (int(W * cx - alpha.width / 2), int(H * cy - alpha.height / 2)))   # cropped by the frame
+    layer = Image.new("RGBA", (W, H), (*_rgb(ink), 0))
+    layer.putalpha(full)
+    layer.save(path)
+    return str(path)
+
+
 def field_text_clips(headline: str, subline: str, start: float, duration: float, ink: str, top: int,
                      big: bool = False, left: int = 0) -> list:
     """Headline and subline set on a flat field, on one left edge like a page (the split-stage direction):
@@ -385,12 +417,19 @@ def closing_png() -> str:
     y = int(H * (0.56 if H > W else 0.42))
     if c.get("image") and Path(c["image"]).exists():
         with Image.open(c["image"]) as pic:
-            pic = pic.convert("RGB")
-            pw = W - 2 * margin
+            pic = pic.convert("RGBA")
+            pw = int(W * float(c["imageWidth"])) if c.get("imageWidth") else W - 2 * margin
             ph = int(pic.height * pw / pic.width)
-            ph = min(ph, int(H * 0.3))
+            if ph > int(H * 0.3):
+                ph = int(H * 0.3)
+                pw = int(pic.width * ph / pic.height)
             pic = pic.resize((pw, ph), Image.LANCZOS)
-            img.paste(pic, (margin, y - ph - int(H * 0.05)))
+            if c.get("tint"):
+                # a transparent logo set in the card's ink: its alpha is the mark
+                solid = Image.new("RGBA", pic.size, (*_rgb(c["tint"]), 255))
+                solid.putalpha(pic.getchannel("A"))
+                pic = solid
+            img.paste(pic, (margin, y - ph - int(H * 0.05)), pic)
     base = min(W, H) if H > W else H
     for ln in c.get("lines") or []:
         size = int(base * _CLOSING_SIZES.get(ln.get("size", "title"), 0.06) * (1.0 if H > W else 1.5))
@@ -546,6 +585,9 @@ def build() -> None:
         if layout in ("split", "type"):
             ground = ColorClip((W, H), color=_rgb(field["ground"])).with_duration(scene_dur)
             parts = [ground]
+            motif = ground_png(field["ink"]) if layout == "type" else None
+            if motif:
+                parts.append(ImageClip(motif).with_duration(scene_dur))
             if layout == "split":
                 stage = (W, stage_h) if H > W else (W // 2, H)
                 if asset.suffix.lower() in VIDEO_EXTS:

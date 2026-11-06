@@ -150,7 +150,8 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
   shows; for someone with a kit, a request in a chat becomes a few `file` and `text` scenes, each `file` chosen
   from that list to fit its sentence, with no code written. The kit's `focus` keeps an off-centre subject in a
   crop (a landscape clip in 9:16 keeps only its middle third); a scene can set `"focus": 0-1` itself. The kit
-  also carries the look from its design session (fonts, headline and caption style, a closing card), so you
+  also carries the look from its design session (fonts, headline and caption style, a motif on type scenes, a
+  closing card with the logo), so you
   don't style a kit video: write its words, choose its files and, when the kit lists `layouts`, how each scene is
   set: `full` (the file fills the frame), `split` (the file above the words on a flat field of the kit's colour)
   or `type` (words alone on a field); `"field"` picks the colour, changed only where the story turns. Prefer
