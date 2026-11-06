@@ -33,9 +33,9 @@ class TestHost(Isolated):
         super().setUp()
         os.environ.pop("VIDEO_JOB_SKIP_HOST_CHECK", None)
 
-    def test_bare_host_offers_only_placeholders(self):
+    def test_bare_host_offers_what_needs_no_provider(self):
         h = vj.host_capabilities()
-        self.assertEqual(h["available_visual_kinds"], ["none"])
+        self.assertEqual(h["available_visual_kinds"], ["text", "file", "none"])
         self.assertFalse(h["voices"]["qwen3"]["modal"])
         self.assertIn("host", vj.catalog())
         self.assertIn("host", vj.presets())
@@ -51,7 +51,7 @@ class TestHost(Isolated):
         os.environ["ELEVENLABS_API_KEY"] = "k"
         os.environ["IDEOGRAM_API_KEY"] = "k"
         h = vj.host_capabilities()
-        self.assertEqual(sorted(h["available_visual_kinds"]), ["ideogram", "none"])
+        self.assertEqual(sorted(h["available_visual_kinds"]), ["file", "ideogram", "none", "text"])
         self.assertEqual(vj.missing_for(vj.normalize_spec(keys_only_spec())), [])
         job = vj.submit(keys_only_spec(), max_usd=5, start_worker=False)
         self.assertEqual(job["phase"], "queued")
@@ -100,6 +100,101 @@ class TestHost(Isolated):
     def test_skip_switch(self):
         os.environ["VIDEO_JOB_SKIP_HOST_CHECK"] = "1"
         vj.check_host(vj.normalize_spec(spec()))   # no raise
+
+
+class TestKitsAndLocal(Isolated):
+    """A host with an ElevenLabs key and nothing else, and a kit made once in a session."""
+
+    def setUp(self):
+        super().setUp()
+        os.environ.pop("VIDEO_JOB_SKIP_HOST_CHECK", None)
+        os.environ["ELEVENLABS_API_KEY"] = "k"
+        self.ws = self.tmp / "ws"
+        kit = self.ws / "kits" / "candles"
+        (kit / "assets").mkdir(parents=True)
+        from PIL import Image
+        Image.new("RGB", (64, 96), (200, 120, 40)).save(kit / "assets" / "jar.jpg")
+        (kit / "brand.json").write_text(json.dumps({"colors": {"primary": "#C2410C", "bgDark": "#1C1917"}}))
+        (kit / "kit.json").write_text(json.dumps({
+            "description": "Small candle shop, warm and plain",
+            "voice": {"provider": "elevenlabs", "voiceId": "v"}, "format": "9:16", "music": False}))
+        os.environ["VIDEO_JOB_WORKSPACE"] = str(self.ws)
+
+    def tearDown(self):
+        os.environ.pop("VIDEO_JOB_WORKSPACE", None)
+        super().tearDown()
+
+    def kit_spec(self):
+        return {"title": "New candles", "kit": "candles", "scenes": [
+            {"text": "Our autumn jars are poured by hand, one at a time.",
+             "visual": {"kind": "file", "path": "jar.jpg", "headline": "AUTUMN JARS"}},
+            {"text": "Each one burns for forty hours.", "visual": {"kind": "text", "headline": "40 HOURS"}},
+            {"text": "Order by Friday for the weekend."}]}
+
+    def test_kit_fills_voice_format_palette_and_finds_files(self):
+        sp = vj.normalize_spec(self.kit_spec())
+        self.assertEqual(sp["voice"]["provider"], "elevenlabs")
+        self.assertEqual(sp["palette"]["accent1"], "#C2410C")
+        self.assertFalse(sp["music"]["enabled"])
+        first = sp["scenes"][0]
+        self.assertTrue(first["visual"]["src"].endswith("jar.jpg"))
+        self.assertEqual(first["asset"], "images/01_" + first["slug"] + ".jpg")
+        self.assertEqual(first["overlay"]["headline"], "AUTUMN JARS")
+        # no FLUX here: the text scene and the scene with no visual draw locally, in the kit's ground colour
+        for sc in sp["scenes"][1:]:
+            self.assertEqual(sc["visual"]["source"], "local")
+            self.assertEqual(sc["visual"]["color"], "#1C1917")
+        self.assertEqual(vj.missing_for(sp), [])
+        self.assertEqual([k["name"] for k in vj.catalog()["kits"]][0], "candles")   # workspace kits first
+
+    def test_estimate_charges_nothing_for_local_and_own_files(self):
+        est = vj.estimate(self.kit_spec())
+        vis = [r for r in est["breakdown"] if r["step"] == "visuals"]
+        self.assertEqual(vis[0]["count"], 3)
+        self.assertEqual(vis[0]["usd"], 0.0)
+
+    def test_visuals_step_copies_and_draws_without_a_tool(self):
+        job = vj.submit(self.kit_spec(), max_usd=5, start_worker=False)
+        spec = json.loads((vj.job_dir(job["id"]) / "spec.json").read_text())
+        job["project_dir"] = str(vj.create_project(job, spec))
+        proj = vj._project(job)
+        calls = []
+        real = vj.run_tool
+        vj.run_tool = lambda *a, **k: calls.append(a) or {"returncode": 1}
+        try:
+            res = vj.step_visuals(job, spec)
+        finally:
+            vj.run_tool = real
+        self.assertEqual(calls, [])
+        self.assertEqual(len(res["assets"]), 3)
+        from PIL import Image
+        bg = Image.open(proj / spec["scenes"][1]["asset"])
+        self.assertEqual(bg.size, (720, 1280))
+        r, g, b = bg.resize((1, 1)).getpixel((0, 0))
+        self.assertLess(abs(r - 0x1C) + abs(g - 0x19) + abs(b - 0x17), 12)
+        vj.cancel(job["id"])
+
+    def test_explicit_backgrounds_flux_still_needs_flux(self):
+        sp = self.kit_spec()
+        sp["backgrounds"] = "flux"
+        miss = vj.missing_for(vj.normalize_spec(sp))
+        self.assertTrue(any("FLUX" in m["needed_for"] for m in miss))
+
+    def test_missing_file_and_unknown_kit_are_spec_errors(self):
+        sp = self.kit_spec()
+        sp["scenes"][0]["visual"]["path"] = "nope.jpg"
+        with self.assertRaises(vj.SpecError):
+            vj.normalize_spec(sp)
+        with self.assertRaises(vj.SpecError) as ctx:
+            vj.normalize_spec({**self.kit_spec(), "kit": "nobody"})
+        self.assertIn("candles", str(ctx.exception))
+
+    def test_flat_form_file_scene(self):
+        sp = vj.spec_from_scene_args("Jars", ["Poured by hand. :: file: jar.jpg ; AUTUMN JARS ; small batch"], "9:16")
+        sp["kit"] = "candles"
+        n = vj.normalize_spec(sp)
+        self.assertEqual(n["scenes"][0]["visual"]["kind"], "file")
+        self.assertEqual(n["scenes"][0]["overlay"]["subline"], "small batch")
 
 
 if __name__ == "__main__":

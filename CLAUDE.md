@@ -613,8 +613,10 @@ Trims NotebookLM visuals, keeps full audio, bridges with freeze frame, adds bran
 `tools/video_job.py` is the async entrypoint for agents that can't babysit a render: `submit --spec spec.json
 --max-usd 1.00` returns in seconds with a job id and estimate, a detached worker runs voiceover → visuals →
 captions → build → `qc.py --fix`, and `status JOB_ID --json` / `result JOB_ID --json` read state from disk from
-any fresh process. The spec is scenes with narration text and one visual each (`ltx`, `ideogram`, `flux`,
-`none`); the compositor is `concept-explainer-short` in 9:16 or 16:9. `estimate` is a pure function of the
+any fresh process. The spec is scenes with narration text and one visual each (`ltx`, `ideogram`, `flux`, `text`,
+`file` for the person's own photo or clip, `none`), optionally naming a **kit** (`kits/README.md`: a brand, voice
+and photo folder set up once in a session, so later videos are one prompt); `text` scenes fall back to a local
+brand-colour background on a host without FLUX; the compositor is `concept-explainer-short` in 9:16 or 16:9. `estimate` is a pure function of the
 spec and the module's `PRICES` table, `submit` refuses over the cap before any spend, one job runs at a time,
 and receipts land in `logs/media-spend.log` as JSON lines (or the agent's workspace with `VIDEO_JOB_WORKSPACE`). A job that dies part-way keeps what
 it bought: `resume JOB_ID` redoes only the missing outputs. `status` carries timestamped `events`, `warnings` and
