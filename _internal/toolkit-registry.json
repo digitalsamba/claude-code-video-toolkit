@@ -437,13 +437,12 @@
     },
     "highlights": {
       "path": "tools/highlights.py",
-      "description": "Assemble sentence-aware transcript highlights and shorten internal pauses",
-      "usage": "uv run tools/highlights.py --help",
+      "description": "Select complete transcript sentences, keep the last repeated take, shorten pauses and render highlights; emit cutdown --segment arguments on the source timeline",
+      "usage": "uv run tools/highlights.py --video input.mp4 --transcript words.json --output highlights.mp4 [--seconds 45] [--keep first|last] [--dry-run]",
       "status": "beta",
       "created": "2026-10-31",
       "category": "utility",
-      "updated": "2026-11-03",
-      "documentation": "docs/highlights.md"
+      "updated": "2026-11-07"
     },
     "image_edit": {
       "path": "tools/image_edit.py",

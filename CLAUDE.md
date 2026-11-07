@@ -502,6 +502,22 @@ Pure ffmpeg, works on any MP4. Outputs land beside the input as `<name>-9x16.mp4
 - `--overlay frame.png` lays a full-frame PNG (with transparency) on top, e.g. a branded header
   band made with Ideogram or by hand.
 
+### Transcript highlights
+
+`highlights.py` selects complete sentences, keeps the last repeated take (`--keep first` overrides),
+and shortens long pauses. It runs by default and overwrites its output. Use `--dry-run` to review
+the JSON plan without writes. `--transcript` must cover the **whole source video timeline**;
+per-scene captions are relative to their audio file and cannot be passed without offsetting them.
+`--transcribe` uses the existing optional Whisper extra locally and may download model weights.
+
+```bash
+uv run tools/highlights.py --video input.mp4 --transcript words.json --seconds 45 --keyword launch --output highlights.mp4 --save-plan edit.json
+```
+
+The plan's `cutdownArgs` array contains repeated `--segment START-END` arguments. Pass them to
+`cutdown.py --input input.mp4 --platform shorts` to crop the selected ranges directly from the
+original video. Review the selection before publishing; keyword ranking is a first editing pass.
+
 ### Watermark Removal
 
 ```bash
