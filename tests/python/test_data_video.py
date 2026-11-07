@@ -1,4 +1,5 @@
 import json
+import subprocess
 import shutil
 import sys
 import tempfile
@@ -9,7 +10,16 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
 from data_video import chart_frames, dataset, prepare, render
-from media_ops import probe, run
+from data_video import text_overlay
+
+
+def run(command):
+    return subprocess.run(list(map(str, command)), check=True, capture_output=True).stdout
+
+
+def probe(path):
+    info = json.loads(run(['ffprobe', '-v', 'error', '-show_streams', '-show_format', '-of', 'json', path]))
+    return {**info, 'duration': float(info['format']['duration'])}
 
 
 class DataVideoTests(unittest.TestCase):
@@ -20,12 +30,12 @@ class DataVideoTests(unittest.TestCase):
                                     'unit': 'users', 'width': 320, 'height': 180, 'fps': 10, 'durationSeconds': 1}))
         return spec
 
-    def test_frames_animate_and_narration_uses_actual_values(self):
+    def test_frames_animate_without_derived_narration(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             report = prepare(self.fixture(root))
-            self.assertIn('10 in Jan, 20 in Feb', report['narrationText'])
-            self.assertIn('Change: -3 users', report['narrationText'])
+            self.assertNotIn('narrationText', report)
+            self.assertEqual(report['headline'], '')
             frames = list(chart_frames(report))
             self.assertEqual(len(frames), 10)
             self.assertEqual(frames[0].shape, (180, 320, 3))
@@ -52,6 +62,7 @@ class DataVideoTests(unittest.TestCase):
             run(['ffmpeg', '-v', 'error', '-f', 'lavfi', '-i', 'sine=duration=1.4', narration])
             report = prepare(self.fixture(root, 'bar'), narration)
             render(report, root / 'chart.mp4')
+            render(report, root / 'chart.mp4')  # Rerender replaces a completed output.
             result = probe(root / 'chart.mp4')
             self.assertAlmostEqual(result['duration'], 1.4, delta=.15)
             self.assertTrue(any(s['codec_type'] == 'audio' for s in result['streams']))
@@ -61,6 +72,51 @@ class DataVideoTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Dataset changed'):
                 render(report, root / 'stale.mp4')
             self.assertFalse((root / 'stale.mp4').exists())
+
+
+    def test_brand_and_author_text_are_separate_overlay_pixels(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            spec = self.fixture(root)
+            data = json.loads(spec.read_text())
+            data.update(source='Source: release metrics', headline='42 active users')
+            spec.write_text(json.dumps(data))
+            report = prepare(spec, brand='digital-samba')
+            self.assertEqual(report['theme']['palette'][0], '#F06859')
+            self.assertIn('Inter', report['theme']['fontFamily'])
+            self.assertTrue(Path(report['theme']['fontPath']).is_file())
+            overlay = np.asarray(text_overlay(report))
+            self.assertGreater(overlay[:35, :, 3].sum(), 0)
+            self.assertGreater(overlay[165:, :, 3].sum(), 0)
+            self.assertEqual(report['headline'], '42 active users')
+            self.assertNotIn('narrationText', report)
+            self.assertEqual(len(report['datasetSha256']), 64)
+
+    def test_brand_path_traversal_and_unknown_brand_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            spec = self.fixture(Path(directory))
+            for brand in ('../default', 'not-a-real-brand'):
+                with self.assertRaises((ValueError, OSError)):
+                    prepare(spec, brand=brand)
+
+    @unittest.skipUnless(shutil.which('ffmpeg'), 'FFmpeg required')
+    def test_example_delegates_to_shared_renderer_and_dry_run_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            spec = self.fixture(root)
+            output = root / 'example.mp4'
+            example = Path(__file__).resolve().parents[2] / 'examples/data-viz-chart/build.py'
+            command = [sys.executable, str(example), '--spec', str(spec), '--output', str(output), '--brand', 'digital-samba']
+            result = subprocess.run([*command, '--dry-run'], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(output.exists())
+            result = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(json.loads(result.stdout)['executed'])
+            self.assertAlmostEqual(probe(output)['duration'], 1, delta=.15)
+            report = subprocess.run([sys.executable, str(example), '--dry-run'], capture_output=True, text=True)
+            self.assertEqual(report.returncode, 0, report.stderr)
+            self.assertEqual(json.loads(report.stdout)['durationSeconds'], 15)
 
 
 class CommandLineTests(unittest.TestCase):
