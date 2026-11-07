@@ -1052,6 +1052,15 @@
       },
       "created": "2026-10-31",
       "updated": "2026-11-06"
+    },
+    "data_video": {
+      "path": "tools/data_video.py",
+      "description": "Shared Matplotlib data and MoviePy/Pillow text renderer used by examples/data-viz-chart; author-written overlays and narration, brand colours/fonts and dataset provenance",
+      "usage": "uv run tools/data_video.py --spec chart.json --brand digital-samba --output chart.mp4 [--narration narration.wav] [--dry-run]",
+      "status": "beta",
+      "created": "2026-10-31",
+      "category": "utility",
+      "updated": "2026-11-07"
     }
   },
   "optionalComponents": {
