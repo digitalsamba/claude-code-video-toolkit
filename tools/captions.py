@@ -38,9 +38,11 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
+import math
 import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 from pacing import spoken_text
@@ -149,6 +151,80 @@ def to_remotion(words: list[dict]) -> list[dict]:
     return out
 
 
+def export_subtitles(words: object, *, format: str = 'srt', max_words: int = 7) -> str:
+    """Group Caption[] at sentence ends, pauses over 600ms, or the word limit."""
+    if format not in ('srt', 'vtt') or type(max_words) is not int or not 1 <= max_words <= 30 or not isinstance(words, list):
+        raise ValueError('Use srt/vtt, a word limit of 1-30 and a caption array')
+    previous = 0
+    validated = []
+    for word in words:
+        if not isinstance(word, dict) or not isinstance(word.get('text'), str) or not word['text'].strip():
+            raise ValueError('Caption words require nonempty text')
+        start, end = word.get('startMs'), word.get('endMs')
+        try:
+            valid = all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in (start, end))
+        except OverflowError:
+            valid = False
+        if not valid or start < previous or end < start:
+            raise ValueError('Caption times must be finite, nonnegative, ordered and non-overlapping')
+        previous = end
+        validated.append({**word, 'text': ' '.join(word['text'].split())})
+
+    def timestamp(value):
+        seconds, millis = divmod(round(value), 1000)
+        minutes, seconds = divmod(seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+        return f'{hours:02}:{minutes:02}:{seconds:02}{"," if format == "srt" else "."}{millis:03}'
+
+    groups, pending = [], []
+    for index, word in enumerate(validated):
+        pending.append(word)
+        sentence_end = re.search(r'[.?!。！？]["\'”’\)\]]*$', word['text'])
+        pause = index + 1 < len(validated) and validated[index + 1]['startMs'] - word['endMs'] > 600
+        if sentence_end or pause or len(pending) >= max_words:
+            groups.append(pending)
+            pending = []
+    if pending:
+        groups.append(pending)
+    blocks = []
+    for group in groups:
+        content = ' '.join(word['text'] for word in group).replace('-->', '→')
+        if format == 'vtt':
+            content = content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        start = group[0]['startMs']
+        end = max(start + 1, group[-1]['endMs'])
+        blocks.append(f'{len(blocks) + 1}\n{timestamp(start)} --> {timestamp(end)}\n{content}')
+    return ('WEBVTT\n\n' if format == 'vtt' else '') + '\n\n'.join(blocks) + ('\n' if blocks else '')
+
+
+def write_text_atomic(path: Path, content: str) -> None:
+    """Leave the previous output intact if the replacement cannot be written."""
+    fd, name = tempfile.mkstemp(prefix=f'.{path.stem}-', suffix=path.suffix, dir=path.parent)
+    os.close(fd)
+    temporary = Path(name)
+    try:
+        temporary.write_text(content, encoding='utf-8', newline='\n')
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def write_caption_outputs(out: Path, captions: list, *, srt=False, vtt=False, max_words=7, write_json=True) -> dict:
+    outputs = {}
+    # Validate and serialize every format before replacing any file.
+    if write_json:
+        outputs[out] = json.dumps(captions, ensure_ascii=False, allow_nan=False, indent=1) + '\n'
+    paths = {'captions': str(out)}
+    for format, enabled in [('srt', srt), ('vtt', vtt)]:
+        if enabled:
+            target = out.with_name(out.name[:-len(SUFFIX)] + '.' + format)
+            outputs[target] = export_subtitles(captions, format=format, max_words=max_words)
+            paths[format] = str(target)
+    for path, content in outputs.items():
+        write_text_atomic(path, content)
+    return paths
+
+
 # ─── CLI ────────────────────────────────────────────────────
 
 def collect_inputs(paths: list[str]) -> list[Path]:
@@ -156,7 +232,7 @@ def collect_inputs(paths: list[str]) -> list[Path]:
     for p in map(Path, paths):
         if p.is_dir():
             files += sorted(f for f in p.iterdir() if f.suffix.lower() in AUDIO_EXTS)
-        elif p.is_file():
+        elif p.is_file() and (p.suffix.lower() in AUDIO_EXTS or p.name.endswith(SUFFIX)):
             files.append(p)
         else:
             sys.exit(f"Error: not found: {p}")
@@ -165,7 +241,7 @@ def collect_inputs(paths: list[str]) -> list[Path]:
     return files
 
 
-def main() -> None:
+def main(argv=None) -> None:
     ensure_utf8_output()  # Windows: piped stdout defaults to cp1252
     from voiceover import ELEVENLABS_STT_MODELS, UrlSafeHelpFormatter, resolve_model_id
 
@@ -174,7 +250,7 @@ def main() -> None:
         formatter_class=UrlSafeHelpFormatter,
         epilog=__doc__,
     )
-    ap.add_argument("inputs", nargs="+", help="Audio files and/or directories of them")
+    ap.add_argument("inputs", nargs="+", help="Audio files/directories, or existing *.captions.json for offline subtitle export")
     ap.add_argument("--engine", choices=["auto", "scribe", "whisper"], default="auto",
                     help="Transcription engine (default: auto = scribe if ELEVENLABS_API_KEY is set, else whisper)")
     ap.add_argument("--script", help="Script text to align to (single input only; default: sibling <name>.txt)")
@@ -185,10 +261,18 @@ def main() -> None:
     ap.add_argument("--scribe-model", default="scribe_v2", choices=ELEVENLABS_STT_MODELS,
                     help="Scribe STT model (default: scribe_v2)")
     ap.add_argument("--json", action="store_true", help="Emit a machine-readable JSON summary on stdout")
-    args = ap.parse_args()
+    ap.add_argument('--srt', action='store_true', help='Also write a sibling <name>.srt subtitle file')
+    ap.add_argument('--vtt', action='store_true', help='Also write a sibling <name>.vtt subtitle file')
+    ap.add_argument('--max-words', type=int, default=7, help='Maximum words per subtitle cue (1-30, default 7); sentences and pauses also split cues')
+    args = ap.parse_args(argv)
+    if not 1 <= args.max_words <= 30:
+        ap.error('--max-words must be between 1 and 30')
 
     files = collect_inputs(args.inputs)
-    if args.script and len(files) != 1:
+    audio_files = [p for p in files if not p.name.endswith(SUFFIX)]
+    if len(audio_files) != len(files) and not (args.srt or args.vtt):
+        ap.error('Existing caption JSON needs --srt or --vtt')
+    if args.script and (len(files) != 1 or not audio_files):
         sys.exit("Error: --script needs exactly one audio input")
     if args.script and args.no_script:
         sys.exit("Error: --script and --no-script are mutually exclusive")
@@ -202,16 +286,29 @@ def main() -> None:
         pass
     api_key = os.getenv("ELEVENLABS_API_KEY")
     engine = args.engine
+    if not audio_files:
+        engine = None
     if engine == "auto":
         engine = "scribe" if api_key else "whisper"
     if engine == "scribe" and not api_key:
         sys.exit("Error: ELEVENLABS_API_KEY not set (or use --engine whisper)")
     whisper_model = load_whisper(args.whisper_model) if engine == "whisper" else None
     scribe_model = resolve_model_id(args.scribe_model)
-    print(f"engine: {engine}", file=sys.stderr)
+    if engine:
+        print(f"engine: {engine}", file=sys.stderr)
 
     results = []
     for audio in files:
+        if audio.name.endswith(SUFFIX):
+            try:
+                captions = json.loads(audio.read_text(encoding='utf-8-sig'))
+                paths = write_caption_outputs(audio, captions, srt=args.srt, vtt=args.vtt,
+                                              max_words=args.max_words, write_json=False)
+                results.append({**paths, 'words': len(captions)})
+            except (ValueError, OSError) as error:
+                print(f'  [error] {audio.name}: {error}', file=sys.stderr)
+                results.append({'captions': str(audio), 'error': str(error)})
+            continue
         out = audio.with_name(audio.stem + SUFFIX)
         script_path = None
         if not args.no_script:
@@ -239,7 +336,12 @@ def main() -> None:
             if script_words:
                 words, match_ratio = align(script_words, heard)
 
-        out.write_text(json.dumps(to_remotion(words), indent=1) + "\n", encoding="utf-8")
+        try:
+            paths = write_caption_outputs(out, to_remotion(words), srt=args.srt, vtt=args.vtt, max_words=args.max_words)
+        except (ValueError, OSError) as error:
+            print(f'  [error] {audio.name}: {error}', file=sys.stderr)
+            results.append({'audio': str(audio), 'error': str(error)})
+            continue
         source = f"aligned to {script_path.name}" if match_ratio is not None else "raw transcript"
         line = f"  {out.name}: {len(words)} words, {source}"
         if match_ratio is not None:
@@ -249,7 +351,7 @@ def main() -> None:
         print(line, file=sys.stderr)
         results.append({
             "audio": str(audio),
-            "captions": str(out),
+            **paths,
             "words": len(words),
             "script": str(script_path) if match_ratio is not None else None,
             "matchRatio": round(match_ratio, 3) if match_ratio is not None else None,
