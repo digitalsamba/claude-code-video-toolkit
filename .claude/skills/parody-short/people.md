@@ -108,6 +108,15 @@ uv run tools/ltx_extend.py --input people/sam.mp4 --at 4.8 --times 2 --output pe
   --prompt "Static camera, locked off tripod ... the same man keeps laughing, then settles back ... no text"
 ```
 
+Two things decide whether a continuation keeps the person (out of 21 extensions, 2026-11-07):
+
+- **Never continue from a close-up.** A frame where the person has leaned right into the lens has no room left in
+  it, and LTX invents a new scene: 2 of 2 cut to a stranger in a studio. Pick a frame from before the lean.
+- **Don't say "tripod" in a webcam scene.** "Locked off tripod" got a tripod and a camera drawn into the frame, in
+  a studio. For webcam shots write "a fixed webcam view that never moves: the framing stays exactly the same, no
+  zoom, no pull back, no cuts". A continuation also tends to pull back to a wide shot; "a close medium shot of
+  his upper body" holds it.
+
 It takes the frame at `--at` (the last good one), runs image-to-video from it and joins the two with a short
 cross-fade; `--times 2` chains another. The seam doesn't show, because the continuation starts from the clip's own
 frame. Contact-sheet the result: a continuation can drift or cut at its own end, so set `hold` to the shot length
