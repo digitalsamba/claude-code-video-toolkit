@@ -86,16 +86,6 @@ Playwright-based web app exploration and analysis:
 - Color contrast guidelines
 - Audio description patterns
 
-### Frontend-Design Skill Rework
-The current frontend-design skill is generic web-focused. Rework to be Remotion/video-specific:
-- Frame-based animation patterns (not CSS transitions)
-- Remotion primitives: `interpolate`, `spring`, `Sequence`, `Series`
-- Video-appropriate motion (30fps constraints, render performance)
-- Slide component patterns (TitleSlide, StatsSlide, etc.)
-- Visual narrative arc across scenes
-- Color/typography choices that work at video resolution
-- Remove web-specific guidance (responsive, hover states, etc.)
-
 ---
 
 ## Templates

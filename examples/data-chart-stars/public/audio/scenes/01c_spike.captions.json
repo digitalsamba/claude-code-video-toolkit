@@ -1,0 +1,93 @@
+[
+ {
+  "text": "Then,",
+  "startMs": 580,
+  "endMs": 900,
+  "timestampMs": 740,
+  "confidence": null
+ },
+ {
+  "text": " at",
+  "startMs": 1380,
+  "endMs": 1440,
+  "timestampMs": 1410,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 1480,
+  "endMs": 1560,
+  "timestampMs": 1520,
+  "confidence": null
+ },
+ {
+  "text": " end",
+  "startMs": 1600,
+  "endMs": 1740,
+  "timestampMs": 1670,
+  "confidence": null
+ },
+ {
+  "text": " of",
+  "startMs": 1800,
+  "endMs": 1880,
+  "timestampMs": 1840,
+  "confidence": null
+ },
+ {
+  "text": " March,",
+  "startMs": 1940,
+  "endMs": 2360,
+  "timestampMs": 2150,
+  "confidence": null
+ },
+ {
+  "text": " four",
+  "startMs": 2860,
+  "endMs": 3020,
+  "timestampMs": 2940,
+  "confidence": null
+ },
+ {
+  "text": " hundred",
+  "startMs": 3060,
+  "endMs": 3360,
+  "timestampMs": 3210,
+  "confidence": null
+ },
+ {
+  "text": " stars",
+  "startMs": 3440,
+  "endMs": 3760,
+  "timestampMs": 3600,
+  "confidence": null
+ },
+ {
+  "text": " arrived",
+  "startMs": 3820,
+  "endMs": 4180,
+  "timestampMs": 4000,
+  "confidence": null
+ },
+ {
+  "text": " in",
+  "startMs": 4240,
+  "endMs": 4320,
+  "timestampMs": 4280,
+  "confidence": null
+ },
+ {
+  "text": " three",
+  "startMs": 4380,
+  "endMs": 4620,
+  "timestampMs": 4500,
+  "confidence": null
+ },
+ {
+  "text": " days.",
+  "startMs": 4680,
+  "endMs": 5020,
+  "timestampMs": 4850,
+  "confidence": null
+ }
+]

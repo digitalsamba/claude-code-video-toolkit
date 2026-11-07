@@ -48,8 +48,28 @@ Ordered roughly by priority. Each is sized to one session or one PR.
       and gets the same submit/status/result flow. Covers only screens a kit already rebuilds. Until then
       Lugh writes a release brief (`memory/release-videos/release-<N>.md` on longarm) and a Claude Code
       session builds from it; build this once a few briefs show which scenes recur.
+- [x] **`<DataChart>` in `lib/components`.** `LineChart` (narration keyframes, growing y axis, cue-timed bands,
+      several series with a legend), `BarChart`, `Counter` and `SplitBar`, themed from a brand
+      (`examples/data-chart-stars`, #175 and the second cut). Still open: CSV loading.
+- [ ] **Data segments for recurring internal reviews.** One JSON per metric, refreshed by a fetch script, rendered
+      at two zooms from the same components: a **quarterly** view for townhalls (the whole period, trend and
+      milestones) and a **monthly** view for KPI reviews (one month by week or day, against the month before).
+      Only the narration lines that carry numbers get re-voiced, and the scene's data checks fail the render
+      when a refreshed number no longer matches what is said.
 - [ ] **`video_job.py wait`**: block up to a few minutes streaming stage lines, for agents with a
       per-call time limit.
+- [ ] **Music that follows the picture.** Today music only matches the video's length (`--duration`), and
+      `pick_music.py` only checks after the fact whether a take happens to have a note on the act cuts. Three
+      ways, cheapest first:
+      1. *Picture to the music:* snap the flexible frames (act cuts, line entrances; never narration) to the
+         chosen take's beats within ±0.3s, from the onsets `pick_music.py` already finds.
+      2. *Tempo from the timeline:* choose the BPM so the act cuts fall on bar lines, or move the cuts to the
+         bars. Measure first how closely ACE-Step keeps the BPM it's asked for.
+      3. *The music turns when the picture turns:* the colour rule for sound. Generate the bed, then
+         `music_gen.py --repaint` a short window round each act cut (times from `design.md`'s acts) with a
+         prompt for the change. Least proven: repaint seams are unheard.
+      Judge each with `audition.py` renders, by ear, not by score. Pilot: `projects/still-wheel-hour` (no
+      voice, four acts with clear turns).
 
 ---
 
@@ -154,7 +174,7 @@ Open items moved to Phase 4 below.
 | elevenlabs | stable | Audio generation |
 | ffmpeg | beta | Asset conversion |
 | playwright-recording | beta | Browser demo capture |
-| frontend-design | stable | Visual design refinement |
+| video-design | beta | Colour by act, type and chart rules, design.md handoff from any design source, contact-sheet critique |
 | qwen-edit | stable | AI image editing prompting patterns |
 | runpod | stable | Cloud GPU setup, Docker images, endpoint management |
 | modal | beta | Alternative cloud GPU provider — faster cold starts, every GPU tool deployed |
@@ -189,7 +209,7 @@ Open items moved to Phase 4 below.
 |----------|-------|-------|
 | Templates | 5 | sprint-review, sprint-review-v2, product-demo, concept-explainer-short, ds-release-notes |
 | Brands | 2 | default, digital-samba |
-| Skills | 14 | remotion, remotion-official, elevenlabs, ffmpeg, playwright-recording, frontend-design, qwen-edit, runpod, acestep, ltx2, moviepy, ideogram4, synthetic-ui-demo, video-toolkit |
+| Skills | 14 | remotion, remotion-official, elevenlabs, ffmpeg, playwright-recording, video-design, qwen-edit, runpod, acestep, ltx2, moviepy, ideogram4, synthetic-ui-demo, video-toolkit |
 | Tools | 31 | voiceover, qwen3_tts, sixtydb_tts, music, music_gen, sfx, redub, addmusic, sync_timing, qc, align_captions, captions, cutdown, dewatermark, locate_watermark, notebooklm_brand, image_edit, upscale, flux2, ideogram4, ltx2, chain_video, sadtalker, soulx, verify_setup, modal_setup, youtube_upload, voice_prosody, pick_takes, video_job, video_mcp |
 | Commands | 15 | setup, video, brand, template, skills, contribute, record-demo, generate-voiceover, scene-review, design, versions, redub, voice-clone, thumbnail, publish |
 | Components | 14 | AnimatedBackground, SlideTransition, Label, Vignette, FilmGrain, LogoWatermark, SplitScreen, NarratorPiP, Captions, Envelope, PointingHand, MazeDecoration, Stage, Cursor |

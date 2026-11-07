@@ -412,12 +412,12 @@ def probe_video(path: Path) -> dict | None:
     }
 
 
-def check_render(render: Path, report: Report, target: float, info: dict | None) -> dict | None:
+def check_render(render: Path, report: Report, target: float, info: dict | None, *, allow_silent: bool = False) -> dict | None:
     if not render.exists():
         report.add("error", "render", f"{render} not found")
         return None
     if info and not info["has_audio"]:
-        report.add("error", "render", f"{render.name}: no audio track")
+        report.add("info" if allow_silent else "error", "render", f"{render.name}: no audio track" + (' (intentional silent output)' if allow_silent else ''))
         return None
     m = measure_loudness(render)
     if not m:
@@ -425,7 +425,7 @@ def check_render(render: Path, report: Report, target: float, info: dict | None)
         return None
     if m["lufs"] is None:
         # loudnorm reports -inf for digital silence
-        report.add("error", "render", f"{render.name}: the audio track is silent")
+        report.add("info" if allow_silent else "error", "render", f"{render.name}: the audio track is silent")
         return None
     report.data["render"] = {"file": str(render), "lufs": m["lufs"], "true_peak": m["true_peak"], "lra": m["lra"]}
     if m["lufs"] < target - 2:
@@ -802,6 +802,7 @@ Examples:
                              "render to <name>.loudnorm.mp4")
     parser.add_argument("--skip-loudness", action="store_true", help="Skip the (slower) loudness pass")
     parser.add_argument("--skip-frames", action="store_true", help="Skip the render's frame checks")
+    parser.add_argument('--allow-silent', action='store_true', help='Explicitly accept intentional silent video; picture checks still run')
     parser.add_argument("--max-still", type=float, default=MAX_STILL_SECONDS,
                         help=f"Seconds with nothing changing before a render warns "
                              f"(default: {MAX_STILL_SECONDS:.0f})")
@@ -842,7 +843,7 @@ Examples:
     if args.render:
         render = Path(args.render)
         info = probe_video(render) if render.exists() else None
-        render_m = check_render(render, report, args.target_lufs, info)
+        render_m = check_render(render, report, args.target_lufs, info, allow_silent=args.allow_silent)
         if info and not args.skip_frames:
             check_frames(render, info, report, args.max_still)
 
