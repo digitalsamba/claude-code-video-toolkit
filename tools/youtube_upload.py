@@ -294,6 +294,10 @@ def build_request_body(args, description: str, tags: list[str]) -> dict:
         "license": args.license,
         "embeddable": True,
     }
+    if args.synthetic_media:
+        # YouTube's "altered or synthetic content" disclosure: required when realistic people, places or events
+        # were generated or altered (an AI-animated cast, a cloned voice saying things the person didn't)
+        status["containsSyntheticMedia"] = True
     if args.publish_at:
         # Scheduled publish REQUIRES privacyStatus == private at insert time.
         status["privacyStatus"] = "private"
@@ -561,6 +565,9 @@ Note: until your OAuth app is Google-verified, uploads are force-locked to priva
     parser.add_argument("--captions-language", default="en", help="Caption language code (default: en)")
     parser.add_argument("--playlist", help="Playlist ID to add the video to")
     parser.add_argument("--made-for-kids", action="store_true", help="Set selfDeclaredMadeForKids")
+    parser.add_argument("--synthetic-media", action="store_true",
+                        help="Disclose realistic AI-generated or altered content (status.containsSyntheticMedia): "
+                             "an animated AI cast, generated people, a cloned voice")
     parser.add_argument("--default-language", help="snippet.defaultLanguage code, e.g. en")
     parser.add_argument(
         "--license", choices=("youtube", "creativeCommon"), default="youtube",
