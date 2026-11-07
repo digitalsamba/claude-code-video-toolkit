@@ -106,7 +106,15 @@ import { LivingPhoto } from '../../../lib/components';
 
 - Wrap it in a `<Sequence>` that starts at its shot, or the clip plays from frame 0 of the composition and is
   over before it appears.
-- It holds the clip's last good frame (`hold`, default 145) for as long as the shot runs.
+- After its last good frame (`hold`, default 145) it **settles**: it drifts slowly back and forth over the clip's
+  last second with a slight push-in, for as long as the shot runs. A dead hold read as a pause in the video's flow
+  (a clip is ~5 s, a shot 7-11 s). `after="freeze"` keeps the old dead hold, for a freeze-frame gag.
+- `rate` below 1 stretches a clip across a long shot (b-roll at 0.5 is natural slow motion).
+- **No still photos in a call grid.** A tile that never moves looks broken next to moving ones. Give every cast
+  member an idle clip (listening, blinking, small slow nods; one LTX clip each) and use it wherever they aren't
+  the one acting.
+- `qc.py --render` warns "motion stops dead" when part of the frame was moving for 3 s and then stops while the
+  video goes on: the check for exactly this.
 - Key props and stamps (a cigar, a "MERGED ✓", a freeze-frame title) to the hold frame, so they land on the still
   face rather than a moving one.
 - Render to a new file name every time; the person may still want the previous cut.

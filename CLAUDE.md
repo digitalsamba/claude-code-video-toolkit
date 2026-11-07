@@ -267,6 +267,9 @@ skip):
 - **Still stretches:** more than 3s (`--max-still`) where nothing on screen changes. The comparison is per
   tile, so a moving cursor or a talking-head PiP counts as change. The last 3s may hold.
 - **Black gaps:** black for 0.5s or more mid-video, usually a gap between sequences or media that didn't load.
+- **Motion that stops dead:** part of the frame moving for 3s or more, then frozen for 2s or more while the rest of the
+  video goes on. Usually an image-to-video clip that ran out and held its last frame; `LivingPhoto` settles instead
+  of freezing. The whole-frame still check misses it because something else is always moving.
 - **Empty first frame:** background only. A warning on vertical and square renders, whose frame 0 is
   the Shorts/Reels cover, and info on landscape renders, which get a custom thumbnail.
 - **Audio:** a missing or silent audio track is an error. `--allow-silent` makes it info, for a deliverable that is
