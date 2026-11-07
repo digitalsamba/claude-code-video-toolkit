@@ -1,0 +1,14 @@
+{
+  "phrases": {
+    "01a_intro": 20,
+    "01b_slow": 140,
+    "01c_spike": 298,
+    "01d_today": 478,
+    "02a_march": 20,
+    "02b_october": 129
+  },
+  "scenes": {
+    "stars": 684,
+    "months": 260
+  }
+}

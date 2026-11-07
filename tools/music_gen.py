@@ -172,7 +172,8 @@ def log(msg: str, level: str = "info"):
     reset = "\033[0m"
     prefix = {"info": "->", "success": "OK", "error": "!!", "warn": "??", "dim": "  "}
     color = colors.get(level, "")
-    print(f"{color}{prefix.get(level, '->')} {msg}{reset}")
+    # stderr, so --json leaves stdout holding only the JSON
+    print(f"{color}{prefix.get(level, '->')} {msg}{reset}", file=sys.stderr)
 
 
 # --- Brand integration ---
@@ -329,6 +330,44 @@ def call_acemusic_api(
         log('Then: echo "ACEMUSIC_API_KEY=your_key" >> .env', "info")
         return None
 
+    # The hosted API returns one take per request whatever batch_size (or n) says
+    # (checked 2026-11-05: batch_size=2, n=2 and audio_config.batch_size=2 each came
+    # back with one choice holding one audio entry). So variations are N requests,
+    # saved as <stem>_1<ext> ... <stem>_N<ext>. A given seed moves on by one per take,
+    # so the takes differ; without one, each request picks its own.
+    if variations > 1:
+        out = Path(output_path)
+        takes = []
+        for i in range(variations):
+            log(f"Take {i + 1}/{variations}", "info")
+            take = call_acemusic_api(
+                prompt, str(out.parent / f"{out.stem}_{i + 1}{out.suffix}"),
+                duration=duration, bpm=bpm, key_scale=key_scale,
+                time_signature=time_signature, lyrics=lyrics,
+                vocal_language=vocal_language, audio_format=audio_format,
+                seed=None if seed is None else seed + i, thinking=thinking,
+                variations=1, task_type=task_type, src_audio_path=src_audio_path,
+                repaint_start=repaint_start, repaint_end=repaint_end,
+                cover_strength=cover_strength, guidance_scale=guidance_scale,
+                infer_method=infer_method, json_output=json_output, progress=progress,
+            )
+            if take:
+                takes.append(take)
+            else:
+                log(f"Take {i + 1} failed; keeping the others", "warn")
+        if not takes:
+            return None
+        files = [t["output"] for t in takes]
+        return {
+            **takes[0],
+            "output": files,
+            "files": files,
+            "variations": len(files),
+            "requested_variations": variations,
+            "elapsed_seconds": round(sum(t["elapsed_seconds"] for t in takes), 2),
+            "takes": takes,
+        }
+
     mode_label = {
         "text2music": "Music Generation",
         "repainting": "Audio Repainting",
@@ -344,9 +383,6 @@ def call_acemusic_api(
         log(f"BPM: {bpm}", "dim")
     if key_scale:
         log(f"Key: {key_scale}", "dim")
-    if variations > 1:
-        log(f"Variations: {variations}", "dim")
-
     # Build message content using XML tag format
     content_parts = []
     content_parts.append(f"<prompt>{prompt}</prompt>")
@@ -394,10 +430,6 @@ def call_acemusic_api(
         payload["audio_config"]["key_scale"] = key_scale
     if time_signature:
         payload["audio_config"]["time_signature"] = str(time_signature)
-
-    # Batch
-    if variations > 1:
-        payload["batch_size"] = variations
 
     # Seed
     if seed is not None:
@@ -1178,8 +1210,8 @@ Examples:
 
     # Musical control
     music_group = parser.add_argument_group("Musical Control")
-    music_group.add_argument("--duration", "-d", type=int, default=30,
-                             help="Duration in seconds (10-600, default: 30)")
+    music_group.add_argument("--duration", "-d", type=int, default=None,
+                             help="Duration in seconds (10-600, default: 30, or the input's length for --repaint and --cover)")
     music_group.add_argument("--bpm", type=int, help="Tempo in BPM (30-300)")
     music_group.add_argument("--key", dest="key_scale", help="Musical key (e.g., 'C Major', 'Am', 'F# minor')")
     music_group.add_argument("--time-sig", type=int, choices=[2, 3, 4, 6],
@@ -1256,6 +1288,13 @@ Examples:
                              "or json (JSON Lines to stderr for bots/agents)")
 
     args = parser.parse_args()
+
+    # Repaint and cover rework a track, so by default they keep its length; a fixed 30s default cut a
+    # 46s bed to 30s without saying so. Generation keeps 30s.
+    if args.duration is None:
+        src = args.input or args.reference
+        src_len = get_audio_duration(src) if (args.repaint or args.cover) and src and Path(src).exists() else None
+        args.duration = int(-(-src_len // 1)) if src_len else 30
 
     # Handle --list-presets
     if args.list_presets:

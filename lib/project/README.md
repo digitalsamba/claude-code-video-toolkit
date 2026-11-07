@@ -123,6 +123,7 @@ See `types.ts` for full TypeScript definitions. Key structures:
   "name": "my-release-video",
   "template": "sprint-review",
   "brand": "digital-samba",
+  "design": { "source": "taste-skill", "file": "design.md" },
   "created": "2024-12-09T10:30:00Z",
   "updated": "2024-12-10T15:45:00Z",
   "phase": "assets",

@@ -18,7 +18,7 @@ Claude Desktop / Claude Code (one line in the client's MCP config):
 
 Any other MCP client: spawn the same command and speak MCP over its stdin/stdout.
 
-Tools: video_estimate, video_submit, video_status, video_result, video_list_presets
+Tools: video_estimate, video_submit, video_status, video_result, video_list_presets, video_catalog
 (plus video_list, video_cancel and video_resume, which cost nothing to expose). Every tool
 returns a dict with `ok`; failures carry `error` and `error_code`, never an exception.
 """
@@ -50,7 +50,10 @@ mcp = FastMCP(
         "spec yourself (scenes with narration text and a visual prompt each) rather than passing "
         "a brief, unless the server has a VIDEO_JOB_EXPANDER configured. video_status has an "
         "`events` list (what started and finished) and `warnings` to pass on to the user; a failed "
-        "job with `resumable: true` can be carried on with video_resume, paying only for what is missing."
+        "job with `resumable: true` can be carried on with video_resume, paying only for what is missing. "
+        "Asked what you can make, or for a style this flow doesn't do (a product walkthrough rebuilt from an "
+        "app's source, a data chart, a sprint review), call video_catalog: templates with agent_support `job` "
+        "go through submit; `session` ones need a working session with the skill each one names."
     ),
 )
 
@@ -59,21 +62,30 @@ def _err(e: Exception, code: str) -> dict[str, Any]:
     return {"ok": False, "error": str(e), "error_code": code}
 
 
-def _resolve(spec: dict | None, brief: str | None, fmt: str, duration_s: int, allow_skeleton: bool):
+def _resolve(spec: dict | None, brief: str | None, fmt: str, duration_s: int, allow_skeleton: bool,
+             kit: str | None = None):
     if spec:
+        if kit and not spec.get("kit"):
+            spec = {**spec, "kit": kit}
+        if fmt and not spec.get("format"):
+            spec = {**spec, "format": fmt}
         return vj.normalize_spec(spec), "spec"
-    return vj.resolve_spec(brief, None, fmt, duration_s, allow_skeleton=allow_skeleton)
+    fmt = fmt or (vj.load_kit(kit).get("format") if kit else None) or "9:16"   # the kit's format unless asked
+    return vj.resolve_spec(brief, None, fmt, duration_s, allow_skeleton=allow_skeleton, kit=kit)
 
 
 @mcp.tool()
-def video_estimate(spec: dict | None = None, brief: str | None = None, format: str = "9:16",
-                   duration_s: int = 45) -> dict:
+def video_estimate(spec: dict | None = None, brief: str | None = None, format: str | None = None,
+                   duration_s: int = 45, kit: str | None = None) -> dict:
     """Cost estimate in USD for a video, with a per-step breakdown. Pass `spec` (preferred) or
-    `brief`. Needs no API keys. With only a brief and no expander configured, the estimate is
-    for the skeleton a brief of that length usually takes."""
+    `brief`, and `kit` to make it for someone with a kit (video_catalog lists them). Needs no API keys. With only a brief and no expander configured, the estimate is
+    for the skeleton a brief of that length usually takes. `host_missing` lists providers the
+    spec uses that this host has no key or endpoint for (video_submit refuses those; entries marked
+    `soft` only mean the video is made without that part, e.g. no music bed)."""
     try:
-        s, source = _resolve(spec, brief, format, duration_s, allow_skeleton=True)
-        return {"ok": True, **vj.estimate(s), "spec_source": source}
+        s, source = _resolve(spec, brief, format, duration_s, allow_skeleton=True, kit=kit)
+        return {"ok": True, **vj.estimate(s), "spec_source": source,
+                "host_missing": vj.missing_for(vj.normalize_spec(s), include_soft=True)}
     except (vj.SpecError, ValueError, vj.NoExpander, RuntimeError) as e:
         return _err(e, "bad_request")
     except Exception as e:  # noqa: BLE001
@@ -81,18 +93,21 @@ def video_estimate(spec: dict | None = None, brief: str | None = None, format: s
 
 
 @mcp.tool()
-def video_submit(spec: dict | None = None, brief: str | None = None, format: str = "9:16",
-                 duration_s: int = 45, max_usd: float = vj.DEFAULT_MAX_USD) -> dict:
+def video_submit(spec: dict | None = None, brief: str | None = None, format: str | None = None,
+                 duration_s: int = 45, max_usd: float = vj.DEFAULT_MAX_USD, kit: str | None = None) -> dict:
     """Start a video job and return at once with its id and estimate. Refused (ok=false,
-    error_code budget_exceeded) when the estimate is over max_usd, before any spend; busy
+    error_code budget_exceeded) when the estimate is over max_usd, or (unavailable, with `missing`) when this
+    host has no key or endpoint for a provider the spec uses, both before any spend; busy
     (error_code lock_held) when another job is running. Poll video_status afterwards."""
     try:
-        s, source = _resolve(spec, brief, format, duration_s, allow_skeleton=False)
+        s, source = _resolve(spec, brief, format, duration_s, allow_skeleton=False, kit=kit)
         job = vj.submit(s, max_usd, spec_source=source, brief=brief)
         return {"ok": True, "id": job["id"], "phase": job["phase"], "estimate_usd": job["estimate_usd"],
                 "max_usd": job["max_usd"], "title": job["title"], "format": job["format"], "scenes": job["scenes"]}
     except vj.BudgetExceeded as e:
         return _err(e, "budget_exceeded")
+    except vj.Unavailable as e:
+        return {**_err(e, "unavailable"), "missing": e.missing}
     except vj.LockHeld as e:
         return {**_err(e, "lock_held"), "holder": e.holder}
     except vj.NoExpander as e:
@@ -154,6 +169,16 @@ def video_resume(job_id: str, max_usd: float | None = None) -> dict:
 def video_list_presets() -> dict:
     """Unit prices, output formats, visual kinds, voice defaults and an example spec."""
     return {"ok": True, **vj.presets()}
+
+
+@mcp.tool()
+def video_catalog() -> dict:
+    """What the toolkit can make: templates (with demo videos and the skill that drives each), example
+    builds, components, brands, design sources and voice presets. `agent_support` is `job` (video_submit makes it) or `session`."""
+    try:
+        return {"ok": True, **vj.catalog()}
+    except Exception as e:  # noqa: BLE001
+        return _err(e, "internal")
 
 
 @mcp.tool()
