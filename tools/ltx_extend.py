@@ -24,7 +24,8 @@ import argparse
 import json
 import subprocess
 import sys
-import tempfile
+import hashlib
+import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -45,14 +46,25 @@ def extend_once(src: Path, at: float, prompt: str, seed: int, out: Path, crossfa
     info = probe(src)
     at = min(at, info["duration"] - 1 / info["fps"])
     still = work / f"seam{n}.png"
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{at:.3f}", "-i", str(src), "-frames:v", "1", str(still)],
-                   check=True)
-    cont = work / f"cont{n}.mp4"
+    # the last frame before `at` (the original plays up to it): seeking exactly to the clip's end yields no frame
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{max(0.0, at - 0.5):.3f}", "-i", str(src), "-t",
+                    f"{min(0.5, at):.3f}", "-update", "1", str(still)], check=True)
+    if not still.exists():
+        raise SystemExit(f"Error: no frame at {at:.2f}s of {src}")
+    key = hashlib.sha1(f"{src.name}|{at:.3f}|{seed}|{frames}|{prompt}".encode()).hexdigest()[:10]
+    cont = work / f"cont{n}-{key}.mp4"
+    if cont.exists():   # paid for on an earlier run that failed later: reuse it
+        print(f"-> reusing {cont}", file=sys.stderr)
+        return join(src, at, cont, out, crossfade, info)
     cmd = [sys.executable, str(ROOT / "tools/ltx2.py"), "--cloud", cloud, "--no-open", "--input", str(still),
            "--width", str(info["width"]), "--height", str(info["height"]), "--num-frames", str(frames),
            "--seed", str(seed), "--prompt", prompt, "--output", str(cont)]
     print(f"-> continuing from {at:.2f}s ({n}) ...", file=sys.stderr)
     subprocess.run(cmd, check=True, stdout=sys.stderr)
+    join(src, at, cont, out, crossfade, info)
+
+
+def join(src: Path, at: float, cont: Path, out: Path, crossfade: float, info: dict) -> None:
     fps = info["fps"]
     w, h = info["width"], info["height"]
     # the original up to the seam, then the continuation (its first frame is the seam frame again, so skip it)
@@ -79,15 +91,17 @@ def main() -> int:
     if not a.input.exists():
         print(f"Error: {a.input} not found", file=sys.stderr)
         return 1
-    with tempfile.TemporaryDirectory() as d:
-        work = Path(d)
-        src = a.input
-        at = a.at if a.at is not None else probe(src)["duration"]
-        for n in range(1, a.times + 1):
-            dst = a.output if n == a.times else work / f"step{n}.mp4"
-            extend_once(src, at, a.prompt, a.seed + n - 1, dst, a.crossfade, a.frames, a.cloud, work, n)
-            src = dst
-            at = probe(src)["duration"]  # later links continue from the new end
+    # kept beside the output until the whole chain succeeds, so a failed run doesn't lose the clips it paid for
+    work = a.output.parent / f".{a.output.stem}-extend"
+    work.mkdir(parents=True, exist_ok=True)
+    src = a.input
+    at = a.at if a.at is not None else probe(src)["duration"]
+    for n in range(1, a.times + 1):
+        dst = a.output if n == a.times else work / f"step{n}.mp4"
+        extend_once(src, at, a.prompt, a.seed + n - 1, dst, a.crossfade, a.frames, a.cloud, work, n)
+        src = dst
+        at = probe(src)["duration"]  # later links continue from the new end
+    shutil.rmtree(work, ignore_errors=True)
     info = probe(a.output)
     print(json.dumps({"output": str(a.output), "duration": round(info["duration"], 2),
                       "frames_at_30fps": round(info["duration"] * 30)}))
