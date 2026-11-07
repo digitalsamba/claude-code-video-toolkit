@@ -47,6 +47,22 @@ export const MyVideo = () => {
 };
 ```
 
+## Choosing one
+
+For most videos, the change between scenes is a hard cut, or a hard-edged `wipe()` from `@remotion/transitions`:
+the edge is the change, and nothing fades. That's the default in the `video-design` skill. The effect transitions
+below are a brand choice. To turn one scene into new pages in place, timed to the narration rather than between
+two sequences, use `PageTurns` from `lib/components`:
+
+```tsx
+import { PageTurns } from '../../../lib/components';
+
+<PageTurns
+  before={<Question />}
+  pages={[{ at: cue('ours'), content: <PageA /> }, { at: cue('taste'), content: <PageB /> }]}
+/>
+```
+
 ## Available Transitions
 
 ### Custom Transitions (this library)

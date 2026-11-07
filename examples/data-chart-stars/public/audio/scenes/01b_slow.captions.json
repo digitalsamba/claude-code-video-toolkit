@@ -1,0 +1,93 @@
+[
+ {
+  "text": "It",
+  "startMs": 580,
+  "endMs": 680,
+  "timestampMs": 630,
+  "confidence": null
+ },
+ {
+  "text": " started",
+  "startMs": 740,
+  "endMs": 1160,
+  "timestampMs": 950,
+  "confidence": null
+ },
+ {
+  "text": " slowly,",
+  "startMs": 1240,
+  "endMs": 1660,
+  "timestampMs": 1450,
+  "confidence": null
+ },
+ {
+  "text": " with",
+  "startMs": 2280,
+  "endMs": 2400,
+  "timestampMs": 2340,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 2440,
+  "endMs": 2500,
+  "timestampMs": 2470,
+  "confidence": null
+ },
+ {
+  "text": " few",
+  "startMs": 2540,
+  "endMs": 2720,
+  "timestampMs": 2630,
+  "confidence": null
+ },
+ {
+  "text": " dozen",
+  "startMs": 2760,
+  "endMs": 3020,
+  "timestampMs": 2890,
+  "confidence": null
+ },
+ {
+  "text": " stars",
+  "startMs": 3140,
+  "endMs": 3500,
+  "timestampMs": 3320,
+  "confidence": null
+ },
+ {
+  "text": " in",
+  "startMs": 3540,
+  "endMs": 3600,
+  "timestampMs": 3570,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 3640,
+  "endMs": 3720,
+  "timestampMs": 3680,
+  "confidence": null
+ },
+ {
+  "text": " first",
+  "startMs": 3760,
+  "endMs": 4000,
+  "timestampMs": 3880,
+  "confidence": null
+ },
+ {
+  "text": " six",
+  "startMs": 4040,
+  "endMs": 4300,
+  "timestampMs": 4170,
+  "confidence": null
+ },
+ {
+  "text": " weeks.",
+  "startMs": 4360,
+  "endMs": 4700,
+  "timestampMs": 4530,
+  "confidence": null
+ }
+]
