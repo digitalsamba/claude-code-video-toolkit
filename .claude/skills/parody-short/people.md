@@ -27,7 +27,12 @@ beard or stubble, photorealistic photograph"
 ```
 
 - **The keep-clause matters.** Listing features to keep ("keep his glasses and beard") *adds* them to people who
-  don't have them. Use the wording above, which names no feature the person lacks.
+  don't have them. Use the wording above, which names no feature the person lacks. The reverse also happens: a
+  person who *does* wear glasses can lose them in a new setting even with "do not add or remove glasses". For
+  them, name the glasses ("she keeps wearing her round tortoiseshell glasses ... the same glasses"). Name what
+  the person has; never name what they lack.
+- Small props in hands (a mug, papers) come out ghosted or smeared. A flat, held prop (a clipboard against the
+  chest) survives.
 - Costume plus setting in one edit; keep framing "head and shoulders, facing the camera" so LTX gets a face.
 - Modal cold-starts take ~10 min (the tool's 600 s timeout can fail the first call). Send one edit, wait for it,
   then run the rest warm (~10 s each).
