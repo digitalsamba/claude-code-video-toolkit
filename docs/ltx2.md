@@ -164,7 +164,11 @@ Total baked weight: ~80 GB, including the ~0.4 GB `crt-terminal` style LoRA. The
 
 - **Training data artifacts:** The model occasionally generates unwanted logos, text overlays, or watermark-like artifacts from its training data (~30% of generations). Re-generating with a different seed usually fixes this.
 - **No visible watermarks:** LTX-2 does not intentionally add watermarks to output.
-- **Max duration:** Practical limit is ~8s (193 frames). Longer clips need stitching.
+- **Max duration:** Practical limit is ~8s (193 frames). For a longer shot, continue the clip with
+  `tools/ltx_extend.py --input clip.mp4 --at <last good second> --times N --prompt "..."`: it runs image-to-video
+  from the clip's own frame and joins the two with a short cross-fade. Holding the last frame reads as a pause and
+  playing the tail back and forth reads as a loop. Never continue from a close-up frame (LTX invents a new scene),
+  and don't say "tripod" in the prompt (it can draw one). Method: `.claude/skills/parody-short/people.md`.
 - **Audio quality:** Generated audio is ambient/environmental. It won't produce speech or music — use the toolkit's voiceover and music tools for that.
 
 ## LTX-2.5 (opt-in)
