@@ -70,6 +70,10 @@ export type {
 export { PageTurns, turnProgress } from './PageTurns';
 export type { PageTurnsProps, PageTurn } from './PageTurns';
 
+// A person's animated photo (ltx2.py --input): plays once, holds its last good frame (parody-short skill)
+export { LivingPhoto, livingFrame, livingRate } from './LivingPhoto';
+export type { LivingPhotoProps } from './LivingPhoto';
+
 // Utilities
 export { hexToRgba, SIZE_PRESETS, POSITION_PRESETS } from './utils';
 export type { SizePreset, PositionPreset } from './utils';

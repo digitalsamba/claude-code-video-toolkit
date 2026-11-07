@@ -87,6 +87,7 @@ Claude Code has deep knowledge in:
 | **ideogram4** | AI image generation with best-in-class in-image text — title cards, thumbnails, exact brand colors |
 | **acestep** | AI music generation — prompts, lyrics, scene presets, video integration |
 | **ltx2** | AI video generation — text-to-video, image-to-video clips, prompting guide |
+| **parody-short** | Comedy shorts about a group's own life or a shared topic, in a borrowed genre: in-jokes from the group's own chat and docs, costumed and animated photos or an invented cast, sound placed on the movement, vertical cuts |
 | **moviepy** | Python video composition — overlay text on LTX-2/SadTalker output, build.py-style projects |
 | **runpod** | Cloud GPU — setup, Docker images, endpoint management, costs |
 
@@ -128,6 +129,8 @@ See `examples/` for finished projects you can learn from (newest first — scrol
 
 | Date | Demo | Description |
 |------|------|-------------|
+| 2026-11-07 | [the-great-return](https://demos.digitalsamba.com/video/the-great-return-v5-share.mp4) | 98s wildlife documentary about the return to the office, made with the `parody-short` skill and the same invented cast: mock-Latin lower thirds, a designed narrator voice, LTX clips lengthened with `ltx_extend.py` instead of frozen, every sound effect placed on its movement with `sync_check.py` ([vertical cut](https://demos.digitalsamba.com/video/the-great-return-vertical-v5-share.mp4)) |
+| 2026-11-07 | [youre-on-mute](https://demos.digitalsamba.com/video/youre-on-mute-v4-share.mp4) | 76s horror trailer about the video call that never ends, from the `parody-short` skill: an invented cast of four (FLUX portraits animated with LTX through `LivingPhoto`), a call UI built in Remotion that misbehaves, a stinger after the title ([vertical cut](https://demos.digitalsamba.com/video/youre-on-mute-vertical-v4-share.mp4)) |
 | 2026-11-04 | [data-chart-stars](https://demos.digitalsamba.com/video/data-chart-stars.mp4) | 31s chart video of the toolkit's GitHub star history, drawn as SVG by the new `LineChart` and `BarChart` components: the line is drawn while Lugh narrates each stretch, and the March spike's band and the monthly bars light on the words that name them, timed with `cue()` (`examples/data-chart-stars`) |
 | 2026-11-01 | [the-agent-handoff](https://demos.digitalsamba.com/video/the-agent-handoff.mp4) | 57s showcase an agent made unattended from one Discord message: the agent wrote the script and the shot list, `video_job.py` voiced it with a cloned voice, generated four LTX-2 clips and a diagram card, built and QC'd it, and the Discord bot posted the link when it went live; $0.47, the fourth take after three pipeline fixes (`docs/agent-video-jobs.md`) |
 | 2026-10-28 | [ds-release-650](https://demos.digitalsamba.com/video/ds-release-650.mp4) | 87s release-notes video built from the `ds-release-notes` template: six items across the room and account center, Lugh's cloned voice made livelier with `voice_prosody.py`, checked with `qc.py --render --layout` (`templates/ds-release-notes`) |
@@ -292,6 +295,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | **Project** | voiceover, music, music_gen, sfx | Used during video creation workflow |
 | **Utility** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations, no project needed |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
+| **Checks** | qc, sync_check, contact_sheet | Before showing a render: freezes and motion that stops dead, loudness, layout, sound effects on their movement |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
 
 ### Cloud GPU (Modal + RunPod)
@@ -308,6 +312,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | `soulx` | Talking head video from portrait + audio — holds identity over long takes | ~$0.0024/sec |
 | `sadtalker` | Talking head video, warp-based — fast, cheap drafts | ~$0.10 |
 | `ltx2` | AI video generation (text-to-video, image-to-video) | ~$0.23 |
+| `ltx_extend` | Lengthen an LTX clip by continuing it from its last good frame, instead of holding or looping it | ~$0.08 per extension |
 | `dewatermark` | Video watermark removal | ~$0.10 |
 
 **Modal (recommended):** Each tool deploys from `docker/modal-*/app.py` — Modal builds and hosts the containers. $30/month free compute on the Starter plan, typical usage is $1-2/month. Run `/setup` to deploy all tools automatically.

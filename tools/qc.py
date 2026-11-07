@@ -99,6 +99,8 @@ STILL_TILE = 20             # px at FRAME_WIDTH: a cursor or a talking-head PiP 
 STILL_TILE_DIFF = 1.0       # mean abs change (0-255) in the busiest tile; encoder noise sits below
 MAX_STILL_SECONDS = 3.0     # motion-craft.md: longer than this with nothing changing reads as a stall
 STILL_END_GRACE = 3.0       # the closing card may hold
+MOTION_MOVING_SECONDS = 3.0 # a region counts as moving after this much sustained change (longer than an entrance)...
+MOTION_STOP_SECONDS = 2.0   # ...and as stopped dead after this much none: a clip that ended and froze
 BLACK_MIN_SECONDS = 0.5     # a dip to black at a cut is a few frames; this is a gap
 EMPTY_EDGE_FRACTION = 0.005 # under 0.5% edge pixels: background only, maybe a disclaimer line
 
@@ -473,6 +475,8 @@ def check_frames(render: Path, info: dict, report: Report, max_still: float):
         return
 
     busiest: list[float] = []   # per sample pair: mean change in the busiest tile
+    regions: list[list[float]] = []  # per sample pair: busiest tile in each region of the frame
+    rg_r, rg_c = (4, 3) if h > w else (3, 4)
     dark: list[bool] = []
     prev = None
     while True:
@@ -482,7 +486,10 @@ def check_frames(render: Path, info: dict, report: Report, max_still: float):
         frame = np.frombuffer(buf, np.uint8).reshape(h, w).astype(np.int16)
         if prev is not None:
             diff = np.abs(frame - prev)[: rows * STILL_TILE, : cols * STILL_TILE]
-            busiest.append(float(diff.reshape(rows, STILL_TILE, cols, STILL_TILE).mean(axis=(1, 3)).max()))
+            tiles = diff.reshape(rows, STILL_TILE, cols, STILL_TILE).mean(axis=(1, 3))
+            busiest.append(float(tiles.max()))
+            regions.append([float(b.max()) for band in np.array_split(tiles, rg_r, axis=0)
+                            for b in np.array_split(band, rg_c, axis=1)])
         # blackdetect's defaults: 98% of pixels under ~10% luma
         dark.append(float((frame >= 26).mean()) < 0.02)
         prev = frame
@@ -511,6 +518,52 @@ def check_frames(render: Path, info: dict, report: Report, max_still: float):
                    "a next action (the cursor moving on, the camera's next move) or cut it shorter",
                    start=round(t0, 2), end=round(t1, 2), kind="still")
     report.data["frames"]["still_stretches"] = len(stills)
+
+    # Motion that stops dead: a region moving for a while, then frozen while the rest of the frame goes on (an
+    # image-to-video clip that ran out and held its last frame). The whole-frame check above misses it, because
+    # something else is always moving.
+    moving_n = round(MOTION_MOVING_SECONDS * STILL_FPS)
+    # A cut or a dissolve changes even the quietest regions at once, as a spike; motion that is only a cut doesn't
+    # count. Footage that moves all over the frame all the time isn't a cut.
+    quiet = [sorted(s)[len(s) // 6] for s in regions]
+    cut = [q >= 4 * STILL_TILE_DIFF and max(quiet[max(0, i - 2)], quiet[min(len(quiet) - 1, i + 2)]) < q / 3
+           for i, q in enumerate(quiet)]
+    stops = []
+    for r in range(rg_r * rg_c):
+        series = [s[r] for s in regions]
+        i = moving_n
+        while i < len(series):
+            recent = series[i - moving_n:i]
+            if (series[i] < STILL_TILE_DIFF and not any(cut[i - moving_n:i + 1])
+                    and sum(c >= STILL_TILE_DIFF for c in recent) >= 0.75 * moving_n):
+                j = i
+                while j < len(series) and series[j] < STILL_TILE_DIFF and not cut[j]:
+                    j += 1
+                t0, t1 = i / STILL_FPS, min(j / STILL_FPS, duration - STILL_END_GRACE)
+                # only while the rest of the video goes on: a whole-frame hold is the still check's
+                others = sum(any(c >= STILL_TILE_DIFF for k, c in enumerate(regions[x]) if k != r) for x in range(i, j))
+                if t1 - t0 >= MOTION_STOP_SECONDS and others >= 0.5 * (j - i):
+                    stops.append((t0, t1, r))
+                i = j
+            i += 1
+    stops.sort()
+    merged: list[list] = []
+    for t0, t1, r in stops:
+        if merged and t0 <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], t1)
+            merged[-1][2].add(r)
+        else:
+            merged.append([t0, t1, {r}])
+    for t0, t1, rs in merged:
+        names = [f"{('top', 'middle', 'bottom')[min(2, r // rg_c * 3 // rg_r)]}-"
+                 f"{('left', 'centre', 'right')[min(2, r % rg_c * 3 // rg_c)]}" for r in sorted(rs)]
+        where = ", ".join(dict.fromkeys(names))
+        report.add("warn", "frames",
+                   f"{_fmt_t(t0)}-{_fmt_t(t1)}: motion stops dead for {t1 - t0:.1f}s ({where}) while the video "
+                   "goes on. A clip that ran out and held its last frame? Extend it (tools/ltx_extend.py), slow it "
+                   "(LivingPhoto fit), or cut the shot shorter",
+                   start=round(t0, 2), end=round(t1, 2), kind="motion_stop")
+    report.data["frames"]["motion_stops"] = len(merged)
 
     # Black gaps away from the opening fade-in and the closing fade-out.
     start = None

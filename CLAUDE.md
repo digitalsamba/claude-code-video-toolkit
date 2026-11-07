@@ -267,6 +267,9 @@ skip):
 - **Still stretches:** more than 3s (`--max-still`) where nothing on screen changes. The comparison is per
   tile, so a moving cursor or a talking-head PiP counts as change. The last 3s may hold.
 - **Black gaps:** black for 0.5s or more mid-video, usually a gap between sequences or media that didn't load.
+- **Motion that stops dead:** part of the frame moving for 3s or more, then frozen for 2s or more while the rest of the
+  video goes on. Usually an image-to-video clip that ran out and held its last frame; lengthen it with `tools/ltx_extend.py`
+  rather than holding or looping it. The whole-frame still check misses it because something else is always moving.
 - **Empty first frame:** background only. A warning on vertical and square renders, whose frame 0 is
   the Shorts/Reels cover, and info on landscape renders, which get a custom thumbnail.
 - **Audio:** a missing or silent audio track is an error. `--allow-silent` makes it info, for a deliverable that is
@@ -286,6 +289,25 @@ Text under `data-qc="product"` is the product's own UI (Stage marks its browser 
 tablet mockup the same way). It's reported separately, as info, without the overflow check, since the camera crops
 it on purpose: the video can't fix the product's colours, but it's worth knowing where the UI is hard to read.
 `data-qc-ignore` skips an element. About 10s to bundle, then ~0.15s a sample.
+
+### Sound effects on generated movement
+
+A sound laid over a generated clip (a sneeze over an LTX face, a thud when a jacket lands) is placed at a frame by
+hand, and is easily half a second off the movement. Place it by measurement, then check the render:
+
+```bash
+# before rendering: where in the clip should the sound start? (its loudest moment meets the movement)
+uv run tools/sync_check.py --clip public/people/theo-sneeze.mp4 --sfx public/audio/sfx/sneeze.mp3 --window 2.5:4.5
+uv run tools/sync_check.py --clip public/people/theo-desk.mp4 --sfx public/audio/sfx/thump.mp3 --kind impact --window 1.5:3.8
+
+# after rendering, before presenting: every cue in one go (exit 1 if any is off by more than 0.1 s)
+uv run tools/sync_check.py --video out/video.mp4 --cues sync-cues.json
+```
+
+`--kind peak` (default) puts the sound on the biggest movement: a sneeze, a laugh, a badge lifted. `--kind impact`
+puts it where a movement stops: a landing, a stamp. Give a `--window` around the action: an extended clip's seam
+or a later gesture can be bigger than the one the sound is for. Keep the cues in the project's `sync-cues.json`
+(`{name, sfx, at, region, kind}`, times in the render, regions as `w:h:x:y`) so the check re-runs on every render.
 
 ### Burned Captions (after voiceover)
 
