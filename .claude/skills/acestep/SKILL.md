@@ -30,8 +30,9 @@ uv run modal deploy docker/modal-music-gen/app.py    # Modal
 # Basic generation (uses acemusic XL Turbo by default)
 uv run tools/music_gen.py --prompt "Upbeat tech corporate" --duration 60 --output bg.mp3
 
-# Generate 4 variations, pick the best
+# Generate 4 variations (ambient_1.mp3 ... ambient_4.mp3), then recommend one for the video
 uv run tools/music_gen.py --prompt "Calm ambient piano" --duration 30 --variations 4 --output ambient.mp3
+uv run tools/pick_music.py ambient_*.mp3 --target 30 --cuts 10,21 --under voice --pick ambient.mp3
 
 # Fast mode (disable thinking)
 uv run tools/music_gen.py --no-thinking --prompt "Quick draft" --duration 30 --output draft.mp3
@@ -69,7 +70,7 @@ If generated music sounds repetitive or lacks variety, try these in order:
 
 1. **Use acemusic cloud** (default) — XL Turbo 4B *plus* the 5Hz LM; Modal runs the same XL Turbo DiT but without the LM, RunPod is still 2B
 2. **Keep thinking mode on** (default for acemusic) — the 5Hz LM enriches sparse prompts into detailed musical descriptions
-3. **Generate variations** — `--variations 4` generates 4 takes, pick the best
+3. **Generate variations** — `--variations 4` generates 4 takes; `pick_music.py` recommends one with its reasons (it measures, it can't hear), and `audition.py` puts each take under the finished picture so the user chooses by watching
 4. **Use stochastic inference** — `--infer-method sde` adds randomness (same seed gives different results)
 5. **Vary BPM and key across scenes** — don't use the same preset for every scene
 6. **Write sparser prompts** — "Upbeat indie rock" gives the model more creative freedom than a hyper-detailed description

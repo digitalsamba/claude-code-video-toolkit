@@ -1,0 +1,65 @@
+[
+ {
+  "text": "Month",
+  "startMs": 200,
+  "endMs": 440,
+  "timestampMs": 320,
+  "confidence": null
+ },
+ {
+  "text": " by",
+  "startMs": 540,
+  "endMs": 720,
+  "timestampMs": 630,
+  "confidence": null
+ },
+ {
+  "text": " month,",
+  "startMs": 760,
+  "endMs": 1100,
+  "timestampMs": 930,
+  "confidence": null
+ },
+ {
+  "text": " March",
+  "startMs": 1700,
+  "endMs": 2120,
+  "timestampMs": 1910,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 2180,
+  "endMs": 2260,
+  "timestampMs": 2220,
+  "confidence": null
+ },
+ {
+  "text": " still",
+  "startMs": 2340,
+  "endMs": 2580,
+  "timestampMs": 2460,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 2620,
+  "endMs": 2700,
+  "timestampMs": 2660,
+  "confidence": null
+ },
+ {
+  "text": " big",
+  "startMs": 2740,
+  "endMs": 2900,
+  "timestampMs": 2820,
+  "confidence": null
+ },
+ {
+  "text": " one.",
+  "startMs": 2940,
+  "endMs": 3120,
+  "timestampMs": 3030,
+  "confidence": null
+ }
+]

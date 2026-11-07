@@ -188,6 +188,12 @@ function measureTexts() {
       const fill = parseColor(cs.webkitTextFillColor);
       if (fill) color = fill;
     }
+    // SVG text paints with `fill`, not `color` (charts, diagrams). A gradient or pattern fill
+    // (url(#...)) can't be judged, like gradient HTML text.
+    if (el instanceof SVGElement) {
+      color = parseColor(cs.fill);
+      if (color) color = [color[0], color[1], color[2], color[3] * parseFloat(cs.fillOpacity || '1')];
+    }
     if (color && color[3] === 0) color = null;
     // Background: the first thing under the text that paints, from the paint stack at its centre
     // (a sibling layer can sit between the text and its ancestors' backgrounds). A solid, opaque

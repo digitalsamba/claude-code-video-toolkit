@@ -1,19 +1,23 @@
-# Design Refinement
+# Design
 
-Focused design session for improving video scene visuals using the frontend-design skill.
+Sets and refines how a video looks with the `video-design` skill, taking direction from the project's design
+source: plug in your own design skill (taste-skill, Anthropic's frontend-design, a team's own), or use ours
+(video-design's act palettes with the brand).
 
-## Purpose
-
-Deep-dive visual refinement for slides and components:
-- Elevate generic aesthetics to distinctive, memorable visuals
-- Ensure visual narrative coherence across scenes
-- Iterate on typography, color, motion, and atmosphere
+It works at any phase, including before a single scene is built:
+- **Direction** (the whole video): pick the design source and write `design.md` (acts, a field per act, ink, the
+  one accent, the type steps). `/video` runs this for a new project; `/design` runs it for a project made without
+  it, or to change direction.
+- **Refine** (one scene): restyle a scene within `design.md`.
+- **Critique** (the whole video): a contact sheet of the render, read against `design.md`.
 
 ## Usage
 
 ```
-/design              # Discover project, list scenes, choose one
-/design [scene-id]   # Jump directly to a specific scene
+/design              # No design.md yet: set the direction. Otherwise: choose direction, a scene, or critique
+/design direction    # Set or change the whole video's direction
+/design [scene-id]   # Refine one scene
+/design critique     # Contact sheet + critique of the latest render
 ```
 
 ---
@@ -33,9 +37,51 @@ First, find and understand the current project:
    - Brand/theme: `src/config/theme.ts`
 
 3. **Build scene inventory**
-   - List all scenes from config
+   - List all scenes from config, or from `project.json` / the scene plan if nothing is built yet
    - Identify which are slide-type (designable) vs demo-type (video playback)
    - Note each scene's purpose from config content
+
+4. **Pick the mode**
+   - `direction`, `critique` or a scene id given: do that.
+   - No argument and no `design.md`: **Direction** ("Design source", then "Direction for the whole video").
+     Refining a scene before the video has a direction restyles it twice.
+   - No argument and `design.md` exists: ask whether to change the direction, refine a scene (Step 2), or
+     critique the render (Step 8).
+
+---
+
+## Design source
+
+If `project.json` has `design.source`, use it. Otherwise ask, offering only: "ours", the
+registry's `designSources` that are installed in this session (match each `skill` with or without a plugin
+prefix), and "another design skill". Don't scan every installed skill for design words; that offers skills
+that aren't design sources. A recommended source that isn't installed can be mentioned with its `install` line:
+
+```
+Which design source should set the direction?
+1. Ours: video-design's act palettes with brands/{brand}/ (nothing to install)
+2. taste-skill (recommended, installed)
+3. frontend-design (installed)
+4. Another design skill (name it)
+```
+
+Save the answer as `"design": {"source": "<registry key, or the skill's name if unlisted>", "file": "design.md"}`
+in `project.json` (e.g. `"taste-skill"`), so later sessions don't ask again. The rules are in
+`.claude/skills/video-design/sources.md`.
+
+---
+
+## Direction for the whole video
+
+1. Choose the design source (above).
+2. Invoke the source with the scene plan (what each scene says, where the story turns), the audience, the format
+   (16:9 or 9:16) and the brand. For ours, pick an act palette from `.claude/skills/video-design/palettes.md`.
+3. Invoke `video-design` to map the direction onto the video: acts at the story's turns, a field per act, ink,
+   the one accent, the five type steps, a ground from the subject where a field would otherwise be dull.
+4. Show a one-line-per-act summary and let the user redirect before writing anything.
+5. Write `design.md` (`.claude/skills/video-design/handoff.md`) and `project.json` `design`, then put the values in
+   the theme or brand config so every scene picks them up. Scenes that are already built are then refined one at a
+   time (Step 2 onward), starting with the title, which sets the video's title edge.
 
 ---
 
@@ -64,7 +110,7 @@ Enter scene ID or number:
 
 ## Step 3: Understand Scene Context
 
-Before invoking frontend-design, gather specific context:
+Before asking the design source for direction, gather specific context:
 
 1. **Read the target slide component**
    - Find component file from scene type mapping
@@ -112,21 +158,18 @@ Common mood dimensions:
 
 ---
 
-## Step 5: Invoke frontend-design Skill
+## Step 5: Direction, then the video layer
 
-Use the Skill tool to invoke `frontend-design`.
-
-Provide context gathered:
-- Scene purpose and content
-- Target mood
-- Adjacent scenes and their moods
-- Brand constraints (colors, fonts)
-- Technical constraints (Remotion/React, duration)
-
-Also read `.claude/skills/remotion/motion-craft.md`. frontend-design is written for web pages; that file holds
-the video-specific rules: motion timing in frames, read time for text, and the defaults that look generated.
-Where the two disagree (frontend-design suggests gradient meshes and decorative effects; motion-craft treats
-glows, particles and mesh gradients as off by default), follow motion-craft unless the brand calls for them.
+1. **Design source:** as in "Design source" above (already saved in `project.json` after the first session).
+2. **Get the direction** from that source (invoke the skill with the scene's purpose, mood, neighbours and brand),
+   or, for ours, pick an act palette from `.claude/skills/video-design/palettes.md`.
+3. **Write or update `design.md`** in the project, in the shape in `.claude/skills/video-design/handoff.md`:
+   acts, a field per act, ink, the one accent, the five type steps, rules turned off and why. If the project
+   already has one, change only what this session decides.
+4. **Invoke `video-design`** to apply it. Its rules hold whatever the source said (colour changes only at a
+   narrative turn, one data accent, two-line titles, five sizes); motion follows
+   `.claude/skills/remotion/motion-craft.md`. Where a source suggests a gradient, glow or decorative effect, the
+   video rule wins unless the brand requires it, and the exception goes under "Rules turned off".
 
 ---
 
@@ -142,8 +185,8 @@ Work with user in a back-and-forth loop:
 6. **Repeat** until satisfied
 
 **Common refinement areas:**
-- Background (gradients, effects, atmosphere)
-- Typography (font choice, size, animation)
+- Colour by act (which field this scene's act has, and whether a change here marks a turn)
+- Typography (the five steps in design.md, line breaks, the title edge)
 - Color palette (mood, contrast, warmth/coolness)
 - Motion (timing, easing, entrance/exit)
 - Decorative elements (taken from the subject or brand; particles, floating shapes and glows only on purpose)
@@ -167,7 +210,17 @@ If adjacent scenes need adjustment, offer to refine them too.
 
 ---
 
-## Step 8: Document Changes
+## Step 8: Look at the whole video
+
+After a render, tile one settled frame per scene and critique it with `.claude/skills/video-design/critique.md`:
+
+```bash
+uv run tools/contact_sheet.py out/video.mp4
+```
+
+---
+
+## Step 9: Document Changes
 
 Update project.json (if exists) with refinement notes:
 
@@ -201,7 +254,7 @@ Add session entry:
 
 ## Design Principles for Video
 
-When working with frontend-design skill on video scenes:
+Whatever the design source, on video scenes (the full rules are in `.claude/skills/video-design/SKILL.md`):
 
 1. **Video scale** - Everything needs to be larger than web UI (viewers are farther from screen)
 2. **Motion matters** - Static designs that work on web may feel dead on video
@@ -275,15 +328,15 @@ User: Warm and celebratory - this was a big team effort
 
 Claude: Got it - warm, celebratory mood for a team achievement.
 
-Invoking frontend-design skill...
-
-[frontend-design provides direction]
+Design source for this project: taste-skill (saved in project.json).
+[taste-skill deals a direction; design.md records the acts, fields and type steps]
+Invoking video-design...
 
 I'll implement:
-1. Warm gradient (brand orange softened with cream tones)
-2. Gentle confetti particles (subtle, not overwhelming)
-3. Smooth text reveal with slight bounce
-4. Soft glow behind version number
+1. The title on the brand's identity field (orange), black ink, the version number at the figure size
+2. The title broken by hand onto two lines, on the video's one title edge
+3. The team names revealed on the narration's words, not one fade for everything
+4. The next scene (overview) on the record field, so the cut marks the turn from "what" to "how"
 
 [Makes changes]
 

@@ -65,21 +65,23 @@ class TestAgentSeams(Isolated):
             vj.spawn_worker = real_spawn
             os.environ.pop("VIDEO_JOB_RESERVE_AT_SUBMIT", None)
 
-    def test_actual_mode_is_the_default_outside_longarm(self):
+    def test_actual_mode_is_the_default_outside_an_agent_workspace(self):
+        os.environ.pop("VIDEO_JOB_WORKSPACE", None)
         os.environ.pop("LONGARM_WORKSPACE", None)
         job = vj.submit(spec(), max_usd=5, start_worker=False)
         self.assertEqual(job["ledger"], "actual")
         vj.write_receipt(job, "ltx2.py", 0.2, 100.0, 0, [])
         self.assertTrue(vj.spend_log_path().exists())
 
-    def test_spend_log_follows_the_longarm_workspace(self):
+    def test_spend_log_follows_the_agent_workspace(self):
         os.environ.pop("MEDIA_SPEND_LOG", None)
-        os.environ["LONGARM_WORKSPACE"] = str(self.tmp / "ws")
-        try:
-            self.assertEqual(vj.spend_log_path(), self.tmp / "ws" / "logs" / "media-spend.log")
-            self.assertTrue(vj.reserve_at_submit())
-        finally:
-            os.environ.pop("LONGARM_WORKSPACE", None)
+        for var in ("VIDEO_JOB_WORKSPACE", "LONGARM_WORKSPACE"):   # the second is the older name
+            os.environ[var] = str(self.tmp / "ws")
+            try:
+                self.assertEqual(vj.spend_log_path(), self.tmp / "ws" / "logs" / "media-spend.log")
+                self.assertTrue(vj.reserve_at_submit())
+            finally:
+                os.environ.pop(var, None)
 
     def test_spec_text_repairs_llm_json_slips(self):
         good = json.dumps(spec())
@@ -99,7 +101,7 @@ class TestAgentSeams(Isolated):
         ws = self.tmp / "ws"
         (ws / "memory").mkdir(parents=True)
         (ws / "memory" / "video-spec.json").write_text(json.dumps(spec()))
-        os.environ["LONGARM_WORKSPACE"] = str(ws)
+        os.environ["VIDEO_JOB_WORKSPACE"] = str(ws)
         try:
             self.assertEqual(vj.parse_spec_text("@memory/video-spec.json")["scenes"][1]["slug"], "scattering")
             out = io.StringIO()
@@ -109,7 +111,18 @@ class TestAgentSeams(Isolated):
             with self.assertRaises(FileNotFoundError):
                 vj.parse_spec_text("@memory/missing.json")
         finally:
-            os.environ.pop("LONGARM_WORKSPACE", None)
+            os.environ.pop("VIDEO_JOB_WORKSPACE", None)
+
+    def test_catalog_lists_routes_from_the_registry(self):
+        cat = vj.catalog()
+        jobs = [t["name"] for t in cat["templates"] if t["agent_support"] == "job"]
+        self.assertEqual(jobs, ["concept-explainer-short"])
+        ds = next(t for t in cat["templates"] if t["name"] == "ds-release-notes")
+        self.assertEqual(ds["skill"], "synthetic-ui-demo")
+        self.assertTrue(ds["skill_path"].startswith(".claude/skills/"))
+        self.assertIn("Stage", cat["components"])
+        self.assertIn("default", cat["brands"])
+        self.assertTrue(cat["design_sources"]["ours"]["default"])
 
     def test_flat_scene_form_builds_a_spec(self):
         sp = vj.spec_from_scene_args("Leap years", [

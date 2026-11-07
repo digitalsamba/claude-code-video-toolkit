@@ -122,6 +122,16 @@ If you think a hosted service belongs in-tree, **open an issue before writing an
 what it does that the toolkit can't already do; another place to run a model we already run
 isn't that. If a maintainer wants to adopt it, we'll take it from there.
 
+### Design skills
+
+Plug in your own design skill, or use ours: the toolkit's own source is `video-design` with the brand, and it bundles
+no third-party design skill. `/design` and `/scene-review` take direction from whichever one the
+user has installed (the README's "Design sources"), and `video-design` applies the video rules. To have yours
+listed, open an issue with a link, its licence (it must allow use in published videos), the `design.md` it
+produced for `examples/data-chart-stars`, and that example's contact sheet
+(`uv run tools/contact_sheet.py examples/data-chart-stars/out/data-chart-stars.mp4`), so sources can be compared
+on the same video. Listed skills stay in their own repos. Details: `.claude/skills/video-design/sources.md`.
+
 ### Brand profiles and new templates
 
 If your video differs from an existing template only in colors, fonts, logo, narrator voice, or
