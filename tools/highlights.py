@@ -115,9 +115,14 @@ def select(transcript, duration, *, budget=60., keywords=(), padding=.12, max_pa
         offset += cut['endSeconds'] - cut['startSeconds']
     if len(cuts) > 128:
         raise ValueError('More than 128 cuts selected. Use a shorter budget.')
+    cutdown_args = []
+    for cut in cuts:
+        start = f"{cut['startSeconds']:.9f}".rstrip('0').rstrip('.')
+        end = f"{cut['endSeconds']:.9f}".rstrip('0').rstrip('.')
+        cutdown_args.extend(['--segment', f'{start}-{end}'])
     return {'version': 1, 'durationSeconds': offset, 'segments': cuts,
             'sentences': [{'text': u['text'], 'score': u['score'], 'sourceStartSeconds': u['words'][0]['start']} for u in selected],
-            'cutdownArgs': [arg for cut in cuts for arg in ('--segment', f"{cut['startSeconds']:.9g}-{cut['endSeconds']:.9g}")],
+            'cutdownArgs': cutdown_args,
             'keep': keep, 'omittedIncompleteTail': bool(incomplete), 'ranking': 'keyword matches and uncommon transcript terms'}
 
 

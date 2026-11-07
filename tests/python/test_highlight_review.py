@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
 from highlights import main, select
+from cutdown import parse_segment
 from media_ops import staged_output
 
 
@@ -31,6 +32,13 @@ class ReviewRegressionTests(unittest.TestCase):
         self.assertEqual(plan['segments'][0]['startSeconds'], .5)
         self.assertEqual(plan['segments'][0]['endSeconds'], .9)
         self.assertEqual(plan['cutdownArgs'], ['--segment', '0.5-0.9'])
+
+    def test_cutdown_arguments_avoid_scientific_notation(self):
+        plan = select([{'text': 'Keep.', 'startMs': 120.0002, 'endMs': 900}], 2)
+        argument = plan['cutdownArgs'][1]
+        self.assertNotIn('e-', argument)
+        segment = parse_segment(argument)
+        self.assertAlmostEqual(segment.start, .0000002, delta=1e-9)
 
     def test_atomic_replace_overwrites_without_hardlinks_and_preserves_failed_output(self):
         with tempfile.TemporaryDirectory() as folder:
