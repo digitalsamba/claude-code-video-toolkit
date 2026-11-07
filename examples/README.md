@@ -9,6 +9,7 @@ Curated showcase projects demonstrating toolkit capabilities.
 | hello-world | Remotion sprint-review | — | Minimal 25s video — zero config, renders in 2 minutes | Beginner |
 | quick-spot | moviepy + PIL | — | 15s ad-style spot with audio-anchored timeline. Runs with zero external assets. | Beginner |
 | data-viz-chart | moviepy + matplotlib | — | Animated time-series chart with deterministic title and source attribution. Runs with included data file. | Beginner |
+| data-chart-stars | Remotion (custom) + `DataChart` | [Digital Samba](https://digitalsamba.com) | 31s narrated chart video: star history drawn word by word with Lugh's voice, then monthly bars lit on cue. All assets committed. | Intermediate |
 | ds-crt-stinger | LTX-2 + moviepy + PIL | — | 6s brand stinger — LTX-2 CRT LoRA footage + post-processed grunged logo | Intermediate |
 | sky-blue-short | concept-explainer-short (moviepy) | — | 52s vertical 9:16 explainer short — Qwen3 VO + Ideogram cards + LTX b-roll + burned captions. All assets committed; re-renders with `uv run build.py`. | Intermediate |
 | ds-release-649 | Remotion (custom) | [Digital Samba](https://digitalsamba.com) | 80s synthetic release-notes video. Product UIs rebuilt from source, scripted cursor and camera, Lugh voice. All assets committed. | Advanced |
@@ -24,13 +25,13 @@ Thank you to these organizations and individuals for sharing their video project
 
 | Contributor | Website | Examples Shared |
 |-------------|---------|-----------------|
-| Digital Samba | [digitalsamba.com](https://digitalsamba.com) | digital-samba-skill-demo, sprint-review-cho-oyu, ds-release-649, ds-free-schedule-demo |
+| Digital Samba | [digitalsamba.com](https://digitalsamba.com) | digital-samba-skill-demo, sprint-review-cho-oyu, ds-release-649, ds-free-schedule-demo, data-chart-stars |
 
 *Want your project featured? Run `/contribute` and select "Share an example project".*
 
 ## Using Examples
 
-**Remotion examples** (`hello-world`, `digital-samba-skill-demo`, `sprint-review-cho-oyu`, `ds-release-649`, `ds-free-schedule-demo`):
+**Remotion examples** (`hello-world`, `digital-samba-skill-demo`, `sprint-review-cho-oyu`, `ds-release-649`, `ds-free-schedule-demo`, `data-chart-stars`):
 
 ```bash
 cp -r examples/example-name projects/my-project

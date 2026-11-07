@@ -1,0 +1,107 @@
+[
+ {
+  "text": "Since",
+  "startMs": 580,
+  "endMs": 820,
+  "timestampMs": 700,
+  "confidence": null
+ },
+ {
+  "text": " then",
+  "startMs": 880,
+  "endMs": 1100,
+  "timestampMs": 990,
+  "confidence": null
+ },
+ {
+  "text": " it",
+  "startMs": 1180,
+  "endMs": 1200,
+  "timestampMs": 1190,
+  "confidence": null
+ },
+ {
+  "text": " has",
+  "startMs": 1240,
+  "endMs": 1360,
+  "timestampMs": 1300,
+  "confidence": null
+ },
+ {
+  "text": " kept",
+  "startMs": 1420,
+  "endMs": 1620,
+  "timestampMs": 1520,
+  "confidence": null
+ },
+ {
+  "text": " on",
+  "startMs": 1680,
+  "endMs": 1800,
+  "timestampMs": 1740,
+  "confidence": null
+ },
+ {
+  "text": " climbing,",
+  "startMs": 1860,
+  "endMs": 2280,
+  "timestampMs": 2070,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 2640,
+  "endMs": 2760,
+  "timestampMs": 2700,
+  "confidence": null
+ },
+ {
+  "text": " today",
+  "startMs": 2800,
+  "endMs": 3300,
+  "timestampMs": 3050,
+  "confidence": null
+ },
+ {
+  "text": " it's",
+  "startMs": 3360,
+  "endMs": 3540,
+  "timestampMs": 3450,
+  "confidence": null
+ },
+ {
+  "text": " past",
+  "startMs": 3600,
+  "endMs": 3920,
+  "timestampMs": 3760,
+  "confidence": null
+ },
+ {
+  "text": " two",
+  "startMs": 3980,
+  "endMs": 4100,
+  "timestampMs": 4040,
+  "confidence": null
+ },
+ {
+  "text": " thousand",
+  "startMs": 4220,
+  "endMs": 4580,
+  "timestampMs": 4400,
+  "confidence": null
+ },
+ {
+  "text": " four",
+  "startMs": 4740,
+  "endMs": 4980,
+  "timestampMs": 4860,
+  "confidence": null
+ },
+ {
+  "text": " hundred.",
+  "startMs": 5020,
+  "endMs": 5440,
+  "timestampMs": 5230,
+  "confidence": null
+ }
+]

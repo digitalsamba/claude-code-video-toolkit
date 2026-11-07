@@ -31,7 +31,7 @@ Navigate to frame 0 in Studio and watch the scene.
 
 > 3 (Refine)
 
-Invoking frontend-design skill...
+Invoking video-design (direction from the project's design source)...
 Reading TitleSlide.tsx and adjacent scenes for context...
 
 What aspect needs refinement?
@@ -78,7 +78,7 @@ The review follows this cycle for each scene:
 ```
 
 - **Adjust**: Change config values (text, duration, asset paths) → hot-reload → verify
-- **Refine**: Invoke frontend-design skill for visual improvements → edit component → hot-reload → verify
+- **Refine**: Invoke video-design for visual improvements → edit component → hot-reload → verify
 
 Repeat until the scene looks right, then approve and move on.
 
@@ -166,7 +166,7 @@ Read the scenes array from the config file. For each scene:
 
 1. Approve - looks good
 2. Edit - need to change something in config
-3. Refine - improve visuals with frontend-design skill
+3. Refine - improve visuals with video-design
 4. Flag - note an issue to address later
 5. Skip - review later
 ```
@@ -190,10 +190,12 @@ Ask what needs to change:
 - "Check Remotion Studio - does it look right now?"
 - If yes, approve. If no, continue editing.
 
-### Refine (frontend-design skill)
+### Refine (video-design skill)
 For visual/aesthetic improvements beyond config changes:
-1. Invoke the `frontend-design` skill, and read `.claude/skills/remotion/motion-craft.md` for the video rules
-   (motion timing in frames, read time, the defaults that look generated, and the review questions)
+1. Use the project's design source (`project.json` `design.source`; if unset, offer the installed design skills
+   and "ours", as in `/design` step 5), update `design.md`, then invoke `video-design`. Read
+   `.claude/skills/remotion/motion-craft.md` for motion (timing in frames, read time, the defaults that look
+   generated)
 2. Read the slide component (e.g., `src/components/slides/TitleSlide.tsx`)
 3. Also read adjacent scenes to understand the visual narrative arc
 4. Work with user iteratively on:

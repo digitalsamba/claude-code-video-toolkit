@@ -82,7 +82,7 @@ Claude Code has deep knowledge in:
 | **elevenlabs** | AI audio — text-to-speech, voice cloning, music, sound effects |
 | **ffmpeg** | Media processing — format conversion, compression, resizing |
 | **playwright-recording** | Browser automation — record demos as video |
-| **frontend-design** | Visual design refinement for distinctive, production-grade aesthetics |
+| **video-design** | Visual design for video: colour by act, one data accent, type steps, a contact-sheet critique; takes direction from any design skill ([design sources](#design-sources)) |
 | **qwen-edit** | AI image editing — prompting patterns and best practices |
 | **ideogram4** | AI image generation with best-in-class in-image text — title cards, thumbnails, exact brand colors |
 | **acestep** | AI music generation — prompts, lyrics, scene presets, video integration |
@@ -99,7 +99,7 @@ Claude Code has deep knowledge in:
 | `/setup` | First-time setup — cloud GPU, file transfer, voice, prerequisites |
 | `/video` | Video projects — list, resume, or create new |
 | `/scene-review` | Scene-by-scene review in Remotion Studio |
-| `/design` | Focused design refinement session for a scene |
+| `/design` | Set a video's design direction (design.md) from a design source, refine a scene, or critique the render |
 | `/brand` | Brand profiles — list, edit, or create new |
 | `/template` | List available templates or create new ones |
 | `/skills` | List installed skills or create new ones |
@@ -128,7 +128,8 @@ See `examples/` for finished projects you can learn from (newest first — scrol
 
 | Date | Demo | Description |
 |------|------|-------------|
-| 2026-11-01 | [the-agent-handoff](https://demos.digitalsamba.com/video/the-agent-handoff.mp4) | 57s showcase an agent made unattended from one Discord message: Lugh wrote the script and the shot list, `video_job.py` voiced it with his clone, generated four LTX-2 clips and a diagram card, built and QC'd it, and the Discord bot posted the link when it went live; $0.47, the fourth take after three pipeline fixes (`docs/agent-video-jobs.md`) |
+| 2026-11-04 | [data-chart-stars](https://demos.digitalsamba.com/video/data-chart-stars.mp4) | 31s chart video of the toolkit's GitHub star history, drawn as SVG by the new `LineChart` and `BarChart` components: the line is drawn while Lugh narrates each stretch, and the March spike's band and the monthly bars light on the words that name them, timed with `cue()` (`examples/data-chart-stars`) |
+| 2026-11-01 | [the-agent-handoff](https://demos.digitalsamba.com/video/the-agent-handoff.mp4) | 57s showcase an agent made unattended from one Discord message: the agent wrote the script and the shot list, `video_job.py` voiced it with a cloned voice, generated four LTX-2 clips and a diagram card, built and QC'd it, and the Discord bot posted the link when it went live; $0.47, the fourth take after three pipeline fixes (`docs/agent-video-jobs.md`) |
 | 2026-10-28 | [ds-release-650](https://demos.digitalsamba.com/video/ds-release-650.mp4) | 87s release-notes video built from the `ds-release-notes` template: six items across the room and account center, Lugh's cloned voice made livelier with `voice_prosody.py`, checked with `qc.py --render --layout` (`templates/ds-release-notes`) |
 | 2026-10-21 | [ds-release-649](https://demos.digitalsamba.com/video/ds-release-649.mp4) | Release-notes video with no screen recording: three product UIs rebuilt from their source code, driven by a scripted cursor and camera, narrated by Lugh (`examples/ds-release-649`) |
 | 2026-10-21 | [ds-free-schedule-demo](https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4) | 26s synthetic product demo of scheduling a call, with a SoulX talking-head narrator tile (`examples/ds-free-schedule-demo`) |
@@ -360,7 +361,7 @@ claude-code-video-toolkit/
 2. **Review script** — Edit `VOICEOVER-SCRIPT.md` to plan content and assets
 3. **Gather assets** — Record demos with `/record-demo` or add external videos
 4. **Scene review** — Run `/scene-review` to verify visuals in Remotion Studio
-5. **Design refinement** — Use `/design` to improve slide visuals with the frontend-design skill
+5. **Design** — `/video` sets the design direction before scenes are built; `/design` changes it, refines a scene with `video-design`, or critiques the render
 6. **Generate audio** — AI voiceover with `/generate-voiceover`
 7. **Configure** — Update config file with asset paths and timing
 8. **Preview** — `npm run studio` for live preview
@@ -387,6 +388,22 @@ uv run scripts/migrate_to_kiro.py --force
 
 See [docs/kiro.md](docs/kiro.md) for what it installs, how it achieves Claude Code-parity, and how to remove it.
 
+## Design sources
+
+**Plug in your own design skill, or use ours.** `/design` and `/scene-review` take their visual direction from the
+source you choose, then apply the toolkit's own video rules (`video-design`) and critique the render from a contact
+sheet. The choice is saved per project; nothing here depends on one particular skill.
+
+| Source | What it's good for | Install |
+|--------|--------------------|---------|
+| Ours (default) | `video-design`'s act palettes and rules, with your brand's colours and fonts | Nothing to install |
+| [taste-skill](https://github.com/Leonxlnx/taste-skill) (recommended plug-in) | Dealt directions and palettes from 247 studied sites, measured house rules, a juror's critique (MIT) | `/plugin marketplace add Leonxlnx/taste-skill` then `/plugin install taste-skill@taste-skill` |
+| [frontend-design](https://github.com/anthropics/skills) | Anthropic's general visual direction for interfaces (written for web pages) | See the anthropics/skills README |
+
+Bring your own: any design skill works if it can fill `design.md` (palette per act, ink, one accent, type).
+To list one here, open an issue with a link, its licence, and a contact sheet of `examples/data-chart-stars`
+restyled with it. See [`.claude/skills/video-design/sources.md`](.claude/skills/video-design/sources.md).
+
 ## Community add-ons
 
 Projects built on or around the toolkit that live in their own repos — typically because they need
@@ -398,6 +415,7 @@ software or a service we can't bundle. We haven't reviewed them; check each proj
 | [arkiv](https://github.com/vulture-s/arkiv) | Natural-language search (EN/中文/日本語) over your own footage archive, returning scenes with start/end timecodes to use as a template's `videoFile` | A local arkiv instance (source-available, PolyForm Perimeter) |
 | [Upload-Post publishing](https://github.com/Upload-Post/claude-code-video-toolkit-upload-post) | Publish a rendered video to TikTok, Instagram, YouTube, LinkedIn, Facebook, X, Threads, Pinterest and Bluesky via a `/publish-social` command | An Upload-Post account and API key (hosted, free plan available) |
 | [CommentKeyword comment-to-DM](https://github.com/commentkeyword/agent-toolkit/tree/main/integrations/claude-code-video-toolkit) | Sets up the Instagram auto-DM behind a video's "Comment KEYWORD" CTA, armed for the next post, via a `/comment-dm` command | A CommentKeyword account and API token (hosted, free plan available; Instagram only) |
+| [easybrandkit](https://github.com/EminBudak/easybrandkit) | Reads a live site's logo, colors and fonts into a BRAND.md that `/brand` can start from | Node 22 and Chrome, Chromium, Edge or Brave |
 
 To be listed, open an issue with a link and a one-line description. Integrations that need a
 hosted third-party service live here rather than in the toolkit itself — see

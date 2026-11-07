@@ -1,23 +1,25 @@
 {
   "name": "Digital Samba",
-  "description": "Digital Samba brand - European video conferencing platform",
+  "description": "Digital Samba brand - European video conferencing platform. Colours from the wordmark (coral #F06859, navy #323E66) and the product blue (#3771e0); orange is not a DS colour.",
   "version": "1.0.0",
   "website": "https://www.digitalsamba.com",
 
   "colors": {
-    "primary": "#ea580c",
-    "primaryLight": "#fb923c",
-    "primaryDark": "#c2410c",
+    "primary": "#F06859",
+    "primaryLight": "#F58A7E",
+    "primaryDark": "#D14F3F",
     "accent": "#3771e0",
-    "textDark": "#1e293b",
-    "textMedium": "#334155",
-    "textLight": "#64748b",
+    "navy": "#323E66",
+    "navyDark": "#232D49",
+    "textDark": "#1B202F",
+    "textMedium": "#323E66",
+    "textLight": "#5E667A",
     "bgLight": "#ffffff",
-    "bgAlt": "#fafafa",
-    "bgDark": "#1a1a2e",
-    "bgOverlay": "rgba(255, 255, 255, 0.95)",
-    "divider": "#e2e8f0",
-    "shadow": "rgba(0, 0, 0, 0.12)"
+    "bgAlt": "#F7F6F3",
+    "bgDark": "#323E66",
+    "bgOverlay": "rgba(50, 62, 102, 0.92)",
+    "divider": "#E5E7EE",
+    "shadow": "rgba(27, 32, 47, 0.18)"
   },
 
   "fonts": {
