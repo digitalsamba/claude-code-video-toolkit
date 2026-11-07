@@ -4,18 +4,20 @@ import { Freeze, OffthreadVideo, interpolate, staticFile, useCurrentFrame } from
 export interface LivingPhotoProps {
   /** An image-to-video clip of the person (ltx2.py --input), relative to public/. */
   src: string;
-  /** The last good frame of the clip, in clip frames (default 145, a 5 s LTX clip at 30 fps).
-   *  Lower it to stop before a late cut to a stranger or a smear. */
+  /** The last good frame of the clip, in frames at 30 fps (default 145, a 5 s LTX clip). Lower it to stop before
+   *  a late cut to a stranger or a smear; raise it for a clip lengthened with tools/ltx_extend.py. */
   hold?: number;
   /** Skip this many frames at the start (a glitch or garbled text in the first second). */
   trim?: number;
-  /** Playback speed. Below 1 stretches the action across a long shot (0.5 for slow-motion b-roll). */
+  /** Playback speed. Below 1 stretches the action (0.5 is natural slow motion for b-roll; faces look slowed below
+   *  ~0.8). Overrides `fit`. */
   rate?: number;
-  /** After `hold`: 'settle' (default) keeps the face alive by drifting slowly back and forth over the clip's
-   *  last `settle` frames with a slight push-in; 'freeze' holds the frame dead still (a freeze-frame gag). */
-  after?: 'settle' | 'freeze';
-  /** Clip frames the settle drifts over (default 30, about a second). */
-  settle?: number;
+  /** The shot's length in frames: slows the clip just enough to fill it, down to 0.8x. A clip still too short at
+   *  0.8x needs extending (tools/ltx_extend.py), not looping: a back-and-forth tail reads as a rewind. */
+  fit?: number;
+  /** After `hold`: 'drift' (default) holds the frame with a slow push-in; 'freeze' holds it dead still (a
+   *  freeze-frame gag). Either way the face stops, so a long one is flagged by qc.py as motion that stops dead. */
+  after?: 'drift' | 'freeze';
   /** CSS object-position for the cover crop; frame the close-up here, not in the LTX input. */
   pos?: string;
   /** CSS filter for the genre's grade, e.g. "sepia(.25) saturate(1.1)". */
@@ -24,28 +26,31 @@ export interface LivingPhotoProps {
   style?: React.CSSProperties;
 }
 
-/** Which clip frame to show at a given shot frame. Exported so a shot can key a gag to the same moment. */
-export const livingFrame = (frame: number, { hold = 145, rate = 1, after = 'settle', settle = 30 }: Pick<LivingPhotoProps, 'hold' | 'rate' | 'after' | 'settle'> = {}) => {
-  const t = frame * rate;
-  if (t < hold || after === 'freeze') return Math.min(t, hold);
-  // half speed, there and back: a gentle idle, never a dead frame
-  const w = Math.max(2, Math.min(settle, hold));
-  const m = ((t - hold) * 0.5) % (2 * w);
-  return hold - (m < w ? m : 2 * w - m);
-};
+const FIT_MIN = 0.8;
+
+/** The playback rate a LivingPhoto uses. */
+export const livingRate = ({ hold = 145, rate, fit }: Pick<LivingPhotoProps, 'hold' | 'rate' | 'fit'> = {}) =>
+  rate ?? (fit ? Math.max(FIT_MIN, Math.min(1, hold / fit)) : 1);
+
+/** Which clip frame shows at a given shot frame. Exported so a shot can key a gag to the same moment. */
+export const livingFrame = (frame: number, props: Pick<LivingPhotoProps, 'hold' | 'rate' | 'fit'> = {}) =>
+  Math.min(frame * livingRate(props), props.hold ?? 145);
 
 /**
- * A person's animated photo. Plays the clip once, then settles: it drifts over its last second at half speed with
- * a slight push-in, so a shot longer than the clip never stops dead (that read as a pause in the video's flow).
+ * A person's animated photo: plays the clip forward once (slowed to `fit` the shot if asked), then holds its last
+ * good frame. It never plays backwards: a ping-pong tail measured as frames revisiting earlier ones and read as a
+ * loop. For a shot longer than the clip, lengthen the clip with tools/ltx_extend.py.
  * Wrap it in a <Sequence> that starts at its shot. Method: .claude/skills/parody-short/people.md
  */
 export const LivingPhoto: React.FC<LivingPhotoProps> = ({
-  src, hold = 145, trim = 0, rate = 1, after = 'settle', settle = 30, pos = 'center 30%', filter, style,
+  src, hold = 145, trim = 0, rate, fit, after = 'drift', pos = 'center 30%', filter, style,
 }) => {
   const frame = useCurrentFrame();
-  const clipFrame = Math.round(livingFrame(frame, { hold, rate, after, settle }));
-  const past = frame * rate - hold;
-  const push = after === 'settle' ? interpolate(past, [0, 300], [1, 1.04], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) : 1;
+  const r = livingRate({ hold, rate, fit });
+  const clipFrame = Math.round(Math.min(frame * r, hold));
+  const push = after === 'drift'
+    ? interpolate(frame * r - hold, [0, 300], [1, 1.04], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+    : 1;
   return (
     <div style={{ position: 'absolute', overflow: 'hidden', ...style }}>
       <Freeze frame={clipFrame} active>

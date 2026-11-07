@@ -858,6 +858,16 @@
       "created": "2026-03-25",
       "updated": "2026-10-12"
     },
+    "ltx_extend": {
+      "path": "tools/ltx_extend.py",
+      "description": "Lengthen an LTX image-to-video clip by continuing it from one of its own frames (the last good one) and joining the two with a short cross-fade; chains with --times. For shots longer than a ~5 s clip, instead of holding (reads as a pause) or ping-ponging (reads as a loop)",
+      "usage": "uv run tools/ltx_extend.py --input clip.mp4 --at 4.8 --times 2 --prompt \"...\" --output clip-long.mp4",
+      "status": "beta",
+      "category": "video-generation",
+      "requires": "ltx2.py on Modal (each extension is one LTX clip, ~$0.08)",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
+    },
     "chain_video": {
       "path": "tools/chain_video.py",
       "description": "Chain LTX-2 clips with visual continuity — each scene uses the last frame of the previous as input",
@@ -1505,7 +1515,7 @@
     },
     "LivingPhoto": {
       "path": "lib/components/LivingPhoto.tsx",
-      "description": "An image-to-video clip of a person (ltx2.py --input) that plays once and holds its last good frame, with hold/trim to cut around a late stranger or an early glitch; used by parody-short",
+      "description": "An image-to-video clip of a person (ltx2.py --input) that plays forward once and holds its last good frame with a slow push-in; hold/trim cut around a late stranger or an early glitch, fit slows a slightly short clip to its shot (to 0.8x). Never plays backwards; lengthen with ltx_extend.py",
       "created": "2026-11-07",
       "updated": "2026-11-07"
     }

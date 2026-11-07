@@ -71,6 +71,8 @@ The same background, the same person, the same face and clothes throughout, no t
 - **Never** "opening credits", "camera pushes in", "title": they cause cuts, garbled text and push-ins.
 - One clear, fun action per clip (lowers aviators, finger guns, a toast, tips a hat, a bouncer head-shake). A
   gentle action survives better than a big one.
+- **Keep legs out of it.** A full-body shot where the legs move (feet up, crossing legs, a kick) grew a third leg.
+  Hands and faces hold up; legs don't. Say "both feet flat on the floor, legs still" in a full-body prompt.
 - 121 frames at 24 fps is ~5 s, about 145 frames at 30 fps in Remotion.
 - Seed 5 was most reliable; seed 11 was the usual re-roll.
 
@@ -93,6 +95,26 @@ three needs something. Fix it in the cheapest way:
 | The best moment is near the end (a sneeze, a punchline face) | freeze on it with `hold`, and time the shot's gag to the hold frame |
 | Garbled text or a glitch in the first second | `trim` past it (`trim={40}`) |
 | Stranger from the start, or the action is wrong | re-roll: another seed, a gentler action |
+| An extra limb or a wrong action mid-clip | extend from a frame **before** it (`ltx_extend.py --at`) with a calmer prompt; the bad part never plays |
+| The shot is longer than the clip | extend it (below); never loop or ping-pong it |
+
+## 4b. Make it as long as the shot
+
+An LTX clip is ~5 s and a shot is often 7-12 s. Two ways to fill the gap both failed: holding the last frame read
+as a pause, and playing the tail back and forth read as a loop. Continue the clip instead:
+
+```bash
+uv run tools/ltx_extend.py --input people/sam.mp4 --at 4.8 --times 2 --output people/sam-long.mp4 \
+  --prompt "Static camera, locked off tripod ... the same man keeps laughing, then settles back ... no text"
+```
+
+It takes the frame at `--at` (the last good one), runs image-to-video from it and joins the two with a short
+cross-fade; `--times 2` chains another. The seam doesn't show, because the continuation starts from the clip's own
+frame. Contact-sheet the result: a continuation can drift or cut at its own end, so set `hold` to the shot length
+and stop before it. ~$0.08 an extension.
+
+Measured on one shot (Marcus at home, 11 s): holding gave 63% frozen frames; a ping-pong tail gave 29% of frames
+revisiting an earlier frame; an extended clip gave 0% frozen and 0% revisits.
 
 ## 5. Play it in Remotion
 
@@ -106,10 +128,10 @@ import { LivingPhoto } from '../../../lib/components';
 
 - Wrap it in a `<Sequence>` that starts at its shot, or the clip plays from frame 0 of the composition and is
   over before it appears.
-- After its last good frame (`hold`, default 145) it **settles**: it drifts slowly back and forth over the clip's
-  last second with a slight push-in, for as long as the shot runs. A dead hold read as a pause in the video's flow
-  (a clip is ~5 s, a shot 7-11 s). `after="freeze"` keeps the old dead hold, for a freeze-frame gag.
-- `rate` below 1 stretches a clip across a long shot (b-roll at 0.5 is natural slow motion).
+- It plays forward once and holds its last good frame (`hold`, default 145) with a slow push-in; `after="freeze"`
+  holds dead still, for a freeze-frame gag. It never plays backwards.
+- `fit={shotLength}` slows a slightly short clip to fill the shot, down to 0.8x (faces look slowed below that).
+  Anything shorter needs `ltx_extend.py` (4b). `rate` sets the speed outright (b-roll at 0.5 is natural slow motion).
 - **No still photos in a call grid.** A tile that never moves looks broken next to moving ones. Give every cast
   member an idle clip (listening, blinking, small slow nods; one LTX clip each) and use it wherever they aren't
   the one acting.
