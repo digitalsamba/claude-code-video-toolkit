@@ -93,6 +93,8 @@ def main() -> int:
     p.add_argument("--clip", type=Path, help="a clip to place a sound on, before rendering")
     p.add_argument("--window", help="with --clip: seconds a:b of the clip where the movement is (default: all)")
     p.add_argument("--rate", type=float, default=1.0, help="with --clip: the clip's playback rate in the video")
+    p.add_argument("--trim", type=int, default=0,
+                   help="with --clip: frames skipped at the clip's start (LivingPhoto trim, 30 fps)")
     p.add_argument("--sfx", type=Path)
     p.add_argument("--at", type=float, help="seconds: where the effect starts in the video")
     p.add_argument("--region", help="ffmpeg crop w:h:x:y of the movement the sound belongs to")
@@ -113,7 +115,7 @@ def main() -> int:
                                "v:0", "-of", "csv=p=0", str(a.clip)], capture_output=True, text=True).stdout.strip()
         w, h = info.split(",")
         moment, size = motion_peak(a.clip, a.region or f"{w}:{h}:0:0", w0, w1, a.kind)
-        start = moment / a.rate - peak             # in video seconds after the clip starts
+        start = (moment - a.trim / 30) / a.rate - peak   # in video seconds after the clip's shot starts
         print(json.dumps({"clip": str(a.clip), "movement_at": round(moment, 2), "sound_peak_in_file": round(peak, 2),
                           "start_sound_after_clip_s": round(start, 2), "start_sound_after_clip_frames_30fps": round(start * 30)}))
         return 0

@@ -24,7 +24,7 @@ no text, no logos"
 ## 1. Photos
 
 Profile photos from the team's chat (`slack_read_user_profile` gives the image URL; take the largest size) or
-photos the person asking supplies. Use only colleagues' photos, for internal use (SKILL.md, rules).
+photos the person asking supplies. Real people's photos are for internal use (SKILL.md, rules).
 
 Crop every photo to the same **704x768 portrait**, the size LTX animates:
 
@@ -61,7 +61,7 @@ beard or stubble, photorealistic photograph"
 ```bash
 uv run tools/ltx2.py --cloud modal --no-open --input people/sam-xmas-in.jpg --width 704 --height 768 \
   --num-frames 121 --seed 5 --output people/sam.mp4 \
-  --prompt "Static camera, locked off tripod, medium shot, framing stays exactly the same, no zoom, no cuts. \
+  --prompt "Static camera, medium shot, framing stays exactly the same, no zoom, no cuts. \
 The same man in the same green robe throws his head back and laughs heartily, then spreads his arms wide. \
 The same background, the same person, the same face and clothes throughout, no text"
 ```
@@ -105,15 +105,15 @@ as a pause, and playing the tail back and forth read as a loop. Continue the cli
 
 ```bash
 uv run tools/ltx_extend.py --input people/sam.mp4 --at 4.8 --times 2 --output people/sam-long.mp4 \
-  --prompt "Static camera, locked off tripod ... the same man keeps laughing, then settles back ... no text"
+  --prompt "A fixed view that never moves: the framing stays exactly the same, no zoom, no pull back, no cuts. A close medium shot of the same man, who keeps laughing ... no text"
 ```
 
 Two things decide whether a continuation keeps the person (out of 21 extensions, 2026-11-07):
 
 - **Never continue from a close-up.** A frame where the person has leaned right into the lens has no room left in
   it, and LTX invents a new scene: 2 of 2 cut to a stranger in a studio. Pick a frame from before the lean.
-- **Don't say "tripod" in a webcam scene.** "Locked off tripod" got a tripod and a camera drawn into the frame, in
-  a studio. For webcam shots write "a fixed webcam view that never moves: the framing stays exactly the same, no
+- **Don't say "tripod".** In a webcam scene "locked off tripod" got a tripod and a camera drawn into the frame, in
+  a studio; "static camera" or "a fixed view" asks for the same thing without the object. For webcam shots write "a fixed webcam view that never moves: the framing stays exactly the same, no
   zoom, no pull back, no cuts". A continuation also tends to pull back to a wide shot; "a close medium shot of
   his upper body" holds it.
 

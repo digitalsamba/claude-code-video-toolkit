@@ -4,8 +4,9 @@ import { Freeze, OffthreadVideo, interpolate, staticFile, useCurrentFrame } from
 export interface LivingPhotoProps {
   /** An image-to-video clip of the person (ltx2.py --input), relative to public/. */
   src: string;
-  /** The last good frame of the clip, in frames at 30 fps (default 145, a 5 s LTX clip). Lower it to stop before
-   *  a late cut to a stranger or a smear; raise it for a clip lengthened with tools/ltx_extend.py. */
+  /** The last good frame of the clip, in frames at 30 fps counted after `trim` (default 145, a 5 s LTX clip).
+   *  Lower it to stop before a late cut to a stranger or a smear; raise it for a clip lengthened with
+   *  tools/ltx_extend.py. */
   hold?: number;
   /** Skip this many frames at the start (a glitch or garbled text in the first second). */
   trim?: number;
@@ -34,7 +35,7 @@ export const livingRate = ({ hold = 145, rate, fit }: Pick<LivingPhotoProps, 'ho
 
 /** Which clip frame shows at a given shot frame. Exported so a shot can key a gag to the same moment. */
 export const livingFrame = (frame: number, props: Pick<LivingPhotoProps, 'hold' | 'rate' | 'fit'> = {}) =>
-  Math.min(frame * livingRate(props), props.hold ?? 145);
+  Math.round(Math.min(frame * livingRate(props), props.hold ?? 145));
 
 /**
  * A person's animated photo: plays the clip forward once (slowed to `fit` the shot if asked), then holds its last
@@ -47,9 +48,10 @@ export const LivingPhoto: React.FC<LivingPhotoProps> = ({
 }) => {
   const frame = useCurrentFrame();
   const r = livingRate({ hold, rate, fit });
-  const clipFrame = Math.round(Math.min(frame * r, hold));
+  const clipFrame = livingFrame(frame, { hold, rate, fit });
+  // the push-in runs over 10 s of the shot from the hold, whatever the playback rate
   const push = after === 'drift'
-    ? interpolate(frame * r - hold, [0, 300], [1, 1.04], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+    ? interpolate(frame - hold / r, [0, 300], [1, 1.04], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
     : 1;
   return (
     <div style={{ position: 'absolute', overflow: 'hidden', ...style }}>

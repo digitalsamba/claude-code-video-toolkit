@@ -150,7 +150,8 @@ uv run tools/ltx2.py --prompt "Subtle natural head movement, warm expression, pr
 **Keeping a real person the same person** (learned animating colleagues' profile photos, 2026-11):
 - Feed the uncropped portrait (704x768); a tight 16:9 crop of a face makes LTX hard-cut to a stranger. Crop in
   Remotion with `objectFit: cover` instead.
-- Lead with "Static camera, locked off tripod, medium shot, framing stays exactly the same, no zoom, no cuts", end
+- Lead with "Static camera, medium shot, framing stays exactly the same, no zoom, no cuts" (not "tripod": it
+  can draw one into the frame), end
   with "the same person, the same face and clothes throughout, no text". Avoid "opening credits", "camera pushes
   in" and "title".
 - One gentle action per clip. About one clip in three still needs a re-roll or a trim, so check every clip with

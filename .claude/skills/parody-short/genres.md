@@ -11,7 +11,6 @@ film or show (renamed or not). Public-domain stories can be used directly.
 | **80s action-show intro** | a release night | narrator sets the mission; a title card per person with a freeze-frame and a stamp; the plan, the montage of welding and cramming, the win with a cigar. |
 | **Creature feature** (original creatures, the "glitchlings") | the same release | the new release arrives in a box with three rules (never restart it with people inside, never leave its secrets lying around, never feed it on a Friday night); each rule gets broken; dawn, all quiet. |
 | **Dickens Christmas TV ad** (*A Christmas Carol*, public domain) | the year's updates | Scrooge = the release lead with a runsheet; Past = old updates; Present = features crammed in; Yet to Come = boxes still unticked; redemption = "automate the deploys". |
-
 | **Horror trailer** (invented cast, glitchlings) | a shared topic: the video call that never ends | "it was supposed to be a quick sync"; muted, frozen, unseen screen; the meeting timer passes 46 hours and Leave runs from the cursor; the title slam; then a stinger after the title: "let's take this offline", and a follow-up invite arrives. |
 | **Wildlife documentary** (invented cast) | a shared topic: the return to the office | the home habitat (shirt above, pyjamas below); the signal (a "mandatory" email); the migration; the lanyard display; a hot-desk territory fight; the watering hole; the predator ("Got a minute?"); the twist: reunited, the herd joins a video call. |
 

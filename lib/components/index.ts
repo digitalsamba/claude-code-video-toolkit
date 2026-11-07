@@ -71,7 +71,7 @@ export { PageTurns, turnProgress } from './PageTurns';
 export type { PageTurnsProps, PageTurn } from './PageTurns';
 
 // A person's animated photo (ltx2.py --input): plays once, holds its last good frame (parody-short skill)
-export { LivingPhoto, livingFrame } from './LivingPhoto';
+export { LivingPhoto, livingFrame, livingRate } from './LivingPhoto';
 export type { LivingPhotoProps } from './LivingPhoto';
 
 // Utilities

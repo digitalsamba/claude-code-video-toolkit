@@ -523,8 +523,8 @@ def check_frames(render: Path, info: dict, report: Report, max_still: float):
     # image-to-video clip that ran out and held its last frame). The whole-frame check above misses it, because
     # something else is always moving.
     moving_n = round(MOTION_MOVING_SECONDS * STILL_FPS)
-    # a cut or a dissolve changes most of the frame at once; motion that is only a cut doesn't count
-    # A cut changes even the quietest regions, as a spike: footage that moves all over the frame all the time isn't one.
+    # A cut or a dissolve changes even the quietest regions at once, as a spike; motion that is only a cut doesn't
+    # count. Footage that moves all over the frame all the time isn't a cut.
     quiet = [sorted(s)[len(s) // 6] for s in regions]
     cut = [q >= 4 * STILL_TILE_DIFF and max(quiet[max(0, i - 2)], quiet[min(len(quiet) - 1, i + 2)]) < q / 3
            for i, q in enumerate(quiet)]
@@ -560,8 +560,8 @@ def check_frames(render: Path, info: dict, report: Report, max_still: float):
         where = ", ".join(dict.fromkeys(names))
         report.add("warn", "frames",
                    f"{_fmt_t(t0)}-{_fmt_t(t1)}: motion stops dead for {t1 - t0:.1f}s ({where}) while the video "
-                   "goes on. A clip that ran out and held its last frame? Settle it (LivingPhoto), slow it, or "
-                   "cut the shot shorter",
+                   "goes on. A clip that ran out and held its last frame? Extend it (tools/ltx_extend.py), slow it "
+                   "(LivingPhoto fit), or cut the shot shorter",
                    start=round(t0, 2), end=round(t1, 2), kind="motion_stop")
     report.data["frames"]["motion_stops"] = len(merged)
 

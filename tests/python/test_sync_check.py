@@ -51,6 +51,11 @@ class SyncCheckTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertAlmostEqual(res['start_sound_after_clip_s'], 1.9, delta=0.1)
 
+    def test_clip_mode_allows_for_a_trimmed_start(self):
+        code, res = self.run_check('--clip', str(self.video), '--sfx', str(self.beep), '--trim', '15')
+        self.assertEqual(code, 0)
+        self.assertAlmostEqual(res['start_sound_after_clip_s'], 1.4, delta=0.1)
+
 
 if __name__ == '__main__':
     unittest.main()

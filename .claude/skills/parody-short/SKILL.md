@@ -50,9 +50,9 @@ documentary about the return to the office), each in 16:9 and vertical, plus a b
 
 ## Rules that are not optional
 
-- **Colleagues only, all affectionate.** Nobody is the butt of a joke they'd mind. No performance, health,
+- **All affectionate.** Nobody in the group is the butt of a joke they'd mind. No performance, health,
   personal life or anything said in confidence. When in doubt, cut the line.
-- **Internal use.** Real people's likeness belongs to them. Make it for the team, share it link-only, and ask
+- **Real people stay internal.** Their likeness belongs to them. Make it for the group, share it link-only, and ask
   before posting anywhere public. Anyone in it who asks to be left out is left out.
 - **Nothing sensitive on screen.** No customer or partner names, no hostnames, no secret values (a secret is a
   blurred bar or `••••`), no internal URLs. Rename real systems ("RELAY ONE").
@@ -66,9 +66,9 @@ documentary about the return to the office), each in 16:9 and vertical, plus a b
 | Step | What | Read |
 |---|---|---|
 | 1. Brief | Event, audience, cast (3-6 people), genre, length, "do facts matter?" | this file |
-| 2. Context | Mine the team's channels and tools; write `public/bible.md` | `context.md` |
+| 2. Context | Mine the group's channels and tools; write `public/bible.md` | `context.md` |
 | 3. Map | Genre beats onto the event; one beat per person; pick lines from the bible | `genres.md` |
-| 4. Cast | Profile photos, costume with `image_edit`, animate with LTX, contact sheet | `people.md` |
+| 4. Cast | Photos or an invented cast, costume with `image_edit`, animate with LTX, contact sheet | `people.md` |
 | 5. World | FLUX backgrounds (text-free), SFX, music or a song with original lyrics | `acestep`, `elevenlabs` |
 | 6. Build | Remotion shots on absolute frames; `LivingPhoto` for the cast; genre overlay | `people.md`, `video-design` |
 | 7. Check | Contact sheet of the render, `qc.py --render --fix`, `sync_check.py --cues`, then the safety rules again | `video-design/critique.md`, CLAUDE.md |

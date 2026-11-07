@@ -107,9 +107,9 @@
     },
     "parody-short": {
       "path": ".claude/skills/parody-short/",
-      "description": "Internal comedy shorts about a team's own work in a borrowed genre, starring the team's animated profile photos: mining team context for in-jokes (Slack, tickets, git, incidents), mapping genre beats onto the event, costume (image_edit) then animate (LTX) the cast, per-genre look and sound, and the affection and privacy rules",
+      "description": "Comedy shorts about a group's own life (a team, club, class or family) or a shared topic, in a borrowed genre, starring the group's animated photos or an invented cast: mining the group's context for in-jokes, mapping genre beats onto the event, costume (image_edit) then animate and extend (LTX, ltx_extend.py) the cast, sound placed with sync_check.py, vertical cuts and brand editions, and the affection and privacy rules",
       "status": "beta",
-      "note": "Learned on three internal videos (2026-11): an 80s action-show release intro, a Halloween creature feature, a Dickens Christmas ad. Not in examples/ because they star real colleagues.",
+      "note": "Learned on three internal videos starring real colleagues (an 80s action-show release intro, a Halloween creature feature, a Dickens Christmas ad) and two public shorts with an invented cast (a horror trailer, a wildlife documentary), 2026-11",
       "created": "2026-11-07",
       "updated": "2026-11-07"
     },

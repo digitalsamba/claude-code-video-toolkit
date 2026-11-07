@@ -11,11 +11,12 @@ for longer shots. Each extension costs one LTX clip (~$0.08 on Modal).
 Examples:
   # one extension from 4.8 s: a ~10 s clip
   uv run tools/ltx_extend.py --input people/rob.mp4 --at 4.8 --output people/rob-long.mp4 \\
-      --prompt "Static camera, locked off tripod ... the same man keeps laughing, then settles ... no text"
+      --prompt "A fixed view that never moves: the framing stays exactly the same, no zoom, no pull back, no cuts. ... the same man keeps laughing ... no text"
 
   # from a clip's last good frame (LivingPhoto hold={105} at 30 fps is 3.5 s), two extensions
   uv run tools/ltx_extend.py --input dana.mp4 --at 3.5 --times 2 --prompt "..." --output dana-long.mp4
 
+Never continue from a close-up frame (LTX invents a new scene), and don't say "tripod" (it draws one).
 Check the result with tools/contact_sheet.py like any LTX clip: a continuation can still cut away at its end.
 """
 
