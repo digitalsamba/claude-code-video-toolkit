@@ -19,18 +19,19 @@ Scrooge's change of heart), and roles that match real roles (the planner, the we
 
 | Genre | Beats | Fits |
 |---|---|---|
-| Heist movie | the crew, the plan on a whiteboard, the vault, the twist, the getaway | migrations, launches, a big cutover |
-| Nature documentary | hushed narrator, the creature in its habitat, the hunt, the migration | a day in on-call, a sprint, the support queue |
-| Space mission | countdown, mission control, a problem, improvisation, splashdown | a launch, a deploy window |
-| Courtroom drama | the accused (a bug), witnesses, the evidence, the verdict | a postmortem, a bug hunt |
-| Cooking show | ingredients, prep, the oven, "here's one I made earlier" | building a feature, an infra recipe |
-| Sports commentary | two commentators, the replay, the stats overlay, the trophy | a hackathon, a quarter's numbers |
-| Western | the stranger in town, the showdown at noon | a new hire, a legacy system |
-| Noir detective | rain, voice-over, the dame (a dashboard), the twist | a mystery outage |
-| Infomercial | the problem in black and white, "but wait, there's more!" | an internal tool launch |
-| Movie trailer | "In a world...", quick cuts, the title, "coming soon" | a roadmap, the next quarter |
-| Holiday ads | Christmas (Dickens, carollers), Halloween (creature feature), New Year (countdown) | end of year, any release near a holiday |
-| Fairy tale (Grimm, public domain) | three tasks, a curse, a happily ever after | a long project |
+| Heist movie | the crew, the plan on a whiteboard, the vault, the twist, the getaway | a launch, an office move, the quarter-end deal |
+| Nature documentary | hushed narrator, the creature in its habitat, the hunt, the migration | a day in the office, the support queue, the return to the office |
+| Space mission | countdown, mission control, a problem, improvisation, splashdown | a launch, an event day, the school play's opening night |
+| Courtroom drama | the accused, witnesses, the evidence, the verdict | who took the last milk, a postmortem |
+| Cooking show | ingredients, prep, the oven, "here's one I made earlier" | how a campaign or a feature gets made |
+| Sports commentary | two commentators, the replay, the stats overlay, the trophy | sports day, a sales leaderboard, a hackathon |
+| Western | the stranger in town, the showdown at noon | a new hire or new manager, the new system |
+| Noir detective | rain, voice-over, the mystery, the twist | the missing stapler, a mystery outage |
+| Infomercial | the problem in black and white, "but wait, there's more!" | a new tool, policy or process everyone must adopt |
+| Movie trailer | "In a world...", quick cuts, the title, "coming soon" | next year's plan, an away day |
+| Horror | the call that never ends, the thing in the inbox | meetings, email, the shared drive |
+| Holiday ads | Christmas (Dickens, carollers), Halloween (creature feature), New Year (countdown) | end of year, anything near a holiday |
+| Fairy tale (Grimm, public domain) | three tasks, a curse, a happily ever after | a long project, a retirement send-off |
 
 ## Writing the beats
 

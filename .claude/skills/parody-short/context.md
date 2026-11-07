@@ -28,18 +28,27 @@ Tried and proven (2026-11):
   and title. Look at reactions too: the most-reacted message in a thread is usually the joke.
 - **The event's own documents.** A runsheet or worklog gave the numbers, the order of events, and what went wrong.
 
-Likely good, not yet tried in a parody short (check what the user has connected):
+Likely good, not yet tried in a parody short (check what the user has connected). Most groups have these:
 
-- **Ticket boards** (Jira, Linear): the oldest open ticket, the most-reopened bug, epic names, the ticket
-  everyone's assigned to.
-- **Git** (`git log`, `gh pr list`): commit messages at 2 a.m., revert counts, the longest-lived branch, PR
-  titles, TODO comments with a name on them.
-- **Incidents and postmortems:** the villain's origin story, the timeline beats, the fix that worked.
+- **The person asking.** Ask them for two or three things everyone in the group would recognise. They know.
+- **Group chat** (Teams, WhatsApp or Discord export the user shares): the same shapes as Slack.
+- **Email and newsletters:** the all-staff email everyone replied-all to, the monthly newsletter's running joke.
 - **Calendar:** the recurring meeting with the funny name, how many meetings a day someone has.
-- **Wiki** (Confluence, Notion): the runbook with 40 steps, the page nobody updates, onboarding docs.
-- **CI and dashboards:** the flaky test's name, uptime numbers, the alert that fires every Monday.
-- **Retro boards and standup notes:** what the team says about itself.
-- **The person asking.** Ask them for two or three things everyone on the team would recognise. They know.
+- **Shared docs and wikis** (Drive, Notion, Confluence): the 40-step process, the page nobody updates, the
+  onboarding guide, the office kitchen rules.
+- **Photos:** the shared album of the last party or away day (props, costumes, settings).
+- **The group's own public posts:** its website, social posts, a club's match reports.
+
+And the tools of the group's own trade, for example:
+
+| Group | Source | What it gives |
+|---|---|---|
+| Sales | CRM, pipeline reports | the deal that's been "closing next week" since spring, the quarter-end sprint |
+| Support | helpdesk | the most-asked question, the ticket that came back five times |
+| Marketing | campaign calendar, brand guide | the launch date that moved, the banned font |
+| Engineering | tickets, git, postmortems, CI | 2 a.m. commits, the flaky test, the outage's origin story |
+| HR, office | policies, rotas | the fridge rota, the expenses form with 14 fields |
+| School, club | newsletters, fixtures, results | the sports day, the season's worst defeat, the trophy cabinet |
 
 ## How to search well
 

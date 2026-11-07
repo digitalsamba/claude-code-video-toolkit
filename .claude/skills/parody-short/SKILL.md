@@ -1,12 +1,13 @@
 ---
 name: parody-short
-description: Internal comedy shorts about a team's own work - a release night, a migration, a quarter - told in a borrowed genre (80s action intro, creature feature, Dickens Christmas ad, heist, nature documentary) and starring the team's real, animated profile photos. Covers mining team context for in-jokes (Slack, tickets, git, incidents, calendars), mapping a genre's beats onto the real event, costuming and animating colleagues' photos (image_edit then LTX), and per-genre look and sound. Use when someone asks for a fun, parody, spoof, holiday or "for the giggles" video about their team, a team party or all-hands video, a Christmas or Halloween video for colleagues, or wants colleagues' photos animated into a story.
+description: Comedy shorts about a group's own life - a team's launch, quarter end, office move or leaving do; a club's season; a class's year; a family's Christmas - or about a shared topic everyone recognises (video calls, the return to the office), told in a borrowed genre (80s action intro, creature feature, Dickens Christmas ad, heist, nature documentary) and starring the group's real, animated photos or an invented cast. Covers mining the group's own context for in-jokes (chat, email, calendars, shared docs, plus domain tools like a CRM, helpdesk or git), mapping a genre's beats onto the real event, costuming and animating photos (image_edit then LTX), and per-genre look and sound. Use when someone asks for a fun, parody, spoof, holiday or "for the giggles" video about their team, colleagues, club, class or family, a party or all-hands video, or wants people's photos animated into a story.
 ---
 
 # Parody shorts
 
-A short comedy for an audience that knows the people in it: a release night told as an 80s action-show intro, a
-Halloween creature feature, a Christmas TV ad. They land harder than anything else the toolkit makes, because the
+A short comedy for an audience that knows the people in it, or the situation: a team's big night told as an 80s
+action-show intro, a Halloween creature feature, a Christmas TV ad. The group can be any group (a sales team, a
+school staff room, a five-a-side club, a family) and the subject anything they lived through together. They land harder than anything else the toolkit makes, because the
 audience is laughing at things they recognise. This skill is how to make one on purpose.
 
 Built and learned on three videos for one team in November 2026 (an action-show intro of a release, its Halloween
@@ -32,6 +33,13 @@ sister cut, a Christmas ad of *A Christmas Carol*). They are not in `examples/` 
 7. **Short.** An ad is 60-90 s. A "show intro" can run 2 min. Past ~2:30 the middle sags; cut there first.
 8. **Pick every clip.** About one LTX clip in three cuts to a stranger. One wrong face breaks the spell, so
    contact-sheet every clip and re-roll.
+
+## Two kinds of cast
+
+- **Real people** (the group's own photos): the strongest laughs, for an audience that knows them. Internal by
+  default; public only with each person's written OK.
+- **An invented cast** (FLUX portraits, or non-human characters): for a public video, or a shared topic where the
+  audience recognises the situation rather than the people. Same pipeline from step 2 of `people.md`.
 
 ## Rules that are not optional
 
