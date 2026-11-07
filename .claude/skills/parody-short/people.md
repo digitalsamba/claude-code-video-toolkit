@@ -3,6 +3,24 @@
 Profile photo → square-up crop → costume (`image_edit`) → animate (`ltx2.py --input`) → contact sheet → play
 it in Remotion with `LivingPhoto`. Each step has one failure that cost a re-roll; they're listed with it.
 
+## 0. An invented cast (no real people)
+
+For a public video, generate the cast with FLUX at the size LTX animates, in webcam framing:
+
+```bash
+uv run tools/flux2.py --cloud modal --no-open --width 704 --height 768 --seed 7 --output cast/dana.png --prompt \
+  "Webcam video call still of a cheerful woman in her mid forties with short grey-streaked dark hair and round \
+tortoiseshell glasses, wearing a mustard cardigan, at a home desk with a bookshelf and a plant behind her, head and \
+shoulders, centred, facing the camera, looking into the lens, soft natural window light, photorealistic photograph, \
+no text, no logos"
+```
+
+- Make each person distinct at a glance: age, hair, one strong colour in their clothes, their own room (a guitar,
+  a fridge covered in magnets, framed certificates). Four people is enough for a call grid.
+- Tile them into one sheet and check them together before animating anything.
+- Keep the cast in a shared folder (`projects/cast/`) and copy into each video; costumes and clips are per video.
+- Skip step 1: the portraits are already 704x768.
+
 ## 1. Photos
 
 Profile photos from the team's chat (`slack_read_user_profile` gives the image URL; take the largest size) or
@@ -71,6 +89,8 @@ three needs something. Fix it in the cheapest way:
 | Problem | Fix |
 |---|---|
 | Cuts to a stranger late in the clip | `hold` the frame before the cut (`LivingPhoto hold={105}`) |
+| Smears or melts late in the clip | `hold` before it, the same way (it showed in 2 of 9 headset clips around 3.3 s) |
+| The best moment is near the end (a sneeze, a punchline face) | freeze on it with `hold`, and time the shot's gag to the hold frame |
 | Garbled text or a glitch in the first second | `trim` past it (`trim={40}`) |
 | Stranger from the start, or the action is wrong | re-roll: another seed, a gentler action |
 

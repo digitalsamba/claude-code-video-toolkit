@@ -12,6 +12,9 @@ film or show (renamed or not). Public-domain stories can be used directly.
 | **Creature feature** (original creatures, the "glitchlings") | the same release | the new release arrives in a box with three rules (never restart it with people inside, never leave its secrets lying around, never feed it on a Friday night); each rule gets broken; dawn, all quiet. |
 | **Dickens Christmas TV ad** (*A Christmas Carol*, public domain) | the year's updates | Scrooge = the release lead with a runsheet; Past = old updates; Present = features crammed in; Yet to Come = boxes still unticked; redemption = "automate the deploys". |
 
+| **Horror trailer** (invented cast, glitchlings) | a shared topic: the video call that never ends | "it was supposed to be a quick sync"; muted, frozen, unseen screen; the meeting timer passes 46 hours and Leave runs from the cursor; the title slam; then a stinger after the title: "let's take this offline", and a follow-up invite arrives. |
+| **Wildlife documentary** (invented cast) | a shared topic: the return to the office | the home habitat (shirt above, pyjamas below); the signal (a "mandatory" email); the migration; the lanyard display; a hot-desk territory fight; the watering hole; the predator ("Got a minute?"); the twist: reunited, the herd joins a video call. |
+
 What made them fit: each genre has a **turn** that matches the event's turn (the win; dawn after the night;
 Scrooge's change of heart), and roles that match real roles (the planner, the welder, the one who keeps adding).
 
@@ -33,6 +36,16 @@ Scrooge's change of heart), and roles that match real roles (the planner, the we
 | Holiday ads | Christmas (Dickens, carollers), Halloween (creature feature), New Year (countdown) | end of year, anything near a holiday |
 | Fairy tale (Grimm, public domain) | three tasks, a curse, a happily ever after | a long project, a retirement send-off |
 
+Devices worth reusing:
+
+- **Mock-Latin species lower thirds** in a documentary ("Lanyardus magnificus", "Hotdeskus contestus"): a joke
+  on every shot that costs one line of text.
+- **Camera-trap cards** (grainy, timestamped "CAM 3 · TUE 09:41") for arrivals.
+- **A trailer stinger after the title card:** the scare is over, the music stops dead, and one last small gag
+  lands in the silence.
+- **A UI that misbehaves:** a runaway Leave button, a timer that accelerates, a spinner that never finishes. Built
+  in Remotion, so it costs nothing to animate.
+
 ## Writing the beats
 
 - One beat per cast member, each with one action their animated photo can do (`people.md`) and one line or text
@@ -49,6 +62,8 @@ Scrooge's change of heart), and roles that match real roles (the planner, the we
 | Genre | Type (Google Fonts) | Picture | Sound |
 |---|---|---|---|
 | 80s action | a heavy condensed display, VT323 for labels | VHS overlay: scanlines, tracking jitter, chroma shift, date stamp | synth-rock score, whooshes, a cigar fizz |
+| Horror trailer | Creepster for the title, VT323 for timers, a plain UI sans for the app | cold teal grade, grain, vignette, a flicker | drones and a music box, a trailer boom on the title, heartbeat, static, then birdsong for the stinger |
+| Wildlife documentary | a classic serif for the title and Latin names, a clean sans for common names | warm grade, fine grain, slow push-ins, b-roll that moves (LTX on a background still) | pizzicato strings and horn, a hushed narrator, ambience per habitat (kettle, train, office, espresso) |
 | Creature feature | Creepster for titles, VT323 for terminals | fog, a flickering light, a low blue-green grade | a horror score, munching, a burp |
 | Dickens ad | IM Fell English and its SC cut | warm grade, film grain, letterbox bars, falling snow, slow Ken Burns | an original carol with lyrics, bells, a clock strike, chains |
 

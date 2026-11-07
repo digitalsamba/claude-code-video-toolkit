@@ -12,6 +12,8 @@ audience is laughing at things they recognise. This skill is how to make one on 
 
 Built and learned on three videos for one team in November 2026 (an action-show intro of a release, its Halloween
 sister cut, a Christmas ad of *A Christmas Carol*). They are not in `examples/` because they star real colleagues.
+Then on two public shorts with an invented cast (a horror trailer about the video call that never ends, a wildlife
+documentary about the return to the office), each in 16:9 and vertical, plus a brand edition in a product's own UI.
 
 ## Why they work (in order of weight)
 
@@ -39,7 +41,12 @@ sister cut, a Christmas ad of *A Christmas Carol*). They are not in `examples/` 
 - **Real people** (the group's own photos): the strongest laughs, for an audience that knows them. Internal by
   default; public only with each person's written OK.
 - **An invented cast** (FLUX portraits, or non-human characters): for a public video, or a shared topic where the
-  audience recognises the situation rather than the people. Same pipeline from step 2 of `people.md`.
+  audience recognises the situation rather than the people (video calls, the office kitchen). Recognition moves
+  from the faces to the situation, so the situation has to be universal and specific: "you're on mute", the
+  spreadsheet with 412 tabs, the jacket on the hot desk. See `people.md` step 0.
+- **Cast once, use everywhere.** Generate the invented cast once in a shared folder and give each video its own
+  costumes and clips from the same faces. Two videos with the same four people feel like a series, and a
+  callback between them (video 2's last line is video 1's first) is a free laugh.
 
 ## Rules that are not optional
 
@@ -65,6 +72,7 @@ sister cut, a Christmas ad of *A Christmas Carol*). They are not in `examples/` 
 | 5. World | FLUX backgrounds (text-free), SFX, music or a song with original lyrics | `acestep`, `elevenlabs` |
 | 6. Build | Remotion shots on absolute frames; `LivingPhoto` for the cast; genre overlay | `people.md`, `video-design` |
 | 7. Check | Contact sheet of the render, `qc.py --render --fix`, then the safety rules again | `video-design/critique.md` |
+| 8. Cuts | Vertical, and a brand edition if wanted: new layouts over the same assets | `formats.md` |
 
 **Shots, not scenes.** These are edited like ads: a fixed shot list with absolute frame ranges, a 10-20 frame
 dissolve between shots, the song or score under everything. If there is narration, generate it first and anchor
@@ -73,15 +81,27 @@ to it (CLAUDE.md, Audio-Anchored Timelines); an ad with one closing narrator lin
 **Text is the punchline carrier.** Speech bubbles, a stamp, a dance card, a tombstone, a typed label. Remotion
 renders all of it (FLUX and LTX garble text). Give every on-screen gag a frame cue and a sound.
 
+**Voices.** For a narrator nobody owns, design one with Qwen VoiceDesign from a written brief ("a warm,
+middle-aged British woman narrating a wildlife documentary, hushed, a slow measured pace"; "a deep, gravelly movie
+trailer announcer"): `qwen3_tts.py --design-instruct "..." --text "<a 20 s seed paragraph in the genre, not the
+script>" --format wav`. VoiceDesign makes a new voice on every call, so design once, then clone that reference
+for every sentence (three takes, `pick_takes.py`). Describe a genre, never a real person; picking a narrator the
+genre's famous voice isn't (a woman for a wildlife film) keeps it clearly original.
+
+**Cuts.** Plan the vertical cut and any brand edition from the start; they reuse every generated asset and cost
+only a render each. See `formats.md`.
+
 **Reuse across genres.** A cast animated once can be re-costumed for the next holiday: the photos, crops and
 context bible carry over, and only the costumes, clips and world change.
 
 ## Cost (Modal, 2026-11)
 
 LTX ~$0.08 a 5 s clip, image_edit ~$0.01 an edit warm (a cold start is ~10 min; send one edit first and wait),
-FLUX ~$0.01 a background, ACE-Step song a few cents. A 90 s ad with five cast members and re-rolls is about $2.
+FLUX ~$0.01 a background or portrait, ACE-Step song a few cents. A 90 s ad with five cast members and re-rolls is
+about $2. Two 80-100 s shorts sharing one invented cast (9 costume edits, 16 clips, 2 designed voices) came to about
+$2.50 together. The acemusic API can return 502s mid-batch; a failed take is skipped, so re-run for more.
 
 ## Related
 
-`context.md`, `genres.md`, `people.md` here; `ltx2`, `qwen-edit`, `acestep`, `elevenlabs`, `video-design`,
+`context.md`, `genres.md`, `people.md`, `formats.md` here; `ltx2`, `qwen-edit`, `acestep`, `elevenlabs`, `video-design`,
 `remotion` skills; `lib/components/LivingPhoto.tsx`.

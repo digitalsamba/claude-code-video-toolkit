@@ -150,3 +150,6 @@ or tablet mockup you build outside it, or its UI text is judged as the video's.
 - **A changed voice line moves everything after it.** In a cued scene the clicks, cursor and camera follow on their
   own, but the scene length and the later phrases' `at` still need checking. In a hand-set scene, re-measure every
   frame. Either way, update the header comment and the scene lengths, then re-check click stills. If a lip-synced narrator is driven by the assembled voice track, regenerate it too.
+- **A kit outlives its demo.** A rebuilt screen kit can host other videos: the `ds-release-notes` room became the
+  stage of a parody short's brand edition, with animated faces in its tiles and no new screen work. Copy the kit
+  into the new project and scale its logical canvas to the frame (`.claude/skills/parody-short/formats.md`).
