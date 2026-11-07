@@ -487,7 +487,19 @@ uv run tools/cutdown.py --input out/video.mp4 --mode crop \
     --segment 0:04-0:11 --segment 0:42-0:58@0.25                                 # highlight reel
 ```
 
-Pure ffmpeg, works on any MP4. Outputs land beside the input as `<name>-9x16.mp4` etc.
+Outputs land beside the input as `<name>-9x16.mp4` etc. `blur`, `crop` and `pad` need only FFmpeg.
+`--mode track` follows a single face, or a textured subject selected with `--box x,y,width,height`
+in source pixels at each segment's start. Install its optional dependency with `uv sync --extra vision`.
+It supports the same `--platform`, repeated `-f` and `--segment` options as other modes:
+
+```bash
+uv run tools/cutdown.py -i input.mp4 --mode track --platform shorts -f 9:16 -f 1:1 --segment 4-11 --segment 42-58
+```
+
+Tracking holds the last good position during occlusion, ambiguous multiple faces or a hard scene cut;
+before a subject is found it uses `--focus` (including per-segment `@FOCUS`). Split at cuts to start
+tracking a new subject. `--track-smoothing` and `--max-pan-speed` limit camera movement. Constant FPS
+is required. Reruns overwrite outputs via temporary files and `os.replace`; `--dry-run` writes nothing.
 
 - **Pick the mode by content.** `blur` (default) fits the whole frame over a blurred copy, so
   nothing is cut: right for slides and screen recordings. `crop` fills the frame by cutting the

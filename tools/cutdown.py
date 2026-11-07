@@ -3,7 +3,7 @@
 
 Takes any MP4 (a Remotion render, a NotebookLM export, a redub) and writes a
 vertical (9:16), square (1:1) or portrait (4:5) copy, optionally cut down to
-one or more time ranges. Pure ffmpeg: no GPU, no API keys, no project needed.
+one or more time ranges. FFmpeg renders every mode; optional OpenCV tracks subjects locally. No API keys or project needed.
 
 Reframe modes:
   blur  The whole frame, fitted to width, over a blurred and darkened copy of
@@ -12,6 +12,8 @@ Reframe modes:
   crop  Fill the frame by cutting the sides off. Best for talking heads and
         anything with one point of interest. --focus picks where to cut
         (0 = left edge, 0.5 = centre, 1 = right edge), per segment if needed.
+  track Follow one face or --box subject; hold position when tracking is lost.
+        Requires uv sync --extra vision only for this mode.
   pad   Fitted to width over a solid colour (--pad-color, or a brand's bgDark).
 
 Blur and pad keep the whole frame but shrink it: in 9:16 a 1920x1080 source
@@ -41,11 +43,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
+import os
 import re
 import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -88,6 +93,7 @@ class Source:
     fps: str
     has_audio: bool
     audio_codec: str | None
+    avg_fps: str | None = None
 
 
 def parse_time(value: str) -> float:
@@ -171,6 +177,7 @@ def probe(path: Path) -> Source:
         fps=video.get("r_frame_rate", "30/1"),
         has_audio=audio is not None,
         audio_codec=audio.get("codec_name") if audio else None,
+        avg_fps=video.get("avg_frame_rate"),
     )
 
 
@@ -192,6 +199,12 @@ def even(x: float) -> int:
 def reframe_filter(src: Source, width: int, height: int, mode: str,
                    focus: float, zoom: float, pad_color: str) -> str:
     """Filter chain from one input video stream ([in]) to a WxH frame ([out])."""
+    if mode == 'track':
+        from cutdown_tracking import crop_dimensions
+        cw, ch = crop_dimensions(src, width, height, zoom)
+        return (f"[in]sendcmd=f='TRACKFILE',crop@TRACKLABEL=w={cw}:h={ch}:"
+                f"x={round((src.width - cw) * focus)}:y={(src.height - ch) // 2}:exact=1,"
+                f"scale={width}:{height},setsar=1[out]")
     if mode == "crop":
         scale = max(width / src.width, height / src.height) * zoom
         sw, sh = even(src.width * scale), even(src.height * scale)
@@ -248,6 +261,8 @@ def build_command(args, src: Source, segments: list[Segment], fmt: str,
         chain = reframe_filter(src, width, height, args.mode,
                                seg.focus if seg.focus is not None else args.focus,
                                args.zoom, args.pad_color)
+        if args.mode == 'track':
+            chain = chain.replace('TRACKFILE', f'track{i}.cmd').replace('TRACKLABEL', f'track{i}')
         chain = chain.replace("[in]", f"[v{i}in]", 1).replace("[out]", f"[v{i}]")
         for label in ("bgsrc", "fgsrc", "bg", "fg"):
             chain = chain.replace(f"[{label}]", f"[{label}{i}]")
@@ -320,9 +335,9 @@ Platforms (default format, short-form length limit):
                         help="Output aspect ratio; repeat for several (default 9:16, or the platform's)")
     parser.add_argument("--platform", choices=sorted(PLATFORMS),
                         help="Sets the default format and warns past the platform's short-form limit")
-    parser.add_argument("--mode", choices=("blur", "crop", "pad"), default="blur",
+    parser.add_argument("--mode", choices=("blur", "crop", "pad", "track"), default="blur",
                         help="blur: fit over a blurred copy (default); crop: fill, cut the sides; "
-                             "pad: fit over a solid colour")
+                             "pad: fit over a solid colour; track: follow a face or --box subject (vision extra)")
     parser.add_argument("--focus", type=arg_type(parse_focus), default=0.5,
                         help="Where crop cuts, 0 = keep the left edge, 1 = the right (default 0.5)")
     parser.add_argument("--zoom", type=float, default=1.0,
@@ -339,11 +354,27 @@ Platforms (default format, short-form length limit):
     parser.add_argument("--preset", default="medium", help="x264 preset (default medium)")
     parser.add_argument("--dry-run", action="store_true", help="Print the ffmpeg commands without running them")
     parser.add_argument("--json", action="store_true", help="Print the result as JSON")
+    parser.add_argument('--box', help='track mode: x,y,width,height in source pixels at each segment start; default automatic single-face detection')
+    parser.add_argument('--track-smoothing', type=float, default=.2, help='track mode: smoothing factor (0.001-1, default .2)')
+    parser.add_argument('--max-pan-speed', type=float, default=600, help='track mode: maximum source pixels per second (default 600)')
     args = parser.parse_args(argv)
+    if args.box and args.mode != 'track':
+        parser.error('--box requires --mode track')
+    if not math.isfinite(args.track_smoothing) or not .001 <= args.track_smoothing <= 1:
+        parser.error('--track-smoothing must be between .001 and 1')
+    if not math.isfinite(args.max_pan_speed) or not 1 <= args.max_pan_speed <= 10000:
+        parser.error('--max-pan-speed must be between 1 and 10000')
+    if args.box:
+        try:
+            args.box = [float(v) for v in args.box.split(',')]
+            if len(args.box) != 4 or not all(math.isfinite(v) for v in args.box):
+                raise ValueError()
+        except ValueError:
+            parser.error('--box needs four finite numbers: x,y,width,height')
 
     if args.segment and args.end is not None:
         parser.error("--end goes with --start; put the end inside each --segment instead")
-    if args.zoom < 1:
+    if not math.isfinite(args.zoom) or args.zoom < 1:
         parser.error("--zoom must be 1.0 or more")
     if args.brand:
         if args.pad_color:
@@ -380,7 +411,7 @@ def main(argv=None) -> int:
 
     try:
         src = probe(source_path)
-    except RuntimeError as e:
+    except (RuntimeError, ValueError) as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
@@ -398,10 +429,30 @@ def main(argv=None) -> int:
             return 1
         seg.end = min(end, src.duration)
 
+    # Absolute inputs keep FFmpeg paths valid in the temporary render directory.
+    args.input = str(source_path.resolve())
+    if args.overlay:
+        args.overlay = str(Path(args.overlay).resolve())
+    if args.mode == 'track' and args.box is not None:
+        from cutdown_tracking import rectangle
+        try:
+            rectangle(args.box, src.width, src.height)
+        except ValueError as error:
+            print(f'Error: {error}', file=sys.stderr)
+            return 1
+    tracks = None
+    if args.mode == 'track' and not args.dry_run:
+        try:
+            from cutdown_tracking import track_subject
+            tracks = track_subject(source_path, src, segments, args.box)
+        except (ValueError, OSError) as error:
+            print(f'Error: {error}', file=sys.stderr)
+            return 1
+
     warnings: list[str] = []
     if src.width < src.height:
         warnings.append(f"source is already portrait ({src.width}x{src.height})")
-    if args.mode != "crop" and args.zoom == 1.0:
+    if args.mode in ("blur", "pad") and args.zoom == 1.0:
         scale = min(FORMATS[f][0] / src.width for f in args.format)
         if scale < 0.75:
             warnings.append(
@@ -413,7 +464,7 @@ def main(argv=None) -> int:
     results = []
     for fmt in args.format:
         out = output_path(args, fmt, multiple)
-        if out.resolve() == source_path.resolve():
+        if out.resolve() in [source_path.resolve(), *([Path(args.overlay).resolve()] if args.overlay else [])]:
             print(f"Error: output would overwrite the input: {out}", file=sys.stderr)
             return 1
         cmd, duration = build_command(args, src, segments, fmt, out)
@@ -434,9 +485,26 @@ def main(argv=None) -> int:
         else:
             out.parent.mkdir(parents=True, exist_ok=True)
             log(f"Rendering {fmt} ({width}x{height}, {duration:.1f}s, {args.mode}) -> {out}")
-            proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
-            if proc.returncode != 0:
-                print(f"Error: ffmpeg failed for {fmt}:\n{proc.stderr.strip()}", file=sys.stderr)
+            try:
+                with tempfile.TemporaryDirectory(prefix=f'.{out.stem}-', dir=out.parent.resolve()) as folder:
+                    target = Path(folder) / out.name
+                    cmd[-1] = str(target)
+                    if tracks is not None:
+                        from cutdown_tracking import write_crop_commands
+                        for i, (seg, entries) in enumerate(zip(segments, tracks)):
+                            write_crop_commands(Path(folder) / f'track{i}.cmd', entries, src, width, height,
+                                                focus=seg.focus if seg.focus is not None else args.focus,
+                                                zoom=args.zoom, smoothing=args.track_smoothing,
+                                                max_speed=args.max_pan_speed, label=f'track{i}')
+                        result['held_frames'] = sum(entry['held'] for entries in tracks for entry in entries)
+                    proc = subprocess.run(cmd, cwd=folder, capture_output=True, text=True, encoding='utf-8')
+                    if proc.returncode != 0:
+                        raise ValueError(f'ffmpeg failed for {fmt}:\n{proc.stderr.strip()}')
+                    if not target.is_file() or target.stat().st_size == 0:
+                        raise ValueError('FFmpeg produced an empty output')
+                    os.replace(target, out)
+            except (ValueError, OSError, subprocess.SubprocessError) as error:
+                print(f'Error: {error}', file=sys.stderr)
                 return 1
             result["size_mb"] = round(out.stat().st_size / 1_048_576, 2)
         results.append(result)
