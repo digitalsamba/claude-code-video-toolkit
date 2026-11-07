@@ -868,6 +868,15 @@
       "created": "2026-11-07",
       "updated": "2026-11-07"
     },
+    "sync_check": {
+      "path": "tools/sync_check.py",
+      "description": "Sound-to-picture sync for effects laid over generated footage: --clip says where in a clip to start a sound so its peak lands on the movement (prevention); --video/--cues measures the offset in a render and exits 1 past 0.1 s (validation). Kinds: peak (a sneeze, a jingle) and impact (where a movement stops)",
+      "usage": "uv run tools/sync_check.py --clip clip.mp4 --sfx sneeze.mp3 --window 2.5:4.5  |  uv run tools/sync_check.py --video out/video.mp4 --cues sync-cues.json",
+      "status": "beta",
+      "category": "quality",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
+    },
     "chain_video": {
       "path": "tools/chain_video.py",
       "description": "Chain LTX-2 clips with visual continuity — each scene uses the last frame of the previous as input",

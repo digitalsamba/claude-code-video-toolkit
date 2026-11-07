@@ -71,12 +71,17 @@ documentary about the return to the office), each in 16:9 and vertical, plus a b
 | 4. Cast | Profile photos, costume with `image_edit`, animate with LTX, contact sheet | `people.md` |
 | 5. World | FLUX backgrounds (text-free), SFX, music or a song with original lyrics | `acestep`, `elevenlabs` |
 | 6. Build | Remotion shots on absolute frames; `LivingPhoto` for the cast; genre overlay | `people.md`, `video-design` |
-| 7. Check | Contact sheet of the render, `qc.py --render --fix`, then the safety rules again | `video-design/critique.md` |
+| 7. Check | Contact sheet of the render, `qc.py --render --fix`, `sync_check.py --cues`, then the safety rules again | `video-design/critique.md`, CLAUDE.md |
 | 8. Cuts | Vertical, and a brand edition if wanted: new layouts over the same assets | `formats.md` |
 
 **Shots, not scenes.** These are edited like ads: a fixed shot list with absolute frame ranges, a 10-20 frame
 dissolve between shots, the song or score under everything. If there is narration, generate it first and anchor
 to it (CLAUDE.md, Audio-Anchored Timelines); an ad with one closing narrator line can be music-led.
+
+**Sound on a movement: measure, don't eyeball.** A sneeze, a jacket landing, a badge jingle: place each sound
+with `tools/sync_check.py --clip` (where its peak meets the movement), list it in the project's `sync-cues.json`,
+and run `sync_check.py --video ... --cues` on every render before showing it. A hand-placed sneeze was half a
+second early; three other cues were 0.8-1.0 s off. If a clip freezes or cuts, end its sound there too.
 
 **Text is the punchline carrier.** Speech bubbles, a stamp, a dance card, a tombstone, a typed label. Remotion
 renders all of it (FLUX and LTX garble text). Give every on-screen gag a frame cue and a sound.

@@ -290,6 +290,25 @@ tablet mockup the same way). It's reported separately, as info, without the over
 it on purpose: the video can't fix the product's colours, but it's worth knowing where the UI is hard to read.
 `data-qc-ignore` skips an element. About 10s to bundle, then ~0.15s a sample.
 
+### Sound effects on generated movement
+
+A sound laid over a generated clip (a sneeze over an LTX face, a thud when a jacket lands) is placed at a frame by
+hand, and is easily half a second off the movement. Place it by measurement, then check the render:
+
+```bash
+# before rendering: where in the clip should the sound start? (its loudest moment meets the movement)
+uv run tools/sync_check.py --clip public/people/theo-sneeze.mp4 --sfx public/audio/sfx/sneeze.mp3 --window 2.5:4.5
+uv run tools/sync_check.py --clip public/people/theo-desk.mp4 --sfx public/audio/sfx/thump.mp3 --kind impact --window 1.5:3.8
+
+# after rendering, before presenting: every cue in one go (exit 1 if any is off by more than 0.1 s)
+uv run tools/sync_check.py --video out/video.mp4 --cues sync-cues.json
+```
+
+`--kind peak` (default) puts the sound on the biggest movement: a sneeze, a laugh, a badge lifted. `--kind impact`
+puts it where a movement stops: a landing, a stamp. Give a `--window` around the action: an extended clip's seam
+or a later gesture can be bigger than the one the sound is for. Keep the cues in the project's `sync-cues.json`
+(`{name, sfx, at, region, kind}`, times in the render, regions as `w:h:x:y`) so the check re-runs on every render.
+
 ### Burned Captions (after voiceover)
 
 ```bash
