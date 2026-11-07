@@ -502,6 +502,22 @@ Pure ffmpeg, works on any MP4. Outputs land beside the input as `<name>-9x16.mp4
 - `--overlay frame.png` lays a full-frame PNG (with transparency) on top, e.g. a branded header
   band made with Ideogram or by hand.
 
+### Python data charts
+
+`examples/data-viz-chart/build.py` and `tools/data_video.py` share one renderer for CSV/JSON line
+and bar charts. Matplotlib draws the data; Pillow text is overlaid in MoviePy for the author's
+title, source and headline. `--brand` supplies colours and fonts from `brands/<name>/brand.json`.
+
+```bash
+uv run examples/data-viz-chart/build.py --spec chart.json --brand digital-samba --output out/chart.mp4
+```
+
+Specs name `dataset` relative to the spec, `type: "line" | "bar"`, and optional `title`, `source`,
+`headline`, `unit`, `width`, `height`, `fps`, `durationSeconds`. Rows use `period`, `series`, `value`,
+or an explicit `columns` mapping. `--narration` uses author-provided audio and sets duration;
+the tool never derives narration from data. `--save-report` records dataset/brand hashes and any
+font fallback. Reruns replace completed outputs; `--dry-run` validates without writes.
+
 ### Watermark Removal
 
 ```bash
