@@ -312,6 +312,12 @@ off; any other `Captions` prop in that block restyles them (`fontSize`, `bottom`
 - `align_captions.py` is different: it re-times hand-written `cap()` phrases in a config, rather than
   generating word captions.
 
+`--srt` and/or `--vtt` also write sibling subtitles, splitting cues at sentence ends, pauses
+over 0.6 seconds, and `--max-words 7`. For an existing caption JSON, export offline without
+transcribing again: `uv run tools/captions.py voiceover.captions.json --srt --vtt`.
+Outputs overwrite atomically. Each subtitle uses the same audio-relative timeline as its JSON;
+scene captions need offsets before use as subtitles for a complete render.
+
 ### Qwen3-TTS (Standalone)
 
 ```bash
