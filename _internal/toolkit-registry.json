@@ -105,6 +105,14 @@
       "created": "2026-10-21",
       "updated": "2026-10-21"
     },
+    "parody-short": {
+      "path": ".claude/skills/parody-short/",
+      "description": "Internal comedy shorts about a team's own work in a borrowed genre, starring the team's animated profile photos: mining team context for in-jokes (Slack, tickets, git, incidents), mapping genre beats onto the event, costume (image_edit) then animate (LTX) the cast, per-genre look and sound, and the affection and privacy rules",
+      "status": "beta",
+      "note": "Learned on three internal videos (2026-11): an 80s action-show release intro, a Halloween creature feature, a Dickens Christmas ad. Not in examples/ because they star real colleagues.",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
+    },
     "video-toolkit": {
       "path": "skills/video-toolkit/",
       "description": "Agent-facing skill for any runtime (OpenClaw, Codex, Hermes, a run_tool loop, MCP clients): a routes table first (which template, skill and example fits what the user asks, and whether it runs as a job or is a build; video_job.py catalog lists them from this registry), then the estimate -> submit -> poll status -> result flow of tools/video_job.py first, then the individual tools with current defaults (SoulX, Ideogram for text, qc.py before delivery, --max-wpm)",
@@ -1494,6 +1502,12 @@
       "description": "SVG noise overlay for cinematic film texture",
       "created": "2026-02-19",
       "updated": "2026-02-19"
+    },
+    "LivingPhoto": {
+      "path": "lib/components/LivingPhoto.tsx",
+      "description": "An image-to-video clip of a person (ltx2.py --input) that plays once and holds its last good frame, with hold/trim to cut around a late stranger or an early glitch; used by parody-short",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
     }
   },
   "brands": {

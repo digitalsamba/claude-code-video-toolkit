@@ -49,6 +49,7 @@ written, QC can judge the result, and there's a cost cap. Offer a `job` when one
 | A marketing or product launch video | `templates/product-demo` | session | the template's README | `examples/digital-samba-skill-demo` |
 | A sprint or monthly review | `templates/sprint-review`, `templates/sprint-review-v2` | session | the template's README | `examples/hello-world` |
 | A data story: a number or a trend drawn as the narration talks | `DataChart` (`LineChart`, `BarChart`, `Counter`, `SplitBar`) in Remotion; Matplotlib + moviepy without Node | session | `lib/components/DataChart.tsx`, `.claude/skills/moviepy/` | `examples/data-chart-stars`, `examples/data-viz-chart` |
+| A fun or holiday video about the user's own team (a release night as an action-show intro, a Christmas ad) starring their colleagues' photos | Remotion shots + `LivingPhoto`, cast from `image_edit` then `ltx2.py --input`, in-jokes from the team's chat | session | `.claude/skills/parody-short/SKILL.md` | |
 | A sub-30 s ad spot or a brand stinger | moviepy, audio-anchored | session | `.claude/skills/moviepy/` | `examples/quick-spot`, `examples/ds-crt-stinger` |
 | A presenter talking to camera | `soulx.py` (below), placed in a template with `NarratorPiP` | tool, or session | Talking heads, below | |
 | Change an existing video: new voice, music, vertical cut, watermark | `redub.py`, `addmusic.py`, `cutdown.py`, `dewatermark.py` | tool | QC, captions, cut-downs, below | |

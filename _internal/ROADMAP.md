@@ -70,6 +70,18 @@ Ordered roughly by priority. Each is sized to one session or one PR.
          prompt for the change. Least proven: repaint seams are unheard.
       Judge each with `audition.py` renders, by ear, not by score. Pilot: `projects/still-wheel-hour` (no
       voice, four acts with clear turns).
+- [ ] **Parody shorts, the next round.** The `parody-short` skill (2026-11-07) is proven on Slack and an event
+      runsheet only. Still to try or build:
+      1. *More context sources:* tickets, `git log` and PR titles, postmortems, calendars, CI and dashboards
+         (listed untested in `context.md`). Record which ones gave a line that got a laugh.
+      2. *A context pass as a step:* the agent writes `bible.md` from whatever the user has connected, and the
+         person asking strikes lines before the script is written.
+      3. *Reusable genre kits:* each genre's overlay, fonts, palette and shot helpers (VHS, creature fog,
+         Dickens grade) as a folder a new project copies, so the second Christmas video starts from the first.
+      4. *Cast reuse:* keep a team's crops, costumes and clips in a kit (`kits/`) so the next holiday only
+         re-costumes.
+      5. *Faces that talk:* a costumed cast member speaking their catchphrase with SoulX, not just moving.
+      6. *Audience test:* show to the team and note which moments got a laugh, to rank the "why it works" list.
 
 ---
 

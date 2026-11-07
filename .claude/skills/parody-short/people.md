@@ -1,0 +1,87 @@
+# The cast: from profile photo to animated character
+
+Profile photo → square-up crop → costume (`image_edit`) → animate (`ltx2.py --input`) → contact sheet → play
+it in Remotion with `LivingPhoto`. Each step has one failure that cost a re-roll; they're listed with it.
+
+## 1. Photos
+
+Profile photos from the team's chat (`slack_read_user_profile` gives the image URL; take the largest size) or
+photos the person asking supplies. Use only colleagues' photos, for internal use (SKILL.md, rules).
+
+Crop every photo to the same **704x768 portrait**, the size LTX animates:
+
+```bash
+ffmpeg -y -i people/sam.jpg -vf "scale=704:768:force_original_aspect_ratio=increase,crop=704:768" people/sam-in.jpg
+```
+
+Plain `crop` fails on a square or small source; the `scale ... increase` first is what makes it work on any input.
+
+## 2. Costume (optional)
+
+```bash
+uv run tools/image_edit.py --cloud modal --no-open --input people/sam-in.jpg --seed 7 --output people/sam-xmas.png \
+  --prompt "Keep the same close-up head and shoulders framing, facing the camera. Dress him as a jolly Victorian \
+Ghost of Christmas Present: a long green fur-trimmed robe and a holly wreath crown, warm firelight, a Victorian hall \
+behind. Keep exactly the same person with an identical face and identical hair, do not add or remove glasses, \
+beard or stubble, photorealistic photograph"
+```
+
+- **The keep-clause matters.** Listing features to keep ("keep his glasses and beard") *adds* them to people who
+  don't have them. Use the wording above, which names no feature the person lacks.
+- Costume plus setting in one edit; keep framing "head and shoulders, facing the camera" so LTX gets a face.
+- Modal cold-starts take ~10 min (the tool's 600 s timeout can fail the first call). Send one edit, wait for it,
+  then run the rest warm (~10 s each).
+- Re-crop the output to 704x768 (step 1) before animating.
+
+## 3. Animate
+
+```bash
+uv run tools/ltx2.py --cloud modal --no-open --input people/sam-xmas-in.jpg --width 704 --height 768 \
+  --num-frames 121 --seed 5 --output people/sam.mp4 \
+  --prompt "Static camera, locked off tripod, medium shot, framing stays exactly the same, no zoom, no cuts. \
+The same man in the same green robe throws his head back and laughs heartily, then spreads his arms wide. \
+The same background, the same person, the same face and clothes throughout, no text"
+```
+
+- **Feed the uncropped portrait.** A tight 16:9 crop of a face made LTX hard-cut to a different person in a
+  different room. Frame the close-up in Remotion (`objectFit: cover`, `objectPosition`) instead.
+- **Never** "opening credits", "camera pushes in", "title": they cause cuts, garbled text and push-ins.
+- One clear, fun action per clip (lowers aviators, finger guns, a toast, tips a hat, a bouncer head-shake). A
+  gentle action survives better than a big one.
+- 121 frames at 24 fps is ~5 s, about 145 frames at 30 fps in Remotion.
+- Seed 5 was most reliable; seed 11 was the usual re-roll.
+
+## 4. Check every clip
+
+```bash
+uv run tools/contact_sheet.py people/sam.mp4 --count 6 --cols 6    # 6 evenly spaced frames, one row
+```
+
+Then run it once without `--count`: its scene detection should find no cut in a 5 s clip. If it finds one, that's
+the cut to a stranger.
+
+Look for: a different face, a cut to another room, garbled text, a face that melts at the end. About one clip in
+three needs something. Fix it in the cheapest way:
+
+| Problem | Fix |
+|---|---|
+| Cuts to a stranger late in the clip | `hold` the frame before the cut (`LivingPhoto hold={105}`) |
+| Garbled text or a glitch in the first second | `trim` past it (`trim={40}`) |
+| Stranger from the start, or the action is wrong | re-roll: another seed, a gentler action |
+
+## 5. Play it in Remotion
+
+```tsx
+import { LivingPhoto } from '../../../lib/components';
+
+<Sequence from={shotStart} durationInFrames={shotLength}>
+  <LivingPhoto src="people/sam.mp4" pos="center 20%" style={{ inset: 0 }} filter="sepia(.2)" />
+</Sequence>
+```
+
+- Wrap it in a `<Sequence>` that starts at its shot, or the clip plays from frame 0 of the composition and is
+  over before it appears.
+- It holds the clip's last good frame (`hold`, default 145) for as long as the shot runs.
+- Key props and stamps (a cigar, a "MERGED ✓", a freeze-frame title) to the hold frame, so they land on the still
+  face rather than a moving one.
+- Render to a new file name every time; the person may still want the previous cut.
