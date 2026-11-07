@@ -25,7 +25,7 @@ def segments(value):
         if not isinstance(item, dict) or not isinstance(item.get('text'), str) or not item['text'].strip():
             raise ValueError(f'Transcript segment {index} needs text')
         start = number(item.get('start'), 'segment start', 0)
-        end = number(item.get('end'), 'segment end', start + .000001)
+        end = number(item.get('end'), 'segment end', start)
         if start < previous:
             raise ValueError('Transcript segments must be ordered by start')
         previous = start
@@ -47,7 +47,7 @@ def segments(value):
             if not isinstance(text, str) or not text.strip():
                 raise ValueError('Transcript words need text')
             left = number(word['start'], 'word start', start, end)
-            right = number(word['end'], 'word end', left + .000001, end + .001)
+            right = number(word['end'], 'word end', left, end + .001)
             if left < word_previous - .001:
                 raise ValueError('Transcript word times must not overlap')
             word_previous = right

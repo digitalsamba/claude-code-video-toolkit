@@ -80,14 +80,12 @@ def output_path(path, *inputs):
     path = Path(path).resolve()
     if path in [Path(p).resolve() for p in inputs if p is not None]:
         raise ValueError('Output cannot replace an input')
-    if path.exists():
-        raise ValueError(f'Output already exists: {path}. Choose a new filename.')
     return path
 
 
 @contextmanager
 def staged_output(path):
-    """Publish a finished file without overwriting an existing file, even on a race."""
+    """Atomically replace an output only after the new file is complete."""
     path = output_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix=f'.{path.stem}-', suffix=path.suffix, dir=path.parent)
@@ -97,7 +95,7 @@ def staged_output(path):
         yield temporary
         if not temporary.is_file() or temporary.stat().st_size == 0:
             raise ValueError('Media engine did not produce a nonempty output')
-        os.link(temporary, path)
+        os.replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 

@@ -32,22 +32,26 @@ def tokens(text):
 def sentences(transcript):
     units = []
     pending = []
+    word_index = 0
     for segment in segments(transcript):
         words = segment['words'] or [{k: segment[k] for k in ('text', 'start', 'end')}]
         for word in words:
-            pending.append(word)
+            pending.append({**word, 'text': word['text'].strip(), 'index': word_index})
+            word_index += 1
             if re.search(r'[.!?。！？]["\'”’]*$', word['text']):
                 units.append({'text': ' '.join(w['text'] for w in pending), 'words': pending})
                 pending = []
     return units, pending
 
 
-def select(transcript, duration, *, budget=60., keywords=(), padding=.12, max_pause=.7, dedup=.85):
+def select(transcript, duration, *, budget=60., keywords=(), padding=.12, max_pause=.7, dedup=.85, keep='last'):
     number(duration, 'source duration', .001)
     number(budget, 'budget', .1, 36000)
     number(padding, 'padding', 0, 1)
     number(max_pause, 'max pause', .1, 10)
     number(dedup, 'dedup similarity', .5, 1)
+    if keep not in ('first', 'last'):
+        raise ValueError('keep must be first or last')
     units, incomplete = sentences(transcript)
     if not units:
         raise ValueError('No complete punctuated sentences found. Supply a punctuated transcript.')
@@ -59,17 +63,16 @@ def select(transcript, duration, *, budget=60., keywords=(), padding=.12, max_pa
         if word['end'] > duration + .001:
             raise ValueError('Transcript extends beyond the source media')
         previous = word['end']
-    starts = {word['start']: i for i, word in enumerate(all_words)}
-    ends = {word['end']: i for i, word in enumerate(all_words)}
-    def padded(start, end):
-        left_index, right_index = starts[start], ends[end]
+    def padded(left_index, right_index):
+        start = all_words[left_index]['start']
+        end = all_words[right_index]['end']
         before = all_words[left_index - 1]['end'] if left_index else 0
         after = all_words[right_index + 1]['start'] if right_index + 1 < len(all_words) else duration
         return [max(0, start - padding, before), min(duration, end + padding, after)]
     vocabulary = Counter(t for unit in units for t in set(tokens(unit['text'])))
     wanted = {t for term in keywords for t in tokens(term)}
     candidates, seen = [], []
-    for unit in units:
+    for unit in (units if keep == 'first' else reversed(units)):
         terms = tokens(unit['text'])
         normalized = ' '.join(terms)
         if not terms or any(SequenceMatcher(None, normalized, earlier).ratio() >= dedup for earlier in seen):
@@ -77,14 +80,16 @@ def select(transcript, duration, *, budget=60., keywords=(), padding=.12, max_pa
         seen.append(normalized)
         words = unit['words']
         ranges = []
-        start, end = words[0]['start'], words[0]['end']
+        first, last = words[0], words[0]
         for word in words[1:]:
-            if word['start'] - end > max_pause:
-                ranges.append(padded(start, end))
-                start = word['start']
-            end = word['end']
-        ranges.append(padded(start, end))
+            if word['start'] - last['end'] > max_pause:
+                ranges.append(padded(first['index'], last['index']))
+                first = word
+            last = word
+        ranges.append(padded(first['index'], last['index']))
         length = sum(b - a for a, b in ranges)
+        if length <= 0:
+            continue
         score = sum(1 / vocabulary[t] for t in set(terms)) / max(1, len(terms))
         score += len(wanted.intersection(terms)) * 3
         candidates.append({**unit, 'ranges': ranges, 'durationSeconds': length, 'score': round(score, 6)})
@@ -112,7 +117,8 @@ def select(transcript, duration, *, budget=60., keywords=(), padding=.12, max_pa
         raise ValueError('More than 128 cuts selected. Use a shorter budget.')
     return {'version': 1, 'durationSeconds': offset, 'segments': cuts,
             'sentences': [{'text': u['text'], 'score': u['score'], 'sourceStartSeconds': u['words'][0]['start']} for u in selected],
-            'omittedIncompleteTail': bool(incomplete), 'ranking': 'keyword matches and uncommon transcript terms'}
+            'cutdownArgs': [arg for cut in cuts for arg in ('--segment', f"{cut['startSeconds']:.9g}-{cut['endSeconds']:.9g}")],
+            'keep': keep, 'omittedIncompleteTail': bool(incomplete), 'ranking': 'keyword matches and uncommon transcript terms'}
 
 
 def render(video, output, plan):
@@ -142,27 +148,29 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--video', type=Path, required=True)
     source = parser.add_mutually_exclusive_group(required=True)
-    source.add_argument('--transcript', type=Path)
+    source.add_argument('--transcript', type=Path, help='Caption[] or Whisper JSON on the whole source-video timeline, not per-scene timings')
     source.add_argument('--transcribe', action='store_true', help='Run installed OpenAI Whisper locally; may download model weights')
     parser.add_argument('--model', default='base')
     parser.add_argument('--seconds', type=float, default=60)
     parser.add_argument('--keyword', action='append', default=[])
     parser.add_argument('--max-pause', type=float, default=.7)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--save-plan', type=Path, help='Explicitly write the edit decision JSON, even in preview')
-    parser.add_argument('--run', action='store_true')
+    parser.add_argument('--save-plan', type=Path, help='Write the edit decision JSON after rendering; --dry-run only prints it')
+    parser.add_argument('--keep', choices=('first', 'last'), default='last', help='Which repeated take to keep (default: last)')
+    parser.add_argument('--dry-run', action='store_true', help='Print the source-relative edit plan without writing files')
     args = parser.parse_args(argv)
     try:
         info = probe(args.video)
         output_path(args.output, args.video, args.transcript)
         transcript = load_json(args.transcript) if args.transcript else transcribe(args.video, args.model)
-        plan = select(transcript, info['duration'], budget=args.seconds, keywords=args.keyword, max_pause=args.max_pause)
-        plan.update(source=str(args.video.resolve()), sourceSha256=sha256(args.video), output=str(args.output.resolve()), executed=args.run)
+        plan = select(transcript, info['duration'], budget=args.seconds, keywords=args.keyword, max_pause=args.max_pause, keep=args.keep)
+        plan.update(source=str(args.video.resolve()), sourceSha256=sha256(args.video), output=str(args.output.resolve()), executed=not args.dry_run)
         if args.save_plan:
             output_path(args.save_plan, args.video, args.transcript, args.output)
-            write_json(args.save_plan, plan)
-        if args.run:
+        if not args.dry_run:
             render(args.video, args.output, plan)
+            if args.save_plan:
+                write_json(args.save_plan, plan)
         print(json.dumps(plan, ensure_ascii=False, indent=2))
         return 0
     except (OSError, ValueError, subprocess.SubprocessError) as error:
