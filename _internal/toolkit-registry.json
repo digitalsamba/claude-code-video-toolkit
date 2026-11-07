@@ -342,21 +342,20 @@
     },
     "addmusic": {
       "path": "tools/addmusic.py",
-      "description": "Add background music to video (generate via ElevenLabs or use existing file)",
-      "usage": "uv run tools/addmusic.py --input video.mp4 --prompt 'Subtle corporate' --output output.mp4",
+      "description": "Add or generate background music, optionally duck it under speech and place timed sound effects with --events",
+      "usage": "uv run tools/addmusic.py -i video.mp4 -m music.wav --duck [--events effects.json] -o mixed.mp4",
       "status": "beta",
       "created": "2025-12-28",
-      "updated": "2025-12-28"
-    },
-    "audio_mix": {
-      "path": "tools/audio_mix.py",
-      "description": "Duck music under speech and place timestamped sound effects",
-      "usage": "uv run tools/audio_mix.py --help",
-      "status": "beta",
-      "created": "2026-10-31",
-      "category": "utility",
-      "updated": "2026-11-03",
-      "documentation": "docs/audio-mix.md"
+      "updated": "2026-11-07",
+      "options": {
+        "duck": "Lower music during speech; --speech supplies isolated narration",
+        "events": "JSON array of {path, atSeconds, gain}, relative paths from the JSON file",
+        "dry-run": "Validate without writes or paid generation",
+        "duck-threshold": "Sidechain threshold, default .03",
+        "duck-ratio": "Compression ratio, default 8",
+        "duck-attack": "Milliseconds, default 20",
+        "duck-release": "Milliseconds, default 400"
+      }
     },
     "dewatermark": {
       "path": "tools/dewatermark.py",
