@@ -154,7 +154,7 @@ This is especially critical for background commands where the working directory 
 | **Project tools** | voiceover, music, music_gen, sfx, sync_timing, qc | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark, cutdown | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
-| **Publishing** | youtube_upload | Upload a finished render to YouTube (use `/publish` for the guided workflow) |
+| **Publishing** | youtube_upload, youtube_stats | Upload a finished render to YouTube (use `/publish` for the guided workflow); see how it does |
 
 Utility tools work on any video file without requiring a project structure.
 
@@ -684,6 +684,11 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --
   channel + account) generally publish public/scheduled fine without the audit. The tool reports
   the actual returned privacy. "Testing"-mode refresh tokens expire after ~7 days (re-run `--auth`).
 - Cached tokens live in `_internal/.youtube/` (gitignored — they grant channel-upload access).
+
+**How it did:** `uv run --extra youtube tools/youtube_stats.py --account personal [--github]` reads views, likes and
+comments with the same token, adds watch time, retention and traffic sources once the token has the Analytics scope
+(`--auth`), and snapshots each run to `_internal/.youtube/stats/` so the next one shows the change. Reading the
+numbers, and what has worked on Shorts, is in `.claude/skills/youtube-stats/`.
 
 ## Video Production Workflow
 
