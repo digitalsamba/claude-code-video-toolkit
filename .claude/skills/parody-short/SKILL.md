@@ -61,6 +61,24 @@ documentary about the return to the office), each in 16:9 and vertical, plus a b
   or not. Write original lyrics for any song (`acestep` skill).
 - **Quote only where the audience could have read it.** Public team channels, yes. DMs, no. See `context.md`.
 
+## Before you start
+
+- **GPU endpoints** (Modal, once): `uv sync --extra modal && uv run modal setup`, then
+  `uv run tools/modal_setup.py flux2 image_edit ltx2 qwen3_tts`. LTX is gated: it needs a Modal secret with your
+  Hugging Face token (`docs/modal-setup.md`). Music: a free `ACEMUSIC_API_KEY` in `.env` (`acestep` skill).
+- **The project** is a plain Remotion project in `projects/<name>/`; no template fits, since nothing here should
+  look like one. Copy `package.json` and `remotion.config.ts` from any template (the config makes `lib/` imports
+  resolve), keep one composition per cut in `src/Root.tsx`, and put the cast's clips in `public/people/`. A shot
+  is a `<Sequence>` on absolute frames with the person in it:
+
+```tsx
+import { LivingPhoto } from '../../../lib/components/LivingPhoto';
+// plays the clip once and holds its last good frame; fit slows a slightly short clip to fill the shot
+<Sequence from={120} durationInFrames={180}>
+  <LivingPhoto src="people/sam-xmas.mp4" hold={140} fit={180} pos="center 30%" style={{ inset: 0 }} />
+</Sequence>
+```
+
 ## Workflow
 
 | Step | What | Read |
