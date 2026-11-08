@@ -48,4 +48,4 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Run tests
-        run: uv run python -m unittest discover -s tests/python -p 'test_*.py' -v
+        run: uv run --extra youtube python -m unittest discover -s tests/python -p 'test_*.py' -v
