@@ -609,17 +609,7 @@ def brand_colors(spec: dict) -> dict:
 # What a model writes when it isn't paying attention: dashes and stock AI phrasing. Narration is heard and
 # burned as captions, and the title, headlines and sublines are on screen, so these are refused before any
 # spend, with the reason.
-COPY_RULES = [
-    (re.compile(r"—|\s–\s|\s--\s"), "a dash; use a comma, a full stop or a new sentence"),
-    (re.compile(r"\bit'?s worth noting\b|\bit is (worth|important) (noting|to note)\b", re.I), "'it's worth noting'; say the point"),
-    (re.compile(r"\bin today'?s (fast-paced |busy |modern )?(world|age|landscape)\b|\bmoving forward\b"
-                r"|\bfirst and foremost\b|\blast but not least\b|\bwithout further ado\b|\ball in all\b"
-                r"|\bin conclusion\b|\bshed light on\b|\bpave the way\b|\bat the forefront\b|\bdeep[- ]dive\b"
-                r"|\bdelve\b|\btapestry\b|\bembark on a journey\b|\bunlock (your|the) (full )?potential\b"
-                r"|\bgame[- ]changer\b|\bnavigat(e|ing) the (complexities|world|landscape)\b"
-                r"|\bseamless(ly)?\b|\bresonate(s)? with\b|\btestament to\b", re.I),
-     "stock AI phrasing; say it the way a person would"),
-]
+from copy_lint import COPY_RULES  # noqa: E402  (shared with every public text: tools/copy_lint.py)
 
 
 def copy_findings(spec: dict) -> list[str]:

@@ -1,0 +1,28 @@
+name: Copy lint
+
+# Everything in this repo is public: docs, skills, the site, the README, and commit subjects (they become the
+# release notes). New lines and commit subjects are checked for dashes and stock AI or marketing phrasing with
+# tools/copy_lint.py. Old text is fixed when it's next touched.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  copy:
+    name: new copy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Lint added lines and commit subjects
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || 'origin/main' }}
+        run: |
+          # synced from upstream Remotion: not our words
+          python3 tools/copy_lint.py --diff "$BASE" --commits "$BASE" \
+            . ':(exclude).claude/skills/remotion-official'
