@@ -121,6 +121,13 @@
       "note": "Was skills/openclaw-video-toolkit (OpenClaw-only paths and yieldMs polling) until 2026-10-31",
       "created": "2026-04-14",
       "updated": "2026-11-06"
+    },
+    "youtube-stats": {
+      "path": ".claude/skills/youtube-stats/",
+      "description": "Reading how published videos do (youtube_stats.py): what each metric means for a Short vs a long video, the Analytics scope step, and what has worked on Shorts so far, kept as findings rather than numbers",
+      "status": "beta",
+      "created": "2026-11-08",
+      "updated": "2026-11-08"
     }
   },
   "designSources": {
@@ -938,6 +945,23 @@
       "documentation": "docs/youtube-upload.md",
       "created": "2026-06-09",
       "updated": "2026-06-09"
+    },
+    "youtube_stats": {
+      "path": "tools/youtube_stats.py",
+      "description": "How the channel's videos are doing: views, likes, comments per video and subscribers (Data API v3), plus watch time, retention, traffic sources and (if the API allows) impressions/CTR when the token has the YouTube Analytics scope; snapshots per run give deltas over time; --github adds the repo's traffic referrers",
+      "usage": "uv run tools/youtube_stats.py --account personal [--video ID ...] [--since 7d] [--github] [--json]",
+      "status": "beta",
+      "category": "publishing",
+      "backend": "YouTube Data API v3 + YouTube Analytics API v2 (reuses youtube_upload.py's cached token)",
+      "requires": "a token from youtube_upload.py --auth; Analytics needs the API enabled and youtube_stats.py --auth",
+      "envVars": [
+        "YOUTUBE_CLIENT_SECRETS_FILE",
+        "YOUTUBE_TOKEN_DIR"
+      ],
+      "note": "Read-only. Snapshots go to _internal/.youtube/stats/<account>/ (gitignored). Analytics lags 1-2 days.",
+      "documentation": ".claude/skills/youtube-stats/SKILL.md",
+      "created": "2026-11-08",
+      "updated": "2026-11-08"
     },
     "voice_prosody": {
       "path": "tools/voice_prosody.py",
