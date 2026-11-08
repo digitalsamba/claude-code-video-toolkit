@@ -18,7 +18,7 @@
   --code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; /* taste-skill-ignore: used only by pre and code */
 
   /* five sizes */
-  --step-small: clamp(0.875rem, 0.84rem + 0.1vw, 0.9375rem);
+  --step-small: clamp(0.9375rem, 0.9rem + 0.2vw, 1rem);
   --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
   --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
   --step-statement: clamp(1.25rem, 0.9rem + 1.4vw, 2.25rem);
@@ -139,7 +139,7 @@ section { margin-top: var(--gap-section); }
   .stages { grid-template-columns: 1fr; }
   .stages .proof { order: -2; min-height: 46svh; }
   .slider { order: -1; }
-  .slider ol { grid-template-columns: 1fr 1fr; gap: 6px; font-size: 15px; }
+  .slider ol { grid-template-columns: 1fr 1fr; gap: 6px; font-size: var(--step-small); }
   .slider ol li, .slider ol li:nth-child(n+2), .slider ol li:last-child { text-align: left; }
   .slider input::-webkit-slider-thumb { width: 40px; height: 40px; }
   .stages .clause h2 { font-size: clamp(2.25rem, 9vw, 4rem); }
@@ -176,7 +176,7 @@ section { margin-top: var(--gap-section); }
 .start .button.copy { font-size: var(--step-body); padding: 0.9em 1em; align-self: stretch; display: inline-flex; align-items: center; border-radius: 0 var(--radius) var(--radius) 0; vertical-align: middle; }
 .start .then { margin-top: 36px; display: grid; gap: 28px; }
 .start .then p { color: var(--ink); max-width: 36em; }
-.start pre { margin: 0; background: var(--surface); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; font: 400 var(--step-small)/1.6 var(--code); }
+.start pre { margin: 0; background: var(--surface); border-radius: var(--radius); padding: 18px 20px; font: 400 var(--step-small)/1.6 var(--code); white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (min-width: 900px) { .start .then { grid-template-columns: 6fr 6fr; align-items: start; } }
 
 /* footer: the address as the headline */
@@ -211,7 +211,7 @@ section { margin-top: var(--gap-section); }
 .show figure { margin: 0; }
 .show figcaption { font-size: var(--step-small); color: var(--muted); margin-top: 10px; }
 .show .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.show pre { margin: 0; background: var(--surface); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; font: 400 14.5px/1.6 var(--code); white-space: pre-wrap; }
+.show pre { margin: 0; background: var(--surface); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; font: 400 var(--step-small)/1.6 var(--code); white-space: pre-wrap; }
 .facts { width: 100%; border-collapse: collapse; font-size: var(--step-body); }
 .facts td { padding: 11px 0; vertical-align: top; }
 .facts td + td { text-align: right; padding-left: 16px; }

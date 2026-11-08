@@ -7,7 +7,9 @@
 <meta name="description" content="An image-to-video clip runs about 5 seconds; a shot runs 7 to 11. Holding the last frame left 63% of an 11-second shot frozen, playing it back and forth made 29% of frames repeats. Continuing the clip from its own last good frame measured 0% of both.">
 <meta property="og:title" content="Why AI video clips freeze or loop mid-shot, and the fix">
 <meta property="og:description" content="An image-to-video clip runs about 5 seconds; a shot runs 7 to 11. Holding the last frame left 63% of an 11-second shot frozen, playing it back and forth made 29% of frames repeats. Continuing the clip from its own last good frame measured 0% of both.">
-<meta property="og:image" content="https://digitalsamba.github.io/claude-code-video-toolkit/media/stage-sheet.jpg">
+<meta property="og:image" content="https://digitalsamba.github.io/claude-code-video-toolkit/media/stage-render.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233771e0'/%3E%3Cpath d='M12 9v14l11-7z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 <script src="site.js" defer></script>
 </head>
@@ -41,7 +43,7 @@
         <h2 id="measured" data-rise>Three ways to fill it, measured</h2>
         <div><p data-rise>We hit this making comedy shorts with animated photos: an LTX clip of a person laughing is about five seconds, and the shot it sits in is longer. Each way of filling it was measured on the same 11-second shot. The raw LTX clips measured 0% repeats, so the loop was ours, not the model's.</p></div>
       </div>
-      <div class="show"><table class="facts" data-rise><caption class="sr-only">Frozen and repeated frames on an 11-second shot</caption><tbody><tr><td>Hold the last frame</td><td>63% frozen, reads as a pause</td></tr><tr><td>Play the tail back and forth</td><td>29% repeats, reads as a rewind</td></tr><tr class="total"><td>Continue the clip from its own frame</td><td>0% frozen, 0% repeats</td></tr></tbody></table><figure data-rise><img src="media/stage-sheet.jpg" alt="A contact sheet: one settled frame from each scene of a render" width="1080" height="203" loading="lazy"><figcaption>Every clip goes on a contact sheet before it is used</figcaption></figure></div>
+      <div class="show"><table class="facts" data-rise><caption class="sr-only">Frozen and repeated frames on an 11-second shot</caption><tbody><tr><td>Hold the last frame</td><td>63% frozen, reads as a pause</td></tr><tr><td>Play the tail back and forth</td><td>29% repeats, reads as a rewind</td></tr><tr class="total"><td>Continue the clip from its own frame</td><td>0% frozen, 0% repeats</td></tr></tbody></table><figure data-rise><img src="media/stage-sheet.jpg" alt="A contact sheet: one settled frame from each scene of a render" width="1080" height="202" loading="lazy"><figcaption>Every clip goes on a contact sheet before it is used</figcaption></figure></div>
     </div>
   </section>
 

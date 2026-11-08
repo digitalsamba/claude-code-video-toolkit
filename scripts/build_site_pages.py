@@ -18,6 +18,8 @@ HEAD = """<!doctype html>
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{desc}">
 <meta property="og:image" content="https://digitalsamba.github.io/claude-code-video-toolkit/{og}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233771e0'/%3E%3Cpath d='M12 9v14l11-7z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 <script src="site.js" defer></script>
 </head>
@@ -104,7 +106,7 @@ def page(name, title, desc, og, body):
 page("christmas-team-video.html",
      "A Christmas video of your team, made with Claude Code",
      "Turn your team into A Christmas Carol: their own photos, costumed and animated, the in-jokes from your team chat, an original carol. A 90-second ad for about $2, made with Claude Code.",
-     "img/the-great-return-short.jpg",
+     "media/band-mute.jpg",
      head("A Christmas video of your team",
           "Your colleagues as <i>A Christmas Carol</i>: their own photos in costume and moving, the jokes from your team "
           "chat, an original carol. Ninety seconds, about $2.")
@@ -242,7 +244,7 @@ page("explainer-shorts.html",
 page("extending-ltx-clips.html",
      "Why AI video clips freeze or loop mid-shot, and the fix",
      "An image-to-video clip runs about 5 seconds; a shot runs 7 to 11. Holding the last frame left 63% of an 11-second shot frozen, playing it back and forth made 29% of frames repeats. Continuing the clip from its own last good frame measured 0% of both.",
-     "media/stage-sheet.jpg",
+     "media/stage-render.jpg",
      head("AI clips that don't freeze or loop",
           "An image-to-video clip runs about five seconds. A shot often runs seven to eleven. What fills the gap decides "
           "whether a generated person looks alive.")
@@ -256,7 +258,7 @@ page("extending-ltx-clips.html",
              "<tr class=\"total\"><td>Continue the clip from its own frame</td><td>0% frozen, 0% repeats</td></tr>"
              "</tbody></table>"
              + fig("media/stage-sheet.jpg", "A contact sheet: one settled frame from each scene of a render",
-                   "Every clip goes on a contact sheet before it is used", 1080, 203))
+                   "Every clip goes on a contact sheet before it is used", 1080, 202))
      + split("fix", "Continue, don't stretch",
              "<p>Take the clip's last <i>good</i> frame, run image-to-video again from it with the same prompt, and join the "
              "two with a cross-fade of about 0.12 seconds. Repeat for longer shots. Each extension is one more clip, about "
