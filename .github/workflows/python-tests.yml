@@ -1,0 +1,51 @@
+name: Python tests
+
+# The unit tests in tests/python (video jobs, qc.py, sync_check.py, pick_music.py, audition.py, ltx_extend.py).
+# Lint Python only checks undefined names; this runs the tests themselves.
+on:
+  pull_request:
+    paths:
+      - 'tools/**'
+      - 'scripts/**'
+      - 'tests/python/**'
+      - 'templates/concept-explainer-short/**'
+      - 'kits/**'
+      - 'skills/video-toolkit/**'
+      - '_internal/toolkit-registry.json'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/python-tests.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'tools/**'
+      - 'scripts/**'
+      - 'tests/python/**'
+      - 'templates/concept-explainer-short/**'
+      - 'kits/**'
+      - 'skills/video-toolkit/**'
+      - '_internal/toolkit-registry.json'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/python-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: unittest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Run tests
+        run: uv run python -m unittest discover -s tests/python -p 'test_*.py' -v
