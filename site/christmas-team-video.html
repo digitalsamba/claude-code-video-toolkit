@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Make a Christmas video of your team with Claude Code</title>
+<meta name="description" content="Turn your team into A Christmas Carol: their own photos, costumed and animated, the in-jokes from your team chat, an original carol. A 90-second ad for about $2, made with Claude Code.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="name" href="./">claude-code-video-toolkit</a>
+  <nav>
+    <a href="christmas-team-video.html" aria-current="page">Christmas video</a>
+    <a href="release-notes-video.html">Release notes</a>
+    <a href="explainer-shorts.html">Explainer shorts</a>
+    <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a>
+  </nav>
+</div></header>
+
+<main class="wrap"><div class="prose">
+  <h1>A Christmas video of your team, made with Claude Code</h1>
+  <p class="lede">Your colleagues as <i>A Christmas Carol</i>: their own photos in costume and moving, the jokes from your
+    team chat, an original carol. Ninety seconds, about $2.</p>
+
+  <p>The videos that land hardest are the ones where the audience knows the people. A Christmas ad of your own team,
+    where the person who always books one more meeting is Scrooge and the ghosts are the colleagues who were there
+    for the year, gets laughs no stock video can. The toolkit's <code>parody-short</code> skill is how Claude Code
+    makes one: it was built on three videos for one team, then on two public shorts with an invented cast.</p>
+
+  <div class="reel">
+    <a href="https://youtube.com/shorts/1hyDgC5Qg_o"><img src="img/youre-on-mute-short.jpg" alt="You're On Mute"><span>You're On Mute (invented cast)</span></a>
+    <a href="https://youtube.com/shorts/e4HW-tvi8-8"><img src="img/the-great-return-short.jpg" alt="The Great Return"><span>The Great Return (same cast)</span></a>
+  </div>
+  <p class="note">The team videos aren't shown here because they star real colleagues. These two use the same method
+    with an invented cast.</p>
+
+  <h2>What you need</h2>
+  <ul>
+    <li>Claude Code and the toolkit (<a href="./#start">quick start</a>).</li>
+    <li>A <a href="https://modal.com">Modal</a> account for the image and video models; the toolkit deploys them for you
+      (<code>/setup</code>, or <code>uv run tools/modal_setup.py flux2 image_edit ltx2 qwen3_tts</code>).</li>
+    <li>A free <a href="https://acemusic.ai/api-key">ACE-Step key</a> for the carol.</li>
+    <li>Three to six people, and a profile photo of each.</li>
+    <li><b>Each person's OK</b> to appear in it (see the rules below).</li>
+  </ul>
+
+  <h2>Ask for it</h2>
+<pre><code>Make a 90-second Christmas TV ad of my team as A Christmas Carol.
+Cast: Sam (Scrooge, books meetings on Christmas Eve), Priya, Jonas, Ana.
+Their photos are in ~/Desktop/team. It's for our end-of-year call, so
+facts don't matter: exaggerate freely.</code></pre>
+  <p>Claude Code picks up the <code>parody-short</code> skill and works through it with you:</p>
+
+  <ol class="steps">
+    <li><b>Brief.</b> The event, the audience, the cast, and one question asked early: do facts matter? Once you say
+      no, numbers get inflated and timelines invented, and nobody fact-checks a joke.</li>
+    <li><b>In-jokes.</b> If Claude Code can read your team chat (a Slack connector, say), it mines the public
+      channels for catchphrases, running jokes and the feature someone keeps cramming in, and writes them to a
+      <code>bible.md</code>. A real line from your own chat beats any written gag. DMs are never quoted.</li>
+    <li><b>Map the story.</b> <i>A Christmas Carol</i> is public domain, so its beats can be used directly: Scrooge, Marley's chains,
+      the Ghosts of Christmas Past, Present and Yet to Come, the change of heart on Christmas morning. One beat per
+      person, each with one thing their photo will do and one line on screen.</li>
+    <li><b>Costume and animate.</b> Each photo is cropped, costumed with an image edit (Scrooge's nightcap, the
+      Ghost of Christmas Present's holly crown) and animated with LTX image-to-video. Every clip goes on a contact
+      sheet first: about one in three cuts to a stranger, and one wrong face breaks the spell.</li>
+    <li><b>Build.</b> Remotion shots on absolute frames, with the Dickens look: an old-print serif, warm grade, film
+      grain, letterbox bars, falling snow. All the text (the invite, the tombstone, the stamp) is drawn by Remotion,
+      because image models garble letters.</li>
+    <li><b>Sound.</b> An original carol with lyrics written for your team (ACE-Step), bells, a clock strike,
+      chains. Each sound placed on its movement by measurement, not by eye.</li>
+    <li><b>Check.</b> A contact sheet of the render, loudness to YouTube's level, frozen or looping clips found
+      automatically, every sound cue checked, then the safety rules again.</li>
+  </ol>
+
+  <h2>The rules that keep it fun</h2>
+  <ul>
+    <li><b>Affectionate, always.</b> Everyone is the hero of a gag or in on it. Nothing about performance, health,
+      personal life or anything said in confidence.</li>
+    <li><b>Real faces stay internal.</b> Share it with the team, link-only. Ask each person before posting anywhere
+      public, and leave out anyone who asks.</li>
+    <li><b>Nothing sensitive on screen.</b> No customer names, hostnames, internal URLs or secrets.</li>
+    <li><b>Original words and music.</b> Dickens is public domain; a film's characters, lines or theme tune are not.</li>
+  </ul>
+
+  <h2>What it costs</h2>
+  <table>
+    <tr><th>Item</th><th>Cost (Modal, Nov 2026)</th></tr>
+    <tr><td>Costume edit</td><td>~$0.01 each</td></tr>
+    <tr><td>5-second LTX clip</td><td>~$0.08 each</td></tr>
+    <tr><td>Background image</td><td>~$0.01 each</td></tr>
+    <tr><td>Carol</td><td>a few cents</td></tr>
+    <tr><td><b>A 90-second ad, five people, with re-rolls</b></td><td><b>about $2</b></td></tr>
+  </table>
+
+  <h2>Not Christmas?</h2>
+  <p>The same skill does an 80s action-show intro of a release night, a creature feature for Halloween, a nature
+    documentary of the office, or a heist movie of a quarter-end deal. Reuse the costumed cast for the next one: only
+    the costumes, clips and world change.</p>
+  <p><a href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/.claude/skills/parody-short">Read the
+    parody-short skill on GitHub</a>.</p>
+</div></main>
+
+<footer class="site"><div class="wrap">
+  MIT licensed · <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a> ·
+  <a href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">Playlist</a>
+</div></footer>
+</body>
+</html>

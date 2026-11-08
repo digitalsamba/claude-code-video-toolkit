@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why AI video clips freeze or loop mid-shot, and the fix</title>
+<meta name="description" content="An image-to-video clip runs about 5 seconds; a shot runs 7 to 11. Holding the last frame left 63% of an 11-second shot frozen, playing it back and forth made 29% of frames repeats. Continuing the clip from its own last good frame measured 0% of both.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="name" href="./">claude-code-video-toolkit</a>
+  <nav>
+    <a href="christmas-team-video.html">Christmas video</a>
+    <a href="release-notes-video.html">Release notes</a>
+    <a href="explainer-shorts.html">Explainer shorts</a>
+    <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a>
+  </nav>
+</div></header>
+
+<main class="wrap"><div class="prose">
+  <h1>AI clips that don't freeze or loop</h1>
+  <p class="lede">An image-to-video clip runs about five seconds. A shot often runs seven to eleven. What fills the gap
+    decides whether a generated person looks alive.</p>
+
+  <p>We hit this making comedy shorts with animated photos: an LTX clip of a person laughing is ~5 s, and the shot
+    it sits in is longer. Three ways to fill it, measured on the same 11-second shot:</p>
+
+  <table>
+    <tr><th>Fill</th><th>Frozen frames</th><th>Frames that repeat an earlier one</th><th>How it reads</th></tr>
+    <tr><td>Hold the last frame</td><td>63%</td><td>0%</td><td>the video paused</td></tr>
+    <tr><td>Play the tail back and forth</td><td>not measured</td><td>29%</td><td>a loop, a rewind</td></tr>
+    <tr><td><b>Continue the clip from its own frame</b></td><td><b>0%</b></td><td><b>0%</b></td><td>one continuous take</td></tr>
+  </table>
+  <p>The raw LTX clips measured 0% repeats, so the loop was ours, not the model's.</p>
+
+  <h2>The fix: continue, don't stretch</h2>
+  <p>Take the clip's last <i>good</i> frame, run image-to-video again from it with the same prompt, and join the two
+    with a cross-fade of about 0.12 s. Repeat for longer shots. Each extension is one more clip, about $0.08 on
+    Modal. The toolkit does it in one command:</p>
+<pre><code>uv run tools/ltx_extend.py --input people/rob.mp4 --at 4.8 \
+    --prompt "A fixed view that never moves ... the same man keeps laughing ... no text" \
+    --output people/rob-long.mp4          # --times 2 for a third link</code></pre>
+  <p>"Last good frame" matters: continuing from an earlier frame also cuts out a bad stretch. A feet-up kick that
+    grew a third leg never plays if the continuation starts before it.</p>
+
+  <h2>What we learned the hard way</h2>
+  <ul>
+    <li><b>Never continue from a close-up.</b> With only a face to go on, the model invents a new scene.</li>
+    <li><b>Lock the framing in words</b> ("a fixed view that never moves, no zoom, no cuts"), but don't say
+      "tripod": it draws one.</li>
+    <li><b>Seek before the end.</b> Grabbing the very last frame of a clip with ffmpeg returns nothing; take the last
+      frame before the seam.</li>
+    <li><b>Keep what you paid for.</b> A chain that fails at link two should keep link one, keyed on its prompt, seam
+      and seed, so a re-run doesn't pay twice.</li>
+    <li><b>A slightly short clip can be slowed,</b> down to about 0.8x before faces look slow-motion; beyond that,
+      extend.</li>
+    <li><b>Contact-sheet every continuation.</b> A continuation can still cut to a stranger at its end.</li>
+  </ul>
+
+  <h2>Catching it automatically</h2>
+  <p>A whole-frame "is anything moving?" check misses a frozen face, because something else on screen is always
+    moving. The toolkit's <code>qc.py --render</code> now looks per region for <i>motion that stops dead</i>: part of
+    the frame moving for 3 s or more, then frozen for 2 s or more while the rest of the video goes on. On four
+    renders it found every clip freeze in the old cuts and none in the fixed ones.</p>
+  <p><a href="https://github.com/digitalsamba/claude-code-video-toolkit/blob/main/tools/ltx_extend.py">ltx_extend.py on
+    GitHub</a> · <a href="christmas-team-video.html">where we used it</a></p>
+</div></main>
+
+<footer class="site"><div class="wrap">
+  MIT licensed · <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a>
+</div></footer>
+</body>
+</html>

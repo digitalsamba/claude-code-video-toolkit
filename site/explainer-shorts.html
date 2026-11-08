@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vertical explainer shorts with Claude Code</title>
+<meta name="description" content="9:16 concept-explainer shorts for YouTube Shorts, Reels and TikTok, made with Claude Code: per-scene narration, cards with legible text, AI b-roll and karaoke captions, for under a dollar.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="name" href="./">claude-code-video-toolkit</a>
+  <nav>
+    <a href="christmas-team-video.html">Christmas video</a>
+    <a href="release-notes-video.html">Release notes</a>
+    <a href="explainer-shorts.html" aria-current="page">Explainer shorts</a>
+    <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a>
+  </nav>
+</div></header>
+
+<main class="wrap"><div class="prose">
+  <h1>Vertical explainer shorts</h1>
+  <p class="lede">One question, answered in under a minute for Shorts, Reels or TikTok: narration, cards with text you can
+    read, b-roll that moves, and captions that follow the voice.</p>
+
+  <div class="reel">
+    <a href="https://demos.digitalsamba.com/video/short-blue-sky.mp4"><img src="img/sky-blue-short.jpg" alt="Why is the sky blue?"><span>"Why is the sky blue?", 52 s, about $0.80</span></a>
+    <a href="https://demos.digitalsamba.com/video/hallucinations_short.mp4"><img src="img/hallucinations-short.jpg" alt="AI hallucinations explainer"><span>AI hallucinations, 3:41, cloned voice</span></a>
+  </div>
+
+  <h2>How it's built</h2>
+  <p>The whole video comes from one <code>scenes.json</code>: a line of narration and one visual per scene. Then:</p>
+  <ol class="steps">
+    <li><b>Voice</b> each scene (Qwen3-TTS, a built-in voice or a clone), with a pace limit so it never rushes.</li>
+    <li><b>Visuals by job:</b> Ideogram for anything with text on it (a title card, a stat), LTX video for b-roll
+      that moves, FLUX for text-free backgrounds. Image and video models garble letters, so text is never asked of
+      them.</li>
+    <li><b>Captions</b> word by word from the audio's timing, but spelled from the script, so names come out right.</li>
+    <li><b>Build</b> anchored to the audio: each scene starts where its narration does, so nothing drifts. It renders
+      at every stage, with placeholder cards before the assets exist.</li>
+  </ol>
+
+  <h2>Start</h2>
+<pre><code># in Claude Code, from the toolkit:
+Make a 50-second vertical explainer: why does bread go stale?</code></pre>
+  <p>Claude Code uses the <code>concept-explainer-short</code> template (pure Python, no Remotion). An agent with no
+    one at the terminal can do the same as a background job with a cost cap: <code>video_job.py submit --max-usd 1</code>
+    (experimental; see <a href="https://github.com/digitalsamba/claude-code-video-toolkit/blob/main/docs/agent-video-jobs.md">agent video jobs</a>).</p>
+  <p class="note">Already have a 16:9 video? <code>tools/cutdown.py --platform shorts</code> makes the 9:16, 1:1 or 4:5
+    cut with ffmpeg.</p>
+</div></main>
+
+<footer class="site"><div class="wrap">
+  MIT licensed · <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a>
+</div></footer>
+</body>
+</html>

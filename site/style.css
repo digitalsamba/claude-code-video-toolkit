@@ -1,0 +1,93 @@
+/* claude-code-video-toolkit site: one ink, one ground, one accent. No gradients, no glows, no shadows at rest. */
+:root {
+  --ground: #f4f1ea;
+  --ink: #1c1b19;
+  --muted: #5d5a53;
+  --rule: #d9d4c8;
+  --accent: #c2410c;
+  --code-bg: #e9e4d8;
+  --serif: "Newsreader", Georgia, serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #161513;
+    --ink: #ece8df;
+    --muted: #a39f95;
+    --rule: #34322d;
+    --accent: #f08a4b;
+    --code-bg: #24221f;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 17px/1.6 var(--sans);
+}
+a { color: var(--accent); text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+.prose { max-width: 680px; }
+
+header.site {
+  border-bottom: 1px solid var(--rule);
+}
+header.site .wrap {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding-top: 18px; padding-bottom: 18px; flex-wrap: wrap;
+}
+header.site .name { font-family: var(--mono); font-size: 15px; color: var(--ink); text-decoration: none; }
+header.site nav { display: flex; gap: 18px; font-size: 15px; flex-wrap: wrap; }
+header.site nav a { color: var(--muted); text-decoration: none; }
+header.site nav a:hover, header.site nav a[aria-current] { color: var(--ink); }
+
+h1, h2, h3 { font-family: var(--serif); font-weight: 500; line-height: 1.15; letter-spacing: -0.01em; }
+h1 { font-size: clamp(36px, 6vw, 60px); margin: 56px 0 18px; max-width: 16ch; }
+h2 { font-size: clamp(26px, 3.4vw, 34px); margin: 56px 0 14px; }
+h3 { font-size: 22px; margin: 32px 0 8px; }
+p.lede { font-size: 20px; color: var(--muted); max-width: 40ch; margin: 0 0 28px; }
+
+code, pre { font-family: var(--mono); font-size: 0.86em; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+pre {
+  background: var(--code-bg); padding: 16px 18px; border-radius: 4px; overflow-x: auto; line-height: 1.5;
+}
+pre code { background: none; padding: 0; }
+
+.cta { display: flex; gap: 14px; flex-wrap: wrap; margin: 0 0 8px; }
+.button {
+  display: inline-block; padding: 11px 18px; border: 1px solid var(--ink); border-radius: 3px;
+  color: var(--ink); text-decoration: none; font-weight: 500;
+}
+.button.primary { background: var(--ink); color: var(--ground); }
+
+/* video grid: landscape tiles and vertical tiles share one row height */
+.reel { display: flex; flex-wrap: wrap; gap: 14px; margin: 24px 0 8px; }
+.reel a { display: block; color: var(--ink); text-decoration: none; }
+.reel img { display: block; height: 240px; width: auto; border: 1px solid var(--rule); border-radius: 3px; }
+.reel span { display: block; font-size: 14px; color: var(--muted); margin-top: 6px; max-width: 30ch; }
+@media (max-width: 600px) { .reel img { height: 180px; } }
+
+/* use cases: a list, not a row of identical tiles */
+.uses { list-style: none; padding: 0; margin: 20px 0; border-top: 1px solid var(--rule); }
+.uses li { border-bottom: 1px solid var(--rule); padding: 18px 0; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+.uses li a { font-family: var(--serif); font-size: 22px; text-decoration: none; }
+.uses li p { margin: 0; color: var(--muted); }
+@media (max-width: 700px) { .uses li { grid-template-columns: 1fr; gap: 6px; } }
+
+ol.steps { padding-left: 1.2em; }
+ol.steps li { margin-bottom: 14px; }
+.note { border-left: 3px solid var(--accent); padding: 2px 0 2px 16px; color: var(--muted); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; margin: 16px 0; }
+th, td { text-align: left; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; }
+figure { margin: 24px 0; }
+figure img { max-width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 3px; }
+figcaption { font-size: 14px; color: var(--muted); margin-top: 6px; }
+
+footer.site { border-top: 1px solid var(--rule); margin-top: 80px; padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
