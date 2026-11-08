@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Release-notes videos from source code, with Claude Code</title>
+<meta name="description" content="Product demo and release-notes videos with no screen recording: Claude Code rebuilds the app's screens from its source as React, then drives them with a scripted cursor and camera timed to the narration.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="name" href="./">claude-code-video-toolkit</a>
+  <nav>
+    <a href="christmas-team-video.html">Christmas video</a>
+    <a href="release-notes-video.html" aria-current="page">Release notes</a>
+    <a href="explainer-shorts.html">Explainer shorts</a>
+    <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a>
+  </nav>
+</div></header>
+
+<main class="wrap"><div class="prose">
+  <h1>Release-notes videos with no screen recording</h1>
+  <p class="lede">Claude Code reads your app's source, rebuilds the screens as React, and films them with a scripted cursor
+    and camera. Nothing to record, no test data, nothing that goes stale.</p>
+
+  <figure>
+    <a href="https://demos.digitalsamba.com/video/ds-release-650.mp4"><img src="img/ds-release-650.jpg" alt="A release-notes video frame: a product UI rebuilt from source, zoomed on a control" width="860"></a>
+    <figcaption>87 s release-notes video: six items across two apps, cloned narration, every click on its word.</figcaption>
+  </figure>
+
+  <h2>Why not record the screen?</h2>
+  <p>A Playwright or screen recording needs a running app, accounts, test data and a clean state, and it breaks on
+    the next UI change. A rebuilt screen is static React: it renders the same every time, shows exactly the state the
+    story needs, and the camera can zoom anywhere without blur.</p>
+
+  <h2>How it works</h2>
+  <ol class="steps">
+    <li><b>Write the narration first,</b> one sentence per item, and generate it (a cloned voice works well).</li>
+    <li><b>Rebuild each screen</b> from the app's own components and styles, as a static React page at a fixed
+      canvas size. Claude Code reads the source; you point it at the right files.</li>
+    <li><b>Drive it with <code>Stage</code> and <code>Cursor</code>:</b> a browser window, camera keyframes for zoom and
+      pan, and an eased cursor with click ripples. Every click is a frame number looked up from the narration with
+      <code>cue('save')</code>, so when the voice is re-timed the whole scene follows it.</li>
+    <li><b>Check the text</b> with <code>qc.py --layout</code>: it opens the composition in a browser and reports text
+      that's too small for a phone, clipped, or under WCAG contrast.</li>
+  </ol>
+
+  <h2>Start</h2>
+<pre><code>cp -r templates/ds-release-notes projects/my-release
+# then, in Claude Code:
+Make a release-notes video for these three changes: ...
+The app's source is in ~/code/my-app.</code></pre>
+  <p>The template ships as a finished build, so it renders as is; for your release keep the kits and replace the
+    scenes. The method and its gotchas are in the
+    <a href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/.claude/skills/synthetic-ui-demo">synthetic-ui-demo
+    skill</a>.</p>
+</div></main>
+
+<footer class="site"><div class="wrap">
+  MIT licensed · <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a>
+</div></footer>
+</body>
+</html>

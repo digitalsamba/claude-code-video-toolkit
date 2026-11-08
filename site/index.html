@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claude-code-video-toolkit: make videos with Claude Code</title>
+<meta name="description" content="An open-source toolkit for making videos with Claude Code: script, AI voiceover, music, video clips and render, on open-source models that cost cents.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="name" href="./">claude-code-video-toolkit</a>
+  <nav>
+    <a href="christmas-team-video.html">Christmas video</a>
+    <a href="release-notes-video.html">Release notes</a>
+    <a href="explainer-shorts.html">Explainer shorts</a>
+    <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <h1>Tell Claude Code what video you want.</h1>
+  <p class="lede">It writes the script, voices it, scores it, generates the shots and renders the MP4. Open source, on
+    models that cost cents.</p>
+  <div class="cta">
+    <a class="button primary" href="https://github.com/digitalsamba/claude-code-video-toolkit">Get it on GitHub</a>
+    <a class="button" href="#start">Quick start</a>
+  </div>
+
+  <h2>What it makes</h2>
+  <div class="reel">
+    <a href="https://youtube.com/shorts/1hyDgC5Qg_o"><img src="img/youre-on-mute-short.jpg" alt="You're On Mute: a horror trailer about video calls"><span>You're On Mute: every video call ever, as a horror trailer</span></a>
+    <a href="https://youtube.com/shorts/e4HW-tvi8-8"><img src="img/the-great-return-short.jpg" alt="The Great Return: a nature documentary about the office"><span>The Great Return: the office, as a wildlife film</span></a>
+    <a href="https://demos.digitalsamba.com/video/ds-release-650.mp4"><img src="img/ds-release-650.jpg" alt="Release-notes video with product UI rebuilt from source"><span>Release notes, UI rebuilt from source, no screen recording</span></a>
+    <a href="https://demos.digitalsamba.com/video/short-blue-sky.mp4"><img src="img/sky-blue-short.jpg" alt="Why is the sky blue? vertical explainer"><span>"Why is the sky blue?", 52 s, about $0.80</span></a>
+    <a href="https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4"><img src="img/ds-free-schedule-demo.jpg" alt="Product demo with an AI narrator tile"><span>Product demo with a talking-head narrator</span></a>
+  </div>
+  <p><a href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">The playlist on YouTube</a> ·
+    <a href="https://github.com/digitalsamba/claude-code-video-toolkit#see-what-it-makes">every video in the showcase</a></p>
+
+  <h2>Pick what you're making</h2>
+  <ul class="uses">
+    <li><a href="christmas-team-video.html">A Christmas video of your team</a>
+      <p>Your team as <i>A Christmas Carol</i>, starring their own animated photos and the in-jokes from your chat. About $2.</p></li>
+    <li><a href="release-notes-video.html">Release notes and product demos</a>
+      <p>The app's screens rebuilt from its source code and driven by a scripted cursor and camera, so nothing is screen-recorded and nothing goes stale.</p></li>
+    <li><a href="explainer-shorts.html">Vertical explainer shorts</a>
+      <p>A 9:16 concept explainer for Shorts, Reels or TikTok: narration, cards with legible text, b-roll and karaoke captions.</p></li>
+    <li><a href="extending-ltx-clips.html">Lesson: AI clips that don't freeze</a>
+      <p>Why generated people freeze or loop mid-shot, how we measured it, and the fix.</p></li>
+  </ul>
+
+  <h2 id="start">Quick start</h2>
+  <div class="prose">
+<pre><code>git clone https://github.com/digitalsamba/claude-code-video-toolkit.git
+cd claude-code-video-toolkit
+uv sync
+claude</code></pre>
+    <p>Then, in Claude Code, <code>/setup</code> configures a cloud GPU, storage and a voice (about five minutes, mostly
+      free), and <code>/video</code> starts your first project. To render something with no keys at all:
+      <code>cd examples/hello-world &amp;&amp; npm install &amp;&amp; npm run render</code>.</p>
+    <p>Needs <a href="https://nodejs.org/">Node.js</a> 22 or later and
+      <a href="https://claude.ai/code">Claude Code</a>; <a href="https://docs.astral.sh/uv/">uv</a> for the AI tools.
+      The models (Qwen3-TTS voices, FLUX.2 images, LTX video, ACE-Step music) run on your own Modal or RunPod
+      account at cost.</p>
+  </div>
+</main>
+
+<footer class="site"><div class="wrap">
+  MIT licensed · <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a> ·
+  <a href="https://github.com/digitalsamba/claude-code-video-toolkit/releases">Releases</a> ·
+  <a href="https://www.youtube.com/@conalmullan">YouTube</a>
+</div></footer>
+</body>
+</html>
