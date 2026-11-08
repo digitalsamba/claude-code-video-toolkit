@@ -7,8 +7,8 @@
   --accent: #c2410c;
   --code-bg: #e9e4d8;
   --serif: "Newsreader", Georgia, serif;
-  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -34,14 +34,12 @@ a:hover { text-decoration-thickness: 2px; }
 .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
 .prose { max-width: 680px; }
 
-header.site {
-  border-bottom: 1px solid var(--rule);
-}
+header.site { margin-bottom: 8px; }
 header.site .wrap {
   display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
   padding-top: 18px; padding-bottom: 18px; flex-wrap: wrap;
 }
-header.site .name { font-family: var(--mono); font-size: 15px; color: var(--ink); text-decoration: none; }
+header.site .name { font-weight: 600; font-size: 16px; color: var(--ink); text-decoration: none; }
 header.site nav { display: flex; gap: 18px; font-size: 15px; flex-wrap: wrap; }
 header.site nav a { color: var(--muted); text-decoration: none; }
 header.site nav a:hover, header.site nav a[aria-current] { color: var(--ink); }
@@ -52,7 +50,7 @@ h2 { font-size: clamp(26px, 3.4vw, 34px); margin: 56px 0 14px; }
 h3 { font-size: 22px; margin: 32px 0 8px; }
 p.lede { font-size: 20px; color: var(--muted); max-width: 40ch; margin: 0 0 28px; }
 
-code, pre { font-family: var(--mono); font-size: 0.86em; }
+code, pre { font-family: var(--mono); font-size: 0.86em; } /* taste-skill-ignore: literal code only */
 code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
 pre {
   background: var(--code-bg); padding: 16px 18px; border-radius: 4px; overflow-x: auto; line-height: 1.5;
@@ -61,7 +59,7 @@ pre code { background: none; padding: 0; }
 
 .cta { display: flex; gap: 14px; flex-wrap: wrap; margin: 0 0 8px; }
 .button {
-  display: inline-block; padding: 11px 18px; border: 1px solid var(--ink); border-radius: 3px;
+  display: inline-block; padding: 12px 19px; background: var(--code-bg); border-radius: 3px;
   color: var(--ink); text-decoration: none; font-weight: 500;
 }
 .button.primary { background: var(--ink); color: var(--ground); }
@@ -69,13 +67,13 @@ pre code { background: none; padding: 0; }
 /* video grid: landscape tiles and vertical tiles share one row height */
 .reel { display: flex; flex-wrap: wrap; gap: 14px; margin: 24px 0 8px; }
 .reel a { display: block; color: var(--ink); text-decoration: none; }
-.reel img { display: block; height: 240px; width: auto; border: 1px solid var(--rule); border-radius: 3px; }
+.reel img { display: block; height: 240px; width: auto; border-radius: 3px; }
 .reel span { display: block; font-size: 14px; color: var(--muted); margin-top: 6px; max-width: 30ch; }
 @media (max-width: 600px) { .reel img { height: 180px; } }
 
 /* use cases: a list, not a row of identical tiles */
-.uses { list-style: none; padding: 0; margin: 20px 0; border-top: 1px solid var(--rule); }
-.uses li { border-bottom: 1px solid var(--rule); padding: 18px 0; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+.uses { list-style: none; padding: 0; margin: 20px 0; }
+.uses li { padding: 16px 0; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
 .uses li a { font-family: var(--serif); font-size: 22px; text-decoration: none; }
 .uses li p { margin: 0; color: var(--muted); }
 @media (max-width: 700px) { .uses li { grid-template-columns: 1fr; gap: 6px; } }
@@ -87,7 +85,7 @@ table { border-collapse: collapse; width: 100%; font-size: 15px; margin: 16px 0;
 th, td { text-align: left; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
 th { font-weight: 600; }
 figure { margin: 24px 0; }
-figure img { max-width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 3px; }
+figure img { max-width: 100%; height: auto; border-radius: 3px; }
 figcaption { font-size: 14px; color: var(--muted); margin-top: 6px; }
 
-footer.site { border-top: 1px solid var(--rule); margin-top: 80px; padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
+footer.site { margin-top: 96px; padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
