@@ -404,6 +404,22 @@ def resumable_upload(request) -> dict:
     return response
 
 
+def locked_private(args, status: dict) -> Optional[str]:
+    """A warning when YouTube kept a video private that was meant to go public, else None.
+
+    A scheduled upload is private until its publishAt by design, so for one the lock shows as YouTube dropping
+    the publishAt, not as privacy=private."""
+    lock = ("likely the unaudited-project lock. For your own channel this usually doesn't apply; "
+            "otherwise lift it via the YouTube API compliance audit.")
+    if args.publish_at:
+        if status.get("privacyStatus") == "private" and not status.get("publishAt"):
+            return f"YouTube dropped the scheduled publish time, so the video stays private: {lock}"
+        return None
+    if args.privacy == "public" and status.get("privacyStatus") == "private":
+        return f"YouTube returned privacy=private for a public upload: {lock}"
+    return None
+
+
 def set_synthetic_media(youtube, video_id: str, status: dict) -> bool:
     """Set the "altered or synthetic content" disclosure after upload. videos.update replaces the whole status
     part, so the fields the insert set are sent back with it."""
@@ -713,14 +729,11 @@ def main():
     actual_privacy = response.get("status", {}).get("privacyStatus", "unknown")
     url = f"https://www.youtube.com/watch?v={video_id}"
     log(f"Uploaded: {url}  (privacy: {actual_privacy})", "success")
-    if args.privacy != "private" or args.publish_at:
-        if actual_privacy == "private" and (args.publish_at or args.privacy == "public"):
-            log(
-                "YouTube returned privacy=private despite the request — likely the "
-                "unaudited-project lock. For your own channel this usually doesn't apply; "
-                "otherwise lift it via the YouTube API compliance audit.",
-                "warn",
-            )
+    lock_warning = locked_private(args, response.get("status", {}))
+    if lock_warning:
+        log(lock_warning, "warn")
+    elif args.publish_at:
+        log(f"Scheduled: private until {args.publish_at}, then public.", "info")
 
     # --- Post-upload extras (each non-fatal) -------------------------------------
     synthetic = bool(response.get("status", {}).get("containsSyntheticMedia"))
