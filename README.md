@@ -22,6 +22,11 @@ Every frame below was generated in this workspace — click to watch.
 | <a href="https://demos.digitalsamba.com/video/q2-townhall-longarm-ad.mp4"><img src="assets/readme-thumbs/q2-townhall-longarm-ad.jpg" height="280" alt="Super Bowl-style launch ad"></a> | <a href="https://demos.digitalsamba.com/video/hallucinations_short.mp4"><img src="assets/readme-thumbs/hallucinations-short.jpg" height="280" alt="AI hallucinations explainer short"></a> | <a href="https://demos.digitalsamba.com/video/short-blue-sky.mp4"><img src="assets/readme-thumbs/sky-blue-short.jpg" height="280" alt="Why is the sky blue? short"></a> |
 | **Super Bowl-style launch ad**<br>LTX-2 animated cameo,<br>dramatic AI announcer | **AI hallucinations explainer**<br>9:16 short — Ideogram 4 cards,<br>cloned voice, burned captions | **"Why is the sky blue?"**<br>52s vertical short,<br>~$0.80 in generation |
 
+| | |
+|:--:|:--:|
+| <a href="https://youtube.com/shorts/1hyDgC5Qg_o"><img src="assets/readme-thumbs/youre-on-mute-short.jpg" height="280" alt="You're On Mute: every video call ever, as a horror trailer"></a> | <a href="https://youtube.com/shorts/e4HW-tvi8-8"><img src="assets/readme-thumbs/the-great-return-short.jpg" height="280" alt="The Great Return: the return to the office, as a nature documentary"></a> |
+| **You're On Mute**<br>every video call ever, as a horror trailer;<br>invented cast, `parody-short` skill | **The Great Return**<br>the return to the office, as a wildlife film;<br>same cast, designed narrator voice |
+
 More in the [showcase table](#templates) below.
 
 ## Quick Start
