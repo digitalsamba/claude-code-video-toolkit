@@ -155,7 +155,9 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
 - **Copy is checked before any spend.** Dashes and stock AI phrasing ("it's worth noting", "delve",
   "in today's world") in the narration, title, headlines or sublines are refused with the line named, and so is
   narration copied word for word from an earlier finished video on this host. Rewrite the named lines and submit
-  again; `"allowCopy": true` only when the person asked for the same words.
+  again; `"allowCopy": true` only when the person asked for the same words. The same rules
+  (`tools/copy_lint.py`) apply to every other word you send out: the message with the video, a title, a
+  description. Run `uv run tools/copy_lint.py --text "..."` on them first.
 - `voice`: an object as above, or a preset name: `assets/voices/<name>.json` (a cloned voice; its reference
   audio is gitignored, so the host needs its own copy) or a brand with a `voice.json`. `catalog` lists them. The title animates
   over the first scene and a soft music bed is mixed in by default; `"titleCard": false` and

@@ -690,7 +690,23 @@ comments with the same token, adds watch time, retention and traffic sources onc
 (`--auth`), and snapshots each run to `_internal/.youtube/stats/` so the next one shows the change. Reading the
 numbers, and what has worked on Shorts, is in `.claude/skills/youtube-stats/`.
 
-## Video Production Workflow
+## Public copy: the copy lint is the first filter
+
+Everything this toolkit makes is public: narration and captions, on-screen text, titles, descriptions, thumbnails,
+the site, the README, docs, skills, PR bodies and commit subjects (they become the release notes). Run new words
+through `tools/copy_lint.py` before anyone sees them: it refuses dashes and stock AI or marketing phrasing (the
+list is `COPY_RULES` in the tool), and says why.
+
+```bash
+uv run tools/copy_lint.py site/*.html DESCRIPTION.md --text "The title"   # files and strings, exit 1 on a hit
+uv run tools/copy_lint.py --diff origin/main --commits origin/main        # a branch's new lines + commit subjects
+```
+
+It is wired in where text leaves: video jobs refuse it before spend, `youtube_upload.py` refuses it (`--allow-copy`
+to override), `voiceover.py` warns before voicing, and the `Copy lint` CI check fails a PR on new lines or commit
+subjects. Old text is fixed when it's next touched. Web pages also go through taste-skill's `lint.mjs` and
+`inspect.mjs` when it's installed.
+
 
 1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing); it sets the design
    direction (`design.md`) before any scene is built

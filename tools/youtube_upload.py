@@ -585,6 +585,9 @@ Note: until your OAuth app is Google-verified, uploads are force-locked to priva
     parser.add_argument("--synthetic-media", action="store_true",
                         help="Disclose realistic AI-generated or altered content (status.containsSyntheticMedia): "
                              "an animated AI cast, generated people, a cloned voice")
+    parser.add_argument("--allow-copy", action="store_true",
+                        help="Upload even if the title, description or tags fail tools/copy_lint.py "
+                             "(dashes, stock AI or marketing phrases)")
     parser.add_argument("--default-language", help="snippet.defaultLanguage code, e.g. en")
     parser.add_argument(
         "--license", choices=("youtube", "creativeCommon"), default="youtube",
@@ -633,6 +636,20 @@ def main():
 
     description = read_description(args)
     tags = parse_tags(args.tags)
+
+    # --- Copy lint: the title, description and tags are public ------------------
+    if not args.allow_copy:
+        from copy_lint import lint_text
+        found = [f"{where}: '{m}' is {why}" for where, text in
+                 (("title", args.title), ("description", description), ("tags", ", ".join(tags)))
+                 for m, why in lint_text(text)]
+        if found:
+            msg = "Copy lint refused the upload (fix the wording, or --allow-copy if it's meant):\n  " + \
+                  "\n  ".join(found)
+            log(msg, "error")
+            if args.json_out:
+                emit_json({"success": False, "error": msg, "errorType": "copy", "findings": found})
+            sys.exit(1)
     body = build_request_body(args, description, tags)
 
     # --- Dry run -----------------------------------------------------------------

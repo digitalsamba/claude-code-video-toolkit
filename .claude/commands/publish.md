@@ -154,6 +154,7 @@ run a dry-run before the real upload.
 |-----------------------|----------|
 | `auth` | Run `uv run tools/youtube_upload.py --auth` once; if the refresh token expired (7-day Testing limit), re-run `--auth`. |
 | `validation` | Fix the flagged field (missing video/title, bad `--publish-at`). |
+| `copy` | `tools/copy_lint.py` found a dash or stock AI/marketing phrasing in the title, description or tags. Reword it and show the user; `--allow-copy` only if they want those words. Lint drafts before showing them: `uv run tools/copy_lint.py .publish-description.txt --text "TITLE"`. |
 | `config` | YouTube Data API v3 isn't enabled on the Cloud project (or just enabled, still propagating). Enable it, wait 1–2 min, retry. See `docs/youtube-upload.md`. |
 | `quota` | Daily quota exhausted — wait, or request more in Google Cloud. |
 | `forbidden` | Permission denied (e.g. the authorized account lacks rights to the target channel). Check the account / `--account`. |

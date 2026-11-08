@@ -963,6 +963,16 @@
       "created": "2026-11-08",
       "updated": "2026-11-08"
     },
+    "copy_lint": {
+      "path": "tools/copy_lint.py",
+      "description": "The first filter on anything public: refuses dashes and stock AI or marketing phrasing in files (HTML, Markdown, text, read as prose), strings, a branch's added lines (--diff) or commit subjects (--commits); the same rules gate video jobs, youtube_upload.py and voiceover.py",
+      "usage": "uv run tools/copy_lint.py site/*.html --text \"Title\" | --diff origin/main --commits origin/main",
+      "status": "stable",
+      "category": "qc",
+      "note": "Stdlib only. CI: .github/workflows/copy-lint.yml lints each PR's new lines and commit subjects. Includes taste-skill's stock marketing phrases.",
+      "created": "2026-11-08",
+      "updated": "2026-11-08"
+    },
     "voice_prosody": {
       "path": "tools/voice_prosody.py",
       "description": "Measure pitch spread (F0 semitone sd, p5-p95) of any audio, and write a livelier clone reference: pitch contour expanded around the median and slowed (Praat PSOLA). A clone copies its reference's pace and intonation, so fix the clip rather than stretching the output",
