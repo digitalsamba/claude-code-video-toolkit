@@ -404,6 +404,23 @@ def resumable_upload(request) -> dict:
     return response
 
 
+def set_synthetic_media(youtube, video_id: str, status: dict) -> bool:
+    """Set the "altered or synthetic content" disclosure after upload. videos.update replaces the whole status
+    part, so the fields the insert set are sent back with it."""
+    keep = {k: status[k] for k in ("privacyStatus", "publishAt", "license", "embeddable", "publicStatsViewable",
+                                   "selfDeclaredMadeForKids") if k in status}
+    try:
+        r = youtube.videos().update(part="status", body={"id": video_id, "status": {
+            **keep, "containsSyntheticMedia": True}}).execute()
+        ok = bool(r.get("status", {}).get("containsSyntheticMedia"))
+        log("AI-generated content disclosure set" if ok else "AI disclosure not confirmed: set it in YouTube Studio",
+            "success" if ok else "warn")
+        return ok
+    except Exception as e:  # non-fatal: the video is up
+        log(f"AI disclosure not set ({e}); set it in YouTube Studio (Details > Altered content)", "warn")
+        return False
+
+
 def set_thumbnail(youtube, video_id: str, thumb_path: str) -> bool:
     """Attach a custom thumbnail. Non-fatal: returns True/False, never raises out."""
     try:
@@ -706,6 +723,10 @@ def main():
             )
 
     # --- Post-upload extras (each non-fatal) -------------------------------------
+    synthetic = bool(response.get("status", {}).get("containsSyntheticMedia"))
+    if args.synthetic_media and not synthetic:
+        # videos.insert didn't keep the disclosure on the first uploads (2026-11-08); videos.update does
+        synthetic = set_synthetic_media(youtube, video_id, response.get("status", {}))
     thumbnail_set = set_thumbnail(youtube, video_id, args.thumbnail) if args.thumbnail else False
     captions_added = (
         add_caption(youtube, video_id, args.captions, args.captions_language) if args.captions else False
@@ -723,6 +744,7 @@ def main():
             "publishAt": args.publish_at,
             "account": args.account,
             "thumbnailSet": thumbnail_set,
+            "syntheticMedia": synthetic,
             "captionsAdded": captions_added,
             "playlistId": args.playlist,
             "uploadStatus": "uploaded",
