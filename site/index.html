@@ -3,75 +3,136 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>claude-code-video-toolkit: make videos with Claude Code</title>
-<meta name="description" content="An open-source toolkit for making videos with Claude Code: script, AI voiceover, music, video clips and render, on open-source models that cost cents.">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+<title>claude-code-video-toolkit: type a prompt, get a video</title>
+<meta name="description" content="An open-source toolkit that turns Claude Code into a video studio: it writes the script, voices it, scores it, generates the shots and renders the MP4, on open models that cost cents.">
+<meta property="og:title" content="claude-code-video-toolkit">
+<meta property="og:description" content="Type a prompt, get a video. Open source, on models that cost cents.">
+<meta property="og:image" content="https://digitalsamba.github.io/claude-code-video-toolkit/media/made-with.jpg">
 <link rel="stylesheet" href="style.css">
+<script src="site.js" defer></script>
 </head>
 <body>
-<header class="site"><div class="wrap">
-  <a class="name" href="./">claude-code-video-toolkit</a>
-  <nav>
-    <a href="christmas-team-video.html">Christmas video</a>
-    <a href="release-notes-video.html">Release notes</a>
-    <a href="explainer-shorts.html">Explainer shorts</a>
-    <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a>
+<header class="frame">
+  <nav class="nav" aria-label="Main">
+    <a class="mark" href="./">claude-code-video-toolkit</a>
+    <ul>
+      <li class="hide-sm"><a class="link" href="#made">Videos</a></li>
+      <li class="hide-sm"><a class="link" href="#how">How it works</a></li>
+      <li class="hide-sm"><a class="link" href="#routes">What to make</a></li>
+      <li><a class="button" href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a></li>
+    </ul>
   </nav>
-</div></header>
+</header>
 
-<main class="wrap">
-  <h1>Tell Claude Code what video you want.</h1>
-  <p class="lede">It writes the script, voices it, scores it, generates the shots and renders the MP4. Open source, on
-    models that cost cents.</p>
-  <div class="cta">
-    <a class="button primary" href="https://github.com/digitalsamba/claude-code-video-toolkit">Get it on GitHub</a>
-    <a class="button" href="#start">Quick start</a>
+<main>
+  <div class="hero frame">
+    <h1>
+      <span class="line">Type a prompt,</span>
+      <span class="line">get a <span class="slot shutter"><video data-loop autoplay muted loop playsinline preload="auto" poster="media/made-with.jpg" width="768" height="296" aria-hidden="true"><source src="media/made-with.mp4" type="video/mp4"></video></span><span class="sr-only">video</span>.</span>
+    </h1>
+    <p class="lede" data-rise>claude-code-video-toolkit turns Claude Code into a video studio. It writes the script, voices it,
+      scores it, generates the shots and renders the MP4, on open models that cost cents.</p>
+    <div class="act" data-rise style="--i:1">
+      <a class="button" href="https://github.com/digitalsamba/claude-code-video-toolkit">Get it on GitHub</a>
+      <a class="link" href="#start">Start in five minutes</a>
+    </div>
   </div>
 
-  <h2>What it makes</h2>
-  <div class="reel">
-    <a href="https://youtube.com/shorts/1hyDgC5Qg_o"><img src="img/youre-on-mute-short.jpg" alt="You're On Mute: a horror trailer about video calls"><span>You're On Mute: every video call ever, as a horror trailer</span></a>
-    <a href="https://youtube.com/shorts/e4HW-tvi8-8"><img src="img/the-great-return-short.jpg" alt="The Great Return: a nature documentary about the office"><span>The Great Return: the office, as a wildlife film</span></a>
-    <a href="https://demos.digitalsamba.com/video/ds-release-650.mp4"><img src="img/ds-release-650.jpg" alt="Release-notes video with product UI rebuilt from source"><span>Release notes, UI rebuilt from source, no screen recording</span></a>
-    <a href="https://demos.digitalsamba.com/video/short-blue-sky.mp4"><img src="img/sky-blue-short.jpg" alt="Why is the sky blue? vertical explainer"><span>"Why is the sky blue?", 52 s, about $0.80</span></a>
-    <a href="https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4"><img src="img/ds-free-schedule-demo.jpg" alt="Product demo with an AI narrator tile"><span>Product demo with a talking-head narrator</span></a>
-  </div>
-  <p><a href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">The playlist on YouTube</a> ·
-    <a href="https://github.com/digitalsamba/claude-code-video-toolkit#see-what-it-makes">every video in the showcase</a></p>
+  <figure class="band" data-rise>
+    <img src="media/band-mute.jpg" alt="Four people on a video call, one saying Any other business?, from You're On Mute" width="1920" height="822">
+    <figcaption class="frame">You're On Mute: every video call ever, as a horror trailer. The cast is invented, animated with LTX and cut in Remotion.</figcaption>
+  </figure>
 
-  <h2>Pick what you're making</h2>
-  <ul class="uses">
-    <li><a href="christmas-team-video.html">A Christmas video of your team</a>
-      <p>Your team as <i>A Christmas Carol</i>, starring their own animated photos and the in-jokes from your chat. About $2.</p></li>
-    <li><a href="release-notes-video.html">Release notes and product demos</a>
-      <p>The app's screens rebuilt from its source code and driven by a scripted cursor and camera, so nothing is screen-recorded and nothing goes stale.</p></li>
-    <li><a href="explainer-shorts.html">Vertical explainer shorts</a>
-      <p>A 9:16 concept explainer for Shorts, Reels or TikTok: narration, cards with legible text, b-roll and karaoke captions.</p></li>
-    <li><a href="extending-ltx-clips.html">Lesson: AI clips that don't freeze</a>
-      <p>Why generated people freeze or loop mid-shot, how we measured it, and the fix.</p></li>
-  </ul>
+  <section id="made" class="frame" aria-labelledby="made-h">
+    <h2 id="made-h" class="names-h" data-rise>Made with it</h2>
+    <p class="names" data-rise style="--i:1"><a href="https://youtube.com/shorts/1hyDgC5Qg_o">You're On Mute<span class="t"><img src="img/youre-on-mute-short.jpg" alt="" width="270" height="480"></span></a>, <a href="https://youtube.com/shorts/e4HW-tvi8-8">The Great Return<span class="t"><img src="img/the-great-return-short.jpg" alt="" width="270" height="480"></span></a>, <a href="https://demos.digitalsamba.com/video/ds-release-650.mp4">Release 650<span class="t"><img src="img/ds-release-650.jpg" alt=""></span></a>, <a href="https://demos.digitalsamba.com/video/short-blue-sky.mp4">Why is the sky blue?<span class="t"><img src="img/sky-blue-short.jpg" alt=""></span></a>, <a href="https://demos.digitalsamba.com/video/hallucinations_short.mp4">AI hallucinations<span class="t"><img src="img/hallucinations-short.jpg" alt=""></span></a>, <a href="https://demos.digitalsamba.com/video/data-chart-stars.mp4">A year of stars<span class="t"><img src="media/data-chart-stars.jpg" alt=""></span></a>, <a href="https://demos.digitalsamba.com/video/q2-townhall-longarm-ad.mp4">The launch ad<span class="t"><img src="img/q2-townhall-longarm-ad.jpg" alt=""></span></a> and <a href="https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4">Scheduling a call<span class="t"><img src="img/ds-free-schedule-demo.jpg" alt=""></span></a>.</p>
+    <p class="names-note" data-rise style="--i:2">Eight of the videos made with it in 2026, every frame generated in this workspace.
+      <a class="link" href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">The playlist on YouTube</a> ·
+      <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit#see-what-it-makes">the full showcase</a></p>
+  </section>
 
-  <h2 id="start">Quick start</h2>
-  <div class="prose">
-<pre><code>git clone https://github.com/digitalsamba/claude-code-video-toolkit.git
+  <section id="how" class="frame" aria-labelledby="how-h">
+    <div class="stages" data-stages>
+      <script type="application/json">[{"name": "Narrate", "clause": "It writes the script and voices it.", "cost": "One file a scene, paced around 140 words a minute. <b>About $0.01</b> for a minute of voice.", "cmd": "uv run tools/voiceover.py --scene-dir public/audio/scenes --json", "out": "01_wild.mp3  5.6 s  139 wpm  <span class=\"ok\">ok</span>
+02_habitat.mp3  5.5 s  130 wpm  <span class=\"ok\">ok</span>", "img": "media/wave-voice.png", "alt": "The waveform of the first line of narration"}, {"name": "Score", "clause": "It writes the music under it.", "cost": "Four takes, one chosen against the cuts, so the music turns when the story does. <b>A few cents.</b>", "cmd": "uv run tools/music_gen.py --prompt \"pizzicato strings, a horn\" --duration 98 --variations 4", "out": "score_1.mp3  score_2.mp3  score_3.mp3  score_4.mp3
+<span class=\"ok\">chosen</span>  score.mp3", "img": "media/wave-music.png", "alt": "The waveform of the chosen music take"}, {"name": "Generate", "clause": "It makes the pictures that move.", "cost": "Stills from FLUX, text cards from Ideogram, motion from LTX. <b>About $0.08</b> a five-second clip.", "cmd": "uv run tools/ltx2.py --input cast/dana.png --prompt \"...\" --output dana.mp4", "out": "dana.mp4  5.0 s  704x768  <span class=\"ok\">done</span>", "img": "media/stage-dana.jpg", "alt": "Dana, an invented cast member, at her desk"}, {"name": "Compose", "clause": "It cuts it together in Remotion.", "cost": "Every shot starts on the frame its narration does, so nothing drifts. <b>Free</b>, on your machine.", "cmd": "npm run render", "out": "out/the-great-return.mp4  98 s  1920x1080  <span class=\"ok\">rendered</span>", "img": "media/stage-render.jpg", "alt": "A frame of The Great Return: four colleagues in headsets on a call"}, {"name": "Check", "clause": "It checks it before you do.", "cost": "Loudness, frozen clips, text size and sound sync, measured. A 60-second video comes to <b>about $0.80</b> in all.", "cmd": "uv run tools/qc.py --render out/video.mp4 --fix", "out": "loudness  -14.0 LUFS  <span class=\"ok\">ok</span>
+frozen clips  none  <span class=\"ok\">ok</span>
+text size  28 px and up  <span class=\"ok\">ok</span>", "img": "media/stage-sheet.jpg", "alt": "A contact sheet: one settled frame from each scene of the render"}]</script>
+      <div class="clause">
+        <h2 id="how-h" data-clause>It writes the script and voices it.</h2>
+        <p class="cost" data-cost>One file a scene, paced around 140 words a minute. <b>About $0.01</b> for a minute of voice.</p>
+      </div>
+      <div class="proof">
+        <div class="proof-in" data-ui aria-live="polite">
+          <img data-img src="media/wave-voice.png" alt="The waveform of the first line of narration" width="1080" height="420">
+          <pre class="term"><code><span class="cmd" data-cmd>uv run tools/voiceover.py --scene-dir public/audio/scenes --json</span>
+<span class="out" data-out>01_wild.mp3  5.6 s  139 wpm  <span class="ok">ok</span>
+02_habitat.mp3  5.5 s  130 wpm  <span class="ok">ok</span></span></code></pre>
+        </div>
+      </div>
+      <div class="slider">
+        <label class="sr-only" for="stage">Stage of the pipeline</label>
+        <input id="stage" type="range" min="0" max="4" step="1" value="0">
+        <ol>
+          <li><button type="button" aria-pressed="true">Narrate</button></li>
+          <li><button type="button">Score</button></li>
+          <li><button type="button">Generate</button></li>
+          <li><button type="button">Compose</button></li>
+          <li><button type="button">Check</button></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section id="routes" class="routes frame" aria-labelledby="routes-h">
+    <h2 id="routes-h" data-rise>Pick what you're making</h2>
+    <div class="grid body" data-stagger>
+      <figure data-rise>
+        <img src="img/the-great-return-short.jpg" alt="Four colleagues in headsets on a video call, from The Great Return" width="270" height="480" loading="lazy">
+        <figcaption>The Great Return, an invented cast made with the parody-short skill.</figcaption>
+      </figure>
+      <p class="word">Routes</p>
+      <table>
+        <tbody>
+          <tr data-rise><td class="kind"><a href="christmas-team-video.html">A Christmas video of your team</a></td><td class="uses">your photos, animated</td><td class="cost">about $2</td></tr>
+          <tr data-rise><td class="kind"><a href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">A comedy short on a shared topic</a></td><td class="uses">an invented cast</td><td class="cost">about $1.25</td></tr>
+          <tr data-rise><td class="kind"><a href="extending-ltx-clips.html">Clips that don't freeze</a></td><td class="uses">the lesson</td><td class="cost">$0.08 a link</td></tr>
+          <tr data-rise class="group"><td class="kind"><a href="release-notes-video.html">Release notes from source</a></td><td class="uses">UI rebuilt as React</td><td class="cost">cents</td></tr>
+          <tr data-rise><td class="kind"><a href="release-notes-video.html">A product demo with a narrator</a></td><td class="uses">a talking-head tile</td><td class="cost">cents</td></tr>
+          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/templates/sprint-review">A sprint review</a></td><td class="uses">a config file</td><td class="cost">free</td></tr>
+          <tr data-rise class="group"><td class="kind"><a href="explainer-shorts.html">A vertical explainer</a></td><td class="uses">cards, b-roll, captions</td><td class="cost">about $0.80</td></tr>
+          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/examples/data-chart-stars">A chart drawn to the voice</a></td><td class="uses">SVG charts on cues</td><td class="cost">free</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="start" class="start frame" aria-labelledby="start-h">
+    <h2 id="start-h" class="sentence" data-rise>Open Claude Code and type <span class="blank"><span class="blank-in">/video</span><button class="button copy" type="button" data-copy="/video">Copy</button></span></h2>
+    <div class="then" data-stagger>
+      <p data-rise>Clone the toolkit, install the Python tools with <a class="link" href="https://docs.astral.sh/uv/">uv</a>, and open Claude Code
+        inside it. <code>/setup</code> walks through a cloud GPU account, storage and a voice in about five minutes, and
+        <code>/video</code> starts a project from a template. You need <a class="link" href="https://nodejs.org/">Node.js</a> 22 or later and
+        <a class="link" href="https://claude.ai/code">Claude Code</a>. The models run on your own Modal or RunPod account, at cost.</p>
+      <pre data-rise><code>git clone https://github.com/digitalsamba/claude-code-video-toolkit.git
 cd claude-code-video-toolkit
 uv sync
 claude</code></pre>
-    <p>Then, in Claude Code, <code>/setup</code> configures a cloud GPU, storage and a voice (about five minutes, mostly
-      free), and <code>/video</code> starts your first project. To render something with no keys at all:
-      <code>cd examples/hello-world &amp;&amp; npm install &amp;&amp; npm run render</code>.</p>
-    <p>Needs <a href="https://nodejs.org/">Node.js</a> 22 or later and
-      <a href="https://claude.ai/code">Claude Code</a>; <a href="https://docs.astral.sh/uv/">uv</a> for the AI tools.
-      The models (Qwen3-TTS voices, FLUX.2 images, LTX video, ACE-Step music) run on your own Modal or RunPod
-      account at cost.</p>
-  </div>
+    </div>
+  </section>
 </main>
 
-<footer class="site"><div class="wrap">
-  MIT licensed · <a href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a> ·
-  <a href="https://github.com/digitalsamba/claude-code-video-toolkit/releases">Releases</a> ·
-  <a href="https://www.youtube.com/@conalmullan">YouTube</a>
-</div></footer>
+<footer class="foot frame">
+  <div class="top">
+    <div class="notes"><span>Open source, MIT licensed</span><span>Made by Conal Mullan and <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/graphs/contributors">contributors</a></span><span>For <a class="link" href="https://claude.ai/code">Claude Code</a>, not made by Anthropic</span></div>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <a class="big" href="https://github.com/digitalsamba/claude-code-video-toolkit"><span>github.com/digitalsamba/</span><span>claude-code-video-toolkit</span></a>
+  <div class="meta">
+    <div><a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/releases">Releases</a><a class="link" href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">Playlist</a><a class="link" href="christmas-team-video.html">Christmas video</a></div>
+    <div class="c">Every video and picture here was made with the toolkit</div>
+    <div class="r">2026</div>
+  </div>
+</footer>
 </body>
 </html>
