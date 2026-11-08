@@ -50,7 +50,9 @@ def sound_peak(sfx: Path) -> tuple[float, float]:
 def motion_peak(video: Path, region: str, t0: float, t1: float, kind: str = "peak") -> tuple[float, float]:
     """The moment in the region between t0 and t1 that the sound belongs to, and the movement's size.
     kind 'peak': the biggest frame-to-frame change (a sneeze, a laugh, a jingle while a badge is lifted).
-    kind 'impact': where the movement stops hardest (a jacket landing, a stamp), the sharpest fall after a peak."""
+    kind 'impact': where the movement stops hardest (a jacket landing, a stamp), the sharpest fall after a peak.
+    kind 'onset': where a sustained movement starts (a badge lifted slowly, a door swinging open): the first frame
+    at half the window's biggest change. 'peak' picks noise on a movement with no single spike."""
     t0 = max(0.0, t0)
     s = 64
     raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t0:.3f}", "-t", f"{t1 - t0:.3f}", "-i", str(video),
@@ -67,6 +69,9 @@ def motion_peak(video: Path, region: str, t0: float, t1: float, kind: str = "pea
     m = m.copy()
     m[dup] = (np.roll(m, 1)[dup] + np.roll(m, -1)[dup]) / 2
     m = np.convolve(m, np.ones(3) / 3, mode="same")  # one noisy frame isn't a movement
+    if kind == "onset":
+        i = int(np.argmax(m >= 0.5 * m.max()))
+        return t0 + (i + 1) / FPS, float(m.max())
     if kind == "impact":
         fall = m[:-3] - m[3:]                        # drop over 0.1 s
         i = int(fall.argmax()) + 3
@@ -99,8 +104,9 @@ def main() -> int:
     p.add_argument("--at", type=float, help="seconds: where the effect starts in the video")
     p.add_argument("--region", help="ffmpeg crop w:h:x:y of the movement the sound belongs to")
     p.add_argument("--name")
-    p.add_argument("--kind", default="peak", choices=["peak", "impact"],
-                   help="peak: the sound goes on the biggest movement; impact: where the movement stops")
+    p.add_argument("--kind", default="peak", choices=["peak", "impact", "onset"],
+                   help="peak: the sound goes on the biggest movement; impact: where the movement stops; "
+                        "onset: where a sustained movement starts")
     p.add_argument("--cues", type=Path, help="JSON list of {name, sfx, at, region}")
     p.add_argument("--tolerance", type=float, default=0.1)
     p.add_argument("--json", action="store_true")
@@ -123,6 +129,14 @@ def main() -> int:
         p.error("give --video (check a render) or --clip (place a sound before rendering)")
     if a.cues:
         cues = json.loads(a.cues.read_text())
+        # a cue's sfx path may be relative to the working directory, the cue file's folder, or a folder above it
+        # (the toolkit root), so the same cue file works from the project or from the root
+        bases = [Path.cwd(), *a.cues.resolve().parents]
+        for c in cues:
+            found = next((b / c["sfx"] for b in bases if (b / c["sfx"]).exists()), None)
+            if found is None:
+                p.error(f"cue {c.get('name', '?')}: sound file {c['sfx']} not found from here or from {a.cues}")
+            c["sfx"] = str(found)
     elif a.sfx and a.at is not None and a.region:
         cues = [{"name": a.name or a.sfx.stem, "sfx": str(a.sfx), "at": a.at, "region": a.region, "kind": a.kind}]
     else:

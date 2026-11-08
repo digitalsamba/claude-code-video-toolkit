@@ -133,6 +133,7 @@ Prefer **`/publish`** for finished projects — it derives the title/description
 | `--thumbnail` | Custom thumbnail (≤2MB, 1280×720). Requires a phone-verified channel. |
 | `--captions` + `--captions-language` | Caption file (.srt/.vtt) + language code |
 | `--playlist` | Playlist ID to add the video to |
+| `--synthetic-media` | YouTube's "altered or synthetic content" disclosure (`status.containsSyntheticMedia`). Required for realistic AI-generated or animated people, or a cloned voice; it adds a label, not a reach penalty |
 | `--account` | Namespaces the cached token — use for multiple channels (e.g. `--account work`) |
 | `--auth` | Interactive login only; caches a token and exits |
 | `--dry-run` | Builds + prints the request body and checks auth, but uploads nothing |

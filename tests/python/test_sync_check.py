@@ -57,5 +57,22 @@ class SyncCheckTests(unittest.TestCase):
         self.assertAlmostEqual(res['start_sound_after_clip_s'], 1.4, delta=0.1)
 
 
+    def test_onset_finds_where_a_sustained_movement_starts(self):
+        # a square that slides steadily from 1.5 s to 3.5 s: no single spike, so the sound goes on the start
+        video = Path(self.dir.name) / 'slide.mp4'
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=320x180:r=30:d=4',
+                        '-f', 'lavfi', '-i', 'color=c=white:s=60x60:r=30:d=4', '-filter_complex',
+                        "[0][1]overlay=x='40+clip(t-1.5,0,2)*100':y=60", '-c:v', 'libx264', str(video)], check=True)
+        code, res = self.run_check('--clip', str(video), '--sfx', str(self.beep), '--kind', 'onset')
+        self.assertAlmostEqual(res['movement_at'], 1.5, delta=0.15)
+
+    def test_cue_sounds_resolve_from_the_cue_files_folder(self):
+        cues = Path(self.dir.name) / 'cues.json'
+        cues.write_text(json.dumps([{'name': 'beep', 'sfx': self.beep.name, 'at': 1.9, 'region': '320:180:0:0'}]))
+        r = subprocess.run([sys.executable, str(ROOT / 'tools/sync_check.py'), '--video', str(self.video), '--cues',
+                            str(cues), '--json'], capture_output=True, encoding='utf-8', timeout=60, cwd=ROOT)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+
 if __name__ == '__main__':
     unittest.main()
