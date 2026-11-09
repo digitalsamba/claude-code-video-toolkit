@@ -82,7 +82,7 @@ export const Stage: React.FC<{
   const cur = path ? cursorAt(frame, path) : null;
 
   return (
-    <AbsoluteFill style={{ background: 'linear-gradient(135deg, #f8fafe 0%, #EBF1FC 100%)', overflow: 'hidden', opacity: intro }}>
+    <AbsoluteFill style={{ background: '#eef2f8', overflow: 'hidden', opacity: intro }}>
       {/* data-qc: qc.py --layout reports the browser and the product's own UI apart from the video's text */}
       <div
         data-qc="product"
