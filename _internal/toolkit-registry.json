@@ -756,20 +756,23 @@
     },
     "captions": {
       "path": "tools/captions.py",
-      "description": "Word-level <name>.captions.json beside each narration file for the <Captions> component. Transcribes with ElevenLabs Scribe or local whisper and aligns the scene's .txt script onto the timing, so captions spell names as written",
+      "description": "Word-level <name>.captions.json beside each narration file for the <Captions> component. Transcribes with ElevenLabs Scribe or local whisper and aligns the scene's .txt script onto the timing, so captions spell names as written; --srt/--vtt export sibling subtitles at sentence/pause boundaries, including offline from existing caption JSON",
       "usage": "uv run tools/captions.py projects/my-video/public/audio/scenes [--engine scribe|whisper] [--script FILE] [--json]",
       "status": "beta",
       "category": "project",
       "requires": "ElevenLabs API key (scribe) or `uv sync --extra whisper` (whisper)",
       "options": {
         "engine": "auto (default: scribe when ELEVENLABS_API_KEY is set, else whisper), scribe, whisper",
-        "script": "Narration text to align to (default: sibling <name>.txt); --no-script burns the raw transcript"
+        "script": "Narration text to align to (default: sibling <name>.txt); --no-script burns the raw transcript",
+        "srt": "Also write <name>.srt, preserving plain text",
+        "vtt": "Also write <name>.vtt with WebVTT escaping",
+        "max-words": "Upper bound per cue, 1-30, default 7; split at sentence ends and gaps over 0.6s"
       },
       "envVars": [
         "ELEVENLABS_API_KEY"
       ],
       "created": "2026-10-12",
-      "updated": "2026-10-12"
+      "updated": "2026-11-07"
     },
     "flux2": {
       "path": "tools/flux2.py",
