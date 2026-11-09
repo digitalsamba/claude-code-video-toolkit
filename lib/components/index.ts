@@ -56,6 +56,9 @@ export type { StageProps, CameraKeyframe } from './Stage';
 export { Cursor, cursorAt, press, near } from './Cursor';
 export type { CursorProps, CursorPoint } from './Cursor';
 
+export { Terminal, terminalTheme, typedUntil } from './Terminal';
+export type { TerminalProps, TerminalLine, TerminalTheme, TerminalKind } from './Terminal';
+
 export { voice, cueWords } from './cues';
 export type { Voice, VoicePhrase, CaptionWord, CueOptions } from './cues';
 

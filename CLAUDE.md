@@ -119,6 +119,11 @@ re-timed. For product walkthroughs and release-notes videos, prefer this to a Pl
 source is readable. The method and its gotchas are in `.claude/skills/synthetic-ui-demo/`. The reference builds
 are `examples/ds-free-schedule-demo` and `examples/ds-release-649`, and their screen kits stay in the examples.
 
+**Terminal demos:** `Terminal` (`lib/components/Terminal.tsx`) is the same idea for a CLI: commands type, output
+prints (`kind: 'ok' | 'err' | 'dim'`) and menus select, each on a `cue()` frame, and the window scrolls once full.
+Theme it with `terminalTheme(brand)`; `brands/video-toolkit` carries a terminal palette. Start a line's output after
+`typedUntil(command)`, or the command is cut off mid-typing.
+
 **Data charts:** `LineChart` and `BarChart` (`lib/components/DataChart.tsx`) draw charts as SVG in the brand
 (`chartTheme(brand.colors, brand.fonts, 'dark' | 'light')`) instead of embedding a Matplotlib MP4. The line draws to
 `keys` (`{ frame, x }` pairs, frames from `cue()`), so each stretch of data is drawn while the narration talks about
