@@ -83,7 +83,9 @@ export const Stage: React.FC<{
 
   return (
     <AbsoluteFill style={{ background: 'linear-gradient(135deg, #f8fafe 0%, #EBF1FC 100%)', overflow: 'hidden', opacity: intro }}>
+      {/* data-qc: qc.py --layout reports the browser and the product's own UI apart from the video's text */}
       <div
+        data-qc="product"
         style={{
           position: 'absolute',
           width: APP_W,

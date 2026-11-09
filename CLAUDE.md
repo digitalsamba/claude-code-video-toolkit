@@ -542,6 +542,8 @@ uv run tools/sfx_search.py --id ID --output public/audio/whoosh.mp3    # one fro
 - Don't filter on `category=sound_effect`: Openverse leaves `category` empty on Freesound records, so it returns
   nothing. The tool filters on `source=freesound` instead.
 - Files are Freesound's HQ MP3 previews, fine for a mix. Search in English.
+- Openverse copies licence data from Freesound and doesn't guarantee it: before commercial use, open the source
+  link in the credit file and confirm the licence there.
 
 ### Social Cut-downs (16:9 → 9:16 / 1:1 / 4:5)
 
