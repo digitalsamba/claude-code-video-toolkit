@@ -8,10 +8,36 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+---
+
+## 2026-11-09 (v0.27.0)
+
+Five contributor tools for working on footage you already have, a stats loop for what you publish, and a copy lint
+on every public word. Real recorded sound effects come from Freesound for free, music ducks under speech, captions
+export as subtitle files, a vertical cut follows a face, and a long recording becomes a highlight reel. The toolkit
+also has a public site now.
+
 ### Added
 
-- **`tools/sfx_search.py`**: finds and downloads Creative Commons sound effects from Freesound through the Openverse API, with no key. Only commercially usable licenses by default, and each download gets an attribution file.
+- **`tools/sfx_search.py`** (#181, gulnarjbl): finds and downloads Creative Commons sound effects from Freesound through the Openverse API, with no key. Only commercially usable licences by default, and each download gets an attribution file. Openverse doesn't guarantee its licence data, so check the Freesound page before commercial use.
+- **`addmusic.py --duck` and `--events`** (#161, AsharibAli): the music bed drops under speech and recovers in the pauses, and sound effects land at set times from a JSON list. Every input is brought to 48 kHz stereo before the mix.
+- **`captions.py --srt` and `--vtt`** (#167, AsharibAli): subtitle files beside the caption JSON in the same pass, split at sentence ends, pauses and a word limit; existing caption JSON converts offline.
+- **`cutdown.py --mode track`** (#163, AsharibAli): a social crop that follows one face, holding the last good position on a cut, a second face or a far jump. OpenCV is an optional extra (`uv sync --extra vision`), needed only for this mode.
+- **`tools/highlights.py`** (#162, AsharibAli): picks the final takes from a word-timed transcript and writes the ranges as `cutdown.py` segments.
+- **`tools/youtube_stats.py`** and the `youtube-stats` skill: views, likes and comments per video, plus watch time, retention and traffic sources with the Analytics scope, saved as snapshots so trends show; GitHub traffic beside it.
+- **`tools/copy_lint.py`**: refuses dashes and stock AI or marketing phrasing in anything public. Video jobs and `youtube_upload.py` refuse it, `voiceover.py` warns, and a `Copy lint` CI check runs on new lines and commit subjects.
+- **A GitHub Pages site**: the front page and one page per use case, in the Digital Samba design system, linked as the repo homepage.
+- **A Python tests workflow** in CI for `tools/`, `scripts/`, tests and the registry, and a test for `ltx_extend.py` against a fake continuation.
 
+### Changed
+
+- **`addmusic.py` mixes at the levels you set**: the old mix halved both tracks, so fixed-level mixes now come out about 6 dB louder than before. Run `qc.py --render ... --fix` for delivery loudness as usual.
+- The agent skill (`skills/video-toolkit/`) names every tool above.
+
+### Fixed
+
+- `youtube_upload.py` no longer warns that a scheduled upload came back private.
+- `examples/ds-release-649` marks its browser window `data-qc="product"` for `qc.py --layout`.
 ---
 
 ## 2026-11-08 (v0.26.0)
