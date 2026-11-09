@@ -151,10 +151,10 @@ This is especially critical for background commands where the working directory 
 
 | Type | Tools | When to Use |
 |------|-------|-------------|
-| **Project tools** | voiceover, music, music_gen, sfx, sync_timing, qc | During video creation workflow |
+| **Project tools** | voiceover, music, music_gen, sfx, sfx_search, sync_timing, qc | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark, cutdown | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
-| **Publishing** | youtube_upload | Upload a finished render to YouTube (use `/publish` for the guided workflow) |
+| **Publishing** | youtube_upload, youtube_stats | Upload a finished render to YouTube (use `/publish` for the guided workflow); see how it does |
 
 Utility tools work on any video file without requiring a project structure.
 
@@ -267,6 +267,9 @@ skip):
 - **Still stretches:** more than 3s (`--max-still`) where nothing on screen changes. The comparison is per
   tile, so a moving cursor or a talking-head PiP counts as change. The last 3s may hold.
 - **Black gaps:** black for 0.5s or more mid-video, usually a gap between sequences or media that didn't load.
+- **Motion that stops dead:** part of the frame moving for 3s or more, then frozen for 2s or more while the rest of the
+  video goes on. Usually an image-to-video clip that ran out and held its last frame; lengthen it with `tools/ltx_extend.py`
+  rather than holding or looping it. The whole-frame still check misses it because something else is always moving.
 - **Empty first frame:** background only. A warning on vertical and square renders, whose frame 0 is
   the Shorts/Reels cover, and info on landscape renders, which get a custom thumbnail.
 - **Audio:** a missing or silent audio track is an error. `--allow-silent` makes it info, for a deliverable that is
@@ -286,6 +289,28 @@ Text under `data-qc="product"` is the product's own UI (Stage marks its browser 
 tablet mockup the same way). It's reported separately, as info, without the overflow check, since the camera crops
 it on purpose: the video can't fix the product's colours, but it's worth knowing where the UI is hard to read.
 `data-qc-ignore` skips an element. About 10s to bundle, then ~0.15s a sample.
+
+### Sound effects on generated movement
+
+A sound laid over a generated clip (a sneeze over an LTX face, a thud when a jacket lands) is placed at a frame by
+hand, and is easily half a second off the movement. Place it by measurement, then check the render:
+
+```bash
+# before rendering: where in the clip should the sound start? (its loudest moment meets the movement)
+uv run tools/sync_check.py --clip public/people/theo-sneeze.mp4 --sfx public/audio/sfx/sneeze.mp3 --window 2.5:4.5
+uv run tools/sync_check.py --clip public/people/theo-desk.mp4 --sfx public/audio/sfx/thump.mp3 --kind impact --window 1.5:3.8
+
+# after rendering, before presenting: every cue in one go (exit 1 if any is off by more than 0.1 s)
+uv run tools/sync_check.py --video out/video.mp4 --cues sync-cues.json
+```
+
+`--kind peak` (default) puts the sound on the biggest movement: a sneeze, a laugh. `--kind impact` puts it where a
+movement stops: a landing, a stamp. `--kind onset` puts it where a sustained movement starts (a badge lifted
+slowly), which has no single spike for `peak` to find. Give a `--window` around the action: an extended clip's seam
+or a later gesture can be bigger than the one the sound is for. Keep the cues in the project's `sync-cues.json`
+(`{name, sfx, at, region, kind, window}`, times in the render, regions as `w:h:x:y`; sound paths relative to the
+cue file or the toolkit root) so the check re-runs on every render. Keep the window clear of the shot's dissolve and
+any text that animates in near the movement.
 
 ### Burned Captions (after voiceover)
 
@@ -484,6 +509,24 @@ uv run tools/audition.py --video out/video.nomusic.mp4 --music public/audio/bg_*
 
 8 scene presets: `corporate-bg`, `upbeat-tech`, `ambient`, `dramatic`, `tension`, `hopeful`, `cta`, `lofi`. See `.claude/skills/acestep/` for prompt engineering patterns and video production integration guide.
 
+### Stock Sound Effects (Openverse)
+
+`sfx.py` generates a sound with ElevenLabs; `sfx_search.py` finds a real recording on Freesound through the
+Openverse API. It's free and needs no key (20 requests/minute, 200/day).
+
+```bash
+uv run tools/sfx_search.py --query "camera shutter" --max-duration 3   # list matches
+uv run tools/sfx_search.py --query "whoosh" --output public/audio/whoosh.mp3   # top match
+uv run tools/sfx_search.py --id ID --output public/audio/whoosh.mp3    # one from the list
+```
+
+- **Licenses:** only `cc0,by` by default, the two that allow commercial use with no share-alike. `--license` widens
+  it, and an `nc` or `nd` download prints a warning.
+- **Credit CC BY sounds in the video.** Every download leaves a `<name>.attribution.txt` with the credit line.
+- Don't filter on `category=sound_effect`: Openverse leaves `category` empty on Freesound records, so it returns
+  nothing. The tool filters on `source=freesound` instead.
+- Files are Freesound's HQ MP3 previews, fine for a mix. Search in English.
+
 ### Social Cut-downs (16:9 → 9:16 / 1:1 / 4:5)
 
 ```bash
@@ -493,7 +536,19 @@ uv run tools/cutdown.py --input out/video.mp4 --mode crop \
     --segment 0:04-0:11 --segment 0:42-0:58@0.25                                 # highlight reel
 ```
 
-Pure ffmpeg, works on any MP4. Outputs land beside the input as `<name>-9x16.mp4` etc.
+Outputs land beside the input as `<name>-9x16.mp4` etc. `blur`, `crop` and `pad` need only FFmpeg.
+`--mode track` follows a single face, or a textured subject selected with `--box x,y,width,height`
+in source pixels at each segment's start. Install its optional dependency with `uv sync --extra vision`.
+It supports the same `--platform`, repeated `-f` and `--segment` options as other modes:
+
+```bash
+uv run tools/cutdown.py -i input.mp4 --mode track --platform shorts -f 9:16 -f 1:1 --segment 4-11 --segment 42-58
+```
+
+Tracking holds the last good position during occlusion, ambiguous multiple faces or a hard scene cut;
+before a subject is found it uses `--focus` (including per-segment `@FOCUS`). Split at cuts to start
+tracking a new subject. `--track-smoothing` and `--max-pan-speed` limit camera movement. Constant FPS
+is required. Reruns overwrite outputs via temporary files and `os.replace`; `--dry-run` writes nothing.
 
 - **Pick the mode by content.** `blur` (default) fits the whole frame over a blurred copy, so
   nothing is cut: right for slides and screen recordings. `crop` fills the frame by cutting the
@@ -507,6 +562,22 @@ Pure ffmpeg, works on any MP4. Outputs land beside the input as `<name>-9x16.mp4
   so `/publish` needs no special flag.
 - `--overlay frame.png` lays a full-frame PNG (with transparency) on top, e.g. a branded header
   band made with Ideogram or by hand.
+
+### Transcript highlights
+
+`highlights.py` selects complete sentences, keeps the last repeated take (`--keep first` overrides),
+and shortens long pauses. It runs by default and overwrites its output. Use `--dry-run` to review
+the JSON plan without writes. `--transcript` must cover the **whole source video timeline**;
+per-scene captions are relative to their audio file and cannot be passed without offsetting them.
+`--transcribe` uses the existing optional Whisper extra locally and may download model weights.
+
+```bash
+uv run tools/highlights.py --video input.mp4 --transcript words.json --seconds 45 --keyword launch --output highlights.mp4 --save-plan edit.json
+```
+
+The plan's `cutdownArgs` array contains repeated `--segment START-END` arguments. Pass them to
+`cutdown.py --input input.mp4 --platform shorts` to crop the selected ranges directly from the
+original video. Review the selection before publishing; keyword ranking is a first editing pass.
 
 ### Watermark Removal
 
@@ -666,7 +737,28 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --
   the actual returned privacy. "Testing"-mode refresh tokens expire after ~7 days (re-run `--auth`).
 - Cached tokens live in `_internal/.youtube/` (gitignored — they grant channel-upload access).
 
-## Video Production Workflow
+**How it did:** `uv run --extra youtube tools/youtube_stats.py --account personal [--github]` reads views, likes and
+comments with the same token, adds watch time, retention and traffic sources once the token has the Analytics scope
+(`--auth`), and snapshots each run to `_internal/.youtube/stats/` so the next one shows the change. Reading the
+numbers, and what has worked on Shorts, is in `.claude/skills/youtube-stats/`.
+
+## Public copy: the copy lint is the first filter
+
+Everything this toolkit makes is public: narration and captions, on-screen text, titles, descriptions, thumbnails,
+the site, the README, docs, skills, PR bodies and commit subjects (they become the release notes). Run new words
+through `tools/copy_lint.py` before anyone sees them: it refuses dashes and stock AI or marketing phrasing (the
+list is `COPY_RULES` in the tool), and says why.
+
+```bash
+uv run tools/copy_lint.py site/*.html DESCRIPTION.md --text "The title"   # files and strings, exit 1 on a hit
+uv run tools/copy_lint.py --diff origin/main --commits origin/main        # a branch's new lines + commit subjects
+```
+
+It is wired in where text leaves: video jobs refuse it before spend, `youtube_upload.py` refuses it (`--allow-copy`
+to override), `voiceover.py` warns before voicing, and the `Copy lint` CI check fails a PR on new lines or commit
+subjects. Old text is fixed when it's next touched. Web pages also go through taste-skill's `lint.mjs` and
+`inspect.mjs` when it's installed.
+
 
 1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing); it sets the design
    direction (`design.md`) before any scene is built

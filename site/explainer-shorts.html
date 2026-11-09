@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vertical explainer shorts with Claude Code</title>
+<meta name="description" content="9:16 concept-explainer shorts for YouTube Shorts, Reels and TikTok, made with Claude Code: per-scene narration, cards with legible text, AI b-roll and karaoke captions, for under a dollar.">
+<meta property="og:title" content="Vertical explainer shorts with Claude Code">
+<meta property="og:description" content="9:16 concept-explainer shorts for YouTube Shorts, Reels and TikTok, made with Claude Code: per-scene narration, cards with legible text, AI b-roll and karaoke captions, for under a dollar.">
+<meta property="og:image" content="https://digitalsamba.github.io/claude-code-video-toolkit/img/sky-blue-short.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233771e0'/%3E%3Cpath d='M12 9v14l11-7z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script src="site.js" defer></script>
+</head>
+<body>
+<header class="frame">
+  <nav class="nav" aria-label="Main">
+    <a class="mark" href="./">claude-code-video-toolkit</a>
+    <ul>
+      <li class="hide-sm"><a class="link" href="./#made">Videos</a></li>
+      <li class="hide-sm"><a class="link" href="./#how">How it works</a></li>
+      <li class="hide-sm"><a class="link" href="./#routes">What to make</a></li>
+      <li><a class="button" href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a></li>
+    </ul>
+  </nav>
+</header>
+<main>
+  <div class="article-head frame grid">
+    <div class="words">
+      <h1>Vertical explainer shorts</h1>
+      <p class="lede" data-rise>One question, answered in under a minute for Shorts, Reels or TikTok: narration, cards with text you can read, b-roll that moves, and captions that follow the voice.</p>
+    </div>
+    <figure class="clip shutter">
+      <video data-loop autoplay muted loop playsinline preload="metadata" poster="media/made-with.jpg" width="768" height="296" aria-label="Clips from videos made with the toolkit"><source src="media/made-with.mp4" type="video/mp4"></video>
+      <figcaption>Two seconds from each of five videos it made</figcaption>
+    </figure>
+  </div>
+
+  <section class="frame" aria-labelledby="made">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="made" data-rise>Two it made</h2>
+        <div><p data-rise><a class="link" href="https://demos.digitalsamba.com/video/short-blue-sky.mp4">Why is the sky blue?</a> runs 52 seconds and cost about $0.80 to generate. <a class="link" href="https://demos.digitalsamba.com/video/hallucinations_short.mp4">AI hallucinations</a> runs 3:41 with a cloned voice.</p></div>
+      </div>
+      <div class="show"><div class="pair"><figure data-rise><img src="img/sky-blue-short.jpg" alt="A sunset over the sea with the caption Far more air" width="270" height="480" loading="lazy"><figcaption>Why is the sky blue?</figcaption></figure><figure data-rise><img src="img/hallucinations-short.jpg" alt="A vertical explainer frame" width="270" height="480" loading="lazy"><figcaption>AI hallucinations</figcaption></figure></div></div>
+    </div>
+  </section>
+
+  <section class="frame field" aria-labelledby="how">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="how" data-rise>How it's built</h2>
+        <div><p data-rise>The whole video comes from one <code>scenes.json</code>: a line of narration and one visual per scene.</p><ol><li data-rise><b>Voice</b> each scene with Qwen3-TTS, a built-in voice or a clone, with a pace limit so it never rushes.</li><li data-rise><b>Pictures by job:</b> Ideogram for anything with text on it, LTX video for b-roll that moves, FLUX for text-free backgrounds. Image and video models garble letters, so text is never asked of them.</li><li data-rise><b>Captions</b> word by word from the audio's timing, but spelled from the script, so names come out right.</li><li data-rise><b>Build</b> anchored to the audio: each scene starts where its narration does. It renders at every stage, with placeholder cards before the pictures exist.</li></ol></div>
+      </div>
+      <div class="show"><div class="pair"><figure data-rise><img src="media/explainer-1.jpg" alt="A text card defining hallucination as confident fiction" width="540" height="960" loading="lazy"><figcaption>A card made by Ideogram</figcaption></figure><figure data-rise><img src="media/explainer-2.jpg" alt="Empty desks in a hall, with a burned caption" width="540" height="960" loading="lazy"><figcaption>LTX b-roll with captions</figcaption></figure></div></div>
+    </div>
+  </section>
+
+  <section class="frame" aria-labelledby="start">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="start" data-rise>Start</h2>
+        <div><p data-rise>Claude Code uses the <code>concept-explainer-short</code> template, pure Python with no Remotion. An agent with nobody at the terminal can do the same as a background job with a cost cap (<a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/blob/main/docs/agent-video-jobs.md">agent video jobs</a>, experimental).</p><p data-rise>Already have a 16:9 video? <code>tools/cutdown.py --platform shorts</code> makes the 9:16, 1:1 or 4:5 cut with ffmpeg.</p></div>
+      </div>
+      <div class="show"><pre data-rise><code># in Claude Code, from the toolkit:
+Make a 50-second vertical explainer:
+why does bread go stale?
+
+# or as a job any agent can submit:
+uv run tools/video_job.py submit --spec spec.json --max-usd 1</code></pre></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot frame">
+  <div class="top">
+    <div class="notes"><span>Open source, MIT licensed</span><span>Made by Conal Mullan and <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/graphs/contributors">contributors</a></span><span>For <a class="link" href="https://claude.ai/code">Claude Code</a>, not made by Anthropic</span></div>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <a class="big" href="https://github.com/digitalsamba/claude-code-video-toolkit"><span>github.com/digitalsamba/</span><span>claude-code-video-toolkit</span></a>
+  <div class="meta">
+    <div><a class="link" href="./">Home</a><a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/releases">Releases</a><a class="link" href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">Playlist</a></div>
+    <div class="c">Every video and picture here was made with the toolkit</div>
+    <div class="r">2026</div>
+  </div>
+</footer>
+</body>
+</html>
