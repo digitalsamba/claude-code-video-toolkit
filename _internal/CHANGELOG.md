@@ -11,11 +11,68 @@ All notable changes to claude-code-video-toolkit.
 ### Added
 
 - **`tools/sfx_search.py`**: finds and downloads Creative Commons sound effects from Freesound through the Openverse API, with no key. Only commercially usable licenses by default, and each download gets an attribution file.
+
+---
+
+## 2026-11-08 (v0.26.0)
+
+Comedy shorts about your own group, and the tools that make generated people hold up in them: clips that
+continue instead of freezing or looping, sound placed on the movement by measurement, and a QC check for motion
+that stops dead. Uploads now carry YouTube's AI-content disclosure, and agent video jobs take a person's own
+photos and clips.
+
+### Added
+
+- **`parody-short` skill**: comedy shorts about a group's own life (a team's launch, a club's season, a family's Christmas) or a shared topic everyone recognises (video calls, the return to the office), told in a borrowed genre (80s action intro, creature feature, Dickens Christmas ad) and starring the group's real, animated photos or an invented cast. It covers mining the group's own chat, docs and tools for in-jokes (with privacy rules), mapping a genre's beats onto the real event, costuming photos with `image_edit` and animating them with LTX, designed voices, vertical cuts and brand editions.
+- **`LivingPhoto`** (`lib/components`) plays an image-to-video clip of a person once and holds its last good frame (`after: 'drift'` with a slow push-in, or `'freeze'` for a freeze-frame gag). `fit` slows a slightly short clip to fill its shot, down to 0.8x; it never loops or plays backwards. `livingFrame()` lets a shot time a gag to the clip.
+- **`tools/ltx_extend.py`** continues an LTX clip from its last good frame instead of looping or freezing it, joining the two with a short cross-fade (`--times` chains more). On an 11 s shot it measured 0% frozen and 0% revisited frames, against 63% frozen when the last frame was held. Continuing from an earlier frame also cuts out a bad stretch. A failed chain keeps the clips it paid for.
+- **`tools/sync_check.py`** places a sound on generated movement and checks it in the render. `--clip` says where in a clip a sound should start so its loudest moment meets the movement; `--video --cues sync-cues.json` measures every cue in a render and exits 1 past 0.1 s. Kinds: `peak` (a sneeze, a laugh), `impact` (where a movement stops, a landing) and `onset` (where a sustained movement starts). Sound paths resolve from the cue file.
+- **`qc.py --render` catches motion that stops dead**: part of the frame moving for 3 s or more, then frozen for 2 s or more while the rest of the video goes on, usually an image-to-video clip that ran out. The whole-frame still check missed these because something else is always moving.
+- **`youtube_upload.py --synthetic-media`** sets YouTube's "altered or synthetic content" disclosure for realistic generated people and cloned voices, and `/publish` asks about it. A privacy policy for the uploader (`docs/privacy.md`) lets its OAuth app run in production mode, so refresh tokens no longer expire weekly.
+- **Agent video jobs take the person's own media**: a kit (`kits/<name>/kit.json`: brand, voice, format and someone's photos, set up once in a session) and `file` scenes from it, a cloned voice in the kit, and a focus map that keeps an off-centre subject in a 9:16 crop. `text` scenes get a local brand-colour background on a host without FLUX, so one-prompt videos run with no GPU provider.
+- **Agent jobs know their host**: `catalog` and presets report the visual kinds, voices, music providers and local tools (ffmpeg, moviepy, Node) this host has, and `submit` refuses a spec that needs a missing one before any spend, naming the env vars and an alternative. Narration and on-screen copy are checked before spend (dashes, stock AI phrasing, narration repeated from an earlier job).
+- **The agent skill opens with a routes table**: which template or skill fits what a user asks, and whether it runs as a one-prompt `job` or a working `session`. `video_job.py catalog` and MCP `video_catalog` list the routes from the registry.
+
+### Fixed
+
+- `youtube_upload.py` checks that the AI-content disclosure survived the upload and sets it with `videos.update` when it didn't (the first two uploads came back without it), and reports `syntheticMedia` in `--json-out`.
+- `ltx_extend.py --times 2` works: the second link no longer seeks to the clip's very last frame, where ffmpeg writes no image.
+- Video jobs take a person's file only from the kit, the agent workspace, the submitting directory or the toolkit; a default spec is no longer refused for want of a music key; `estimate` parses its host lines on Python 3.10.
+
+---
+
+## 2026-11-05 (v0.25.0)
+
+### Added
+
+- **`video-design`, the toolkit's video design layer, takes direction from any design source**: plug in your own design skill, or use ours. taste-skill is the recommended external source, Anthropic's frontend-design is another, and "ours" (video-design's act palettes with the brand) needs nothing installed. It turns a direction into scenes with rules that hold whatever the source says (colour changes only at a narrative turn, one data accent, five type sizes, two-line titles, a ground drawn from the subject's own shape), writes the decisions to the project's `design.md`, and critiques the render from a contact sheet. The project records its source in `project.json` `design.source`.
+- **`/video` sets the design direction before any scene is built**, and `/design` sets or changes it for a project made without one, refines a scene within it, or critiques the render.
+- **`tools/contact_sheet.py`** tiles one settled frame per scene of any render, finding cuts and fades by colour (so two fields of the same lightness still count), or frames at chosen seconds (`--at 4.2,13.8`).
+- **`PageTurns`** (`lib/components`) turns one scene into new pages in place, each on its narration cue, with a hard edge instead of a fade.
+- **Data charts drawn to the narration** (`lib/components/DataChart.tsx`): `LineChart` draws its line to `cue()` keyframes, with cue-timed bands and several series with a legend; `BarChart` highlights and grows bars on cues; `Counter` counts up from a cue; `SplitBar` shows shares of a whole and still labels a zero share. Brand-themed with `chartTheme()`. Reference: `examples/data-chart-stars`.
+- **Synthetic UI scenes cue from the narration**: `cue('save')` (`lib/components/cues.ts`) looks a click frame up from the voice, so cursor, clicks and camera follow a re-timed narration.
+- **`tools/pick_music.py`** recommends one of several music takes with its reasons: it rules out a take shorter than the video, clipping, or with a mid-track gap, then prefers a calm bed under voice or text, some movement, a clean ending and a note on the act cuts. It measures and can't hear, so commands show its pick and ask the user to listen.
+- **`tools/audition.py`** puts each music take under the finished picture in seconds (one render serves every take, mixed at the composition's level and fades, -14 LUFS), so takes are chosen by watching the video. The video's own narration is kept.
+- **`qc.py --allow-silent`** makes a missing or silent audio track info instead of an error, for a deliverable that is silent on purpose (#171).
+- **Agent video jobs resume and report**: `resume JOB_ID` redoes only the missing outputs after a crash, `submit` prunes old jobs' project trees, `status` carries timestamped events, warnings and an ETA calibrated per host, and renders are encoded under 9.5 MB so they attach in Discord. concept-explainer-short builds 3.3x faster (175 s to 53 s on a 52 s video).
+- `Stage` takes `windowShadow` (a hairline edge instead of a drop shadow at rest); `ChartTheme` takes a solid `other` colour; `palettes.md` gains a brand blue + cool grey + navy palette.
 - **`check_versions.py` checks Dependabot coverage**: every project that pins Remotion must be listed in `.github/dependabot.yml`, or the monthly grouped bump skips it. `--strict` fails on a gap, and a new `Check versions` workflow runs it on any PR that touches a `package.json` or `dependabot.yml` (`--remotion-only` skips the Python and toolkit checks).
 
 ### Changed
 
-- **Remotion 4.0.539** in every template, example and showcase (#152, #154). `templates/ds-release-notes`, `examples/ds-release-649` and `examples/ds-free-schedule-demo` are now in `dependabot.yml`.
+- **The bundled frontend-design skill is removed**: install it (or taste-skill) as a design source instead. Nothing in the toolkit points at `.claude/skills/frontend-design` any more.
+- **The digital-samba brand uses DS's own colours** (wordmark coral #F06859, navy #323E66, product blue #3771e0) instead of an orange that isn't a DS colour.
+- **Remotion 4.0.539** in every template, example and showcase (#152, #154). `templates/ds-release-notes`, `examples/ds-release-649` and `examples/ds-free-schedule-demo` are now in `dependabot.yml`. The official Remotion skills are synced to upstream v4.0.540.
+- **Node 24 LTS** in CI and the docs (18 and 20 are end of life); `verify_setup.py` flags an end-of-life Node.
+
+### Fixed
+
+- **`music_gen.py --variations N` saves N takes** (`name_1` ... `name_N`) instead of one: the acemusic API returns one take per request whatever `batch_size` says. `--json` prints only the JSON on stdout.
+- **`music_gen.py --repaint` and `--cover` keep the input's length** by default instead of cutting it to 30s without saying so. (Separately, hosted repaint on real music doesn't keep the source outside the window; see the roadmap.)
+- `qc.py --layout` reads SVG text colour from its fill, so chart and diagram labels are no longer judged as black text.
+- `SplitBar` stacks two zero shares' labels instead of printing them on top of each other.
+- `contact_sheet.py` samples a scene that fades to blank before its fade-out, finds scenes that fade to the same ground, keeps `--at` times inside the video and refuses `--count 0`.
+- Agent video jobs: captions drop words with no letters or digits, resume never reuses a half-written file, the lock can't be stolen during setup, an LLM-expanded brief is told the clip-prompt rules, and estimates match what jobs actually cost.
 
 ---
 

@@ -123,6 +123,8 @@ are `examples/ds-free-schedule-demo` and `examples/ds-release-649`, and their sc
 (`chartTheme(brand.colors, brand.fonts, 'dark' | 'light')`) instead of embedding a Matplotlib MP4. The line draws to
 `keys` (`{ frame, x }` pairs, frames from `cue()`), so each stretch of data is drawn while the narration talks about
 it; annotation bands and bar highlights take cue frames too, and `lineHead()` gives the same position for a counter.
+`series` puts several lines on one chart with a legend; `Counter` counts a number up from a cue; `SplitBar` shows shares of a
+whole (who did the work), and still labels a zero share so the narration can say it.
 Prefer this inside Remotion videos; keep the `data-viz-chart` Matplotlib pattern for pure-Python builds. Reference:
 `examples/data-chart-stars`.
 
@@ -152,7 +154,7 @@ This is especially critical for background commands where the working directory 
 | **Project tools** | voiceover, music, music_gen, sfx, sfx_search, sync_timing, qc | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark, cutdown | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
-| **Publishing** | youtube_upload | Upload a finished render to YouTube (use `/publish` for the guided workflow) |
+| **Publishing** | youtube_upload, youtube_stats | Upload a finished render to YouTube (use `/publish` for the guided workflow); see how it does |
 
 Utility tools work on any video file without requiring a project structure.
 
@@ -219,6 +221,12 @@ for t in 1 2 3; do cp -r public/audio/phrases public/audio/takes/t$t; \
 uv run tools/pick_takes.py --takes-dir public/audio/takes --output public/audio/scenes --json
 ```
 
+**Pronunciation (Qwen3 has no phoneme tags):** short words that look like acronyms can come out spelled, so "ops
+escalations" became "O-P-S escalations". Fix it in the text: sentence case ("Ops"), or let a phrase carry it ("the ops
+team"). The `.txt` is also the caption text, so prefer a rewording to a respelling ("opps"). To check by transcript,
+copy the MP3s to a folder without their `.txt` and run `captions.py` there: the raw transcript shows letters as
+"OP-IS" or "OPS".
+
 Lugh's expressive reference lives at `assets/voices/lugh-ref-expressive.wav`. Measured on release 650: the raw
 clip gave clones at 1.7-2.1 st sd and 180-215 wpm; the expanded clip gave 3-4 st at 145-165 wpm with no stretch.
 Short closing sentences still rush; take selection handles most of it.
@@ -259,6 +267,9 @@ skip):
 - **Still stretches:** more than 3s (`--max-still`) where nothing on screen changes. The comparison is per
   tile, so a moving cursor or a talking-head PiP counts as change. The last 3s may hold.
 - **Black gaps:** black for 0.5s or more mid-video, usually a gap between sequences or media that didn't load.
+- **Motion that stops dead:** part of the frame moving for 3s or more, then frozen for 2s or more while the rest of the
+  video goes on. Usually an image-to-video clip that ran out and held its last frame; lengthen it with `tools/ltx_extend.py`
+  rather than holding or looping it. The whole-frame still check misses it because something else is always moving.
 - **Empty first frame:** background only. A warning on vertical and square renders, whose frame 0 is
   the Shorts/Reels cover, and info on landscape renders, which get a custom thumbnail.
 - **Audio:** a missing or silent audio track is an error. `--allow-silent` makes it info, for a deliverable that is
@@ -278,6 +289,28 @@ Text under `data-qc="product"` is the product's own UI (Stage marks its browser 
 tablet mockup the same way). It's reported separately, as info, without the overflow check, since the camera crops
 it on purpose: the video can't fix the product's colours, but it's worth knowing where the UI is hard to read.
 `data-qc-ignore` skips an element. About 10s to bundle, then ~0.15s a sample.
+
+### Sound effects on generated movement
+
+A sound laid over a generated clip (a sneeze over an LTX face, a thud when a jacket lands) is placed at a frame by
+hand, and is easily half a second off the movement. Place it by measurement, then check the render:
+
+```bash
+# before rendering: where in the clip should the sound start? (its loudest moment meets the movement)
+uv run tools/sync_check.py --clip public/people/theo-sneeze.mp4 --sfx public/audio/sfx/sneeze.mp3 --window 2.5:4.5
+uv run tools/sync_check.py --clip public/people/theo-desk.mp4 --sfx public/audio/sfx/thump.mp3 --kind impact --window 1.5:3.8
+
+# after rendering, before presenting: every cue in one go (exit 1 if any is off by more than 0.1 s)
+uv run tools/sync_check.py --video out/video.mp4 --cues sync-cues.json
+```
+
+`--kind peak` (default) puts the sound on the biggest movement: a sneeze, a laugh. `--kind impact` puts it where a
+movement stops: a landing, a stamp. `--kind onset` puts it where a sustained movement starts (a badge lifted
+slowly), which has no single spike for `peak` to find. Give a `--window` around the action: an extended clip's seam
+or a later gesture can be bigger than the one the sound is for. Keep the cues in the project's `sync-cues.json`
+(`{name, sfx, at, region, kind, window}`, times in the render, regions as `w:h:x:y`; sound paths relative to the
+cue file or the toolkit root) so the check re-runs on every render. Keep the window clear of the shot's dissolve and
+any text that animates in near the movement.
 
 ### Burned Captions (after voiceover)
 
@@ -414,8 +447,9 @@ Default provider is **acemusic** (official cloud API, free key from [acemusic.ai
 # Background music (acemusic cloud API by default)
 uv run tools/music_gen.py --prompt "Upbeat tech corporate" --duration 60 --bpm 128 --key "G Major" --output music.mp3
 
-# Generate 4 variations, pick the best
+# Generate 4 variations (bg_1.mp3 ... bg_4.mp3), then recommend one against the video
 uv run tools/music_gen.py --prompt "Subtle corporate tech" --duration 60 --variations 4 --output bg.mp3
+uv run tools/pick_music.py bg_*.mp3 --target 58 --cuts 12,31,50 --under voice --fade-out 1.5 --pick bg.mp3
 
 # Fast mode (disable thinking)
 uv run tools/music_gen.py --no-thinking --prompt "Quick draft" --duration 30 --output draft.mp3
@@ -448,6 +482,23 @@ uv run tools/music_gen.py --cloud modal --prompt "Background music" --duration 6
 
 # List presets
 uv run tools/music_gen.py --list-presets
+```
+
+**Choosing between takes:** `pick_music.py` measures, it can't listen. It rules out a take shorter than the video,
+clipping, or with a gap mid-track, then prefers a calm bed under narration or text, some movement, a clean ending
+(or one the video's own `--fade-out` covers) and a note or level change on the act cuts, and says why against the
+runner-up. An agent with nobody to ask takes its pick and records the reasons.
+
+**With a person, choose against the picture.** A take that sounds best alone may not be the one that sits best
+under the video, and clean takes often tie on the measures. The picture doesn't depend on the music, so one render
+serves every take: `audition.py` mixes each in with ffmpeg in seconds, at the composition's level and fades, and
+normalised to -14 LUFS. Show its measured pick first, then ask the user to watch every render and choose.
+
+```bash
+# a narrated video: render once with the music file moved aside (the templates skip it), then
+uv run tools/audition.py --video out/video.nomusic.mp4 --music public/audio/bg_*.mp3 --volume 0.15 --fade-out 1.5 \
+    --recommend --cuts 12,31,50 --under voice                  # -> out/audition/video.bg_1.mp4 ...
+# music only (the render's audio is the old bed): --drop-audio
 ```
 
 8 scene presets: `corporate-bg`, `upbeat-tech`, `ambient`, `dramatic`, `tension`, `hopeful`, `cta`, `lofi`. See `.claude/skills/acestep/` for prompt engineering patterns and video production integration guide.
@@ -605,16 +656,21 @@ Trims NotebookLM visuals, keeps full audio, bridges with freeze frame, adds bran
 `tools/video_job.py` is the async entrypoint for agents that can't babysit a render: `submit --spec spec.json
 --max-usd 1.00` returns in seconds with a job id and estimate, a detached worker runs voiceover → visuals →
 captions → build → `qc.py --fix`, and `status JOB_ID --json` / `result JOB_ID --json` read state from disk from
-any fresh process. The spec is scenes with narration text and one visual each (`ltx`, `ideogram`, `flux`,
-`none`); the compositor is `concept-explainer-short` in 9:16 or 16:9. `estimate` is a pure function of the
+any fresh process. The spec is scenes with narration text and one visual each (`ltx`, `ideogram`, `flux`, `text`,
+`file` for the person's own photo or clip, `none`), optionally naming a **kit** (`kits/README.md`: a brand, voice
+and photo folder set up once in a session, so later videos are one prompt); `text` scenes fall back to a local
+brand-colour background on a host without FLUX; the compositor is `concept-explainer-short` in 9:16 or 16:9. `estimate` is a pure function of the
 spec and the module's `PRICES` table, `submit` refuses over the cap before any spend, one job runs at a time,
-and receipts land in `logs/media-spend.log` in longarm's ledger shape. A job that dies part-way keeps what
+and receipts land in `logs/media-spend.log` as JSON lines (or the agent's workspace with `VIDEO_JOB_WORKSPACE`). A job that dies part-way keeps what
 it bought: `resume JOB_ID` redoes only the missing outputs. `status` carries timestamped `events`, `warnings` and
 an ETA calibrated per host, `submit` prunes old jobs' project trees, and renders are encoded under 9.5 MB so they
 attach in Discord. Brief → spec needs an LLM: agents write
 the spec themselves, or set `VIDEO_JOB_EXPANDER` to any command that turns a brief into one. Agents without a
 shell get the same calls from `tools/video_mcp.py` (MCP over stdio, `uv sync --extra mcp`). The
-agent-facing skill is `skills/video-toolkit/`; the full contract is in `docs/agent-video-jobs.md`.
+agent-facing skill is `skills/video-toolkit/` (it opens with a routes table: which template or skill fits what the
+user asks, and whether it is a one-prompt `job` or a working `session`; `video_job.py catalog` lists them from the registry); the full contract is in
+`docs/agent-video-jobs.md`. When you add a tool, template, component, skill or design source to the registry,
+mention it in that skill too, if an agent outside Claude Code could use it.
 
 ### Publishing to YouTube
 
@@ -647,13 +703,36 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --
   the actual returned privacy. "Testing"-mode refresh tokens expire after ~7 days (re-run `--auth`).
 - Cached tokens live in `_internal/.youtube/` (gitignored — they grant channel-upload access).
 
-## Video Production Workflow
+**How it did:** `uv run --extra youtube tools/youtube_stats.py --account personal [--github]` reads views, likes and
+comments with the same token, adds watch time, retention and traffic sources once the token has the Analytics scope
+(`--auth`), and snapshots each run to `_internal/.youtube/stats/` so the next one shows the change. Reading the
+numbers, and what has worked on Shorts, is in `.claude/skills/youtube-stats/`.
 
-1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing)
+## Public copy: the copy lint is the first filter
+
+Everything this toolkit makes is public: narration and captions, on-screen text, titles, descriptions, thumbnails,
+the site, the README, docs, skills, PR bodies and commit subjects (they become the release notes). Run new words
+through `tools/copy_lint.py` before anyone sees them: it refuses dashes and stock AI or marketing phrasing (the
+list is `COPY_RULES` in the tool), and says why.
+
+```bash
+uv run tools/copy_lint.py site/*.html DESCRIPTION.md --text "The title"   # files and strings, exit 1 on a hit
+uv run tools/copy_lint.py --diff origin/main --commits origin/main        # a branch's new lines + commit subjects
+```
+
+It is wired in where text leaves: video jobs refuse it before spend, `youtube_upload.py` refuses it (`--allow-copy`
+to override), `voiceover.py` warns before voicing, and the `Copy lint` CI check fails a PR on new lines or commit
+subjects. Old text is fixed when it's next touched. Web pages also go through taste-skill's `lint.mjs` and
+`inspect.mjs` when it's installed.
+
+
+1. **Create/resume project** - Run `/video`, choose template and brand (or resume existing); it sets the design
+   direction (`design.md`) before any scene is built
 2. **Review script** - Edit `VOICEOVER-SCRIPT.md` to plan content
 3. **Gather assets** - Record demos with `/record-demo` or add external videos
 4. **Scene review** - Run `/scene-review` to verify visuals in Remotion Studio
-5. **Design refinement** - Use `/design` or the "Refine" option in scene-review to improve slide visuals
+5. **Design refinement** - `/design` refines a scene within `design.md` (or the "Refine" option in scene-review),
+   changes the direction, or critiques the render
 6. **Generate audio** - Use `/generate-voiceover` for AI narration
 7. **Sync timing** - Run `uv run tools/sync_timing.py --apply` to update config durations
 8. **Preview** - `npm run studio` in project directory
@@ -898,27 +977,38 @@ Preview all transitions: `cd showcase/transitions && npm run studio`
 
 See `lib/transitions/README.md` for full documentation.
 
-## Design Refinement with frontend-design Skill
+## Design: video-design and design sources
 
-The `frontend-design` skill elevates slide visuals from generic to distinctive.
+How a video looks is split in two. A **design source** gives the direction (palette, type, an idea): any design
+skill the user trusts (plug in your own), or ours. **`video-design`** (`.claude/skills/video-design/`) is the toolkit's
+own video layer: it turns that direction into scenes and critiques the render. The project records its source in
+`project.json` (`design.source`) and the decisions in `design.md` (format in `video-design/handoff.md`), so a
+different source changes the file, not the code. Known sources are in the registry's `designSources`; taste-skill
+is the recommended external one today, Anthropic's frontend-design is another, and "ours" (video-design's act
+palettes with the brand) is the default that needs nothing installed. Plug in your own design skill, or use ours.
+
+**Turning a scene in place:** `PageTurns` (`lib/components/PageTurns.tsx`) turns one scene into new pages, each on
+its narration cue: a hard edge sweeps across with the next page behind it, and nothing fades. Use it when the same
+thing is shown again in a new way and the change is the point (one chart in three design sources, a screen before
+and after a fix). Between scenes, use `wipe()` from `@remotion/transitions`: a hard-edged cut is the default for an
+act change in `video-design`, and the effect transitions below are for when the brand calls for them. Sources are installed by the user and never copied into the toolkit.
 
 ### Usage
-- **During scene review** (`/scene-review`): Choose "Refine" for visual improvements
-- **Focused sessions** (`/design`): Deep-dive on a specific scene — `/design title`, `/design cta`
+- **During scene review** (`/scene-review`): choose "Refine"
+- **Focused sessions** (`/design`): `/design title`, `/design cta`
+- **Whole video:** `uv run tools/contact_sheet.py out/video.mp4` tiles one settled frame per scene for the
+  critique in `video-design/critique.md`
 
-### When to Use
-- Slide scenes that feel generic
-- When building visual contrast between scenes (e.g., calm title → harsh problem)
-- When animations feel too basic or too busy
+### The rules that hold whatever the source says
+- **Colour follows the story:** two or three fields, changing only at a narrative turn (a new act, not a new
+  scene), neighbours differing in lightness, hard cuts between them.
+- **One data accent:** the brand colour on the narrated bar, line or number; other data one neutral step, never a
+  tint of the ground.
+- **Type:** five sizes per video, titles on two lines at most (broken by hand), one title edge for every scene.
+- **No** rows of identical tiles, gradients, glows, shadows at rest, eyebrow labels.
 
-### Visual Narrative Arc
-Consider how visual intensity builds across scenes:
-- **Title**: Set the mood, plant visual seeds
-- **Problem**: Create tension (harsh contrast)
-- **Solution**: Relief and hope return
-- **Demo**: Neutral, content-focused
-- **Stats**: Build credibility
-- **CTA**: Climax - maximum visual energy
+Learned on Lugh's work (2026-11): a colour per scene read as noise ("not 100% sure about the different colors per
+scene"); three fields by act (brand orange, bone, near-black) made each turn in the story visible.
 
 ## Toolkit vs Project Work
 

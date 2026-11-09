@@ -294,6 +294,10 @@ def build_request_body(args, description: str, tags: list[str]) -> dict:
         "license": args.license,
         "embeddable": True,
     }
+    if args.synthetic_media:
+        # YouTube's "altered or synthetic content" disclosure: required when realistic people, places or events
+        # were generated or altered (an AI-animated cast, a cloned voice saying things the person didn't)
+        status["containsSyntheticMedia"] = True
     if args.publish_at:
         # Scheduled publish REQUIRES privacyStatus == private at insert time.
         status["privacyStatus"] = "private"
@@ -398,6 +402,39 @@ def resumable_upload(request) -> dict:
             error = None
 
     return response
+
+
+def locked_private(args, status: dict) -> Optional[str]:
+    """A warning when YouTube kept a video private that was meant to go public, else None.
+
+    A scheduled upload is private until its publishAt by design, so for one the lock shows as YouTube dropping
+    the publishAt, not as privacy=private."""
+    lock = ("likely the unaudited-project lock. For your own channel this usually doesn't apply; "
+            "otherwise lift it via the YouTube API compliance audit.")
+    if args.publish_at:
+        if status.get("privacyStatus") == "private" and not status.get("publishAt"):
+            return f"YouTube dropped the scheduled publish time, so the video stays private: {lock}"
+        return None
+    if args.privacy == "public" and status.get("privacyStatus") == "private":
+        return f"YouTube returned privacy=private for a public upload: {lock}"
+    return None
+
+
+def set_synthetic_media(youtube, video_id: str, status: dict) -> bool:
+    """Set the "altered or synthetic content" disclosure after upload. videos.update replaces the whole status
+    part, so the fields the insert set are sent back with it."""
+    keep = {k: status[k] for k in ("privacyStatus", "publishAt", "license", "embeddable", "publicStatsViewable",
+                                   "selfDeclaredMadeForKids") if k in status}
+    try:
+        r = youtube.videos().update(part="status", body={"id": video_id, "status": {
+            **keep, "containsSyntheticMedia": True}}).execute()
+        ok = bool(r.get("status", {}).get("containsSyntheticMedia"))
+        log("AI-generated content disclosure set" if ok else "AI disclosure not confirmed: set it in YouTube Studio",
+            "success" if ok else "warn")
+        return ok
+    except Exception as e:  # non-fatal: the video is up
+        log(f"AI disclosure not set ({e}); set it in YouTube Studio (Details > Altered content)", "warn")
+        return False
 
 
 def set_thumbnail(youtube, video_id: str, thumb_path: str) -> bool:
@@ -561,6 +598,12 @@ Note: until your OAuth app is Google-verified, uploads are force-locked to priva
     parser.add_argument("--captions-language", default="en", help="Caption language code (default: en)")
     parser.add_argument("--playlist", help="Playlist ID to add the video to")
     parser.add_argument("--made-for-kids", action="store_true", help="Set selfDeclaredMadeForKids")
+    parser.add_argument("--synthetic-media", action="store_true",
+                        help="Disclose realistic AI-generated or altered content (status.containsSyntheticMedia): "
+                             "an animated AI cast, generated people, a cloned voice")
+    parser.add_argument("--allow-copy", action="store_true",
+                        help="Upload even if the title, description or tags fail tools/copy_lint.py "
+                             "(dashes, stock AI or marketing phrases)")
     parser.add_argument("--default-language", help="snippet.defaultLanguage code, e.g. en")
     parser.add_argument(
         "--license", choices=("youtube", "creativeCommon"), default="youtube",
@@ -609,6 +652,20 @@ def main():
 
     description = read_description(args)
     tags = parse_tags(args.tags)
+
+    # --- Copy lint: the title, description and tags are public ------------------
+    if not args.allow_copy:
+        from copy_lint import lint_text
+        found = [f"{where}: '{m}' is {why}" for where, text in
+                 (("title", args.title), ("description", description), ("tags", ", ".join(tags)))
+                 for m, why in lint_text(text)]
+        if found:
+            msg = "Copy lint refused the upload (fix the wording, or --allow-copy if it's meant):\n  " + \
+                  "\n  ".join(found)
+            log(msg, "error")
+            if args.json_out:
+                emit_json({"success": False, "error": msg, "errorType": "copy", "findings": found})
+            sys.exit(1)
     body = build_request_body(args, description, tags)
 
     # --- Dry run -----------------------------------------------------------------
@@ -689,16 +746,17 @@ def main():
     actual_privacy = response.get("status", {}).get("privacyStatus", "unknown")
     url = f"https://www.youtube.com/watch?v={video_id}"
     log(f"Uploaded: {url}  (privacy: {actual_privacy})", "success")
-    if args.privacy != "private" or args.publish_at:
-        if actual_privacy == "private" and (args.publish_at or args.privacy == "public"):
-            log(
-                "YouTube returned privacy=private despite the request — likely the "
-                "unaudited-project lock. For your own channel this usually doesn't apply; "
-                "otherwise lift it via the YouTube API compliance audit.",
-                "warn",
-            )
+    lock_warning = locked_private(args, response.get("status", {}))
+    if lock_warning:
+        log(lock_warning, "warn")
+    elif args.publish_at:
+        log(f"Scheduled: private until {args.publish_at}, then public.", "info")
 
     # --- Post-upload extras (each non-fatal) -------------------------------------
+    synthetic = bool(response.get("status", {}).get("containsSyntheticMedia"))
+    if args.synthetic_media and not synthetic:
+        # videos.insert didn't keep the disclosure on the first uploads (2026-11-08); videos.update does
+        synthetic = set_synthetic_media(youtube, video_id, response.get("status", {}))
     thumbnail_set = set_thumbnail(youtube, video_id, args.thumbnail) if args.thumbnail else False
     captions_added = (
         add_caption(youtube, video_id, args.captions, args.captions_language) if args.captions else False
@@ -716,6 +774,7 @@ def main():
             "publishAt": args.publish_at,
             "account": args.account,
             "thumbnailSet": thumbnail_set,
+            "syntheticMedia": synthetic,
             "captionsAdded": captions_added,
             "playlistId": args.playlist,
             "uploadStatus": "uploaded",

@@ -128,6 +128,11 @@ export interface StageProps {
   rippleColor?: string;
   /** Fade the stage in over its first frames (default true) */
   fadeIn?: boolean;
+  /**
+   * The window's edge (default: a soft drop shadow). video-design has no shadows at rest, so a designed video
+   * passes a hairline instead, e.g. `0 0 0 1px rgba(17,17,17,0.12)`.
+   */
+  windowShadow?: string;
   children: React.ReactNode;
 }
 
@@ -146,6 +151,7 @@ export const Stage: React.FC<StageProps> = ({
   fontFamily = SYSTEM_FONT,
   rippleColor,
   fadeIn = true,
+  windowShadow = '0 30px 80px rgba(50,63,102,0.25), 0 0 0 1px rgba(50,63,102,0.08)',
   children,
 }) => {
   const frame = useCurrentFrame();
@@ -171,7 +177,7 @@ export const Stage: React.FC<StageProps> = ({
           transform: `translate(${width / 2 - cx * s}px, ${height / 2 - cy * s}px) scale(${s})`,
           borderRadius: 10,
           overflow: 'hidden',
-          boxShadow: '0 30px 80px rgba(50,63,102,0.25), 0 0 0 1px rgba(50,63,102,0.08)',
+          boxShadow: windowShadow,
         }}
       >
         {chromeHeight > 0 && <BrowserChrome url={url} height={chromeHeight} fontFamily={fontFamily} />}

@@ -1,6 +1,6 @@
 {
   "name": "claude-code-video-toolkit",
-  "version": "0.24.0",
+  "version": "0.26.0",
   "description": "AI-native video production workspace for Claude Code",
   "repository": "https://github.com/digitalsamba/claude-code-video-toolkit",
   "skills": {
@@ -20,6 +20,14 @@
       "status": "stable",
       "created": "2025-12-04",
       "updated": "2026-10-28"
+    },
+    "video-design": {
+      "path": ".claude/skills/video-design/",
+      "description": "Visual design for videos: colour fields by act (two or three, ordered by lightness), one data accent, five type steps, two-line titles, chart and layout rules; a design.md handoff any design source can fill; a contact-sheet critique with a weighted score and caps",
+      "status": "beta",
+      "note": "Takes direction from the project's design source (designSources) or the brand alone. Parts adapted from taste-skill (MIT).",
+      "created": "2026-11-04",
+      "updated": "2026-11-04"
     },
     "elevenlabs": {
       "path": ".claude/skills/elevenlabs/",
@@ -41,13 +49,6 @@
       "status": "beta",
       "created": "2025-12-08",
       "updated": "2025-12-10"
-    },
-    "frontend-design": {
-      "path": ".claude/skills/frontend-design/",
-      "description": "Visual design refinement for distinctive, production-grade aesthetics",
-      "status": "stable",
-      "created": "2025-12-10",
-      "updated": "2025-12-13"
     },
     "qwen-edit": {
       "path": ".claude/skills/qwen-edit/",
@@ -104,14 +105,53 @@
       "created": "2026-10-21",
       "updated": "2026-10-21"
     },
+    "parody-short": {
+      "path": ".claude/skills/parody-short/",
+      "description": "Comedy shorts about a group's own life (a team, club, class or family) or a shared topic, in a borrowed genre, starring the group's animated photos or an invented cast: mining the group's context for in-jokes, mapping genre beats onto the event, costume (image_edit) then animate and extend (LTX, ltx_extend.py) the cast, sound placed with sync_check.py, vertical cuts and brand editions, and the affection and privacy rules",
+      "status": "beta",
+      "note": "Learned on three internal videos starring real colleagues (an 80s action-show release intro, a Halloween creature feature, a Dickens Christmas ad) and two public shorts with an invented cast (a horror trailer, a wildlife documentary), 2026-11",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
+    },
     "video-toolkit": {
       "path": "skills/video-toolkit/",
-      "description": "Agent-facing skill for any runtime (OpenClaw, Codex, Hermes, longarm, MCP clients): the estimate -> submit -> poll status -> result flow of tools/video_job.py first, then the individual tools with current defaults (SoulX, Ideogram for text, qc.py before delivery, --max-wpm)",
+      "description": "Agent-facing skill for any runtime (OpenClaw, Codex, Hermes, a run_tool loop, MCP clients): a routes table first (which template, skill and example fits what the user asks, and whether it runs as a job or is a build; video_job.py catalog lists them from this registry), then the estimate -> submit -> poll status -> result flow of tools/video_job.py first, then the individual tools with current defaults (SoulX, Ideogram for text, qc.py before delivery, --max-wpm)",
       "status": "beta",
       "audience": "agents other than Claude Code; keeps the metadata.openclaw frontmatter so OpenClaw loads it",
       "note": "Was skills/openclaw-video-toolkit (OpenClaw-only paths and yieldMs polling) until 2026-10-31",
       "created": "2026-04-14",
-      "updated": "2026-10-31"
+      "updated": "2026-11-06"
+    },
+    "youtube-stats": {
+      "path": ".claude/skills/youtube-stats/",
+      "description": "Reading how published videos do (youtube_stats.py): what each metric means for a Short vs a long video, the Analytics scope step, and what has worked on Shorts so far, kept as findings rather than numbers",
+      "status": "beta",
+      "created": "2026-11-08",
+      "updated": "2026-11-08"
+    }
+  },
+  "designSources": {
+    "_note": "Plug in your own design skill, or use ours. Design skills give video-design its direction; they're installed by the user from their own repos, never copied into the toolkit. 'ours' is the toolkit's own: video-design's act palettes and rules with the project's brand, nothing to install. /design and /scene-review offer the installed ones plus ours; the project's choice is project.json design.source. List one by opening an issue (see .claude/skills/video-design/sources.md).",
+    "ours": {
+      "skill": "video-design",
+      "recommended": false,
+      "default": true,
+      "description": "The toolkit's own: video-design's act palettes (brand + bone + black, graphite, paper, loud two-act) and rules with the project's brand; nothing to install"
+    },
+    "taste-skill": {
+      "skill": "taste-skill:design-taste-frontend",
+      "recommended": true,
+      "description": "Dealt directions and palettes from 247 studied sites, measured house rules, a juror's critique with caps",
+      "license": "MIT",
+      "repo": "https://github.com/Leonxlnx/taste-skill",
+      "install": "/plugin marketplace add Leonxlnx/taste-skill && /plugin install taste-skill@taste-skill"
+    },
+    "frontend-design": {
+      "skill": "frontend-design",
+      "recommended": false,
+      "description": "Anthropic's general visual direction for interfaces; written for web pages, so its effects (gradient meshes, glows) are turned down for video",
+      "repo": "https://github.com/anthropics/skills",
+      "install": "See the anthropics/skills README"
     }
   },
   "commands": {
@@ -173,10 +213,10 @@
     },
     "design": {
       "path": ".claude/commands/design.md",
-      "description": "Focused design refinement session for a scene",
+      "description": "Set a video's design direction (design.md) from a design source, refine a scene, or critique the render",
       "status": "stable",
       "created": "2025-12-10",
-      "updated": "2025-12-13"
+      "updated": "2026-11-05"
     },
     "versions": {
       "path": ".claude/commands/versions.md",
@@ -671,6 +711,12 @@
       "created": "2026-10-12",
       "updated": "2026-10-28"
     },
+    "contact_sheet": {
+      "path": "tools/contact_sheet.py",
+      "description": "Contact sheet of a rendered video: one settled frame before each scene cut (colour-aware detection, so same-lightness cuts are found), tiled into one PNG for the video-design critique; --at for chosen times, --count for even spacing",
+      "status": "beta",
+      "created": "2026-11-04"
+    },
     "align_captions": {
       "path": "tools/align_captions.py",
       "description": "Align hand-estimated cap() caption timings in sprint-config.ts to actual TTS audio — transcribes each scene with ElevenLabs Scribe, fuzzy-matches phrases to word timestamps, patches fromSec/durSec in --apply mode",
@@ -827,6 +873,25 @@
       "created": "2026-03-25",
       "updated": "2026-10-12"
     },
+    "ltx_extend": {
+      "path": "tools/ltx_extend.py",
+      "description": "Lengthen an LTX image-to-video clip by continuing it from one of its own frames (the last good one) and joining the two with a short cross-fade; chains with --times. For shots longer than a ~5 s clip, instead of holding (reads as a pause) or ping-ponging (reads as a loop)",
+      "usage": "uv run tools/ltx_extend.py --input clip.mp4 --at 4.8 --times 2 --prompt \"...\" --output clip-long.mp4",
+      "status": "beta",
+      "category": "video-generation",
+      "requires": "ltx2.py on Modal (each extension is one LTX clip, ~$0.08)",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
+    },
+    "sync_check": {
+      "path": "tools/sync_check.py",
+      "description": "Sound-to-picture sync for effects laid over generated footage: --clip says where in a clip to start a sound so its peak lands on the movement (prevention); --video/--cues measures the offset in a render and exits 1 past 0.1 s (validation). Kinds: peak (a sneeze, a jingle) and impact (where a movement stops)",
+      "usage": "uv run tools/sync_check.py --clip clip.mp4 --sfx sneeze.mp3 --window 2.5:4.5  |  uv run tools/sync_check.py --video out/video.mp4 --cues sync-cues.json",
+      "status": "beta",
+      "category": "quality",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
+    },
     "chain_video": {
       "path": "tools/chain_video.py",
       "description": "Chain LTX-2 clips with visual continuity — each scene uses the last frame of the previous as input",
@@ -889,6 +954,33 @@
       "created": "2026-06-09",
       "updated": "2026-06-09"
     },
+    "youtube_stats": {
+      "path": "tools/youtube_stats.py",
+      "description": "How the channel's videos are doing: views, likes, comments per video and subscribers (Data API v3), plus watch time, retention, traffic sources and (if the API allows) impressions/CTR when the token has the YouTube Analytics scope; snapshots per run give deltas over time; --github adds the repo's traffic referrers",
+      "usage": "uv run tools/youtube_stats.py --account personal [--video ID ...] [--since 7d] [--github] [--json]",
+      "status": "beta",
+      "category": "publishing",
+      "backend": "YouTube Data API v3 + YouTube Analytics API v2 (reuses youtube_upload.py's cached token)",
+      "requires": "a token from youtube_upload.py --auth; Analytics needs the API enabled and youtube_stats.py --auth",
+      "envVars": [
+        "YOUTUBE_CLIENT_SECRETS_FILE",
+        "YOUTUBE_TOKEN_DIR"
+      ],
+      "note": "Read-only. Snapshots go to _internal/.youtube/stats/<account>/ (gitignored). Analytics lags 1-2 days.",
+      "documentation": ".claude/skills/youtube-stats/SKILL.md",
+      "created": "2026-11-08",
+      "updated": "2026-11-08"
+    },
+    "copy_lint": {
+      "path": "tools/copy_lint.py",
+      "description": "The first filter on anything public: refuses dashes and stock AI or marketing phrasing in files (HTML, Markdown, text, read as prose), strings, a branch's added lines (--diff) or commit subjects (--commits); the same rules gate video jobs, youtube_upload.py and voiceover.py",
+      "usage": "uv run tools/copy_lint.py site/*.html --text \"Title\" | --diff origin/main --commits origin/main",
+      "status": "stable",
+      "category": "qc",
+      "note": "Stdlib only. CI: .github/workflows/copy-lint.yml lints each PR's new lines and commit subjects. Includes taste-skill's stock marketing phrases.",
+      "created": "2026-11-08",
+      "updated": "2026-11-08"
+    },
     "voice_prosody": {
       "path": "tools/voice_prosody.py",
       "description": "Measure pitch spread (F0 semitone sd, p5-p95) of any audio, and write a livelier clone reference: pitch contour expanded around the median and slowed (Praat PSOLA). A clone copies its reference's pace and intonation, so fix the clip rather than stretching the output",
@@ -920,9 +1012,41 @@
       "created": "2026-10-28",
       "updated": "2026-10-28"
     },
+    "pick_music": {
+      "path": "tools/pick_music.py",
+      "description": "Recommend one of several music takes (music_gen.py --variations N) with its reasons, for a person to confirm: rules out takes shorter than the video, clipping or with a mid-track dropout; scores calm under voice/text (onsets a second), movement (loudness spread), the ending (a fade, or a cut-off the video's own fade must cover) and whether a note or a level change lands on each act cut. Measured, not heard: commands show the recommendation and ask the user to listen; video_job-style agents take it and record why",
+      "usage": "uv run tools/pick_music.py public/audio/music_*.mp3 --target 44.5 --cuts 11.5,17.5,37.5 --under text --fade-out 1.5 [--pick public/audio/music.mp3] [--json]",
+      "status": "beta",
+      "category": "project",
+      "options": {
+        "target": "the video's length in seconds; a shorter take is ruled out",
+        "cuts": "comma-separated seconds of the video's turns",
+        "under": "voice | text | none: what the music sits under (voice and text prefer a calm bed)",
+        "fade-out": "seconds of music fade the video applies, so a take still playing at the end isn't penalised",
+        "pick": "copy the recommended take to this path"
+      },
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
+    },
+    "audition": {
+      "path": "tools/audition.py",
+      "description": "Put each music take under the finished picture for the user to watch and choose: one render serves every take, each mixed in with ffmpeg in seconds at the composition's volume and fades, trimmed to the video and normalised to -14 LUFS / -1.5 dBTP. Keeps the video's own audio (narration) unless --drop-audio; --recommend adds pick_music.py's measured pick and flags a tie the measures can't separate",
+      "usage": "uv run tools/audition.py --video out/video.nomusic.mp4 --music public/audio/bg_*.mp3 --volume 0.15 --fade-out 1.5 [--drop-audio] [--recommend --cuts 12,31,50 --under voice] [--json]",
+      "status": "beta",
+      "category": "project",
+      "options": {
+        "volume": "music gain, as in the composition",
+        "start / fade-in / fade-out": "where the music starts and its fades, seconds",
+        "drop-audio": "discard the render's own audio (an old music bed)",
+        "recommend": "add pick_music.py's pick; takes --cuts and --under",
+        "out-dir": "default <video dir>/audition"
+      },
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
+    },
     "video_job": {
       "path": "tools/video_job.py",
-      "description": "Async video jobs for agents: a scene spec (or a brief via VIDEO_JOB_EXPANDER) in, a QC-checked MP4 out. submit returns in seconds with a job id and estimate; a detached worker runs voiceover -> visuals (Ideogram/LTX/FLUX) -> captions -> build (concept-explainer-short, 9:16 or 16:9) -> qc --fix -> publish (R2 URL when configured). State on disk under jobs/<id>/, one job at a time, --max-usd refused before any spend and enforced before each paid step, receipts in longarm's media-spend shape. Failed or cancelled jobs resume from their first missing output; status has timestamped events, warnings and a per-host ETA; renders are encoded under 9.5 MB for chat attachments",
+      "description": "Async video jobs for agents: a scene spec (or a brief via VIDEO_JOB_EXPANDER) in, a QC-checked MP4 out. submit returns in seconds with a job id and estimate; a detached worker runs voiceover -> visuals (Ideogram/LTX/FLUX) -> captions -> build (concept-explainer-short, 9:16 or 16:9) -> qc --fix -> publish (R2 URL when configured). State on disk under jobs/<id>/, one job at a time, --max-usd refused before any spend and enforced before each paid step, receipts as JSON lines in MEDIA_SPEND_LOG (or the agent workspace's logs/ when VIDEO_JOB_WORKSPACE is set). catalog lists what the toolkit makes, from this registry. Failed or cancelled jobs resume from their first missing output; status has timestamped events, warnings and a per-host ETA; renders are encoded under 9.5 MB for chat attachments; catalog/presets report what this host can make (host), and submit refuses a provider it has no key or endpoint for (unavailable) before any spend; kits (kits/<name>/kit.json in the agent workspace or the toolkit: brand, voice, format, own photos) fill a spec, file scenes use a person's own photos or clips, and text scenes get a local brand-colour background on a host without FLUX",
       "usage": "uv run tools/video_job.py submit --spec spec.json --max-usd 1.00 --json; then status JOB_ID --json; result JOB_ID --json",
       "status": "beta",
       "category": "project",
@@ -937,6 +1061,7 @@
         "prune",
         "spec",
         "presets",
+        "catalog",
         "settle"
       ],
       "options": {
@@ -958,7 +1083,9 @@
         "VIDEO_JOB_MAX_MB",
         "VIDEO_JOB_KEEP",
         "VIDEO_JOB_OUTPUT_ROOTS",
-        "VIDEO_JOB_RESERVE_AT_SUBMIT"
+        "VIDEO_JOB_RESERVE_AT_SUBMIT",
+        "VIDEO_JOB_WORKSPACE",
+        "VIDEO_JOB_SKIP_HOST_CHECK"
       ],
       "exitCodes": {
         "0": "ok",
@@ -966,13 +1093,13 @@
         "2": "refused or not ready (budget_exceeded, no_expander, job not done)",
         "3": "lock_held"
       },
-      "tests": "uv run python -m unittest tests/python/test_video_job.py tests/python/test_video_job_agents.py tests/python/test_video_job_hardening.py",
+      "tests": "uv run python -m unittest tests/python/test_video_job.py tests/python/test_video_job_agents.py tests/python/test_video_job_hardening.py tests/python/test_video_job_host.py",
       "created": "2026-10-31",
-      "updated": "2026-11-01"
+      "updated": "2026-11-06"
     },
     "video_mcp": {
       "path": "tools/video_mcp.py",
-      "description": "MCP server (stdio) for agents without a shell: video_estimate, video_submit, video_status, video_result, video_list_presets (+ video_list, video_cancel, video_resume). A thin wrapper over tools/video_job.py with no pipeline logic of its own",
+      "description": "MCP server (stdio) for agents without a shell: video_estimate, video_submit, video_status, video_result, video_list_presets, video_catalog (+ video_list, video_cancel, video_resume). A thin wrapper over tools/video_job.py with no pipeline logic of its own",
       "usage": "uv sync --extra mcp && uv run --extra mcp tools/video_mcp.py",
       "status": "beta",
       "category": "agent",
@@ -993,7 +1120,7 @@
         }
       },
       "created": "2026-10-31",
-      "updated": "2026-11-01"
+      "updated": "2026-11-06"
     }
   },
   "optionalComponents": {
@@ -1198,21 +1325,24 @@
       "description": "Sprint review videos with demos, stats, and voiceover",
       "status": "stable",
       "created": "2025-12-04",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "agentSupport": "session"
     },
     "sprint-review-v2": {
       "path": "templates/sprint-review-v2/",
       "description": "Composable scene-based sprint review with film-quality upgrades",
       "status": "beta",
       "created": "2026-02-19",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "agentSupport": "session"
     },
     "product-demo": {
       "path": "templates/product-demo/",
       "description": "Marketing videos with dark tech aesthetic, stats, CTA",
       "status": "stable",
       "created": "2025-12-09",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "agentSupport": "session"
     },
     "concept-explainer-short": {
       "path": "templates/concept-explainer-short/",
@@ -1221,7 +1351,8 @@
       "status": "beta",
       "created": "2026-06-09",
       "updated": "2026-10-31",
-      "note": "The compositor tools/video_job.py drives; jobs copy it into jobs/<id>/project/"
+      "note": "The compositor tools/video_job.py drives; jobs copy it into jobs/<id>/project/",
+      "agentSupport": "job"
     },
     "ds-release-notes": {
       "path": "templates/ds-release-notes/",
@@ -1229,7 +1360,8 @@
       "status": "beta",
       "created": "2026-10-28",
       "updated": "2026-10-28",
-      "skill": "synthetic-ui-demo"
+      "skill": "synthetic-ui-demo",
+      "agentSupport": "session"
     }
   },
   "transitions": {
@@ -1408,7 +1540,14 @@
     },
     "DataChart": {
       "path": "lib/components/DataChart.tsx",
-      "description": "LineChart and BarChart drawn as SVG frame by frame: brand-themed (chartTheme, dark or light), a line that draws to narration keyframes with a y axis that grows with the data, cue-timed annotation bands and bar highlights, counting value labels. Labels are real text, so qc.py --layout checks them",
+      "description": "LineChart (one line or several series with a legend), BarChart, Counter and SplitBar drawn as SVG frame by frame: brand-themed (chartTheme, dark or light), a line that draws to narration keyframes with a y axis that grows with the data, cue-timed bands, bar highlights (own colour per bar), counters and split-bar labels. Labels are real text, so qc.py --layout checks them",
+      "status": "beta",
+      "created": "2026-11-04",
+      "updated": "2026-11-04"
+    },
+    "PageTurns": {
+      "path": "lib/components/PageTurns.tsx",
+      "description": "One scene that turns into new pages in place, each on its narration cue: a hard edge sweeps across with the next page behind it (no fade). For showing the same thing again in a new way (one chart in three design sources, before and after a fix). Between scenes use @remotion/transitions wipe()",
       "status": "beta",
       "created": "2026-11-04",
       "updated": "2026-11-04"
@@ -1424,6 +1563,12 @@
       "description": "SVG noise overlay for cinematic film texture",
       "created": "2026-02-19",
       "updated": "2026-02-19"
+    },
+    "LivingPhoto": {
+      "path": "lib/components/LivingPhoto.tsx",
+      "description": "An image-to-video clip of a person (ltx2.py --input) that plays forward once and holds its last good frame with a slow push-in; hold/trim cut around a late stranger or an early glitch, fit slows a slightly short clip to its shot (to 0.8x). Never plays backwards; lengthen with ltx_extend.py",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
     }
   },
   "brands": {
@@ -1489,7 +1634,7 @@
     },
     "data-chart-stars": {
       "path": "examples/data-chart-stars/",
-      "description": "31s narrated chart video: the toolkit's GitHub star history as a line that draws word by word with Lugh's narration, then monthly gains as bars lit on cue. Built on lib/components DataChart; data refreshed by scripts/fetch_stars.py",
+      "description": "31s narrated chart video: the toolkit's GitHub star history as a line that draws word by word with the narration, then monthly gains as bars lit on cue. Built on lib/components DataChart; data refreshed by scripts/fetch_stars.py",
       "template": "custom",
       "stack": "remotion",
       "complexity": "intermediate",
@@ -1516,7 +1661,7 @@
     },
     "ds-release-649": {
       "path": "examples/ds-release-649/",
-      "description": "80s synthetic release-notes video for Digital Samba 649: room, dashboard and account-center screens rebuilt from product code and driven by a scripted cursor and camera; Lugh voice (Qwen3 clone), FLUX.2 portraits",
+      "description": "80s synthetic release-notes video for Digital Samba 649: room, dashboard and account-center screens rebuilt from product code and driven by a scripted cursor and camera; a cloned Qwen3 narrator, FLUX.2 portraits",
       "template": "custom",
       "stack": "remotion",
       "complexity": "advanced",
@@ -1526,7 +1671,7 @@
     },
     "ds-free-schedule-demo": {
       "path": "examples/ds-free-schedule-demo/",
-      "description": "26s synthetic product demo of scheduling a call in the DS Free account center, with a SoulX Pro Lugh narrator tile",
+      "description": "26s synthetic product demo of scheduling a call in the DS Free account center, with a SoulX Pro narrator tile",
       "template": "custom",
       "stack": "remotion",
       "complexity": "intermediate",

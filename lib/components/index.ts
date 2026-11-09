@@ -60,8 +60,19 @@ export { voice, cueWords } from './cues';
 export type { Voice, VoicePhrase, CaptionWord, CueOptions } from './cues';
 
 // Data charts (SVG, brand-themed, cue-able; see examples/data-chart-stars)
-export { LineChart, BarChart, chartTheme, lineHead, headFrameAt } from './DataChart';
-export type { LineChartProps, BarChartProps, ChartTheme, LinePoint, HeadKey, ChartBand, ChartBar } from './DataChart';
+export { LineChart, BarChart, Counter, SplitBar, chartTheme, lineHead, headFrameAt } from './DataChart';
+export type {
+  LineChartProps, LineSeries, BarChartProps, CounterProps, SplitBarProps, SplitSegment,
+  ChartTheme, LinePoint, HeadKey, ChartBand, ChartBar,
+} from './DataChart';
+
+// Turning one scene into new pages in place, on narration cues (between scenes: @remotion/transitions wipe())
+export { PageTurns, turnProgress } from './PageTurns';
+export type { PageTurnsProps, PageTurn } from './PageTurns';
+
+// A person's animated photo (ltx2.py --input): plays once, holds its last good frame (parody-short skill)
+export { LivingPhoto, livingFrame, livingRate } from './LivingPhoto';
+export type { LivingPhotoProps } from './LivingPhoto';
 
 // Utilities
 export { hexToRgba, SIZE_PRESETS, POSITION_PRESETS } from './utils';

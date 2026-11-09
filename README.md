@@ -22,6 +22,11 @@ Every frame below was generated in this workspace — click to watch.
 | <a href="https://demos.digitalsamba.com/video/q2-townhall-longarm-ad.mp4"><img src="assets/readme-thumbs/q2-townhall-longarm-ad.jpg" height="280" alt="Super Bowl-style launch ad"></a> | <a href="https://demos.digitalsamba.com/video/hallucinations_short.mp4"><img src="assets/readme-thumbs/hallucinations-short.jpg" height="280" alt="AI hallucinations explainer short"></a> | <a href="https://demos.digitalsamba.com/video/short-blue-sky.mp4"><img src="assets/readme-thumbs/sky-blue-short.jpg" height="280" alt="Why is the sky blue? short"></a> |
 | **Super Bowl-style launch ad**<br>LTX-2 animated cameo,<br>dramatic AI announcer | **AI hallucinations explainer**<br>9:16 short — Ideogram 4 cards,<br>cloned voice, burned captions | **"Why is the sky blue?"**<br>52s vertical short,<br>~$0.80 in generation |
 
+| | |
+|:--:|:--:|
+| <a href="https://youtube.com/shorts/1hyDgC5Qg_o"><img src="assets/readme-thumbs/youre-on-mute-short.jpg" height="280" alt="You're On Mute: every video call ever, as a horror trailer"></a> | <a href="https://youtube.com/shorts/e4HW-tvi8-8"><img src="assets/readme-thumbs/the-great-return-short.jpg" height="280" alt="The Great Return: the return to the office, as a nature documentary"></a> |
+| **You're On Mute**<br>every video call ever, as a horror trailer;<br>invented cast, `parody-short` skill | **The Great Return**<br>the return to the office, as a wildlife film;<br>same cast, designed narrator voice |
+
 More in the [showcase table](#templates) below.
 
 ## Quick Start
@@ -82,11 +87,12 @@ Claude Code has deep knowledge in:
 | **elevenlabs** | AI audio — text-to-speech, voice cloning, music, sound effects |
 | **ffmpeg** | Media processing — format conversion, compression, resizing |
 | **playwright-recording** | Browser automation — record demos as video |
-| **frontend-design** | Visual design refinement for distinctive, production-grade aesthetics |
+| **video-design** | Visual design for video: colour by act, one data accent, type steps, a contact-sheet critique; takes direction from any design skill ([design sources](#design-sources)) |
 | **qwen-edit** | AI image editing — prompting patterns and best practices |
 | **ideogram4** | AI image generation with best-in-class in-image text — title cards, thumbnails, exact brand colors |
 | **acestep** | AI music generation — prompts, lyrics, scene presets, video integration |
 | **ltx2** | AI video generation — text-to-video, image-to-video clips, prompting guide |
+| **parody-short** | Comedy shorts about a group's own life or a shared topic, in a borrowed genre: in-jokes from the group's own chat and docs, costumed and animated photos or an invented cast, sound placed on the movement, vertical cuts |
 | **moviepy** | Python video composition — overlay text on LTX-2/SadTalker output, build.py-style projects |
 | **runpod** | Cloud GPU — setup, Docker images, endpoint management, costs |
 
@@ -99,7 +105,7 @@ Claude Code has deep knowledge in:
 | `/setup` | First-time setup — cloud GPU, file transfer, voice, prerequisites |
 | `/video` | Video projects — list, resume, or create new |
 | `/scene-review` | Scene-by-scene review in Remotion Studio |
-| `/design` | Focused design refinement session for a scene |
+| `/design` | Set a video's design direction (design.md) from a design source, refine a scene, or critique the render |
 | `/brand` | Brand profiles — list, edit, or create new |
 | `/template` | List available templates or create new ones |
 | `/skills` | List installed skills or create new ones |
@@ -128,8 +134,10 @@ See `examples/` for finished projects you can learn from (newest first — scrol
 
 | Date | Demo | Description |
 |------|------|-------------|
+| 2026-11-07 | [the-great-return](https://demos.digitalsamba.com/video/the-great-return-v5-share.mp4) | 98s wildlife documentary about the return to the office, made with the `parody-short` skill and the same invented cast: mock-Latin lower thirds, a designed narrator voice, LTX clips lengthened with `ltx_extend.py` instead of frozen, every sound effect placed on its movement with `sync_check.py` ([vertical cut](https://demos.digitalsamba.com/video/the-great-return-vertical-v5-share.mp4)) |
+| 2026-11-07 | [youre-on-mute](https://demos.digitalsamba.com/video/youre-on-mute-v4-share.mp4) | 76s horror trailer about the video call that never ends, from the `parody-short` skill: an invented cast of four (FLUX portraits animated with LTX through `LivingPhoto`), a call UI built in Remotion that misbehaves, a stinger after the title ([vertical cut](https://demos.digitalsamba.com/video/youre-on-mute-vertical-v4-share.mp4)) |
 | 2026-11-04 | [data-chart-stars](https://demos.digitalsamba.com/video/data-chart-stars.mp4) | 31s chart video of the toolkit's GitHub star history, drawn as SVG by the new `LineChart` and `BarChart` components: the line is drawn while Lugh narrates each stretch, and the March spike's band and the monthly bars light on the words that name them, timed with `cue()` (`examples/data-chart-stars`) |
-| 2026-11-01 | [the-agent-handoff](https://demos.digitalsamba.com/video/the-agent-handoff.mp4) | 57s showcase an agent made unattended from one Discord message: Lugh wrote the script and the shot list, `video_job.py` voiced it with his clone, generated four LTX-2 clips and a diagram card, built and QC'd it, and the Discord bot posted the link when it went live; $0.47, the fourth take after three pipeline fixes (`docs/agent-video-jobs.md`) |
+| 2026-11-01 | [the-agent-handoff](https://demos.digitalsamba.com/video/the-agent-handoff.mp4) | 57s showcase an agent made unattended from one Discord message: the agent wrote the script and the shot list, `video_job.py` voiced it with a cloned voice, generated four LTX-2 clips and a diagram card, built and QC'd it, and the Discord bot posted the link when it went live; $0.47, the fourth take after three pipeline fixes (`docs/agent-video-jobs.md`) |
 | 2026-10-28 | [ds-release-650](https://demos.digitalsamba.com/video/ds-release-650.mp4) | 87s release-notes video built from the `ds-release-notes` template: six items across the room and account center, Lugh's cloned voice made livelier with `voice_prosody.py`, checked with `qc.py --render --layout` (`templates/ds-release-notes`) |
 | 2026-10-21 | [ds-release-649](https://demos.digitalsamba.com/video/ds-release-649.mp4) | Release-notes video with no screen recording: three product UIs rebuilt from their source code, driven by a scripted cursor and camera, narrated by Lugh (`examples/ds-release-649`) |
 | 2026-10-21 | [ds-free-schedule-demo](https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4) | 26s synthetic product demo of scheduling a call, with a SoulX talking-head narrator tile (`examples/ds-free-schedule-demo`) |
@@ -295,6 +303,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | **Project** | voiceover, music, music_gen, sfx, sfx_search | Used during video creation workflow |
 | **Utility** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations, no project needed |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
+| **Checks** | qc, sync_check, contact_sheet | Before showing a render: freezes and motion that stops dead, loudness, layout, sound effects on their movement |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
 
 ### Cloud GPU (Modal + RunPod)
@@ -311,6 +320,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | `soulx` | Talking head video from portrait + audio — holds identity over long takes | ~$0.0024/sec |
 | `sadtalker` | Talking head video, warp-based — fast, cheap drafts | ~$0.10 |
 | `ltx2` | AI video generation (text-to-video, image-to-video) | ~$0.23 |
+| `ltx_extend` | Lengthen an LTX clip by continuing it from its last good frame, instead of holding or looping it | ~$0.08 per extension |
 | `dewatermark` | Video watermark removal | ~$0.10 |
 
 **Modal (recommended):** Each tool deploys from `docker/modal-*/app.py` — Modal builds and hosts the containers. $30/month free compute on the Starter plan, typical usage is $1-2/month. Run `/setup` to deploy all tools automatically.
@@ -364,7 +374,7 @@ claude-code-video-toolkit/
 2. **Review script** — Edit `VOICEOVER-SCRIPT.md` to plan content and assets
 3. **Gather assets** — Record demos with `/record-demo` or add external videos
 4. **Scene review** — Run `/scene-review` to verify visuals in Remotion Studio
-5. **Design refinement** — Use `/design` to improve slide visuals with the frontend-design skill
+5. **Design** — `/video` sets the design direction before scenes are built; `/design` changes it, refines a scene with `video-design`, or critiques the render
 6. **Generate audio** — AI voiceover with `/generate-voiceover`
 7. **Configure** — Update config file with asset paths and timing
 8. **Preview** — `npm run studio` for live preview
@@ -390,6 +400,22 @@ uv run scripts/migrate_to_kiro.py --force
 ```
 
 See [docs/kiro.md](docs/kiro.md) for what it installs, how it achieves Claude Code-parity, and how to remove it.
+
+## Design sources
+
+**Plug in your own design skill, or use ours.** `/design` and `/scene-review` take their visual direction from the
+source you choose, then apply the toolkit's own video rules (`video-design`) and critique the render from a contact
+sheet. The choice is saved per project; nothing here depends on one particular skill.
+
+| Source | What it's good for | Install |
+|--------|--------------------|---------|
+| Ours (default) | `video-design`'s act palettes and rules, with your brand's colours and fonts | Nothing to install |
+| [taste-skill](https://github.com/Leonxlnx/taste-skill) (recommended plug-in) | Dealt directions and palettes from 247 studied sites, measured house rules, a juror's critique (MIT) | `/plugin marketplace add Leonxlnx/taste-skill` then `/plugin install taste-skill@taste-skill` |
+| [frontend-design](https://github.com/anthropics/skills) | Anthropic's general visual direction for interfaces (written for web pages) | See the anthropics/skills README |
+
+Bring your own: any design skill works if it can fill `design.md` (palette per act, ink, one accent, type).
+To list one here, open an issue with a link, its licence, and a contact sheet of `examples/data-chart-stars`
+restyled with it. See [`.claude/skills/video-design/sources.md`](.claude/skills/video-design/sources.md).
 
 ## Community add-ons
 
