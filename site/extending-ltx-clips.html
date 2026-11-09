@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why AI video clips freeze or loop mid-shot, and the fix</title>
+<meta name="description" content="An image-to-video clip runs about 5 seconds; a shot runs 7 to 11. Holding the last frame left 63% of an 11-second shot frozen, playing it back and forth made 29% of frames repeats. Continuing the clip from its own last good frame measured 0% of both.">
+<meta property="og:title" content="Why AI video clips freeze or loop mid-shot, and the fix">
+<meta property="og:description" content="An image-to-video clip runs about 5 seconds; a shot runs 7 to 11. Holding the last frame left 63% of an 11-second shot frozen, playing it back and forth made 29% of frames repeats. Continuing the clip from its own last good frame measured 0% of both.">
+<meta property="og:image" content="https://digitalsamba.github.io/claude-code-video-toolkit/media/stage-render.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233771e0'/%3E%3Cpath d='M12 9v14l11-7z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script src="site.js" defer></script>
+</head>
+<body>
+<header class="frame">
+  <nav class="nav" aria-label="Main">
+    <a class="mark" href="./">claude-code-video-toolkit</a>
+    <ul>
+      <li class="hide-sm"><a class="link" href="./#made">Videos</a></li>
+      <li class="hide-sm"><a class="link" href="./#how">How it works</a></li>
+      <li class="hide-sm"><a class="link" href="./#routes">What to make</a></li>
+      <li><a class="button" href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a></li>
+    </ul>
+  </nav>
+</header>
+<main>
+  <div class="article-head frame grid">
+    <div class="words">
+      <h1>AI clips that don't freeze or loop</h1>
+      <p class="lede" data-rise>An image-to-video clip runs about five seconds. A shot often runs seven to eleven. What fills the gap decides whether a generated person looks alive.</p>
+    </div>
+    <figure class="clip shutter">
+      <video data-loop autoplay muted loop playsinline preload="metadata" poster="media/made-with.jpg" width="768" height="296" aria-label="Clips from videos made with the toolkit"><source src="media/made-with.mp4" type="video/mp4"></video>
+      <figcaption>Two seconds from each of five videos it made</figcaption>
+    </figure>
+  </div>
+
+  <section class="frame" aria-labelledby="measured">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="measured" data-rise>Three ways to fill it, measured</h2>
+        <div><p data-rise>We hit this making comedy shorts with animated photos: an LTX clip of a person laughing is about five seconds, and the shot it sits in is longer. Each way of filling it was measured on the same 11-second shot. The raw LTX clips measured 0% repeats, so the loop was ours, not the model's.</p></div>
+      </div>
+      <div class="show"><table class="facts" data-rise><caption class="sr-only">Frozen and repeated frames on an 11-second shot</caption><tbody><tr><td>Hold the last frame</td><td>63% frozen, reads as a pause</td></tr><tr><td>Play the tail back and forth</td><td>29% repeats, reads as a rewind</td></tr><tr class="total"><td>Continue the clip from its own frame</td><td>0% frozen, 0% repeats</td></tr></tbody></table><figure data-rise><img src="media/stage-sheet.jpg" alt="A contact sheet: one settled frame from each scene of a render" width="1080" height="202" loading="lazy"><figcaption>Every clip goes on a contact sheet before it is used</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="frame field" aria-labelledby="fix">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="fix" data-rise>Continue, don't stretch</h2>
+        <div><p data-rise>Take the clip's last <i>good</i> frame, run image-to-video again from it with the same prompt, and join the two with a cross-fade of about 0.12 seconds. Repeat for longer shots. Each extension is one more clip, about $0.08 on Modal.</p><p data-rise>"Last good" matters: continuing from an earlier frame also cuts out a bad stretch. A feet-up kick that grew a third leg never plays if the continuation starts before it.</p></div>
+      </div>
+      <div class="show"><pre data-rise><code>uv run tools/ltx_extend.py --input people/rob.mp4 --at 4.8 \
+    --prompt "A fixed view that never moves ... the same man keeps laughing" \
+    --output people/rob-long.mp4
+# --times 2 for a third link</code></pre><figure data-rise><img src="media/stage-dana.jpg" alt="Dana, an invented cast member, at her desk" width="704" height="768" loading="lazy"><figcaption>A cast portrait, the input to a clip</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="frame" aria-labelledby="learned">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="learned" data-rise>Learned the hard way</h2>
+        <div><ul><li data-rise><b>Never continue from a close-up.</b> With only a face to go on, the model invents a new scene.</li><li data-rise><b>Lock the framing in words,</b> a fixed view with no zoom and no cuts, but don't say "tripod": it draws one.</li><li data-rise><b>Seek before the end.</b> Grabbing a clip's very last frame with ffmpeg returns nothing.</li><li data-rise><b>Keep what you paid for.</b> A chain that fails at link two keeps link one, so a re-run doesn't pay twice.</li><li data-rise><b>Slow a slightly short clip</b> down to about 0.8x before faces look slow-motion; beyond that, extend.</li></ul></div>
+      </div>
+      <div class="show"><figure data-rise><img src="media/stage-render.jpg" alt="Four colleagues in headsets, from a shot lengthened with ltx_extend.py" width="1080" height="608" loading="lazy"><figcaption>The Great Return: its long shots were extended, not held</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="frame" aria-labelledby="qc">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="qc" data-rise>Catching it automatically</h2>
+        <div><p data-rise>A whole-frame check for movement misses a frozen face, because something else on screen is always moving. <code>qc.py --render</code> looks per region for motion that stops dead: part of the frame moving for three seconds or more, then frozen for two or more while the rest goes on. On four renders it found every clip freeze in the old cuts and none in the fixed ones.</p><p data-rise><a class="button" href="https://github.com/digitalsamba/claude-code-video-toolkit/blob/main/tools/ltx_extend.py">ltx_extend.py on GitHub</a></p></div>
+      </div>
+      <div class="show"><figure data-rise><img src="media/band-mute.jpg" alt="Four people on a video call" width="1920" height="822" loading="lazy"><figcaption>You're On Mute, checked with qc.py before upload</figcaption></figure></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot frame">
+  <div class="top">
+    <div class="notes"><span>Open source, MIT licensed</span><span>Made by Conal Mullan and <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/graphs/contributors">contributors</a></span><span>For <a class="link" href="https://claude.ai/code">Claude Code</a>, not made by Anthropic</span></div>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <a class="big" href="https://github.com/digitalsamba/claude-code-video-toolkit"><span>github.com/digitalsamba/</span><span>claude-code-video-toolkit</span></a>
+  <div class="meta">
+    <div><a class="link" href="./">Home</a><a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/releases">Releases</a><a class="link" href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">Playlist</a></div>
+    <div class="c">Every video and picture here was made with the toolkit</div>
+    <div class="r">2026</div>
+  </div>
+</footer>
+</body>
+</html>

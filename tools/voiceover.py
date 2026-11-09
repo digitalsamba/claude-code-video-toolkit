@@ -354,6 +354,18 @@ def _progress_reporter(args):
     return ProgressReporter(mode=args.progress)
 
 
+def warn_copy(script: str, where: str) -> None:
+    """Narration is heard and usually burned as captions: flag dashes and stock AI phrasing (tools/copy_lint.py)
+    before paying to voice it. A warning, not a refusal: a dash can be a deliberate pause."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from copy_lint import lint_text
+    except ImportError:
+        return
+    for m, why in lint_text(script):
+        print(f"Copy lint ({where}): '{m}' is {why}", file=sys.stderr)
+
+
 def read_script(script_path: str | None) -> str:
     """Read script from file or stdin."""
     if script_path:
@@ -791,6 +803,7 @@ def process_scene_directory(
     for txt_file in txt_files:
         mp3_file = txt_file.with_suffix(".mp3")
         script = txt_file.read_text().strip()
+        warn_copy(script, txt_file.name)
 
         if not script:
             print(f"Warning: Empty script in {txt_file.name}, skipping", file=sys.stderr)
@@ -1347,6 +1360,7 @@ def main():
 
     # Single-file mode (original behavior)
     script = read_script(args.script)
+    warn_copy(script, args.script or "stdin")
     if not script:
         print("Error: Empty script", file=sys.stderr)
         sys.exit(1)

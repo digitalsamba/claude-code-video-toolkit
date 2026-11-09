@@ -48,6 +48,7 @@ editable, and re-runnable. If a `publish` block already exists, use it as defaul
 | `thumbnail` | Existing `publish.thumbnail`, else `out/thumbnail.*` or `public/thumbnail.*`. If none and the user wants one, run `/thumbnail` first. |
 | `privacy` | Default **`private`** (safe — the video uploads but stays hidden until you flip it). Offer `unlisted`, `public`, or a scheduled go-live (`--publish-at`, e.g. next morning ~09:00 local in UTC) if the user asks. |
 | `playlist` | Optional; only if the user has one. |
+| `synthetic` | **On** (`--synthetic-media`) when the video shows realistic people who were generated or animated by AI (an LTX-animated cast, FLUX portraits, a SoulX presenter) or a cloned voice saying new lines. YouTube requires the disclosure; it shows a label, it doesn't limit reach. Off for UI rebuilds, charts and stylised cartoons. |
 
 **Show the assembled metadata to the user and let them edit before uploading.**
 
@@ -126,6 +127,7 @@ run a dry-run before the real upload.
 | `--tags` | Comma-separated tags (combined ≤500 chars) |
 | `--category` | Numeric category ID string (default `22`; `28` = Science & Tech) |
 | `--privacy` | `private` (default) / `unlisted` / `public` |
+| `--synthetic-media` | Disclose realistic AI-generated or altered people, places or voices |
 | `--publish-at` | ISO8601 UTC schedule, e.g. `2026-06-10T09:00:00Z` (forces private at insert) |
 | `--thumbnail` | Custom thumbnail (≤2MB, 1280×720) |
 | `--captions` + `--captions-language` | Caption file + language code |
@@ -152,6 +154,7 @@ run a dry-run before the real upload.
 |-----------------------|----------|
 | `auth` | Run `uv run tools/youtube_upload.py --auth` once; if the refresh token expired (7-day Testing limit), re-run `--auth`. |
 | `validation` | Fix the flagged field (missing video/title, bad `--publish-at`). |
+| `copy` | `tools/copy_lint.py` found a dash or stock AI/marketing phrasing in the title, description or tags. Reword it and show the user; `--allow-copy` only if they want those words. Lint drafts before showing them: `uv run tools/copy_lint.py .publish-description.txt --text "TITLE"`. |
 | `config` | YouTube Data API v3 isn't enabled on the Cloud project (or just enabled, still propagating). Enable it, wait 1–2 min, retry. See `docs/youtube-upload.md`. |
 | `quota` | Daily quota exhausted — wait, or request more in Google Cloud. |
 | `forbidden` | Permission denied (e.g. the authorized account lacks rights to the target channel). Check the account / `--account`. |
