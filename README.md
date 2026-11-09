@@ -252,6 +252,9 @@ uv run tools/music_gen.py --prompt "Upbeat indie rock" --duration 60 --variation
 # Generate sound effects
 uv run tools/sfx.py --preset whoosh --output sfx.mp3
 
+# Find real recorded sound effects (Creative Commons, free, no API key)
+uv run tools/sfx_search.py --query "whoosh" --output sfx.mp3
+
 # Redub video with different voice
 uv run tools/redub.py --input video.mp4 --voice-id VOICE_ID --output dubbed.mp4
 
@@ -297,7 +300,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 
 | Type | Tools | Purpose |
 |------|-------|---------|
-| **Project** | voiceover, music, music_gen, sfx | Used during video creation workflow |
+| **Project** | voiceover, music, music_gen, sfx, sfx_search | Used during video creation workflow |
 | **Utility** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations, no project needed |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
 | **Checks** | qc, sync_check, contact_sheet | Before showing a render: freezes and motion that stops dead, loudness, layout, sound effects on their movement |

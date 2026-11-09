@@ -8,6 +8,10 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+### Added
+
+- **`tools/sfx_search.py`**: finds and downloads Creative Commons sound effects from Freesound through the Openverse API, with no key. Only commercially usable licenses by default, and each download gets an attribution file.
+
 ---
 
 ## 2026-11-08 (v0.26.0)
