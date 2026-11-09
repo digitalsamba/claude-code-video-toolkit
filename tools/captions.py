@@ -165,10 +165,14 @@ def export_subtitles(words: object, *, format: str = 'srt', max_words: int = 7) 
             valid = all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in (start, end))
         except OverflowError:
             valid = False
-        if not valid or start < previous or end < start:
-            raise ValueError('Caption times must be finite, nonnegative, ordered and non-overlapping')
+        if not valid or start < 0 or end < start:
+            raise ValueError('Caption times must be finite, nonnegative and end after they start')
+        # Our own pipeline can overlap neighbours (to_remotion gives a zero-length word 1 ms; align's
+        # minimum span can run an interpolated word past the next one), so clamp onto the previous word.
+        start = max(start, previous)
+        end = max(end, start)
         previous = end
-        validated.append({**word, 'text': ' '.join(word['text'].split())})
+        validated.append({**word, 'text': ' '.join(word['text'].split()), 'startMs': start, 'endMs': end})
 
     def timestamp(value):
         seconds, millis = divmod(round(value), 1000)
@@ -210,10 +214,11 @@ def write_text_atomic(path: Path, content: str) -> None:
 
 
 def write_caption_outputs(out: Path, captions: list, *, srt=False, vtt=False, max_words=7, write_json=True) -> dict:
-    outputs = {}
-    # Validate and serialize every format before replacing any file.
+    # The caption JSON is what the paid transcription bought, so it is written first and kept even if a
+    # subtitle can't be built. The subtitles are serialized before either is replaced.
     if write_json:
-        outputs[out] = json.dumps(captions, ensure_ascii=False, allow_nan=False, indent=1) + '\n'
+        write_text_atomic(out, json.dumps(captions, ensure_ascii=False, allow_nan=False, indent=1) + '\n')
+    outputs = {}
     paths = {'captions': str(out)}
     for format, enabled in [('srt', srt), ('vtt', vtt)]:
         if enabled:
@@ -232,7 +237,7 @@ def collect_inputs(paths: list[str]) -> list[Path]:
     for p in map(Path, paths):
         if p.is_dir():
             files += sorted(f for f in p.iterdir() if f.suffix.lower() in AUDIO_EXTS)
-        elif p.is_file() and (p.suffix.lower() in AUDIO_EXTS or p.name.endswith(SUFFIX)):
+        elif p.is_file():
             files.append(p)
         else:
             sys.exit(f"Error: not found: {p}")

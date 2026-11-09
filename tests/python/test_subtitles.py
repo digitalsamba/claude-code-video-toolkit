@@ -32,8 +32,26 @@ class SubtitleTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 export_subtitles([], max_words=limit)
         with self.assertRaises(ValueError):
-            export_subtitles([{'text': 'a', 'startMs': 0, 'endMs': 500},
-                              {'text': 'b', 'startMs': 200, 'endMs': 600}])
+            export_subtitles([{'text': 'a', 'startMs': 500, 'endMs': 200}])
+
+    def test_overlapping_neighbours_from_our_pipeline_are_clamped(self):
+        # to_remotion: a zero-length word at 1.0s becomes 1000-1001 ms while the next starts at 1000
+        srt = export_subtitles([{'text': 'a', 'startMs': 1000, 'endMs': 1001},
+                                {'text': 'b', 'startMs': 1000, 'endMs': 1400}], max_words=1)
+        self.assertIn('00:00:01,001 --> 00:00:01,400\nb', srt)
+        # align: an interpolated word stretched past the next matched word
+        srt = export_subtitles([{'text': 'brave', 'startMs': 300, 'endMs': 740},
+                                {'text': 'world.', 'startMs': 550, 'endMs': 700}], max_words=1)
+        self.assertIn('00:00:00,740 --> 00:00:00,741\nworld.', srt)  # a cue is never zero length
+
+    def test_caption_json_is_kept_when_a_subtitle_cannot_be_built(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory) / 'voice.captions.json'
+            words = [{'text': 'hello', 'startMs': 0, 'endMs': 500}]
+            with patch.object(captions, 'export_subtitles', side_effect=ValueError('bad')):
+                with self.assertRaises(ValueError):
+                    captions.write_caption_outputs(out, words, srt=True)
+            self.assertEqual(json.loads(out.read_text(encoding='utf-8')), words)
 
     def test_only_vtt_escapes_markup_and_ampersands(self):
         words = [{'text': 'A & <b>two</b>\n\n --> three', 'startMs': 0, 'endMs': 500}]
