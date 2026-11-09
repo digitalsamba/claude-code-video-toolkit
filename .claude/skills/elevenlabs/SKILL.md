@@ -72,6 +72,11 @@ save(audio, "voiceover.mp3")
 | Conversational | 0.5-0.6 | 0.85 | 0.3-0.4 | 0.9-1.0 |
 | Energetic/YouTuber | 0.3-0.5 | 0.75 | 0.5-0.7 | 1.0-1.1 |
 
+`voiceover.py`'s own defaults (stability 0.85, style 0.0) sit at the top of the first row: steady but flat. A
+library voice picked for its preview usually sounds slower and duller at those defaults than in the preview.
+Lower the stability first (0.45 on v4 brought Marilyn back to her preview's pace and pitch range), then
+measure the takes with `voice_prosody.py measure` and listen.
+
 ### Pauses Between Sections
 
 **With flash models:** Use SSML break tags inline:
@@ -411,5 +416,31 @@ The `/generate-voiceover` command handles the full workflow:
 - Adam: `pNInz6obpgDQGcFmaJgB` (professional male)
 
 List all: `client.voices.get_all()`
+
+### Voice library (a particular accent or character)
+
+The premade voices are mostly American. For another accent, search the shared voice library: free to search
+and to hear, and every voice has a preview MP3.
+
+```bash
+curl -s -G https://api.elevenlabs.io/v1/shared-voices -H "xi-api-key: $ELEVENLABS_API_KEY" \
+  --data-urlencode "search=irish" -d gender=female -d page_size=30   # each voice has voice_id, accent, preview_url
+```
+
+- **Search with `search=`.** The `accent=` filter alone came back empty for `irish`, `scottish` and `british`.
+- **Using a library voice through the API needs a paid plan.** A free key gets 402 `paid_plan_required`.
+  The cheapest tier (Starter) is enough; the voice ID then works directly in `--voice-id` or a brand.
+- **Don't clone a preview into Qwen3 or another model.** The owner licensed the voice through ElevenLabs
+  (and is paid per use there), not for cloning elsewhere.
+- **Qwen3 VoiceDesign is not a substitute for an accent.** Irish, Scottish and Manchester briefs all came out
+  American. An accent has to come from a real recording.
+- Voices already picked by ear are in `assets/voices/library-shortlist.json`. Start there.
+
+### Brand voices
+
+A brand's `voice.json` can hold several narrators (`voices` map plus `default`), one per video:
+`voiceover.py --brand video-toolkit --voice bren`. The brand's `model`, `settings` (stability,
+similarityBoost, style, speed) and `maxWpm` apply wherever the command line left its default. See
+`docs/creating-brands.md`.
 
 For full API docs, see [reference.md](reference.md).

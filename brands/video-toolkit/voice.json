@@ -1,0 +1,21 @@
+{
+  "description": "Narrators for videos about the toolkit, one per video: ElevenLabs voice-library voices, not American. Marilyn is the default; pass --voice bren for a video he narrates. More candidates are in assets/voices/library-shortlist.json. Library voices need a paid ElevenLabs plan through the API.",
+  "default": "marilyn",
+  "model": "eleven_v4",
+  "voices": {
+    "marilyn": {
+      "voiceId": "CyuaHFjYAn74u3mOqDX6",
+      "description": "Marilyn: clear British female narrator. On eleven_v4 at stability 0.45 she keeps the life of her preview (~168 wpm, 5 st pitch sd); the v2 defaults made her slow and flat.",
+      "settings": {
+        "stability": 0.45
+      }
+    },
+    "bren": {
+      "voiceId": "RlSVB64yXMZJjq67jbB1",
+      "description": "Bren: young, calm, conversational Irish male. He reads fast (~190 wpm on eleven_v4, which ignores speed). The take Conal picked (2026-11-09) is unstretched, with a leading [relaxed, unhurried] tag in the script text, which v4 doesn't read aloud; add maxWpm here if he needs slowing.",
+      "settings": {
+        "stability": 0.45
+      }
+    }
+  }
+}

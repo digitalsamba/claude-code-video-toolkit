@@ -1,0 +1,78 @@
+{
+  "note": "Conal's shortlist of ElevenLabs voice-library narrators (non-American), picked by ear from the previews on 2026-11-09. Pull from here before searching the library again. Library voices need a paid ElevenLabs plan to use through the API (a free key gets 402 paid_plan_required). Don't clone a preview into another model: the owners licensed the voice through ElevenLabs only. In use: british-marilyn and irish-bren in brands/video-toolkit.",
+  "provider": "elevenlabs",
+  "voices": {
+    "scottish-john": {
+      "voiceId": "h194bY5xBKzOKQYzA1N5",
+      "name": "John - Scottish accent",
+      "gender": "male",
+      "age": "middle_aged",
+      "accent": "scottish",
+      "locale": "en-GB",
+      "useCase": "informative_educational",
+      "description": "Clear and warm with a mild Scottish accent.",
+      "preview": "https://storage.googleapis.com/eleven-public-prod/database/workspace/288205762e1e44879baee090f900a5f3/voices/h194bY5xBKzOKQYzA1N5/YTIPRGHbDWmFmERkbdXa.mp3",
+      "publicOwnerId": "a00f14b1d59c4a9d632fb9d8ca6feef30f21a7c80e94433d094b4acbe348da89"
+    },
+    "irish-bren": {
+      "voiceId": "RlSVB64yXMZJjq67jbB1",
+      "name": "Bren - Calm Irish Conversational Voice",
+      "gender": "male",
+      "age": "young",
+      "accent": "irish",
+      "locale": "en-IE",
+      "useCase": "narrative_story",
+      "description": "A calm, conversational Irish voice suited to long-form narration and audiobooks. Reflective, steady and clear, with a quiet authority that feels human rather than performed. Ideal for storytelling and content that values depth, presence and trust.",
+      "preview": "https://storage.googleapis.com/eleven-public-prod/database/workspace/a3d6b707147347958f07e59f57844953/voices/RlSVB64yXMZJjq67jbB1/ZoIS16ILLG6qexxwLPo7.mp3",
+      "publicOwnerId": "3fb6cb00fd18d60880c0911ade3ede94ebef36c8f6d912e1eb6d99d2779d73e1"
+    },
+    "scottish-anna": {
+      "voiceId": "uNrshbzdyxF1WMdteTyB",
+      "name": "Anna - Scottish, Warm & Expressive",
+      "gender": "female",
+      "age": "middle_aged",
+      "accent": "scottish",
+      "locale": "en-GB",
+      "useCase": "narrative_story",
+      "description": "A mid-40s friendly, warm and expressive female with a well-spoken Edinburgh accent. Relaxing and engaging tone. Flexible voice for travel guides, audiobooks, fantasy, gaming, animation, e-learning, audio, phone systems, screen readers.",
+      "preview": "https://api.us.elevenlabs.io/v1/voices/uNrshbzdyxF1WMdteTyB/previews/audio?payload=eyJ2b2ljZV9zb3VyY2UiOiJjdXN0b20iLCJ3b3Jrc3BhY2VfaWQiOiIyZjI0NzBiYjkwMmU0MWE0ODMwZTAzYmUwN2M3NGNiMiIsImZpbGVuYW1lIjoiZmE5Y2JhMjYtMjQ1Mi00ZWMyLWFmYzUtZDJhNTBlYTA1NzljLm1wMyIsInRpbWVzdGFtcCI6MTc5NDI1ODAwMDAwMDAwMH0%3D",
+      "publicOwnerId": "21b7e5202196c0b03acdf69efa4104269b57745e96a36fd639d8248b931f20c6"
+    },
+    "irish-aoife": {
+      "voiceId": "63T2Z5X6a8FKjTpmpqjH",
+      "name": "Aoife - Irish Professional",
+      "gender": "female",
+      "age": "young",
+      "accent": "irish",
+      "locale": "en-IE",
+      "useCase": "conversational",
+      "description": "Irish trustworthy professional neutral voice.",
+      "preview": "https://storage.googleapis.com/eleven-public-prod/database/workspace/19f674b49c0e4acabe3265d13a6e6bc6/voices/63T2Z5X6a8FKjTpmpqjH/fba1fd79-53db-4cdb-8e6d-0085c9abefcf.mp3",
+      "publicOwnerId": "7b3bf0dc638cf81b2947606bf761451ca6dc79a1b87045676ca4c4bc7eac1075"
+    },
+    "british-philippa": {
+      "voiceId": "IbXTsH7MlHi5GQco8zZH",
+      "name": "Philippa - Clear British Narrator",
+      "gender": "female",
+      "age": "middle_aged",
+      "accent": "british",
+      "locale": "en-GB",
+      "useCase": "informative_educational",
+      "description": "Clear, confident British female voiceover with a calm, steady delivery. Best use cases: e-learning, explainers, product walkthroughs and corporate videos. Key qualities: crisp diction, natural pacing, clean studio sound.",
+      "preview": "https://storage.googleapis.com/eleven-public-prod/database/workspace/988fb8fcebb348c7839c8be5e578cb88/voices/IbXTsH7MlHi5GQco8zZH/jcu8iUBVSDnUtb5sFh2m.mp3",
+      "publicOwnerId": "bd3d97086e4ad0b2c1d902c3b0ac821496f7b1bb44db9e98a4e55ae0e2a253cf"
+    },
+    "british-marilyn": {
+      "voiceId": "CyuaHFjYAn74u3mOqDX6",
+      "name": "Marilyn - Warm Clear, British",
+      "gender": "female",
+      "age": "middle_aged",
+      "accent": "british",
+      "locale": "en-GB",
+      "useCase": "narrative_story",
+      "description": "A calm, clear British female voice with a warm, reassuring character. Marilyn is well suited to customer-facing voice assistants, conversational AI, virtual receptionists and customer support, bringing a welcoming, approachable tone to everyday interactions. Her gentle delivery also lends itself beautifully to guided meditations, relaxation, reflective storytelling and thoughtful narration.",
+      "preview": "https://storage.googleapis.com/eleven-public-prod/database/workspace/eb6d0cc118c84181bd8f6d4180051d21/voices/CyuaHFjYAn74u3mOqDX6/Yt8w3izfiCBA6ILBrns3.mp3",
+      "publicOwnerId": "2ded801d19bfd04e7ef4df66c42cebcf7513ecfc93f193aa1c62f2c190e74ff4"
+    }
+  }
+}
