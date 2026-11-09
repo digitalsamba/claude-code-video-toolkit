@@ -458,6 +458,15 @@
       "created": "2026-10-12",
       "updated": "2026-10-12"
     },
+    "highlights": {
+      "path": "tools/highlights.py",
+      "description": "Select complete transcript sentences, keep the last repeated take, shorten pauses and render highlights; emit cutdown --segment arguments on the source timeline",
+      "usage": "uv run tools/highlights.py --video input.mp4 --transcript words.json --output highlights.mp4 [--seconds 45] [--keep first|last] [--dry-run]",
+      "status": "beta",
+      "created": "2026-10-31",
+      "category": "utility",
+      "updated": "2026-11-07"
+    },
     "image_edit": {
       "path": "tools/image_edit.py",
       "description": "AI image editing using Qwen-Image (Edit-2511 by default, Apache-2.0; 2.1 as a non-commercial Modal opt-in) - style transfer, backgrounds, prompts",
