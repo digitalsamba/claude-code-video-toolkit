@@ -503,6 +503,22 @@ uv run tools/audition.py --video out/video.nomusic.mp4 --music public/audio/bg_*
 
 8 scene presets: `corporate-bg`, `upbeat-tech`, `ambient`, `dramatic`, `tension`, `hopeful`, `cta`, `lofi`. See `.claude/skills/acestep/` for prompt engineering patterns and video production integration guide.
 
+`addmusic.py --duck` lowers an existing music bed while speech is active and lets it recover in
+pauses. Omit `--duck` for a fixed level. `--speech narration.wav` replaces the video's audio with
+isolated narration; otherwise the video's audio controls ducking. Music loops to the video length.
+
+```bash
+uv run tools/addmusic.py -i input.mp4 -m music.wav --duck --events effects.json -o mixed.mp4
+uv run tools/qc.py --render mixed.mp4 --fix
+uv run tools/qc.py --render mixed.loudnorm.mp4
+```
+
+Effects use `[{"path":"chime.wav","atSeconds":1.5,"gain":0.5}]`, with paths relative to the JSON
+(generate them with `sfx.py` or find a recording with `sfx_search.py`).
+Attack/release controls (`--duck-attack`, `--duck-release`) use milliseconds. The peak limiter does
+not set integrated loudness; use QC's normalized output for the -14 LUFS delivery target. Reruns
+replace completed outputs atomically. `--dry-run` performs no writes or API calls.
+
 ### Stock Sound Effects (Openverse)
 
 `sfx.py` generates a sound with ElevenLabs; `sfx_search.py` finds a real recording on Freesound through the
