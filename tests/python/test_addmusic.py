@@ -93,6 +93,30 @@ class AddMusicTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse(new_output.parent.exists())
 
+    def test_mono_low_rate_narration_keeps_stereo_music_at_48k(self):
+        voice = self.folder / 'voice-mono.wav'
+        music = self.folder / 'music-stereo.wav'
+        ff('-f', 'lavfi', '-i', 'sine=frequency=880:duration=6:sample_rate=22050', '-ac', '1', voice)
+        ff('-f', 'lavfi', '-i', 'sine=frequency=220:duration=6:sample_rate=44100',
+           '-f', 'lavfi', '-i', 'sine=frequency=330:duration=6:sample_rate=44100',
+           '-filter_complex', '[0:a][1:a]join=inputs=2:channel_layout=stereo', music)
+        self.assertTrue(mix_audio_with_video(self.video, music, self.output, speech=voice, original_volume=0, duck=True, verbose=False))
+        probe = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=sample_rate,channels',
+                                '-of', 'json', str(self.output)], capture_output=True, text=True, check=True)
+        stream = json.loads(probe.stdout)['streams'][0]
+        self.assertEqual((int(stream['sample_rate']), stream['channels']), (48000, 2))
+        left, right = (self.folder / 'left.wav', self.folder / 'right.wav')
+        ff('-i', self.output, '-af', 'pan=mono|c0=c0', '-ar', '16000', left)
+        ff('-i', self.output, '-af', 'pan=mono|c0=c1', '-ar', '16000', right)
+        read = lambda p: np.frombuffer(wave.open(str(p)).readframes(10 ** 6), dtype=np.int16).astype(float)
+        self.assertGreater(np.max(np.abs(read(left) - read(right))), 100)  # still two different channels
+
+    def test_missing_effect_file_is_named(self):
+        events_file = self.folder / 'effects.json'
+        events_file.write_text(json.dumps([{'path': 'nope.wav', 'atSeconds': 1}]))
+        with self.assertRaisesRegex(ValueError, 'Effect file not found: .*nope.wav'):
+            load_events(events_file, 6)
+
     def test_ducked_mix_passes_delivery_loudness_after_qc_fix(self):
         self.assertTrue(mix_audio_with_video(self.video, self.music, self.output, speech=self.voice, duck=True, verbose=False))
         result = subprocess.run([sys.executable, str(ROOT / 'tools/qc.py'), '--render', str(self.output), '--fix', '--skip-frames', '--json'], capture_output=True, text=True, encoding='utf-8')

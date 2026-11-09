@@ -226,6 +226,8 @@ def load_events(path, duration):
         if not isinstance(event, dict) or not isinstance(event.get('path'), str) or not event['path'].strip():
             raise ValueError('Each effect needs a path and atSeconds')
         effect = (path.parent / event['path']).resolve()
+        if not effect.is_file():
+            raise ValueError(f'Effect file not found: {effect}')
         if not has_audio(str(effect)):
             raise ValueError(f'Effect has no audio: {effect}')
         normalized.append({'path': str(effect),
@@ -281,7 +283,13 @@ def build_mix_command(video_path, music_path, output_path, *, original_volume=1.
         index = i + (3 if speech else 2)
         filters.append(f'[{index}:a:0]asetpts=PTS-STARTPTS,volume={gain},adelay={round(when * 1000)}:all=1[fx{i}]')
         labels.append(f'[fx{i}]')
-    filters.append(''.join(labels) + f'amix=inputs={len(labels)}:normalize=0:duration=first,alimiter=limit=0.95:latency=1[out]')
+    # amix takes the first input's rate and layout, so a mono 22.05 kHz narration would fold stereo music
+    # to mono. Bring every input to 48 kHz stereo before mixing.
+    mixed = []
+    for i, label in enumerate(labels):
+        filters.append(f'{label}aformat=sample_rates=48000:channel_layouts=stereo[mix{i}]')
+        mixed.append(f'[mix{i}]')
+    filters.append(''.join(mixed) + f'amix=inputs={len(mixed)}:normalize=0:duration=first,alimiter=limit=0.95:latency=1[out]')
     return [*command, '-filter_complex', ';'.join(filters), '-map', '0:v:0', '-map', '[out]',
             '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', str(duration), '-movflags', '+faststart', str(output_path)]
 
