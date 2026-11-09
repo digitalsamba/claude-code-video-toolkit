@@ -41,8 +41,25 @@ Ordered roughly by priority. Each is sized to one session or one PR.
 - [ ] **Chaptered long-form template.** 10–30 min YouTube videos: render chapter by chapter with a cache,
       one continuous ducked music bed, -14 LUFS, chapter timestamps and an `.srt`. Probably built on
       concept-explainer-short's 16:9 path. A contributor attempt (#127) had the right design.
-- [ ] **Transcript-driven highlights for `cutdown.py`.** Pick whole sentences from the captions JSON by
-      keyword or score, so a short from a long render doesn't need hand-typed `--segment` times.
+- [x] **Transcript-driven highlights for `cutdown.py`.** Done in #162: `highlights.py` picks whole sentences
+      from a word-timed transcript and writes the ranges as `cutdown.py --segment` arguments.
+- [ ] **Tutorial template and batch production.** "How to do X" videos, one task each: steps called out on
+      screen, the same intro and outro, synthetic UI from the screen kits (the account-center kit from
+      `ds-free-schedule-demo` first). A batch is one spec per tutorial built in a row, and an upload queue that
+      spreads it over days and schedules each video, since the YouTube quota is about 6 uploads a day. Pilot: DS
+      Free account-center tutorials for the Digital Samba channel.
+- [ ] **`Terminal` component.** A synthetic terminal in `lib/components` that types commands and prints output on
+      narration cues, as `Stage` does for a browser, so toolkit demos and tutorials show Claude Code without a
+      screen recording. The design-sources sample has a hand-built one to start from. Covers the "terminal
+      recording" skill below without recording anything.
+- [ ] **Translate a finished video.** Translate each scene's `.txt`, re-voice with the same clone (Qwen3 is
+      multilingual), re-caption and re-time with the existing tools. Synthetic UI videos can also switch the
+      rebuilt screens to the app's own locale files (`public/locales/<lang>/`), so the product UI is translated
+      too, which a screen recording can't do.
+- [ ] **Publish kit for a render.** Chapters for the description from the scene list, one SRT for the whole
+      video (per-scene captions joined at their offsets) uploaded with `--captions`, a default thumbnail, and the
+      site and playlist links, all from `project.json`, so `/publish` is one step. Overlaps with the chaptered
+      long-form template above.
 - [ ] **Spec-driven release-notes job for Lugh.** A `ds-release-notes` path in `video_job.py`: the agent
       writes scenes as "screen, action, target, narration" over the screen kits the template already has,
       and gets the same submit/status/result flow. Covers only screens a kit already rebuilds. Until then
