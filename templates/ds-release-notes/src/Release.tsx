@@ -56,7 +56,7 @@ const Sfx: React.FC<{ file: string; at: number; volume: number; frames?: number 
 );
 
 export const Release: React.FC = () => (
-  <AbsoluteFill style={{ background: '#f8fafe' }}>
+  <AbsoluteFill style={{ background: '#eef2f8' }}>
     {SCENES.map((s, i) => (
       <Sequence key={s.id} from={starts[i]} durationInFrames={s.len}>
         {s.el}

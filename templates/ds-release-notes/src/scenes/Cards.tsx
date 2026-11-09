@@ -4,8 +4,12 @@ import { fade } from '../Stage';
 import { RFONT } from '../room/theme';
 import { RELEASE_MONTH, RELEASE_NUMBER } from '../config';
 
-const NAVY = '#323F66';
+// Restyled to the DS act palette (video-design palettes.md, "brand blue + cool grey + navy"; tokens from the DS
+// design system): identity = DS blue with white type, record = cool grey with navy type and a blue accent.
 const BLUE = '#3771e0';
+const GREY = '#eef2f8';
+const NAVY = '#323e66';
+const ON_BLUE = '#ffffff';
 
 export const TITLE_LEN = 165;
 export const OUTRO_LEN = 120;
@@ -19,18 +23,16 @@ const ITEMS: [string, boolean][] = [
   ['Fixed: avatar in a pinned tile', true],
 ];
 
-const CORAL = '#F06859';
 
-// Title and outro follow the digitalsamba.com hero: a navy band, bold white type,
-// and a white-framed collage of video tiles (one large, three stacked)
+// Title and outro on the identity field: flat DS blue, white type, the same collage of video tiles.
 const Navy: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <AbsoluteFill style={{ background: `radial-gradient(1200px 700px at 75% 40%, #3d4b7a 0%, ${NAVY} 60%, #283253 100%)`, fontFamily: RFONT, color: '#fff' }}>
+  <AbsoluteFill style={{ background: BLUE, fontFamily: RFONT, color: ON_BLUE }}>
     {children}
   </AbsoluteFill>
 );
 
 const Frame: React.FC<{ img: string; w: number; h: number; name?: string; speaking?: boolean; style?: React.CSSProperties }> = ({ img, w, h, name, speaking, style }) => (
-  <div style={{ width: w, height: h, borderRadius: 14, overflow: 'hidden', position: 'relative', boxShadow: '0 20px 50px rgba(10,15,40,0.35)', ...style }}>
+  <div style={{ width: w, height: h, borderRadius: 14, overflow: 'hidden', position: 'relative', ...style }}>
     <Img src={staticFile(`people/${img}.jpg`)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
     {name && (
       <div style={{ position: 'absolute', left: 12, bottom: 12, display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', borderRadius: 14, background: 'rgba(0,0,0,0.6)', fontSize: 17 }}>
@@ -57,14 +59,14 @@ export const TitleCard: React.FC = () => {
       </div>
       <div style={{ position: 'absolute', left: 140, top: 350, opacity: b, transform: `translateY(${(1 - b) * 30}px)` }}>
         <div style={{ fontSize: 136, fontWeight: 800, letterSpacing: -4, lineHeight: 1 }}>Release {RELEASE_NUMBER}</div>
-        <div style={{ fontSize: 34, color: CORAL, fontWeight: 600, marginTop: 22 }}>What's new · {RELEASE_MONTH}</div>
+        <div style={{ fontSize: 36, color: ON_BLUE, opacity: 0.9, fontWeight: 600, marginTop: 22 }}>What's new · {RELEASE_MONTH}</div>
       </div>
-      <div style={{ position: 'absolute', left: 140, top: 610, display: 'grid', gridTemplateColumns: 'auto auto', columnGap: 44, rowGap: 18, width: 860 }}>
+      <div style={{ position: 'absolute', left: 140, top: 590, display: 'grid', gridTemplateColumns: 'auto', rowGap: 14, width: 860 }}>
         {ITEMS.map(([t, fixed], i) => {
           const o = fade(frame, 30 + i * 6, 42 + i * 6);
           return (
-            <div key={t} style={{ fontSize: 22, whiteSpace: 'nowrap', opacity: o * 0.92, transform: `translateY(${(1 - o) * 12}px)`, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 4, flexShrink: 0, background: fixed ? '#4ade80' : CORAL }} />
+            <div key={t} style={{ fontSize: 28, fontWeight: 600, whiteSpace: 'nowrap', opacity: o, transform: `translateY(${(1 - o) * 12}px)`, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 5, flexShrink: 0, background: fixed ? NAVY : ON_BLUE }} />
               {t}
             </div>
           );
@@ -84,7 +86,6 @@ export const TitleCard: React.FC = () => {
           gap: 12,
           opacity: big,
           transform: `translateY(${(1 - big) * 40 - drift}px) scale(${0.94 + 0.06 * big})`,
-          boxShadow: '0 40px 90px rgba(10,15,40,0.45)',
         }}
       >
         <Frame img="elena" w={520} h={520} name="Elena Moreau" speaking style={{ boxShadow: 'none' }} />
@@ -94,7 +95,7 @@ export const TitleCard: React.FC = () => {
           ))}
         </div>
       </div>
-      <div style={{ position: 'absolute', left: 140, bottom: 30, fontSize: 16, color: 'rgba(255,255,255,0.45)' }}>People shown are AI-generated</div>
+      <div style={{ position: 'absolute', left: 140, bottom: 30, fontSize: 28, color: ON_BLUE, opacity: 0.85 }}>People shown are AI-generated</div>
     </Navy>
   );
 };
@@ -106,12 +107,12 @@ export const OutroCard: React.FC = () => {
   const people = ['elena', 'matthias', 'sofia', 'jonas', 'julien', 'mateo', 'isabelle', 'amara'];
   return (
     <Navy>
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 230, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 30, opacity: a, transform: `translateY(${(1 - a) * 24}px)` }}>
+      <div style={{ position: 'absolute', left: 140, top: 230, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 30, opacity: a, transform: `translateY(${(1 - a) * 24}px)` }}>
         <Img src={staticFile('logo_mono.svg')} style={{ height: 46, filter: 'brightness(0) invert(1)' }} />
-        <div style={{ fontSize: 84, fontWeight: 800, letterSpacing: -2 }}>Release {RELEASE_NUMBER} is available now</div>
-        <div style={{ fontSize: 34, color: CORAL, fontWeight: 600, opacity: fade(frame, 16, 28) }}>digitalsamba.com/release-notes</div>
+        <div style={{ fontSize: 112, fontWeight: 800, letterSpacing: -4, lineHeight: 1 }}>Release {RELEASE_NUMBER} is available now</div>
+        <div style={{ fontSize: 36, color: ON_BLUE, opacity: 0.9 * fade(frame, 16, 28), fontWeight: 600 }}>digitalsamba.com/release-notes</div>
       </div>
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 640, display: 'flex', justifyContent: 'center', gap: 16 }}>
+      <div style={{ position: 'absolute', left: 140, top: 640, display: 'flex', gap: 16 }}>
         {people.map((p, i) => {
           const o = spring({ frame: frame - 10 - i * 3, fps, config: { damping: 16 } });
           return (
@@ -121,7 +122,7 @@ export const OutroCard: React.FC = () => {
           );
         })}
       </div>
-      <div style={{ position: 'absolute', left: 140, bottom: 30, fontSize: 16, color: 'rgba(255,255,255,0.45)' }}>People shown are AI-generated</div>
+      <div style={{ position: 'absolute', left: 140, bottom: 30, fontSize: 28, color: ON_BLUE, opacity: 0.85 }}>People shown are AI-generated</div>
     </Navy>
   );
 };
@@ -139,16 +140,15 @@ export const SceneLabel: React.FC<{ kind: string; title: string }> = ({ kind, ti
         top: 44,
         opacity: o,
         transform: `translateY(${(1 - o) * -10}px)`,
-        background: 'rgba(255,255,255,0.96)',
-        borderRadius: 14,
+        background: GREY,
+        borderRadius: 0,
         padding: '16px 26px',
-        boxShadow: '0 14px 40px rgba(50,63,102,0.25)',
         fontFamily: RFONT,
         zIndex: 50,
       }}
     >
-      <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: kind === 'Fixed' ? '#178831' : BLUE }}>{kind}</div>
-      <div style={{ fontSize: 34, fontWeight: 600, color: NAVY, marginTop: 4 }}>{title}</div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: kind === 'Fixed' ? NAVY : BLUE }}>{kind}</div>
+      <div style={{ fontSize: 36, fontWeight: 800, color: NAVY, marginTop: 4 }}>{title}</div>
     </div>
   );
 };
