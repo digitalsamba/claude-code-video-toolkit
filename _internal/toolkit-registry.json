@@ -433,8 +433,8 @@
     },
     "cutdown": {
       "path": "tools/cutdown.py",
-      "description": "Social cut-downs: reframe a finished 16:9 video to 9:16 / 1:1 / 4:5 for Shorts, Reels, TikTok and feeds, optionally cut to one or more time ranges. Pure ffmpeg, works on any MP4",
-      "usage": "uv run tools/cutdown.py --input out/video.mp4 --platform shorts [--mode blur|crop|pad] [--start 1:05 --end 1:50 | --segment START-END[@FOCUS] ...]",
+      "description": "Social cut-downs to 9:16 / 1:1 / 4:5, optional highlight segments and subject tracking; FFmpeg for all modes, optional vision extra for --mode track",
+      "usage": "uv run tools/cutdown.py --input input.mp4 --platform shorts [--mode blur|crop|pad|track] [--segment START-END[@FOCUS] ...]",
       "status": "beta",
       "category": "utility",
       "requires": "ffmpeg",
@@ -445,7 +445,7 @@
           "4:5"
         ],
         "platform": "shorts, reels (9:16, 3 min), tiktok (9:16, 10 min), square (1:1), feed (4:5) - sets the default format and warns past the short-form limit",
-        "mode": "blur (fit over a blurred copy, default), crop (fill, cut the sides; --focus 0-1), pad (fit over --pad-color or --brand bgDark)",
+        "mode": "blur (fit over a blurred copy, default), crop (fill, cut the sides; --focus 0-1), pad (fit over --pad-color or --brand bgDark); track follows a single face or --box subject, holding position on loss (uv sync --extra vision)",
         "segments": "--start/--end for one range, repeated --segment for a highlight reel joined with click-free audio fades; @FOCUS sets crop focus per segment",
         "extras": [
           "--zoom",
@@ -453,10 +453,13 @@
           "--output-dir",
           "--dry-run",
           "--json"
-        ]
+        ],
+        "box": "track mode: x,y,width,height in source pixels at each segment start; automatic single-face detection by default",
+        "track-smoothing": "Smoothing factor .001-1, default .2",
+        "max-pan-speed": "Maximum source pixels per second, default 600"
       },
       "created": "2026-10-12",
-      "updated": "2026-10-12"
+      "updated": "2026-11-07"
     },
     "highlights": {
       "path": "tools/highlights.py",
