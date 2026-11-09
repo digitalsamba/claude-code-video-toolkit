@@ -114,8 +114,9 @@ export const terminalTheme = (brand: {
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 
+// a line is drawn from its own frame on (spring frame 0 is 0, so count that frame as the first step)
 const rise = (frame: number, at: number, fps: number) =>
-  frame < at ? 0 : Math.min(1, spring({ frame: frame - at, fps, config: { damping: 200 }, durationInFrames: 10 }));
+  frame < at ? 0 : Math.min(1, spring({ frame: frame - at + 1, fps, config: { damping: 200 }, durationInFrames: 10 }));
 
 /** Frame a command line finishes typing: put the output after it (`{ at: typedUntil(cmd) + 6, ... }`). */
 export const typedUntil = (line: { at: number; command: string; perChar?: number }) =>
