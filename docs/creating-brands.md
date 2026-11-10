@@ -119,6 +119,27 @@ Define sizes and weights for each text style:
 
 ## Voice Settings
 
+### Several voices
+
+A brand can carry more than one narrator, so different videos can sound different while sharing the
+brand. Put each under `voices` and name the one to use when a video doesn't ask for one:
+
+```json
+{
+  "default": "marilyn",
+  "voices": {
+    "marilyn": { "voiceId": "CyuaHFjYAn74u3mOqDX6" },
+    "bren": { "voiceId": "RlSVB64yXMZJjq67jbB1" }
+  }
+}
+```
+
+`voiceover.py --brand video-toolkit` uses the default; `--voice bren` picks another for that video. Keys at
+the top level (a shared `model`, `settings`, `qwen3` or `sixtydb` block) apply to every voice, and a voice's
+own keys override them. A voice can also carry `maxWpm` and `minTempo`, the brand's pacing clamp. A
+voice.json without `voices` works as before. ElevenLabs voice-library narrators already picked by ear are
+in `assets/voices/library-shortlist.json`.
+
 ### ElevenLabs
 
 | Property | Description |
@@ -127,7 +148,7 @@ Define sizes and weights for each text style:
 | `stability` | Voice stability (0-1, higher = more consistent) |
 | `similarityBoost` | Voice similarity (0-1, higher = more similar to original) |
 | `style` | Style exaggeration (0-1) |
-| `model` | ElevenLabs model to use |
+| `model` | ElevenLabs model to use (`eleven_v4` takes only stability and similarity) |
 
 ### Qwen3-TTS
 

@@ -309,6 +309,12 @@ Examples:
         type=str,
         help="Brand name to load voice config from (e.g., 'default', 'digital-samba')",
     )
+    parser.add_argument(
+        "--voice",
+        type=str,
+        help="With --brand: which of the brand's voices (its voice.json 'voices' map) to use; "
+        "default is the brand's 'default' voice",
+    )
 
     # Common options
     parser.add_argument(
@@ -1047,12 +1053,24 @@ def main():
         print("Error: --ref-text is required with --ref-audio", file=sys.stderr)
         sys.exit(1)
 
+    if args.voice and not args.brand:
+        print("Error: --voice picks one of a brand's voices, so it needs --brand", file=sys.stderr)
+        sys.exit(1)
+
     # Brand voice config resolution
     if args.brand:
-        voice_config = load_brand_voice_config(args.brand)
+        try:
+            voice_config = load_brand_voice_config(args.brand, args.voice)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
         if not voice_config:
             print(f"Error: Brand '{args.brand}' not found or has no voice.json", file=sys.stderr)
             sys.exit(1)
+        if voice_config.get("maxWpm") and args.max_wpm is None:
+            args.max_wpm = voice_config["maxWpm"]
+        if voice_config.get("minTempo") and args.min_tempo is None:
+            args.min_tempo = voice_config["minTempo"]
 
         if provider == "qwen3":
             qwen3_cfg = voice_config.get("qwen3", {})
@@ -1122,6 +1140,18 @@ def main():
             # Apply voice ID from brand if not explicitly provided
             if not args.voice_id and voice_config.get("voiceId") and voice_config["voiceId"] != "YOUR_VOICE_ID_HERE":
                 args.voice_id = voice_config["voiceId"]
+            # Brand model, settings and pacing fill in only where the CLI left its default.
+            if voice_config.get("model") and args.model == "eleven_multilingual_v2":
+                args.model = voice_config["model"]
+            el_settings = voice_config.get("settings", {})
+            if "stability" in el_settings and args.stability == 0.85:
+                args.stability = el_settings["stability"]
+            if "similarityBoost" in el_settings and args.similarity == 0.95:
+                args.similarity = el_settings["similarityBoost"]
+            if "style" in el_settings and args.style == 0.0:
+                args.style = el_settings["style"]
+            if "speed" in el_settings and args.speed == 1.0:
+                args.speed = el_settings["speed"]
         elif provider == "60db":
             # Apply 60db voice ID + settings from the brand's `sixtydb` block
             sixtydb_cfg = voice_config.get("sixtydb", {})

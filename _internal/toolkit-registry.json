@@ -1589,6 +1589,13 @@
       "created": "2026-02-19",
       "updated": "2026-02-19"
     },
+    "Terminal": {
+      "path": "lib/components/Terminal.tsx",
+      "description": "Terminal window that types commands and prints output (ok, error, dim), plus select menus, each line on a narration cue; scrolls once full, blinking prompt at the end. terminalTheme(brand) reads a brand's colors.terminal block; typedUntil() gives the frame a command finishes typing. For CLI and Claude Code demos, nothing screen-recorded",
+      "status": "beta",
+      "created": "2026-11-09",
+      "updated": "2026-11-09"
+    },
     "LivingPhoto": {
       "path": "lib/components/LivingPhoto.tsx",
       "description": "An image-to-video clip of a person (ltx2.py --input) that plays forward once and holds its last good frame with a slow push-in; hold/trim cut around a late stranger or an early glitch, fit slows a slightly short clip to its shot (to 0.8x). Never plays backwards; lengthen with ltx_extend.py",
@@ -1602,6 +1609,12 @@
       "description": "Clean, professional brand with orange accent",
       "created": "2025-12-08",
       "updated": "2025-12-08"
+    },
+    "video-toolkit": {
+      "path": "brands/video-toolkit/",
+      "description": "The toolkit's own look, the same tokens as the site: white and light grey, DS blue accent, navy dark field, system type, and a terminal palette for Terminal",
+      "created": "2026-11-09",
+      "updated": "2026-11-09"
     },
     "digital-samba": {
       "path": "brands/digital-samba/",
