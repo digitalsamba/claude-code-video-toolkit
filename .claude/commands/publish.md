@@ -130,8 +130,9 @@ run a dry-run before the real upload.
 | `--synthetic-media` | Disclose realistic AI-generated or altered people, places or voices |
 | `--publish-at` | ISO8601 UTC schedule, e.g. `2026-06-10T09:00:00Z` (forces private at insert) |
 | `--thumbnail` | Custom thumbnail (≤2MB, 1280×720) |
-| `--captions` + `--captions-language` | Caption file + language code |
+| `--captions` + `--captions-language` | Caption file + language code (needs the force-ssl scope; an older token asks for `--auth`) |
 | `--playlist` | Playlist ID |
+| `--video-id` | Add captions, a thumbnail or a playlist to an uploaded video, without uploading |
 | `--account` | Channel name namespacing the cached token (default `default`) |
 | `--auth` | Interactive login only — cache a token and exit |
 | `--dry-run` | Validate + print the request body without uploading |
