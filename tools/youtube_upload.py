@@ -372,6 +372,79 @@ def classify_http_error(e: "HttpError") -> tuple[str, Optional[str]]:
     return "http", reason
 
 
+ANALYTICS_SCOPE = "https://www.googleapis.com/auth/yt-analytics.readonly"
+APIS = {"data": "youtube.googleapis.com", "analytics": "youtubeanalytics.googleapis.com"}
+
+
+def cloud_project_number(client_secrets: Optional[str]) -> Optional[str]:
+    """The Cloud project number, from the OAuth client ID ('495036436430-abc.apps...' -> '495036436430')."""
+    from config import get_youtube_client_secrets_file
+    path = client_secrets or get_youtube_client_secrets_file()
+    try:
+        data = json.loads(Path(path).read_text())
+        cid = (data.get("installed") or data.get("web") or {}).get("client_id", "")
+    except (OSError, ValueError, TypeError):
+        return None
+    head = cid.split("-", 1)[0]
+    return head if head.isdigit() else None
+
+
+def enable_url(api: str, project: Optional[str]) -> str:
+    """The Cloud Console page that switches `api` on (the same link Google puts in an accessNotConfigured error)."""
+    url = f"https://console.developers.google.com/apis/api/{APIS[api]}/overview"
+    return f"{url}?project={project}" if project else url
+
+
+def check_setup(account: str, client_secrets: Optional[str]) -> dict:
+    """Read-only: is the login there, which channel is it, which scopes does it have, and are the Data and
+    Analytics APIs switched on? Costs about 1 quota unit (channels.list); nothing is written."""
+    project = cloud_project_number(client_secrets)
+    out: dict = {"account": account, "cloudProject": project, "ok": False, "fixes": []}
+    try:
+        creds = get_credentials(account, client_secrets, allow_interactive=False)
+    except AuthError as e:
+        out["auth"] = str(e)
+        out["fixes"].append(f"log in: uv run --extra youtube tools/youtube_upload.py --auth --account {account}")
+        return out
+    granted = list(getattr(creds, "scopes", None) or [])
+    out["scopes"] = granted
+    out["missingScopes"] = missing_scopes(creds, SCOPES)
+    if out["missingScopes"]:
+        out["fixes"].append(f"log in again for {', '.join(s.rsplit('/', 1)[-1] for s in out['missingScopes'])}: "
+                            f"uv run --extra youtube tools/youtube_upload.py --auth --account {account}")
+
+    try:
+        items = build_service(creds).channels().list(part="snippet", mine=True).execute().get("items", [])
+        out["dataApi"] = "on"
+        out["channel"] = ({"id": items[0]["id"], "title": items[0]["snippet"]["title"]} if items else None)
+        if not items:
+            out["fixes"].append("this Google account has no YouTube channel: create one, or log in with the right one")
+    except HttpError as e:
+        etype, reason = classify_http_error(e)
+        out["dataApi"] = "off" if etype == "config" else f"error: {reason or getattr(e.resp, 'status', '')}"
+        if etype == "config":
+            out["fixes"].append(f"switch on the YouTube Data API v3: {enable_url('data', project)}")
+
+    if ANALYTICS_SCOPE in granted:
+        try:
+            import datetime as dt
+            day = dt.date.today()
+            build("youtubeAnalytics", "v2", credentials=creds, cache_discovery=False).reports().query(
+                ids="channel==MINE", startDate=str(day - dt.timedelta(days=7)), endDate=str(day), metrics="views",
+            ).execute()
+            out["analyticsApi"] = "on"
+        except HttpError as e:
+            etype, reason = classify_http_error(e)
+            out["analyticsApi"] = "off" if etype == "config" else f"error: {reason or getattr(e.resp, 'status', '')}"
+            if etype == "config":
+                out["fixes"].append(f"switch on the YouTube Analytics API: {enable_url('analytics', project)}")
+    else:
+        out["analyticsApi"] = "no scope"   # optional: only youtube_stats.py needs it
+
+    out["ok"] = out["dataApi"] == "on" and not out["missingScopes"] and bool(out.get("channel"))
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Upload
 # ---------------------------------------------------------------------------
@@ -665,6 +738,9 @@ Note: until your OAuth app is Google-verified, uploads are force-locked to priva
     parser.add_argument("--account", default="default", help="Channel/account name to namespace the cached token")
     parser.add_argument("--client-secrets", help="Path to the OAuth client_secret JSON (overrides env var)")
     parser.add_argument("--auth", action="store_true", help="Interactive login only: cache a token and exit")
+    parser.add_argument("--check", action="store_true",
+                        help="Check the setup and exit: login, channel, scopes, and whether the Data and Analytics "
+                             "APIs are on (read-only, ~1 quota unit)")
     parser.add_argument(
         "--login-if-needed", action="store_true",
         help="Allow an upload run to open a browser for first-time consent (default: fail with instructions)",
@@ -693,6 +769,23 @@ def main():
         if args.json_out:
             emit_json({"success": True, "account": args.account, "action": "auth"})
         sys.exit(0)
+
+    # --- Setup check ---------------------------------------------------------------
+    if args.check:
+        r = check_setup(args.account, args.client_secrets)
+        ch = r.get("channel")
+        log(f"Account '{args.account}': " + (f"channel '{ch['title']}' ({ch['id']})" if ch else
+                                            r.get("auth") or "no channel"), "success" if ch else "error")
+        if "scopes" in r:
+            log(f"Scopes: {', '.join(x.rsplit('/', 1)[-1] for x in r['scopes'])}", "info")
+            log(f"Data API: {r.get('dataApi')}; Analytics API: {r.get('analyticsApi')}", "info")
+        for fix in r["fixes"]:
+            log(f"Fix: {fix}", "warn")
+        if r["ok"]:
+            log("Ready to upload.", "success")
+        if args.json_out:
+            emit_json({"success": r["ok"], "action": "check", **r})
+        sys.exit(0 if r["ok"] else 1)
 
     # --- Validate ----------------------------------------------------------------
     err = validate_args(args)
