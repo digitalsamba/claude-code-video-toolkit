@@ -1,0 +1,29 @@
+$ uv run tools/ltx2.py --cloud modal --input projects/toolkit-made-itself/public/img/desk.png --width 1024 --height 576 --num-frames 121 --seed 5 --prompt 'Static shot of a quiet desk by a window at dawn. Steam rises slowly and continuously from the mug and drifts. The laptop screen glows softly. Very slow, smooth camera push-in. Nothing else moves. No people, no text.' --output projects/toolkit-made-itself/public/video/desk.mp4
+[94m-> Generating video via Modal...[0m
+[90m   Generating video via Modal... (15s)[0m
+[90m   Generating video via Modal... (30s)[0m
+[90m   Generating video via Modal... (45s)[0m
+[90m   Generating video via Modal... (60s)[0m
+[90m   Generating video via Modal... (75s)[0m
+[90m   Generating video via Modal... (90s)[0m
+[90m   Generating video via Modal... (105s)[0m
+[90m   Generating video via Modal... (120s)[0m
+[90m   Generating video via Modal... (135s)[0m
+[90m   Generating video via Modal... (150s)[0m
+[90m   Generating video via Modal... (165s)[0m
+[90m   Generating video via Modal... (180s)[0m
+[90m   Generating video via Modal... (195s)[0m
+[92mOK Completed in 201.9s[0m
+[90m   Est. cost: $0.1402 (202s on modal)[0m
+
+[94m-> LTX-2 Video Generation (22B DiT)[0m
+[90m   =============================================[0m
+[94m-> Prompt: Static shot of a quiet desk by a window at dawn. Steam rises slowly and continuously from the mug and drifts. The laptop screen glows softly. Very slow, smooth camera push-in. Nothing else moves. No people, no text.[0m
+[90m   Size: 1024x576, 121 frames @ 24fps (5.0s)[0m
+[94m-> Input image: projects/toolkit-made-itself/public/img/desk.png[0m
+[90m   Downloading from R2...[0m
+[92mOK Saved: projects/toolkit-made-itself/public/video/desk.mp4[0m
+[90m   Duration: 5.04s, 121 frames @ 24fps[0m
+[90m   Time: 201.9s total, 154.6s inference[0m
+[90m   Seed: 5[0m
+# elapsed 203s, exit 0

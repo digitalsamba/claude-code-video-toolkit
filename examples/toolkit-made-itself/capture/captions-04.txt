@@ -1,0 +1,4 @@
+$ uv run tools/captions.py projects/toolkit-made-itself/tmpcap
+engine: scribe
+  04_generate.captions.json: 31 words, aligned to 04_generate.txt (100% matched)
+# elapsed 2s, exit 0

@@ -1,0 +1,74 @@
+$ uv run tools/voiceover.py --brand video-toolkit --max-wpm 165 --scene-dir projects/toolkit-made-itself/public/audio/scenes --json
+{
+  "success": true,
+  "mode": "per_scene",
+  "provider": "elevenlabs",
+  "scene_dir": "projects/toolkit-made-itself/public/audio/scenes",
+  "total_chars": 619,
+  "total_duration_seconds": 44.62,
+  "total_duration_frames_30fps": 1338,
+  "scenes": [
+    {
+      "success": true,
+      "output": "projects/toolkit-made-itself/public/audio/scenes/01_open.mp3",
+      "script_chars": 104,
+      "duration_seconds": 7.2,
+      "duration_frames_30fps": 216,
+      "wpm": 150.0,
+      "pacing": "ok",
+      "script": "projects/toolkit-made-itself/public/audio/scenes/01_open.txt"
+    },
+    {
+      "success": true,
+      "output": "projects/toolkit-made-itself/public/audio/scenes/02_narrate.mp3",
+      "script_chars": 167,
+      "duration_seconds": 11.62,
+      "duration_frames_30fps": 348,
+      "pace_adjusted": {
+        "original_wpm": 177.8,
+        "atempo": 0.928,
+        "floored": false
+      },
+      "wpm": 165.2,
+      "pacing": "ok",
+      "script": "projects/toolkit-made-itself/public/audio/scenes/02_narrate.txt"
+    },
+    {
+      "success": true,
+      "output": "projects/toolkit-made-itself/public/audio/scenes/03_score.mp3",
+      "script_chars": 124,
+      "duration_seconds": 9.08,
+      "duration_frames_30fps": 272,
+      "pace_adjusted": {
+        "original_wpm": 189.4,
+        "atempo": 0.8712,
+        "floored": false
+      },
+      "wpm": 165.2,
+      "pacing": "ok",
+      "script": "projects/toolkit-made-itself/public/audio/scenes/03_score.txt"
+    },
+    {
+      "success": true,
+      "output": "projects/toolkit-made-itself/public/audio/scenes/05_compose.mp3",
+      "script_chars": 123,
+      "duration_seconds": 9.12,
+      "duration_frames_30fps": 273,
+      "wpm": 144.7,
+      "pacing": "ok",
+      "script": "projects/toolkit-made-itself/public/audio/scenes/05_compose.txt"
+    },
+    {
+      "success": true,
+      "output": "projects/toolkit-made-itself/public/audio/scenes/07_close.mp3",
+      "script_chars": 101,
+      "duration_seconds": 7.6,
+      "duration_frames_30fps": 228,
+      "wpm": 150.0,
+      "pacing": "ok",
+      "script": "projects/toolkit-made-itself/public/audio/scenes/07_close.txt"
+    }
+  ],
+  "voice_id": "CyuaHFjYAn74u3mOqDX6",
+  "model": "eleven_v4"
+}

@@ -1,0 +1,31 @@
+{
+  "phrases": {
+    "01_open": 75,
+    "02_narrate": 60,
+    "03_score": 55,
+    "04_generate": 30,
+    "05_compose": 30,
+    "06_check": 75,
+    "07_close": 20
+  },
+  "scenes": {
+    "open": 321,
+    "narrate": 439,
+    "score": 372,
+    "generate": 413,
+    "compose": 349,
+    "check": 586,
+    "close": 308
+  },
+  "estimated": [],
+  "starts": {
+    "open": 0,
+    "narrate": 321,
+    "score": 760,
+    "generate": 1132,
+    "compose": 1545,
+    "check": 1894,
+    "close": 2480
+  },
+  "total": 2788
+}

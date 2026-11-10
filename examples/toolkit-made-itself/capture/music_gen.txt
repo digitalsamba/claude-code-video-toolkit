@@ -1,0 +1,49 @@
+$ uv run tools/music_gen.py --prompt 'Minimal modern electronic, soft synth plucks, light brushed percussion, warm round bass, optimistic and understated, clear space in the mids for a narrator, instrumental, clean ending' --duration 100 --bpm 104 --key 'D Major' --variations 4 --output projects/toolkit-made-itself/public/audio/music/bg.mp3
+[94m-> Take 1/4[0m
+[94m-> ACE-Step Cloud API — Music Generation[0m
+[90m   ========================================[0m
+[94m-> Prompt: Minimal modern electronic, soft synth plucks, light brushed percussion, warm rou...[0m
+[90m   Duration: 100s | Thinking: on[0m
+[90m   BPM: 104[0m
+[90m   Key: D Major[0m
+[90m   Model: acemusic/acestep-v1.5-xl-turbo[0m
+[90m   Sending to acemusic.ai (XL Turbo 4B, thinking: on)...[0m
+[90m   Waiting for acemusic.ai response... (15s)[0m
+[92mOK Saved: projects/toolkit-made-itself/public/audio/music/bg_1.mp3 (1563 KB, 100.0s)[0m
+[90m   Time: 15.3s total (acemusic)[0m
+[94m-> Take 2/4[0m
+[94m-> ACE-Step Cloud API — Music Generation[0m
+[90m   ========================================[0m
+[94m-> Prompt: Minimal modern electronic, soft synth plucks, light brushed percussion, warm rou...[0m
+[90m   Duration: 100s | Thinking: on[0m
+[90m   BPM: 104[0m
+[90m   Key: D Major[0m
+[90m   Model: acemusic/acestep-v1.5-xl-turbo[0m
+[90m   Sending to acemusic.ai (XL Turbo 4B, thinking: on)...[0m
+[90m   Waiting for acemusic.ai response... (31s)[0m
+[92mOK Saved: projects/toolkit-made-itself/public/audio/music/bg_2.mp3 (1563 KB, 100.0s)[0m
+[90m   Time: 15.1s total (acemusic)[0m
+[94m-> Take 3/4[0m
+[94m-> ACE-Step Cloud API — Music Generation[0m
+[90m   ========================================[0m
+[94m-> Prompt: Minimal modern electronic, soft synth plucks, light brushed percussion, warm rou...[0m
+[90m   Duration: 100s | Thinking: on[0m
+[90m   BPM: 104[0m
+[90m   Key: D Major[0m
+[90m   Model: acemusic/acestep-v1.5-xl-turbo[0m
+[90m   Sending to acemusic.ai (XL Turbo 4B, thinking: on)...[0m
+[92mOK Saved: projects/toolkit-made-itself/public/audio/music/bg_3.mp3 (1563 KB, 100.0s)[0m
+[90m   Time: 14.9s total (acemusic)[0m
+[94m-> Take 4/4[0m
+[94m-> ACE-Step Cloud API — Music Generation[0m
+[90m   ========================================[0m
+[94m-> Prompt: Minimal modern electronic, soft synth plucks, light brushed percussion, warm rou...[0m
+[90m   Duration: 100s | Thinking: on[0m
+[90m   BPM: 104[0m
+[90m   Key: D Major[0m
+[90m   Model: acemusic/acestep-v1.5-xl-turbo[0m
+[90m   Sending to acemusic.ai (XL Turbo 4B, thinking: on)...[0m
+[92mOK Saved: projects/toolkit-made-itself/public/audio/music/bg_4.mp3 (1563 KB, 100.0s)[0m
+[90m   Time: 14.1s total (acemusic)[0m
+
+# elapsed 60s, exit 0

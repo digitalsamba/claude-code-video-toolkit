@@ -1,0 +1,13 @@
+[
+ "export const composeLines = (cue: Cue): TerminalLine[] => {",
+ "  const render = run('render');",
+ "  return [",
+ "    { at: cue('every scene'), command: render.command, prompt: '$', perChar: 0.5 },",
+ "    { at: cue('rendered'), ...pick('render', 'Composition') },",
+ "    { at: cue('remotion'), ...pick('render', 'Codec') },",
+ "    { at: cue('component'), ...pickLast('render', 'Encoded') },",
+ "    { at: cue('each line'), ...pick('render', ' MB'), kind: 'ok' },",
+ "    { at: cue('names'), command: '', prompt: '$' },",
+ "  ];",
+ "};"
+]
