@@ -112,6 +112,9 @@ uv run tools/youtube_upload.py \
 uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
   --publish-at 2026-06-10T09:00:00Z --thumbnail out/thumb.png
 
+# Captions for a video that's already up
+uv run tools/youtube_upload.py --video-id VIDEO_ID --captions out/video.srt --json-out
+
 # Validate everything without uploading (also reports whether auth is ready)
 uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
 ```
@@ -131,8 +134,9 @@ Prefer **`/publish`** for finished projects — it derives the title/description
 | `--privacy` | `private` (default) / `unlisted` / `public` |
 | `--publish-at` | ISO8601 UTC, e.g. `2026-06-10T09:00:00Z`. Forces `private` at insert, flips public at the time. |
 | `--thumbnail` | Custom thumbnail (≤2MB, 1280×720). Requires a phone-verified channel. |
-| `--captions` + `--captions-language` | Caption file (.srt/.vtt) + language code |
+| `--captions` + `--captions-language` | Caption file (.srt/.vtt) + language code. Needs the `youtube.force-ssl` scope: a token from before it was added is refused before the upload starts, so re-run `--auth` once |
 | `--playlist` | Playlist ID to add the video to |
+| `--video-id` | Add `--captions`, `--thumbnail` or `--playlist` to a video already uploaded, with no new upload (no `--video` or `--title`) |
 | `--synthetic-media` | YouTube's "altered or synthetic content" disclosure (`status.containsSyntheticMedia`). Required for realistic AI-generated or animated people, or a cloned voice; it adds a label, not a reach penalty |
 | `--account` | Namespaces the cached token — use for multiple channels (e.g. `--account work`) |
 | `--auth` | Interactive login only; caches a token and exits |
@@ -202,6 +206,7 @@ Compare `requestedPrivacy` vs `privacyStatus` to detect the unverified-app force
 | `OAuth client secrets file not found` | Set `YOUTUBE_CLIENT_SECRETS_FILE` in `.env` (absolute path) or pass `--client-secrets` |
 | `No cached credentials` | Run `uv run tools/youtube_upload.py --auth` once |
 | `Refresh token ... is invalid` | Re-run `--auth` (7-day Testing expiry or revoked token) |
+| `can't add captions (it lacks ...force-ssl)` | The token predates the captions scope: re-run `--auth`, then attach them with `--video-id` |
 | `errorType: "quota"` | Daily quota hit — wait or request more quota |
 | Video uploaded but stays `private` | Unverified-app lock — verify your OAuth app, or publish manually |
 | `access_denied` in the browser | The Google account isn't a Test user on the consent screen — add it |

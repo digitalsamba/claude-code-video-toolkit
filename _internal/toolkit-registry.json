@@ -963,7 +963,8 @@
         "extras": [
           "--thumbnail",
           "--captions",
-          "--playlist"
+          "--playlist",
+          "--video-id"
         ],
         "dryRun": true,
         "jsonOut": true,
