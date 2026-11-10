@@ -525,7 +525,7 @@ def call_acemusic_api(
     for i, audio_entry in enumerate(audio_list):
         audio_url = audio_entry.get("audio_url", {}).get("url", "")
         if not audio_url.startswith("data:audio"):
-            log(f"Unexpected audio format in response", "warn")
+            log("Unexpected audio format in response", "warn")
             continue
 
         # Decode base64 data URL: data:audio/mpeg;base64,...

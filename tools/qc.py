@@ -256,10 +256,10 @@ def load_remotion(project: Path, report: Report, config_override: str | None):
             if resolve_public(public_dir, ref):
                 continue
             if key in OPTIONAL_ASSET_KEYS:
-                report.add("warn", "assets", f"{ref} ({key}) — not found under public/; the template "
+                report.add("warn", "assets", f"{ref} ({key}): not found under public/; the template "
                            "skips it, so the render will be without it", file=ref)
             else:
-                report.add("error", "assets", f"{ref} — referenced in {src.name}, not found under public/",
+                report.add("error", "assets", f"{ref}: referenced in {src.name}, not found under public/",
                            file=ref)
     report.data["assets_checked"] = checked
 
@@ -302,7 +302,7 @@ def load_scenes_json(project: Path, report: Report):
     for ref in refs:
         if not (project / ref).exists():
             # build.py renders a placeholder card for a missing visual, so it won't crash
-            report.add("warn", "assets", f"{ref} — not found (build.py will render a placeholder)", file=ref)
+            report.add("warn", "assets", f"{ref}: not found (build.py will render a placeholder)", file=ref)
     report.data["assets_checked"] = len(refs)
     # gen_vo.py passes the narration inline, so the text lives here, not in .txt files
     audio_dir = project / "audio" / "scenes"
@@ -320,11 +320,11 @@ def check_timing(timed: list[dict], report: Report):
             continue
         if audio > scene:
             report.add("error", "timing",
-                       f"{t['label']}: narration {audio:.1f}s > scene {scene:.1f}s — will be cut off",
+                       f"{t['label']}: narration {audio:.1f}s > scene {scene:.1f}s, will be cut off",
                        file=t["audio_path"].name)
         elif scene - audio > DEAD_AIR_SECONDS:
             report.add("warn", "timing",
-                       f"{t['label']}: scene {scene:.1f}s, narration {audio:.1f}s — "
+                       f"{t['label']}: scene {scene:.1f}s, narration {audio:.1f}s, "
                        f"{scene - audio:.1f}s of trailing silence",
                        file=t["audio_path"].name)
     report.data["scenes_timed"] = len(timed)
@@ -376,7 +376,7 @@ def check_scene_loudness(files: list[Path], report: Report) -> dict[Path, dict]:
 
     for f, m in levels.items():
         if m["true_peak"] is not None and m["true_peak"] > SCENE_TRUE_PEAK:
-            report.add("warn", "loudness", f"{f.name}: true peak {m['true_peak']:+.1f} dBTP — clipped",
+            report.add("warn", "loudness", f"{f.name}: true peak {m['true_peak']:+.1f} dBTP, clipped",
                        file=f.name)
     if len(levels) >= 3:
         median = statistics.median(m["lufs"] for m in levels.values())
@@ -432,13 +432,13 @@ def check_render(render: Path, report: Report, target: float, info: dict | None,
     report.data["render"] = {"file": str(render), "lufs": m["lufs"], "true_peak": m["true_peak"], "lra": m["lra"]}
     if m["lufs"] < target - 2:
         # Platforms turn loud content down but never turn quiet content up.
-        report.add("warn", "render", f"{render.name}: {m['lufs']:.1f} LUFS — quieter than the {target:.0f} target, "
+        report.add("warn", "render", f"{render.name}: {m['lufs']:.1f} LUFS, quieter than the {target:.0f} target, "
                    "and YouTube won't raise it")
     elif m["lufs"] > target + 1:
-        report.add("warn", "render", f"{render.name}: {m['lufs']:.1f} LUFS — YouTube will turn it down "
+        report.add("warn", "render", f"{render.name}: {m['lufs']:.1f} LUFS, YouTube will turn it down "
                    f"{m['lufs'] - target:.1f} dB")
     if m["true_peak"] is not None and m["true_peak"] > YOUTUBE_TRUE_PEAK:
-        report.add("warn", "render", f"{render.name}: true peak {m['true_peak']:+.1f} dBTP — clipping after "
+        report.add("warn", "render", f"{render.name}: true peak {m['true_peak']:+.1f} dBTP, clipping after "
                    "lossy encoding")
     return m
 
@@ -790,7 +790,7 @@ def fix_render(render: Path, m: dict, target: float, report: Report) -> Path | N
         report.add("error", "fix", f"{render.name}: normalisation failed: {err}")
         return None
     report.add("info", "fix", f"wrote {out.name} ({m['lufs']:.1f} → {target:.0f} LUFS); "
-               f"{render.name} is unchanged — re-run with --render {out.name} to confirm")
+               f"{render.name} is unchanged; re-run with --render {out.name} to confirm")
     return out
 
 
@@ -801,7 +801,7 @@ ICONS = {"error": "✗", "warn": "!", "info": "·"}
 
 def print_report(report: Report, project: Path):
     d = report.data
-    print(f"QC — {project} ({d.get('template_type', 'unknown')})", file=sys.stderr)
+    print(f"QC: {project} ({d.get('template_type', 'unknown')})", file=sys.stderr)
     print(f"  assets checked: {d.get('assets_checked', 0)} | scenes timed: {d.get('scenes_timed', 0)} | "
           f"pacing measured: {d.get('pacing_measured', 0)} | "
           f"loudness measured: {len(d.get('scene_loudness', {}))}", file=sys.stderr)
