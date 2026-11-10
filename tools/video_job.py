@@ -663,6 +663,17 @@ def _hex_rgb(h: str, fallback=(10, 10, 20)) -> tuple:
         return fallback
 
 
+def field_clear_of(color: str, ink: str) -> str:
+    """The local field's colour, moved one step off the caption pill's ink when they match: the pill is drawn in
+    the palette ink, which is also the field's default colour, so on its own field it disappeared."""
+    c, k = _hex_rgb(color), _hex_rgb(ink)
+    if sum(abs(a - b) for a, b in zip(c, k)) > 36:
+        return color
+    light = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) > 140
+    mixed = [round(v + ((0 if light else 255) - v) * 0.14) for v in c]
+    return "#" + "".join(f"{v:02X}" for v in mixed)
+
+
 def draw_local_background(out: Path, width: int, height: int, color: str, seed: int = 0) -> None:
     """A flat colour field with fine grain: no GPU, no network, no gradient. The build's Ken Burns drift
     moves the grain, and the headline reveal and captions carry the motion."""
@@ -1797,7 +1808,10 @@ def step_visuals(job: dict, spec: dict) -> dict:
                 what = f"your file {Path(vis['src']).name}"
             else:
                 w, h = FORMATS[spec["format"]]["flux"]
-                draw_local_background(out, w, h, vis.get("color") or "#0A0A14", seed=int(s["id"]))
+                ink = (spec.get("palette") or {}).get("ink") or "#0A0A14"   # the template's default ink
+                field = field_clear_of(vis.get("color") or ink, ink) if spec["captions"]["enabled"] \
+                    else (vis.get("color") or ink)
+                draw_local_background(out, w, h, field, seed=int(s["id"]))
                 what = "a local background"
             _mark_made(job, s["asset"])
             add_event(job, "asset", f"scene {s['id']}: {what}", scene=s["id"], visual=vis["kind"], cost_usd=0.0,
