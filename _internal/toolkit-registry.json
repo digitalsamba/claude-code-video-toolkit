@@ -954,6 +954,7 @@
       "requires": "Google Cloud OAuth client (Desktop app); YOUTUBE_CLIENT_SECRETS_FILE",
       "options": {
         "auth": "--auth (interactive login, caches a refresh token per --account)",
+        "check": "--check (read-only: channel, scopes, Data/Analytics API on or off, with the fix for each)",
         "privacy": [
           "private",
           "unlisted",
@@ -978,6 +979,24 @@
       "documentation": "docs/youtube-upload.md",
       "created": "2026-06-09",
       "updated": "2026-06-09"
+    },
+    "publish_kit": {
+      "path": "tools/publish_kit.py",
+      "description": "Subtitles and chapters for YouTube from a finished render: the render's audio transcribed once and aligned to the scene scripts gives one whole-video SRT and a chapter at each scene's cut, under YouTube's chapter rules",
+      "usage": "uv run tools/publish_kit.py --project projects/my-video --video out/video.mp4",
+      "status": "beta",
+      "category": "publishing",
+      "backend": "ElevenLabs Scribe ($0.40/audio hour) or local whisper",
+      "options": {
+        "engine": ["auto", "scribe", "whisper"],
+        "skip": ["--no-captions", "--no-chapters"],
+        "fresh": "--fresh (transcribe again; otherwise a saved transcript newer than the render is reused)",
+        "jsonOut": true
+      },
+      "envVars": ["ELEVENLABS_API_KEY"],
+      "note": "Writes out/publish/ (video.srt, video.captions.json, chapters.txt, kit.json). Chapter titles from project.json scenes[].title or the scene file names. /publish runs it before the dry run.",
+      "created": "2026-11-10",
+      "updated": "2026-11-10"
     },
     "youtube_stats": {
       "path": "tools/youtube_stats.py",

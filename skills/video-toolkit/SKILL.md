@@ -329,7 +329,8 @@ for JSON-lines progress on stderr, and `--json` for a machine-readable result on
 | Captions for a Remotion template | `captions.py public/audio/scenes` (`--srt`/`--vtt` for subtitle files too) | burning the recogniser's own transcript |
 | Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` (`--mode track` keeps a talking head in frame) | |
 | A highlight reel from a long recording | `highlights.py` (picks final takes from a word-timed transcript), then `cutdown.py --segment` | cutting by eye |
-| Upload to YouTube | `youtube_upload.py` (OAuth, private by default) | |
+| Upload to YouTube | `youtube_upload.py` (OAuth, private by default; `--check` first) | |
+| Subtitles and chapters for the upload | `publish_kit.py --project DIR` (one transcription of the render, ~$0.01 a 90 s video) | adding scene caption offsets by hand |
 
 ### Voiceover
 
@@ -433,7 +434,9 @@ silent on purpose passes with `--allow-silent`. In sprint-review configs, `align
 Fixing existing videos: `redub.py --input v.mp4 --voice-id ID --sync` (new voice, word-level re-timing),
 `addmusic.py` (a bed under a finished video; `--duck` lowers it under speech, `--events` adds timed effects), `locate_watermark.py` then `dewatermark.py` (ProPainter inpainting),
 `notebooklm_brand.py` (a NotebookLM video with your logo and outro). Publishing: `youtube_upload.py --video
-out.mp4 --title "..." --json-out` (one-time `--auth`, private unless told otherwise; `docs/youtube-upload.md`).
+out.mp4 --title "..." --json-out` (one-time `--auth`, private unless told otherwise; `--check` says what's
+missing and how to fix it; `docs/youtube-upload.md`). `publish_kit.py` writes the whole-video SRT for
+`--captions` and the chapter lines for the description.
 
 ### Remotion templates (when a job's compositor isn't enough)
 

@@ -112,6 +112,13 @@ uv run tools/youtube_upload.py \
 uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
   --publish-at 2026-06-10T09:00:00Z --thumbnail out/thumb.png
 
+# Is everything set up? (channel, scopes, APIs; read-only)
+uv run tools/youtube_upload.py --check --account personal
+
+# Subtitles and chapters from the render (one transcription, ~$0.01 for 90 s)
+uv run tools/publish_kit.py --project projects/my-video --video out/video.mp4
+#   -> out/publish/video.srt for --captions, out/publish/chapters.txt for the description
+
 # Captions for a video that's already up
 uv run tools/youtube_upload.py --video-id VIDEO_ID --captions out/video.srt --json-out
 
@@ -140,6 +147,7 @@ Prefer **`/publish`** for finished projects — it derives the title/description
 | `--synthetic-media` | YouTube's "altered or synthetic content" disclosure (`status.containsSyntheticMedia`). Required for realistic AI-generated or animated people, or a cloned voice; it adds a label, not a reach penalty |
 | `--account` | Namespaces the cached token — use for multiple channels (e.g. `--account work`) |
 | `--auth` | Interactive login only; caches a token and exits |
+| `--check` | Read-only setup check: the channel the login belongs to, its scopes, and whether the Data and Analytics APIs are on. Prints the fix for each problem, including the Cloud Console page that switches an API on. ~1 quota unit |
 | `--dry-run` | Builds + prints the request body and checks auth, but uploads nothing |
 | `--json-out` | Emits one machine-readable JSON line on stdout |
 
@@ -206,6 +214,7 @@ Compare `requestedPrivacy` vs `privacyStatus` to detect the unverified-app force
 | `OAuth client secrets file not found` | Set `YOUTUBE_CLIENT_SECRETS_FILE` in `.env` (absolute path) or pass `--client-secrets` |
 | `No cached credentials` | Run `uv run tools/youtube_upload.py --auth` once |
 | `Refresh token ... is invalid` | Re-run `--auth` (7-day Testing expiry or revoked token) |
+| `accessNotConfigured` | An API isn't switched on in the Cloud project. `--check` prints the page to switch it on; wait a minute or two after |
 | `can't add captions (it lacks ...force-ssl)` | The token predates the captions scope: re-run `--auth`, then attach them with `--video-id` |
 | `errorType: "quota"` | Daily quota hit — wait or request more quota |
 | Video uploaded but stays `private` | Unverified-app lock — verify your OAuth app, or publish manually |
