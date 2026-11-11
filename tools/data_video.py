@@ -6,57 +6,17 @@ import argparse
 import csv
 import json
 import math
+import os
 import re
 import subprocess
 import sys
+import tempfile
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
-import hashlib
-import os
-import tempfile
 
-
-def number(value, label, low=None, high=None):
-    try:
-        finite = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
-    except OverflowError:
-        finite = False
-    if not finite or (low is not None and value < low) or (high is not None and value > high):
-        raise ValueError(f'{label} must be a finite number in the allowed range')
-    return value
-
-
-def load_json(path):
-    return json.loads(Path(path).read_text(encoding='utf-8-sig'))
-
-
-def sha256(path):
-    digest = hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b''):
-            digest.update(block)
-    return digest.hexdigest()
-
-
-def output_path(path, *inputs):
-    path = Path(path).resolve()
-    if path in [Path(p).resolve() for p in inputs if p is not None]:
-        raise ValueError('Output cannot replace an input')
-    return path
-
-
-def write_json(path, data):
-    path = Path(path)
-    content = json.dumps(data, ensure_ascii=False, allow_nan=False, indent=2) + '\n'
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, name = tempfile.mkstemp(prefix=f'.{path.stem}-', suffix=path.suffix, dir=path.parent)
-    os.close(fd)
-    try:
-        Path(name).write_text(content, encoding='utf-8')
-        os.replace(name, path)
-    finally:
-        Path(name).unlink(missing_ok=True)
+from media_ops import audio_stream, load_json, number, output_path, probe, sha256, write_json
 
 
 def dataset(path, columns, default_series='Value'):
@@ -112,6 +72,38 @@ def dataset(path, columns, default_series='Value'):
     return {'periods': periods, 'series': names, 'values': [[cells[p, n] for p in periods] for n in names]}
 
 
+def line_axis(data):
+    """Use calendar coordinates for dated periods, preserving categorical labels otherwise."""
+    from matplotlib import dates as mdates
+    parsed = []
+    for label in data['periods']:
+        date = None
+        if re.match(r'^\d{4}-\d{2}-\d{2}', label):
+            try:
+                date = datetime.fromisoformat(label.replace('Z', '+00:00'))
+            except ValueError:
+                pass
+        if date is None:
+            for pattern in ('%Y-%m-%d', '%Y-%m', '%b %Y', '%B %Y'):
+                try:
+                    date = datetime.strptime(label, pattern)
+                    break
+                except ValueError:
+                    continue
+        parsed.append(date)
+    if not any(parsed):
+        return {**data, 'positions': list(range(len(parsed))), 'dateAxis': False}
+    if not all(parsed):
+        raise ValueError('Line periods must all be valid dates or all categorical labels')
+    positions = mdates.date2num(parsed).tolist()
+    if len(set(positions)) != len(positions):
+        raise ValueError('Date periods must refer to distinct times')
+    order = sorted(range(len(positions)), key=positions.__getitem__)
+    return {**data, 'positions': [positions[i] for i in order], 'dateAxis': True,
+            'periods': [data['periods'][i] for i in order],
+            'values': [[row[i] for i in order] for row in data['values']]}
+
+
 def prepare(spec_file, narration=None, *, brand='default'):
     spec = load_json(spec_file)
     if not isinstance(spec, dict) or type(spec.get('version')) is not int or spec['version'] != 1:
@@ -122,6 +114,8 @@ def prepare(spec_file, narration=None, *, brand='default'):
     data = dataset(source, spec.get('columns', {'period': 'period', 'series': 'series', 'value': 'value'}), spec.get('seriesName', 'Value'))
     if spec['type'] == 'line' and len(data['periods']) < 2:
         raise ValueError('Line charts need at least two periods')
+    if spec['type'] == 'line':
+        data = line_axis(data)
     for key in ('title', 'unit', 'source', 'headline'):
         if not isinstance(spec.get(key, ''), str):
             raise ValueError(f'{key} must be text')
@@ -129,10 +123,9 @@ def prepare(spec_file, narration=None, *, brand='default'):
             raise ValueError(f'{key} must be a single line')
     duration = number(spec.get('durationSeconds', 6), 'durationSeconds', .5, 3600)
     if narration:
-        info = json.loads(subprocess.run(['ffprobe', '-v', 'error', '-show_format', '-show_streams', '-of', 'json', str(narration)], capture_output=True, text=True, encoding='utf-8', check=True).stdout)
-        if not any(s.get('codec_type') == 'audio' for s in info.get('streams', [])):
-            raise ValueError('Narration needs an audio stream')
-        duration = number(float(info['format']['duration']), 'narration duration', .5, 3600)
+        info = probe(narration)
+        audio_stream(info)
+        duration = number(info['duration'], 'narration duration', .5, 3600)
     fps = spec.get('fps', 30)
     width, height = spec.get('width', 1280), spec.get('height', 720)
     for name, value, low, high in [('fps', fps, 1, 60), ('width', width, 64, 4096), ('height', height, 64, 4096)]:
@@ -141,12 +134,16 @@ def prepare(spec_file, narration=None, *, brand='default'):
         number(value, name, low, high)
     if width % 2 or height % 2:
         raise ValueError('Chart dimensions must be even')
+    headline_start = number(spec.get('headlineStartSeconds', 0), 'headlineStartSeconds', 0, duration)
+    headline_fade = number(spec.get('headlineFadeSeconds', .5), 'headlineFadeSeconds', 0, duration)
+    if spec.get('headline') and (headline_start >= duration or headline_start + headline_fade > duration):
+        raise ValueError('The headline must start and finish fading before the video ends')
     theme = brand_theme(brand)
     return {'version': 1, 'type': spec['type'], 'title': spec.get('title', ''), 'unit': spec.get('unit', ''),
             'dataset': str(source), 'datasetSha256': sha256(source), 'data': data,
             'durationSeconds': duration, 'fps': fps, 'width': width, 'height': height, 'theme': theme,
-            'source': spec.get('source', ''), 'headline': spec.get('headline', ''), 'narrationAudio': str(Path(narration).resolve()) if narration else None}
-
+            'source': spec.get('source', ''), 'headline': spec.get('headline', ''),
+            'headlineStartSeconds': headline_start, 'headlineFadeSeconds': headline_fade, 'narrationAudio': str(Path(narration).resolve()) if narration else None}
 
 
 def brand_theme(name):
@@ -163,26 +160,34 @@ def brand_theme(name):
     if not isinstance(family, str) or not family.strip():
         raise ValueError('Brand needs fonts.primary')
     requested = [part.strip().strip('"\'') for part in family.split(',')]
-    for candidate in [*requested, 'DejaVu Sans']:
-        if candidate in ('system-ui', '-apple-system', 'BlinkMacSystemFont'):
-            continue
-        try:
-            font_path = findfont(FontProperties(family=[candidate]), fallback_to_default=False)
+    font_path = None
+    for index, candidate in enumerate([*requested, 'DejaVu Sans']):
+        if candidate.casefold() == 'system-ui':
+            aliases = (['Segoe UI', 'DejaVu Sans'] if sys.platform == 'win32' else
+                       ['Helvetica Neue', 'DejaVu Sans'] if sys.platform == 'darwin' else ['DejaVu Sans'])
+        elif candidate.casefold() in ('-apple-system', 'blinkmacsystemfont'):
+            aliases = ['Helvetica Neue', 'DejaVu Sans'] if sys.platform == 'darwin' else []
+        else:
+            aliases = [candidate]
+        for alias in aliases:
+            try:
+                font_path = findfont(FontProperties(family=[alias]), fallback_to_default=False)
+                break
+            except ValueError:
+                continue
+        if font_path is not None:
             break
-        except ValueError:
-            continue
-    else:
+    if font_path is None:
         raise ValueError('No usable brand font found. Install a font from fonts.primary.')
     font_name = FontProperties(fname=font_path).get_name()
-    palette = list(dict.fromkeys(colors[key] for key in ('primary', 'accent', 'primaryLight', 'primaryDark')
-                                 if re.fullmatch(r'#[0-9A-Fa-f]{6}', str(colors.get(key, '')))))
+    palette = [colors['primary'], colors['textLight']]
     return {'name': name, 'path': str(path), 'sha256': sha256(path), 'background': colors['bgLight'],
             'text': colors['textDark'], 'muted': colors['textLight'], 'palette': palette,
             'fontFamily': family, 'fontPath': font_path, 'resolvedFont': font_name,
-            'fontFallback': font_name.casefold() != requested[0].casefold()}
+            'fontFallback': index != 0}
 
 
-def text_overlay(report):
+def text_overlay(report, *, fields=('title', 'headline', 'source')):
     """Render author-written title, attribution and headline independently of Matplotlib."""
     from PIL import Image, ImageDraw, ImageFont
     width, height = report['width'], report['height']
@@ -190,10 +195,11 @@ def text_overlay(report):
     draw = ImageDraw.Draw(layer)
     margin = round(width * .04)
     for key, top, scale, color in [('title', .035, .040, report['theme']['text']),
-                                    ('headline', .12, .055, report['theme']['text']),
+                                    ('headline', .12, .070, report['theme']['text']),
+                                    ('period', .20, .025, report['theme']['muted']),
                                     ('source', .93, .023, report['theme']['muted'])]:
         text = report.get(key, '')
-        if not text:
+        if key not in fields or not text:
             continue
         size = max(8, round(height * scale))
         while True:
@@ -209,6 +215,7 @@ def text_overlay(report):
 
 
 def chart_renderer(report):
+    from matplotlib import dates as mdates
     from matplotlib.backends.backend_agg import FigureCanvasAgg
     from matplotlib.figure import Figure
     from matplotlib.font_manager import FontProperties
@@ -231,35 +238,75 @@ def chart_renderer(report):
     axes.set_ylabel(report['unit'], color=theme['text'], fontproperties=font)
     artists = []
     if report['type'] == 'line':
-        axes.set_xlim(0, max(1, len(periods) - 1))
-        indices = np.unique(np.linspace(0, len(periods) - 1, min(8, len(periods))).astype(int))
-        axes.set_xticks(indices, [periods[i] for i in indices], rotation=15)
+        positions = np.asarray(report['data']['positions'], dtype=float)
+        axes.set_xlim(positions[0], positions[-1])
+        if report['data']['dateAxis']:
+            axes.xaxis_date()
+            first, last = mdates.num2date(positions[[0, -1]])
+            months = (last.year - first.year) * 12 + last.month - first.month
+            locator = mdates.MonthLocator(interval=max(1, math.ceil(months / 6)))
+            ticks = [tick for tick in locator.tick_values(first, last)
+                     if positions[0] <= tick <= positions[-1] and mdates.num2date(tick).day == 1]
+            # MonthLocator falls back to the endpoints when a range contains no month start.
+            axes.set_xticks(ticks or [positions[0]])
+            axes.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+        else:
+            indices = np.unique(np.linspace(0, len(periods) - 1, min(8, len(periods))).astype(int))
+            axes.set_xticks(indices, [periods[i] for i in indices], rotation=15)
         for i, name in enumerate(names):
-            artists.append(axes.plot([], [], label=name, color=theme['palette'][i % len(theme['palette'])], linewidth=2.5)[0])
-        axes.legend(facecolor=theme['background'], labelcolor=theme['text'], prop=font)
+            color = theme['palette'][0 if i == 0 else 1]
+            artists.append(axes.plot([], [], label=name, color=color, linewidth=2.5)[0])
+        if len(names) > 1:
+            axes.legend(facecolor=theme['background'], labelcolor=theme['text'], prop=font)
     else:
-        artists = axes.bar(names, values[:, 0], color=[theme['palette'][i % len(theme['palette'])] for i in range(len(names))])
+        artists = axes.bar(names, values[:, 0], color=theme['palette'][0])
         axes.tick_params(axis='x', rotation=15)
     for tick in [*axes.get_xticklabels(), *axes.get_yticklabels()]:
         tick.set_fontproperties(font)
-    overlay = text_overlay(report)
+    overlay = text_overlay(report, fields=('title', 'source'))
+    headline = text_overlay(report, fields=('headline',))
+    period_text, period_overlay = None, None
     frame_count = math.ceil(report['durationSeconds'] * report['fps'])
     hold = min(round(report['fps'] * .5), frame_count // 3)
 
     def frame_at(seconds):
+        nonlocal period_text, period_overlay
         frame = min(frame_count - 1, max(0, int(seconds * report['fps'] + 1e-6)))
-        progress = min(1, frame / max(1, frame_count - hold - 1)) * (len(periods) - 1)
-        left = int(progress)
-        right = min(left + 1, len(periods) - 1)
-        current = values[:, left] * (1 - (progress - left)) + values[:, right] * (progress - left)
+        amount = min(1, frame / max(1, frame_count - hold - 1))
+        if report['type'] == 'line':
+            head = positions[0] + amount * (positions[-1] - positions[0])
+            left = max(0, int(np.searchsorted(positions, head, side='right')) - 1)
+            right = min(left + 1, len(periods) - 1)
+            fraction = (head - positions[left]) / (positions[right] - positions[left]) if right > left else 0
+        else:
+            progress = amount * (len(periods) - 1)
+            left = int(progress)
+            right = min(left + 1, len(periods) - 1)
+            fraction = progress - left
+        current = values[:, left] * (1 - fraction) + values[:, right] * fraction
         for i, artist in enumerate(artists):
             if report['type'] == 'line':
-                artist.set_data([*range(left + 1), progress], [*values[i, :left + 1], current[i]])
+                artist.set_data([*positions[:left + 1], head], [*values[i, :left + 1], current[i]])
             else:
                 artist.set_height(current[i])
         canvas.draw()
         image = Image.fromarray(np.asarray(canvas.buffer_rgba()).copy())
         image.alpha_composite(overlay)
+        elapsed = frame / report['fps'] - report['headlineStartSeconds']
+        fade = report['headlineFadeSeconds']
+        opacity = max(0, min(1, elapsed / fade)) if fade else float(elapsed >= 0)
+        if report['headline'] and opacity >= 1:
+            image.alpha_composite(headline)
+        elif report['headline'] and opacity > 0:
+            faded = headline.copy()
+            faded.putalpha(headline.getchannel('A').point(lambda a: round(a * opacity)))
+            image.alpha_composite(faded)
+        if report['type'] == 'bar':
+            label = periods[left] if fraction == 0 or left == right else f'{periods[left]} → {periods[right]}'
+            if label != period_text:
+                period_text = label
+                period_overlay = text_overlay({**report, 'period': label}, fields=('period',))
+            image.alpha_composite(period_overlay)
         return np.asarray(image.convert('RGB')).copy()
     return figure, frame_at
 
