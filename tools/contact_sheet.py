@@ -19,7 +19,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import re
 import shutil
 import subprocess
 import sys
@@ -140,7 +139,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("video", type=Path)
     ap.add_argument("-o", "--output", type=Path, help="sheet PNG (default: <video>.sheet.png)")
-    ap.add_argument("--at", help="comma-separated seconds instead of scene detection")
+    ap.add_argument("--at", action="append", help="seconds instead of scene detection: comma-separated, "
+                    "or repeat the flag")
     ap.add_argument("--count", type=int, help="this many evenly spaced frames instead of scene detection")
     ap.add_argument("--threshold", type=float, default=0.12, help="picture change between samples, 0-1 (default 0.12)")
     ap.add_argument("--before", type=float, default=0.8, help="seconds before each cut to sample (default 0.8)")
@@ -161,7 +161,7 @@ def main() -> int:
 
     duration = ffprobe_duration(args.video)
     if args.at:
-        times = [min(max(0.0, float(t)), round(duration - END_MARGIN, 3)) for t in args.at.split(",") if t.strip()]
+        times = [min(max(0.0, float(t)), round(duration - END_MARGIN, 3)) for t in ",".join(args.at).split(",") if t.strip()]
         how = "chosen times"
     elif args.count is not None:
         if args.count < 1:

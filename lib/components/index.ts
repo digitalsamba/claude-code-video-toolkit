@@ -56,6 +56,9 @@ export type { StageProps, CameraKeyframe } from './Stage';
 export { Cursor, cursorAt, press, near } from './Cursor';
 export type { CursorProps, CursorPoint } from './Cursor';
 
+export { Terminal, terminalTheme, typedUntil } from './Terminal';
+export type { TerminalProps, TerminalLine, TerminalTheme, TerminalKind } from './Terminal';
+
 export { voice, cueWords } from './cues';
 export type { Voice, VoicePhrase, CaptionWord, CueOptions } from './cues';
 
@@ -69,6 +72,10 @@ export type {
 // Turning one scene into new pages in place, on narration cues (between scenes: @remotion/transitions wipe())
 export { PageTurns, turnProgress } from './PageTurns';
 export type { PageTurnsProps, PageTurn } from './PageTurns';
+
+// A person's animated photo (ltx2.py --input): plays once, holds its last good frame (parody-short skill)
+export { LivingPhoto, livingFrame, livingRate } from './LivingPhoto';
+export type { LivingPhotoProps } from './LivingPhoto';
 
 // Utilities
 export { hexToRgba, SIZE_PRESETS, POSITION_PRESETS } from './utils';

@@ -61,6 +61,10 @@ Use when the user wants to:
 
 ## Use With Care
 
+- **Identity keep-clauses** - naming features to keep ("keep his glasses and beard") ADDS them to people who lack
+  them. Use "Keep exactly the same person with an identical face and identical hair, do not add or remove glasses,
+  beard or stubble, photorealistic photograph" (costuming colleagues, 2026-11; `.claude/skills/parody-short/people.md`).
+  For someone who does wear glasses, name them ("keeps wearing her round glasses"), or a new setting can drop them
 - **Multi-image compositing** - CAN work with explicit identity anchors (see examples.md for prompt patterns). Requires describing distinctive features (hair texture/color, ethnicity, outfit) and using guidance ~2.0
 - **Camera angle changes** - Inconsistent results. Vertical angles (low/high) work better than rotational (three-quarter view)
 

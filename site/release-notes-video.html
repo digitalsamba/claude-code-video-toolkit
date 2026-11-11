@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Release-notes videos from source code, with Claude Code</title>
+<meta name="description" content="Product demo and release-notes videos with no screen recording: Claude Code rebuilds the app's screens from its source as React, then drives them with a scripted cursor and camera timed to the narration.">
+<meta property="og:title" content="Release-notes videos from source code, with Claude Code">
+<meta property="og:description" content="Product demo and release-notes videos with no screen recording: Claude Code rebuilds the app's screens from its source as React, then drives them with a scripted cursor and camera timed to the narration.">
+<meta property="og:image" content="https://digitalsamba.github.io/claude-code-video-toolkit/img/ds-release-650.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233771e0'/%3E%3Cpath d='M12 9v14l11-7z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script src="site.js" defer></script>
+</head>
+<body>
+<header class="frame">
+  <nav class="nav" aria-label="Main">
+    <a class="mark" href="./">claude-code-video-toolkit</a>
+    <ul>
+      <li class="hide-sm"><a class="link" href="./#made">Videos</a></li>
+      <li class="hide-sm"><a class="link" href="./#how">How it works</a></li>
+      <li class="hide-sm"><a class="link" href="./#routes">What to make</a></li>
+      <li><a class="button" href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a></li>
+    </ul>
+  </nav>
+</header>
+<main>
+  <div class="article-head frame grid">
+    <div class="words">
+      <h1>Release notes with no screen recording</h1>
+      <p class="lede" data-rise>Claude Code reads your app's source, rebuilds the screens as React and films them with a scripted cursor and camera. Nothing to record, no test data, nothing that goes stale.</p>
+    </div>
+    <figure class="clip shutter">
+      <video data-loop autoplay muted loop playsinline preload="metadata" poster="media/made-with.jpg" width="768" height="296" aria-label="Clips from videos made with the toolkit"><source src="media/made-with.mp4" type="video/mp4"></video>
+      <figcaption>Two seconds from each of five videos it made</figcaption>
+    </figure>
+  </div>
+
+  <section class="frame" aria-labelledby="why">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="why" data-rise>Why not record the screen?</h2>
+        <div><p data-rise>A screen recording needs a running app, accounts, test data and a clean state, and it breaks on the next UI change. A rebuilt screen is static React: it renders the same every time, shows exactly the state the story needs, and the camera can zoom anywhere without blur.</p></div>
+      </div>
+      <div class="show"><figure data-rise><img src="img/ds-release-650.jpg" alt="A product settings screen rebuilt as React, with a language menu open" loading="lazy"><figcaption>Release 650: six items across two apps, every click on its word</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="frame field" aria-labelledby="how">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="how" data-rise>How it works</h2>
+        <div><ol><li data-rise><b>Write the narration first,</b> one sentence per item, and generate it. A cloned voice works well.</li><li data-rise><b>Rebuild each screen</b> from the app's own components and styles, as a static page at a fixed canvas size. Claude Code reads the source; you point it at the right files.</li><li data-rise><b>Drive it with <code>Stage</code> and <code>Cursor</code>:</b> a browser window, camera keyframes for zoom and pan, and an eased cursor with click ripples. Every click is a frame looked up from the narration with <code>cue('save')</code>, so a re-timed voice moves the whole scene with it.</li><li data-rise><b>Check the text</b> with <code>qc.py --layout</code>: text too small for a phone, clipped, or under WCAG contrast.</li></ol></div>
+      </div>
+      <div class="show"><div class="pair"><figure data-rise><img src="img/ds-release-649.jpg" alt="A rebuilt product screen with the cursor on a control" loading="lazy"><figcaption>Release 649</figcaption></figure><figure data-rise><img src="img/ds-free-schedule-demo.jpg" alt="A scheduling form with a talking-head narrator tile" loading="lazy"><figcaption>A product demo with a narrator tile</figcaption></figure></div></div>
+    </div>
+  </section>
+
+  <section class="frame" aria-labelledby="start">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="start" data-rise>Start</h2>
+        <div><p data-rise>The template ships as a finished build, so it renders as it is. For your release, keep the screen kits and replace the scenes. The method and its gotchas are in the <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/.claude/skills/synthetic-ui-demo">synthetic-ui-demo skill</a>.</p></div>
+      </div>
+      <div class="show"><pre data-rise><code>cp -r templates/ds-release-notes projects/my-release
+# then, in Claude Code:
+Make a release-notes video for these three changes: ...
+The app's source is in ~/code/my-app.</code></pre><figure data-rise><img src="img/soulx-talking-head.jpg" alt="A presenter generated as a talking head" loading="lazy"><figcaption>A narrator tile made with SoulX</figcaption></figure></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot frame">
+  <div class="top">
+    <div class="notes"><span>Open source, MIT licensed</span><span>Made by Conal Mullan and <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/graphs/contributors">contributors</a></span><span>For <a class="link" href="https://claude.ai/code">Claude Code</a>, not made by Anthropic</span></div>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <a class="big" href="https://github.com/digitalsamba/claude-code-video-toolkit"><span>github.com/digitalsamba/</span><span>claude-code-video-toolkit</span></a>
+  <div class="meta">
+    <div><a class="link" href="./">Home</a><a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/releases">Releases</a><a class="link" href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">Playlist</a></div>
+    <div class="c">Every video and picture here was made with the toolkit</div>
+    <div class="r">2026</div>
+  </div>
+</footer>
+</body>
+</html>

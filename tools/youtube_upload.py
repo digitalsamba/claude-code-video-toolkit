@@ -90,12 +90,16 @@ load_dotenv()
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-# OAuth scopes. youtube.upload covers videos.insert / thumbnails.set / captions.insert.
-# The broader youtube scope is needed for playlistItems.insert; request both up front
-# so adding a video to a playlist later never forces a re-consent.
+# OAuth scopes. youtube.upload covers videos.insert and thumbnails.set; youtube covers
+# playlistItems.insert and videos.update. captions.insert accepts neither: it needs
+# youtube.force-ssl (a 403 "insufficient scopes" otherwise). Request all three up front so
+# a later step never forces a re-consent. A token from before force-ssl was added keeps
+# working for uploads; only --captions asks for a new --auth.
+CAPTION_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube",
+    CAPTION_SCOPE,
 ]
 
 VALID_PRIVACY = ("private", "unlisted", "public")
@@ -187,10 +191,20 @@ def get_credentials(
 
     if token_file.exists():
         try:
-            creds = Credentials.from_authorized_user_file(str(token_file), SCOPES)
+            # no scopes argument: keep what was granted, so a refresh never asks for more
+            creds = Credentials.from_authorized_user_file(str(token_file))
         except (ValueError, json.JSONDecodeError) as e:
             log(f"Cached token for '{account}' is unreadable ({e}); re-authing.", "warn")
             creds = None
+
+    # Kept on a new consent, so logging in again here never drops a scope another tool asked for
+    # (youtube_stats.py adds Analytics).
+    granted = list(getattr(creds, "scopes", None) or [])
+
+    # Logging in (--auth) with a token from before a scope was added: ask again for all of them.
+    if creds and allow_interactive and missing_scopes(creds, SCOPES):
+        log(f"Token for '{account}' lacks {', '.join(missing_scopes(creds, SCOPES))}; asking again.", "info")
+        creds = None
 
     # Valid cached token -> zero interaction.
     if creds and creds.valid:
@@ -224,7 +238,7 @@ def get_credentials(
             "or pass --client-secrets PATH. See docs/youtube-upload.md for the Cloud Console steps."
         )
 
-    flow = InstalledAppFlow.from_client_secrets_file(secrets, SCOPES)
+    flow = InstalledAppFlow.from_client_secrets_file(secrets, SCOPES + [g for g in granted if g not in SCOPES])
     # port=0 -> OS-assigned free localhost port (matches the "Desktop app" client's
     # http://localhost redirect). access_type=offline + prompt=consent guarantee a
     # refresh_token is issued so future runs are silent.
@@ -294,6 +308,10 @@ def build_request_body(args, description: str, tags: list[str]) -> dict:
         "license": args.license,
         "embeddable": True,
     }
+    if args.synthetic_media:
+        # YouTube's "altered or synthetic content" disclosure: required when realistic people, places or events
+        # were generated or altered (an AI-animated cast, a cloned voice saying things the person didn't)
+        status["containsSyntheticMedia"] = True
     if args.publish_at:
         # Scheduled publish REQUIRES privacyStatus == private at insert time.
         status["privacyStatus"] = "private"
@@ -400,6 +418,39 @@ def resumable_upload(request) -> dict:
     return response
 
 
+def locked_private(args, status: dict) -> Optional[str]:
+    """A warning when YouTube kept a video private that was meant to go public, else None.
+
+    A scheduled upload is private until its publishAt by design, so for one the lock shows as YouTube dropping
+    the publishAt, not as privacy=private."""
+    lock = ("likely the unaudited-project lock. For your own channel this usually doesn't apply; "
+            "otherwise lift it via the YouTube API compliance audit.")
+    if args.publish_at:
+        if status.get("privacyStatus") == "private" and not status.get("publishAt"):
+            return f"YouTube dropped the scheduled publish time, so the video stays private: {lock}"
+        return None
+    if args.privacy == "public" and status.get("privacyStatus") == "private":
+        return f"YouTube returned privacy=private for a public upload: {lock}"
+    return None
+
+
+def set_synthetic_media(youtube, video_id: str, status: dict) -> bool:
+    """Set the "altered or synthetic content" disclosure after upload. videos.update replaces the whole status
+    part, so the fields the insert set are sent back with it."""
+    keep = {k: status[k] for k in ("privacyStatus", "publishAt", "license", "embeddable", "publicStatsViewable",
+                                   "selfDeclaredMadeForKids") if k in status}
+    try:
+        r = youtube.videos().update(part="status", body={"id": video_id, "status": {
+            **keep, "containsSyntheticMedia": True}}).execute()
+        ok = bool(r.get("status", {}).get("containsSyntheticMedia"))
+        log("AI-generated content disclosure set" if ok else "AI disclosure not confirmed: set it in YouTube Studio",
+            "success" if ok else "warn")
+        return ok
+    except Exception as e:  # non-fatal: the video is up
+        log(f"AI disclosure not set ({e}); set it in YouTube Studio (Details > Altered content)", "warn")
+        return False
+
+
 def set_thumbnail(youtube, video_id: str, thumb_path: str) -> bool:
     """Attach a custom thumbnail. Non-fatal: returns True/False, never raises out."""
     try:
@@ -415,6 +466,16 @@ def set_thumbnail(youtube, video_id: str, thumb_path: str) -> bool:
             "warn",
         )
         return False
+
+
+def missing_scopes(creds, needed: list[str]) -> list[str]:
+    """Scopes in `needed` that the cached token was not granted."""
+    have = set(getattr(creds, "scopes", None) or [])
+    return [s for s in needed if s not in have]
+
+
+def needed_scopes(args) -> list[str]:
+    return [CAPTION_SCOPE] if args.captions else []
 
 
 def add_caption(youtube, video_id: str, caption_path: str, language: str) -> bool:
@@ -486,6 +547,15 @@ def parse_publish_at(value: str) -> str:
 def validate_args(args) -> Optional[str]:
     """Return an error string if invalid, else None. Mutates args.publish_at to the
     normalized form. Runs before any network call so we never burn quota on bad input."""
+    if args.video_id:
+        if args.video:
+            return "--video-id works on an uploaded video; leave out --video."
+        if not (args.thumbnail or args.captions or args.playlist):
+            return "--video-id needs something to add: --captions, --thumbnail or --playlist."
+        for label, p in (("--thumbnail", args.thumbnail), ("--captions", args.captions)):
+            if p and not Path(p).exists():
+                return f"{label} file not found: {p}"
+        return None
     if not args.video:
         return "Missing --video (the file to upload)."
     vpath = Path(args.video)
@@ -506,6 +576,23 @@ def validate_args(args) -> Optional[str]:
         if p and not Path(p).exists():
             return f"{label} file not found: {p}"
     return None
+
+
+def add_extras_to_existing(youtube, args):
+    """--video-id: thumbnail, captions and playlist for a video already on YouTube. Exits."""
+    vid = args.video_id
+    thumbnail_set = set_thumbnail(youtube, vid, args.thumbnail) if args.thumbnail else False
+    captions_added = add_caption(youtube, vid, args.captions, args.captions_language) if args.captions else False
+    playlist_added = add_to_playlist(youtube, vid, args.playlist) if args.playlist else False
+    ok = all(done for asked, done in ((args.thumbnail, thumbnail_set), (args.captions, captions_added),
+                                      (args.playlist, playlist_added)) if asked)
+    if args.json_out:
+        emit_json({
+            "success": ok, "videoId": vid, "url": f"https://www.youtube.com/watch?v={vid}",
+            "account": args.account, "thumbnailSet": thumbnail_set, "captionsAdded": captions_added,
+            "playlistId": args.playlist if playlist_added else None, "uploadStatus": "existing",
+        })
+    sys.exit(0 if ok else 1)
 
 
 def emit_json(payload: dict):
@@ -560,7 +647,15 @@ Note: until your OAuth app is Google-verified, uploads are force-locked to priva
     parser.add_argument("--captions", help="Path to a caption file (.srt/.vtt)")
     parser.add_argument("--captions-language", default="en", help="Caption language code (default: en)")
     parser.add_argument("--playlist", help="Playlist ID to add the video to")
+    parser.add_argument("--video-id", help="Add --captions, --thumbnail or --playlist to an already uploaded "
+                        "video instead of uploading one")
     parser.add_argument("--made-for-kids", action="store_true", help="Set selfDeclaredMadeForKids")
+    parser.add_argument("--synthetic-media", action="store_true",
+                        help="Disclose realistic AI-generated or altered content (status.containsSyntheticMedia): "
+                             "an animated AI cast, generated people, a cloned voice")
+    parser.add_argument("--allow-copy", action="store_true",
+                        help="Upload even if the title, description or tags fail tools/copy_lint.py "
+                             "(dashes, stock AI or marketing phrases)")
     parser.add_argument("--default-language", help="snippet.defaultLanguage code, e.g. en")
     parser.add_argument(
         "--license", choices=("youtube", "creativeCommon"), default="youtube",
@@ -607,27 +702,50 @@ def main():
             emit_json({"success": False, "error": err, "errorType": "validation"})
         sys.exit(1)
 
-    description = read_description(args)
-    tags = parse_tags(args.tags)
-    body = build_request_body(args, description, tags)
+    body = None
+    if not args.video_id:  # adding to an uploaded video sends no title or description
+        description = read_description(args)
+        tags = parse_tags(args.tags)
+
+        # --- Copy lint: the title, description and tags are public ------------------
+        if not args.allow_copy:
+            from copy_lint import lint_text
+            found = [f"{where}: '{m}' is {why}" for where, text in
+                     (("title", args.title), ("description", description), ("tags", ", ".join(tags)))
+                     for m, why in lint_text(text)]
+            if found:
+                msg = "Copy lint refused the upload (fix the wording, or --allow-copy if it's meant):\n  " + \
+                      "\n  ".join(found)
+                log(msg, "error")
+                if args.json_out:
+                    emit_json({"success": False, "error": msg, "errorType": "copy", "findings": found})
+                sys.exit(1)
+        body = build_request_body(args, description, tags)
 
     # --- Dry run -----------------------------------------------------------------
     if args.dry_run:
-        log("Dry run — request body (no upload):", "info")
-        print(json.dumps(body, indent=2), file=sys.stderr)
+        if body is not None:
+            log("Dry run — request body (no upload):", "info")
+            print(json.dumps(body, indent=2), file=sys.stderr)
         auth_ok = False
         auth_msg = None
+        missing = []
         try:
-            get_credentials(args.account, args.client_secrets, allow_interactive=False)
-            auth_ok = True
-            log("Auth: cached credentials ready.", "success")
+            creds = get_credentials(args.account, args.client_secrets, allow_interactive=False)
+            missing = missing_scopes(creds, needed_scopes(args))
+            if missing:
+                auth_msg = f"token lacks {', '.join(missing)} (needed for --captions); re-run --auth"
+                log(f"Auth: {auth_msg}", "warn")
+            else:
+                auth_ok = True
+                log("Auth: cached credentials ready.", "success")
         except AuthError as e:
             auth_msg = str(e)
             log(f"Auth: not ready — {e}", "warn")
         if args.json_out:
             emit_json({
-                "success": True, "dryRun": True, "authOk": auth_ok,
-                "authError": auth_msg, "requestBody": body, "account": args.account,
+                "success": True, "dryRun": True, "authOk": auth_ok, "authError": auth_msg,
+                "missingScopes": missing, "requestBody": body, "account": args.account,
             })
         sys.exit(0)
 
@@ -650,7 +768,20 @@ def main():
             emit_json({"success": False, "error": str(e), "errorType": "auth"})
         sys.exit(1)
 
+    missing = missing_scopes(creds, needed_scopes(args))
+    if missing:
+        msg = (f"The cached token for '{args.account}' can't add captions (it lacks {', '.join(missing)}). "
+               f"Log in again once, then re-run: uv run --extra youtube tools/youtube_upload.py --auth "
+               f"--account {args.account}")
+        log(msg, "error")
+        if args.json_out:
+            emit_json({"success": False, "error": msg, "errorType": "auth", "missingScopes": missing})
+        sys.exit(1)
+
     youtube = build_service(creds)
+
+    if args.video_id:
+        add_extras_to_existing(youtube, args)
 
     # --- Upload ------------------------------------------------------------------
     media = MediaFileUpload(args.video, chunksize=args.chunk_size * 1024 * 1024, resumable=True)
@@ -689,16 +820,17 @@ def main():
     actual_privacy = response.get("status", {}).get("privacyStatus", "unknown")
     url = f"https://www.youtube.com/watch?v={video_id}"
     log(f"Uploaded: {url}  (privacy: {actual_privacy})", "success")
-    if args.privacy != "private" or args.publish_at:
-        if actual_privacy == "private" and (args.publish_at or args.privacy == "public"):
-            log(
-                "YouTube returned privacy=private despite the request — likely the "
-                "unaudited-project lock. For your own channel this usually doesn't apply; "
-                "otherwise lift it via the YouTube API compliance audit.",
-                "warn",
-            )
+    lock_warning = locked_private(args, response.get("status", {}))
+    if lock_warning:
+        log(lock_warning, "warn")
+    elif args.publish_at:
+        log(f"Scheduled: private until {args.publish_at}, then public.", "info")
 
     # --- Post-upload extras (each non-fatal) -------------------------------------
+    synthetic = bool(response.get("status", {}).get("containsSyntheticMedia"))
+    if args.synthetic_media and not synthetic:
+        # videos.insert didn't keep the disclosure on the first uploads (2026-11-08); videos.update does
+        synthetic = set_synthetic_media(youtube, video_id, response.get("status", {}))
     thumbnail_set = set_thumbnail(youtube, video_id, args.thumbnail) if args.thumbnail else False
     captions_added = (
         add_caption(youtube, video_id, args.captions, args.captions_language) if args.captions else False
@@ -716,6 +848,7 @@ def main():
             "publishAt": args.publish_at,
             "account": args.account,
             "thumbnailSet": thumbnail_set,
+            "syntheticMedia": synthetic,
             "captionsAdded": captions_added,
             "playlistId": args.playlist,
             "uploadStatus": "uploaded",

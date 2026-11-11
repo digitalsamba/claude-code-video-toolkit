@@ -10,6 +10,63 @@ All notable changes to claude-code-video-toolkit.
 
 ---
 
+## 2026-11-09 (v0.27.0)
+
+Five contributor tools for working on footage you already have, a stats loop for what you publish, and a copy lint
+on every public word. Real recorded sound effects come from Freesound for free, music ducks under speech, captions
+export as subtitle files, a vertical cut follows a face, and a long recording becomes a highlight reel. The toolkit
+also has a public site now.
+
+### Added
+
+- **`tools/sfx_search.py`** (#181, gulnarjbl): finds and downloads Creative Commons sound effects from Freesound through the Openverse API, with no key. Only commercially usable licences by default, and each download gets an attribution file. Openverse doesn't guarantee its licence data, so check the Freesound page before commercial use.
+- **`addmusic.py --duck` and `--events`** (#161, AsharibAli): the music bed drops under speech and recovers in the pauses, and sound effects land at set times from a JSON list. Every input is brought to 48 kHz stereo before the mix.
+- **`captions.py --srt` and `--vtt`** (#167, AsharibAli): subtitle files beside the caption JSON in the same pass, split at sentence ends, pauses and a word limit; existing caption JSON converts offline.
+- **`cutdown.py --mode track`** (#163, AsharibAli): a social crop that follows one face, holding the last good position on a cut, a second face or a far jump. OpenCV is an optional extra (`uv sync --extra vision`), needed only for this mode.
+- **`tools/highlights.py`** (#162, AsharibAli): picks the final takes from a word-timed transcript and writes the ranges as `cutdown.py` segments.
+- **`tools/youtube_stats.py`** and the `youtube-stats` skill: views, likes and comments per video, plus watch time, retention and traffic sources with the Analytics scope, saved as snapshots so trends show; GitHub traffic beside it.
+- **`tools/copy_lint.py`**: refuses dashes and stock AI or marketing phrasing in anything public. Video jobs and `youtube_upload.py` refuse it, `voiceover.py` warns, and a `Copy lint` CI check runs on new lines and commit subjects.
+- **A GitHub Pages site**: the front page and one page per use case, in the Digital Samba design system, linked as the repo homepage.
+- **A Python tests workflow** in CI for `tools/`, `scripts/`, tests and the registry, and a test for `ltx_extend.py` against a fake continuation.
+
+### Changed
+
+- **`addmusic.py` mixes at the levels you set**: the old mix halved both tracks, so fixed-level mixes now come out about 6 dB louder than before. Run `qc.py --render ... --fix` for delivery loudness as usual.
+- The agent skill (`skills/video-toolkit/`) names every tool above.
+
+### Fixed
+
+- `youtube_upload.py` no longer warns that a scheduled upload came back private.
+- `examples/ds-release-649` marks its browser window `data-qc="product"` for `qc.py --layout`.
+---
+
+## 2026-11-08 (v0.26.0)
+
+Comedy shorts about your own group, and the tools that make generated people hold up in them: clips that
+continue instead of freezing or looping, sound placed on the movement by measurement, and a QC check for motion
+that stops dead. Uploads now carry YouTube's AI-content disclosure, and agent video jobs take a person's own
+photos and clips.
+
+### Added
+
+- **`parody-short` skill**: comedy shorts about a group's own life (a team's launch, a club's season, a family's Christmas) or a shared topic everyone recognises (video calls, the return to the office), told in a borrowed genre (80s action intro, creature feature, Dickens Christmas ad) and starring the group's real, animated photos or an invented cast. It covers mining the group's own chat, docs and tools for in-jokes (with privacy rules), mapping a genre's beats onto the real event, costuming photos with `image_edit` and animating them with LTX, designed voices, vertical cuts and brand editions.
+- **`LivingPhoto`** (`lib/components`) plays an image-to-video clip of a person once and holds its last good frame (`after: 'drift'` with a slow push-in, or `'freeze'` for a freeze-frame gag). `fit` slows a slightly short clip to fill its shot, down to 0.8x; it never loops or plays backwards. `livingFrame()` lets a shot time a gag to the clip.
+- **`tools/ltx_extend.py`** continues an LTX clip from its last good frame instead of looping or freezing it, joining the two with a short cross-fade (`--times` chains more). On an 11 s shot it measured 0% frozen and 0% revisited frames, against 63% frozen when the last frame was held. Continuing from an earlier frame also cuts out a bad stretch. A failed chain keeps the clips it paid for.
+- **`tools/sync_check.py`** places a sound on generated movement and checks it in the render. `--clip` says where in a clip a sound should start so its loudest moment meets the movement; `--video --cues sync-cues.json` measures every cue in a render and exits 1 past 0.1 s. Kinds: `peak` (a sneeze, a laugh), `impact` (where a movement stops, a landing) and `onset` (where a sustained movement starts). Sound paths resolve from the cue file.
+- **`qc.py --render` catches motion that stops dead**: part of the frame moving for 3 s or more, then frozen for 2 s or more while the rest of the video goes on, usually an image-to-video clip that ran out. The whole-frame still check missed these because something else is always moving.
+- **`youtube_upload.py --synthetic-media`** sets YouTube's "altered or synthetic content" disclosure for realistic generated people and cloned voices, and `/publish` asks about it. A privacy policy for the uploader (`docs/privacy.md`) lets its OAuth app run in production mode, so refresh tokens no longer expire weekly.
+- **Agent video jobs take the person's own media**: a kit (`kits/<name>/kit.json`: brand, voice, format and someone's photos, set up once in a session) and `file` scenes from it, a cloned voice in the kit, and a focus map that keeps an off-centre subject in a 9:16 crop. `text` scenes get a local brand-colour background on a host without FLUX, so one-prompt videos run with no GPU provider.
+- **Agent jobs know their host**: `catalog` and presets report the visual kinds, voices, music providers and local tools (ffmpeg, moviepy, Node) this host has, and `submit` refuses a spec that needs a missing one before any spend, naming the env vars and an alternative. Narration and on-screen copy are checked before spend (dashes, stock AI phrasing, narration repeated from an earlier job).
+- **The agent skill opens with a routes table**: which template or skill fits what a user asks, and whether it runs as a one-prompt `job` or a working `session`. `video_job.py catalog` and MCP `video_catalog` list the routes from the registry.
+
+### Fixed
+
+- `youtube_upload.py` checks that the AI-content disclosure survived the upload and sets it with `videos.update` when it didn't (the first two uploads came back without it), and reports `syntheticMedia` in `--json-out`.
+- `ltx_extend.py --times 2` works: the second link no longer seeks to the clip's very last frame, where ffmpeg writes no image.
+- Video jobs take a person's file only from the kit, the agent workspace, the submitting directory or the toolkit; a default spec is no longer refused for want of a music key; `estimate` parses its host lines on Python 3.10.
+
+---
+
 ## 2026-11-05 (v0.25.0)
 
 ### Added

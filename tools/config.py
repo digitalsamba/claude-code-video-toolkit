@@ -177,8 +177,15 @@ def get_brand_dir(brand_name: str) -> Path | None:
     return None
 
 
-def load_brand_voice_config(brand_name: str) -> dict | None:
-    """Load voice.json for a brand. Returns parsed dict or None."""
+def load_brand_voice_config(brand_name: str, voice: str | None = None) -> dict | None:
+    """Load voice.json for a brand. Returns parsed dict or None.
+
+    A brand can carry several voices: ``{"default": "marilyn", "voices": {"marilyn": {...},
+    "bren": {...}}}``. ``voice`` picks one by name (else ``default``, else the first); its
+    block is laid over any top-level keys, so shared settings can sit at the top. A
+    single-voice voice.json (no ``voices`` map) is returned as it is, and naming a voice
+    for it raises ``ValueError``, as does a name the map doesn't have.
+    """
     brand_dir = get_brand_dir(brand_name)
     if not brand_dir:
         return None
@@ -186,7 +193,28 @@ def load_brand_voice_config(brand_name: str) -> dict | None:
     if not voice_path.exists():
         return None
     with open(voice_path) as f:
-        return json.load(f)
+        config = json.load(f)
+    voices = config.get("voices")
+    if not isinstance(voices, dict) or not voices:
+        if voice:
+            raise ValueError(f"brand '{brand_name}' has one voice; its voice.json has no 'voices' map")
+        return config
+    name = voice or config.get("default") or next(iter(voices))
+    if name not in voices:
+        raise ValueError(f"brand '{brand_name}' has no voice '{name}' (it has: {', '.join(voices)})")
+    shared = {k: v for k, v in config.items() if k not in ("voices", "default")}
+    return {**shared, **voices[name], "voiceName": name}
+
+
+def list_brand_voices(brand_name: str) -> list[str]:
+    """Names in a brand's ``voices`` map ([] for a single-voice brand or none)."""
+    brand_dir = get_brand_dir(brand_name)
+    voice_path = brand_dir / "voice.json" if brand_dir else None
+    if not voice_path or not voice_path.exists():
+        return []
+    with open(voice_path) as f:
+        voices = json.load(f).get("voices")
+    return list(voices) if isinstance(voices, dict) else []
 
 
 def get_r2_config() -> dict | None:

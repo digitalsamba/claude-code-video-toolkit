@@ -609,17 +609,7 @@ def brand_colors(spec: dict) -> dict:
 # What a model writes when it isn't paying attention: dashes and stock AI phrasing. Narration is heard and
 # burned as captions, and the title, headlines and sublines are on screen, so these are refused before any
 # spend, with the reason.
-COPY_RULES = [
-    (re.compile(r"—|\s–\s|\s--\s"), "a dash; use a comma, a full stop or a new sentence"),
-    (re.compile(r"\bit'?s worth noting\b|\bit is (worth|important) (noting|to note)\b", re.I), "'it's worth noting'; say the point"),
-    (re.compile(r"\bin today'?s (fast-paced |busy |modern )?(world|age|landscape)\b|\bmoving forward\b"
-                r"|\bfirst and foremost\b|\blast but not least\b|\bwithout further ado\b|\ball in all\b"
-                r"|\bin conclusion\b|\bshed light on\b|\bpave the way\b|\bat the forefront\b|\bdeep[- ]dive\b"
-                r"|\bdelve\b|\btapestry\b|\bembark on a journey\b|\bunlock (your|the) (full )?potential\b"
-                r"|\bgame[- ]changer\b|\bnavigat(e|ing) the (complexities|world|landscape)\b"
-                r"|\bseamless(ly)?\b|\bresonate(s)? with\b|\btestament to\b", re.I),
-     "stock AI phrasing; say it the way a person would"),
-]
+from copy_lint import COPY_RULES  # noqa: E402  (shared with every public text: tools/copy_lint.py)
 
 
 def copy_findings(spec: dict) -> list[str]:
@@ -671,6 +661,17 @@ def _hex_rgb(h: str, fallback=(10, 10, 20)) -> tuple:
         return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
     except ValueError:
         return fallback
+
+
+def field_clear_of(color: str, ink: str) -> str:
+    """The local field's colour, moved one step off the caption pill's ink when they match: the pill is drawn in
+    the palette ink, which is also the field's default colour, so on its own field it disappeared."""
+    c, k = _hex_rgb(color), _hex_rgb(ink)
+    if sum(abs(a - b) for a, b in zip(c, k)) > 36:
+        return color
+    light = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) > 140
+    mixed = [round(v + ((0 if light else 255) - v) * 0.14) for v in c]
+    return "#" + "".join(f"{v:02X}" for v in mixed)
 
 
 def draw_local_background(out: Path, width: int, height: int, color: str, seed: int = 0) -> None:
@@ -1807,7 +1808,10 @@ def step_visuals(job: dict, spec: dict) -> dict:
                 what = f"your file {Path(vis['src']).name}"
             else:
                 w, h = FORMATS[spec["format"]]["flux"]
-                draw_local_background(out, w, h, vis.get("color") or "#0A0A14", seed=int(s["id"]))
+                ink = (spec.get("palette") or {}).get("ink") or "#0A0A14"   # the template's default ink
+                field = field_clear_of(vis.get("color") or ink, ink) if spec["captions"]["enabled"] \
+                    else (vis.get("color") or ink)
+                draw_local_background(out, w, h, field, seed=int(s["id"]))
                 what = "a local background"
             _mark_made(job, s["asset"])
             add_event(job, "asset", f"scene {s['id']}: {what}", scene=s["id"], visual=vis["kind"], cost_usd=0.0,

@@ -1,6 +1,6 @@
 {
   "name": "claude-code-video-toolkit",
-  "version": "0.25.0",
+  "version": "0.27.0",
   "description": "AI-native video production workspace for Claude Code",
   "repository": "https://github.com/digitalsamba/claude-code-video-toolkit",
   "skills": {
@@ -10,9 +10,9 @@
       "status": "stable",
       "upstream": "https://github.com/remotion-dev/skills",
       "created": "2026-02-19",
-      "updated": "2026-11-02",
+      "updated": "2026-11-09",
       "upstreamPath": "skills/remotion-best-practices",
-      "upstreamVersion": "4.0.540"
+      "upstreamVersion": "4.0.542"
     },
     "remotion": {
       "path": ".claude/skills/remotion/",
@@ -105,6 +105,14 @@
       "created": "2026-10-21",
       "updated": "2026-10-21"
     },
+    "parody-short": {
+      "path": ".claude/skills/parody-short/",
+      "description": "Comedy shorts about a group's own life (a team, club, class or family) or a shared topic, in a borrowed genre, starring the group's animated photos or an invented cast: mining the group's context for in-jokes, mapping genre beats onto the event, costume (image_edit) then animate and extend (LTX, ltx_extend.py) the cast, sound placed with sync_check.py, vertical cuts and brand editions, and the affection and privacy rules",
+      "status": "beta",
+      "note": "Learned on three internal videos starring real colleagues (an 80s action-show release intro, a Halloween creature feature, a Dickens Christmas ad) and two public shorts with an invented cast (a horror trailer, a wildlife documentary), 2026-11",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
+    },
     "video-toolkit": {
       "path": "skills/video-toolkit/",
       "description": "Agent-facing skill for any runtime (OpenClaw, Codex, Hermes, a run_tool loop, MCP clients): a routes table first (which template, skill and example fits what the user asks, and whether it runs as a job or is a build; video_job.py catalog lists them from this registry), then the estimate -> submit -> poll status -> result flow of tools/video_job.py first, then the individual tools with current defaults (SoulX, Ideogram for text, qc.py before delivery, --max-wpm)",
@@ -113,6 +121,13 @@
       "note": "Was skills/openclaw-video-toolkit (OpenClaw-only paths and yieldMs polling) until 2026-10-31",
       "created": "2026-04-14",
       "updated": "2026-11-06"
+    },
+    "youtube-stats": {
+      "path": ".claude/skills/youtube-stats/",
+      "description": "Reading how published videos do (youtube_stats.py): what each metric means for a Short vs a long video, the Analytics scope step, and what has worked on Shorts so far, kept as findings rather than numbers",
+      "status": "beta",
+      "created": "2026-11-08",
+      "updated": "2026-11-08"
     }
   },
   "designSources": {
@@ -328,6 +343,14 @@
       "created": "2025-12-08",
       "updated": "2026-10-21"
     },
+    "sfx_search": {
+      "path": "tools/sfx_search.py",
+      "description": "Find and download Creative Commons sound effects via the Openverse API (Freesound, no key needed)",
+      "usage": "uv run tools/sfx_search.py --query whoosh --output sfx.mp3",
+      "status": "beta",
+      "created": "2026-11-06",
+      "updated": "2026-11-06"
+    },
     "redub": {
       "path": "tools/redub.py",
       "description": "Redub video with different voice (extract audio, transcribe, TTS, replace)",
@@ -342,11 +365,20 @@
     },
     "addmusic": {
       "path": "tools/addmusic.py",
-      "description": "Add background music to video (generate via ElevenLabs or use existing file)",
-      "usage": "uv run tools/addmusic.py --input video.mp4 --prompt 'Subtle corporate' --output output.mp4",
+      "description": "Add or generate background music, optionally duck it under speech and place timed sound effects with --events",
+      "usage": "uv run tools/addmusic.py -i video.mp4 -m music.wav --duck [--events effects.json] -o mixed.mp4",
       "status": "beta",
       "created": "2025-12-28",
-      "updated": "2025-12-28"
+      "updated": "2026-11-07",
+      "options": {
+        "duck": "Lower music during speech; --speech supplies isolated narration",
+        "events": "JSON array of {path, atSeconds, gain}, relative paths from the JSON file",
+        "dry-run": "Validate without writes or paid generation",
+        "duck-threshold": "Sidechain threshold, default .03",
+        "duck-ratio": "Compression ratio, default 8",
+        "duck-attack": "Milliseconds, default 20",
+        "duck-release": "Milliseconds, default 400"
+      }
     },
     "dewatermark": {
       "path": "tools/dewatermark.py",
@@ -410,8 +442,8 @@
     },
     "cutdown": {
       "path": "tools/cutdown.py",
-      "description": "Social cut-downs: reframe a finished 16:9 video to 9:16 / 1:1 / 4:5 for Shorts, Reels, TikTok and feeds, optionally cut to one or more time ranges. Pure ffmpeg, works on any MP4",
-      "usage": "uv run tools/cutdown.py --input out/video.mp4 --platform shorts [--mode blur|crop|pad] [--start 1:05 --end 1:50 | --segment START-END[@FOCUS] ...]",
+      "description": "Social cut-downs to 9:16 / 1:1 / 4:5, optional highlight segments and subject tracking; FFmpeg for all modes, optional vision extra for --mode track",
+      "usage": "uv run tools/cutdown.py --input input.mp4 --platform shorts [--mode blur|crop|pad|track] [--segment START-END[@FOCUS] ...]",
       "status": "beta",
       "category": "utility",
       "requires": "ffmpeg",
@@ -422,7 +454,7 @@
           "4:5"
         ],
         "platform": "shorts, reels (9:16, 3 min), tiktok (9:16, 10 min), square (1:1), feed (4:5) - sets the default format and warns past the short-form limit",
-        "mode": "blur (fit over a blurred copy, default), crop (fill, cut the sides; --focus 0-1), pad (fit over --pad-color or --brand bgDark)",
+        "mode": "blur (fit over a blurred copy, default), crop (fill, cut the sides; --focus 0-1), pad (fit over --pad-color or --brand bgDark); track follows a single face or --box subject, holding position on loss (uv sync --extra vision)",
         "segments": "--start/--end for one range, repeated --segment for a highlight reel joined with click-free audio fades; @FOCUS sets crop focus per segment",
         "extras": [
           "--zoom",
@@ -430,10 +462,22 @@
           "--output-dir",
           "--dry-run",
           "--json"
-        ]
+        ],
+        "box": "track mode: x,y,width,height in source pixels at each segment start; automatic single-face detection by default",
+        "track-smoothing": "Smoothing factor .001-1, default .2",
+        "max-pan-speed": "Maximum source pixels per second, default 600"
       },
       "created": "2026-10-12",
-      "updated": "2026-10-12"
+      "updated": "2026-11-07"
+    },
+    "highlights": {
+      "path": "tools/highlights.py",
+      "description": "Select complete transcript sentences, keep the last repeated take, shorten pauses and render highlights; emit cutdown --segment arguments on the source timeline",
+      "usage": "uv run tools/highlights.py --video input.mp4 --transcript words.json --output highlights.mp4 [--seconds 45] [--keep first|last] [--dry-run]",
+      "status": "beta",
+      "created": "2026-10-31",
+      "category": "utility",
+      "updated": "2026-11-07"
     },
     "image_edit": {
       "path": "tools/image_edit.py",
@@ -712,20 +756,23 @@
     },
     "captions": {
       "path": "tools/captions.py",
-      "description": "Word-level <name>.captions.json beside each narration file for the <Captions> component. Transcribes with ElevenLabs Scribe or local whisper and aligns the scene's .txt script onto the timing, so captions spell names as written",
+      "description": "Word-level <name>.captions.json beside each narration file for the <Captions> component. Transcribes with ElevenLabs Scribe or local whisper and aligns the scene's .txt script onto the timing, so captions spell names as written; --srt/--vtt export sibling subtitles at sentence/pause boundaries, including offline from existing caption JSON",
       "usage": "uv run tools/captions.py projects/my-video/public/audio/scenes [--engine scribe|whisper] [--script FILE] [--json]",
       "status": "beta",
       "category": "project",
       "requires": "ElevenLabs API key (scribe) or `uv sync --extra whisper` (whisper)",
       "options": {
         "engine": "auto (default: scribe when ELEVENLABS_API_KEY is set, else whisper), scribe, whisper",
-        "script": "Narration text to align to (default: sibling <name>.txt); --no-script burns the raw transcript"
+        "script": "Narration text to align to (default: sibling <name>.txt); --no-script burns the raw transcript",
+        "srt": "Also write <name>.srt, preserving plain text",
+        "vtt": "Also write <name>.vtt with WebVTT escaping",
+        "max-words": "Upper bound per cue, 1-30, default 7; split at sentence ends and gaps over 0.6s"
       },
       "envVars": [
         "ELEVENLABS_API_KEY"
       ],
       "created": "2026-10-12",
-      "updated": "2026-10-12"
+      "updated": "2026-11-07"
     },
     "flux2": {
       "path": "tools/flux2.py",
@@ -850,6 +897,25 @@
       "created": "2026-03-25",
       "updated": "2026-10-12"
     },
+    "ltx_extend": {
+      "path": "tools/ltx_extend.py",
+      "description": "Lengthen an LTX image-to-video clip by continuing it from one of its own frames (the last good one) and joining the two with a short cross-fade; chains with --times. For shots longer than a ~5 s clip, instead of holding (reads as a pause) or ping-ponging (reads as a loop)",
+      "usage": "uv run tools/ltx_extend.py --input clip.mp4 --at 4.8 --times 2 --prompt \"...\" --output clip-long.mp4",
+      "status": "beta",
+      "category": "video-generation",
+      "requires": "ltx2.py on Modal (each extension is one LTX clip, ~$0.08)",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
+    },
+    "sync_check": {
+      "path": "tools/sync_check.py",
+      "description": "Sound-to-picture sync for effects laid over generated footage: --clip says where in a clip to start a sound so its peak lands on the movement (prevention); --video/--cues measures the offset in a render and exits 1 past 0.1 s (validation). Kinds: peak (a sneeze, a jingle) and impact (where a movement stops)",
+      "usage": "uv run tools/sync_check.py --clip clip.mp4 --sfx sneeze.mp3 --window 2.5:4.5  |  uv run tools/sync_check.py --video out/video.mp4 --cues sync-cues.json",
+      "status": "beta",
+      "category": "quality",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
+    },
     "chain_video": {
       "path": "tools/chain_video.py",
       "description": "Chain LTX-2 clips with visual continuity — each scene uses the last frame of the previous as input",
@@ -897,7 +963,8 @@
         "extras": [
           "--thumbnail",
           "--captions",
-          "--playlist"
+          "--playlist",
+          "--video-id"
         ],
         "dryRun": true,
         "jsonOut": true,
@@ -911,6 +978,33 @@
       "documentation": "docs/youtube-upload.md",
       "created": "2026-06-09",
       "updated": "2026-06-09"
+    },
+    "youtube_stats": {
+      "path": "tools/youtube_stats.py",
+      "description": "How the channel's videos are doing: views, likes, comments per video and subscribers (Data API v3), plus watch time, retention, traffic sources and (if the API allows) impressions/CTR when the token has the YouTube Analytics scope; snapshots per run give deltas over time; --github adds the repo's traffic referrers",
+      "usage": "uv run tools/youtube_stats.py --account personal [--video ID ...] [--since 7d] [--github] [--json]",
+      "status": "beta",
+      "category": "publishing",
+      "backend": "YouTube Data API v3 + YouTube Analytics API v2 (reuses youtube_upload.py's cached token)",
+      "requires": "a token from youtube_upload.py --auth; Analytics needs the API enabled and youtube_stats.py --auth",
+      "envVars": [
+        "YOUTUBE_CLIENT_SECRETS_FILE",
+        "YOUTUBE_TOKEN_DIR"
+      ],
+      "note": "Read-only. Snapshots go to _internal/.youtube/stats/<account>/ (gitignored). Analytics lags 1-2 days.",
+      "documentation": ".claude/skills/youtube-stats/SKILL.md",
+      "created": "2026-11-08",
+      "updated": "2026-11-08"
+    },
+    "copy_lint": {
+      "path": "tools/copy_lint.py",
+      "description": "The first filter on anything public: refuses dashes and stock AI or marketing phrasing in files (HTML, Markdown, text, read as prose), strings, a branch's added lines (--diff) or commit subjects (--commits); the same rules gate video jobs, youtube_upload.py and voiceover.py",
+      "usage": "uv run tools/copy_lint.py site/*.html --text \"Title\" | --diff origin/main --commits origin/main",
+      "status": "stable",
+      "category": "qc",
+      "note": "Stdlib only. CI: .github/workflows/copy-lint.yml lints each PR's new lines and commit subjects. Includes taste-skill's stock marketing phrases.",
+      "created": "2026-11-08",
+      "updated": "2026-11-08"
     },
     "voice_prosody": {
       "path": "tools/voice_prosody.py",
@@ -1503,6 +1597,19 @@
       "description": "SVG noise overlay for cinematic film texture",
       "created": "2026-02-19",
       "updated": "2026-02-19"
+    },
+    "Terminal": {
+      "path": "lib/components/Terminal.tsx",
+      "description": "Terminal window that types commands and prints output (ok, error, dim), plus select menus, each line on a narration cue; scrolls once full, blinking prompt at the end. terminalTheme(brand) reads a brand's colors.terminal block; typedUntil() gives the frame a command finishes typing. For CLI and Claude Code demos, nothing screen-recorded",
+      "status": "beta",
+      "created": "2026-11-09",
+      "updated": "2026-11-09"
+    },
+    "LivingPhoto": {
+      "path": "lib/components/LivingPhoto.tsx",
+      "description": "An image-to-video clip of a person (ltx2.py --input) that plays forward once and holds its last good frame with a slow push-in; hold/trim cut around a late stranger or an early glitch, fit slows a slightly short clip to its shot (to 0.8x). Never plays backwards; lengthen with ltx_extend.py",
+      "created": "2026-11-07",
+      "updated": "2026-11-07"
     }
   },
   "brands": {
@@ -1511,6 +1618,12 @@
       "description": "Clean, professional brand with orange accent",
       "created": "2025-12-08",
       "updated": "2025-12-08"
+    },
+    "video-toolkit": {
+      "path": "brands/video-toolkit/",
+      "description": "The toolkit's own look, the same tokens as the site: white and light grey, DS blue accent, navy dark field, system type, and a terminal palette for Terminal",
+      "created": "2026-11-09",
+      "updated": "2026-11-09"
     },
     "digital-samba": {
       "path": "brands/digital-samba/",

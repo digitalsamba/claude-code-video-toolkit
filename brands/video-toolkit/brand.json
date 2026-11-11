@@ -1,0 +1,64 @@
+{
+  "name": "claude-code-video-toolkit",
+  "description": "The toolkit's own look, the same tokens as the site (site/style.css): white and light grey grounds, DS blue #3771e0 as the one accent, navy #323e66 for the dark field, system UI type, radii 4/8/12. The terminal block is for lib/components Terminal.",
+  "version": "1.0.0",
+  "website": "https://digitalsamba.github.io/claude-code-video-toolkit/",
+
+  "colors": {
+    "primary": "#3771e0",
+    "primaryLight": "#93b4f2",
+    "primaryDark": "#2f63c9",
+    "accent": "#3771e0",
+    "navy": "#323e66",
+    "navyDark": "#232d49",
+    "textDark": "#121418",
+    "textMedium": "#323e66",
+    "textLight": "#5e667a",
+    "textOnDark": "#ffffff",
+    "textOnDarkMuted": "#c9cfe0",
+    "bgLight": "#ffffff",
+    "bgAlt": "#f1f2f4",
+    "bgDark": "#323e66",
+    "bgOverlay": "rgba(50, 62, 102, 0.92)",
+    "divider": "#e3e5ea",
+    "shadow": "rgba(18, 20, 24, 0.16)",
+
+    "terminal": {
+      "bg": "#232d49",
+      "bar": "#2a3555",
+      "ink": "#ffffff",
+      "dim": "#9aa3bd",
+      "accent": "#93b4f2",
+      "ok": "#7ccf8a",
+      "err": "#f08a7e"
+    }
+  },
+
+  "fonts": {
+    "primary": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, Helvetica, sans-serif",
+    "mono": "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+  },
+
+  "spacing": {
+    "xs": 8,
+    "sm": 16,
+    "md": 24,
+    "lg": 48,
+    "xl": 80,
+    "xxl": 120
+  },
+
+  "borderRadius": {
+    "sm": 4,
+    "md": 8,
+    "lg": 12
+  },
+
+  "typography": {
+    "h1": { "size": 112, "weight": 700, "letterSpacing": -3.9 },
+    "h2": { "size": 72, "weight": 700, "letterSpacing": -2.5 },
+    "h3": { "size": 48, "weight": 700 },
+    "body": { "size": 36, "weight": 400 },
+    "label": { "size": 28, "weight": 500 }
+  }
+}

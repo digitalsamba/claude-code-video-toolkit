@@ -225,8 +225,11 @@ class TestKitsAndLocal(Isolated):
         from PIL import Image
         bg = Image.open(proj / spec["scenes"][1]["asset"])
         self.assertEqual(bg.size, (720, 1280))
+        # the kit's ground colour, a step off the caption pill when the pill is drawn in the same ink
+        want = vj._hex_rgb(vj.field_clear_of("#1C1917", (spec.get("palette") or {}).get("ink") or "#0A0A14")
+                           if spec["captions"]["enabled"] else "#1C1917")
         r, g, b = bg.resize((1, 1)).getpixel((0, 0))
-        self.assertLess(abs(r - 0x1C) + abs(g - 0x19) + abs(b - 0x17), 12)
+        self.assertLess(abs(r - want[0]) + abs(g - want[1]) + abs(b - want[2]), 12)
         vj.cancel(job["id"])
 
     def test_resume_arithmetic_prices_own_files_and_local_backgrounds_at_zero(self):

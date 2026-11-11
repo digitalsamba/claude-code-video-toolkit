@@ -494,6 +494,23 @@ After generation:
 4. Add session entry
 5. Regenerate CLAUDE.md
 
+### Music (after the voiceover, when the video wants a bed)
+
+Offer it as a next action once the narration is timed. Generate takes, let the tool rule out the bad ones, then
+let the user choose by ear against the picture:
+
+```bash
+uv run tools/music_gen.py --prompt "..." --duration {video seconds + 5} --variations 4 --output public/audio/bg.mp3
+uv run tools/pick_music.py public/audio/bg_*.mp3 --target {video seconds} --cuts {act cuts, s} --under voice
+# render once without music (move the bed aside), then one mix per take, in seconds:
+uv run tools/audition.py --video out/video.nomusic.mp4 --music public/audio/bg_*.mp3 --volume 0.15 \
+    --recommend --cuts {act cuts, s} --under voice
+```
+
+Show `pick_music.py`'s pick and why, then ask the user to watch the `out/audition/` renders and choose. Copy the
+choice to the project's music file, set `audio.music.status: "present"`, and render. With nobody to ask, take the
+measured pick and record its reasons in the session entry. Prompts and presets: the `acestep` skill.
+
 ---
 
 ## Key Principles

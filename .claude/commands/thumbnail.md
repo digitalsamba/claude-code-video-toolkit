@@ -58,6 +58,8 @@ next to the title, which YouTube shows anyway.
 - Concrete beats clever: the feature, the outcome, the number ("SCREEN SHARE",
   "2× FASTER", "v2 IS HERE").
 - Avoid repeating the title word for word.
+- Run every option through `uv run tools/copy_lint.py --text "PHRASE"` before proposing it: no dashes, no
+  stock AI or marketing phrasing.
 
 Propose **2–3 options** and a one-line visual idea for each (what sits beside the text).
 Let the user pick or edit. Accept a phrase the user gives directly.

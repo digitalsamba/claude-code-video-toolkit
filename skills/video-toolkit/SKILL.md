@@ -44,14 +44,15 @@ written, QC can judge the result, and there's a cost cap. Offer a `job` when one
 |---|---|---|---|---|
 | A short explainer on a topic (Shorts, Reels, a 16:9 explainer) from a brief | `concept-explainer-short` via `video_job.py` | job | this file | `examples/sky-blue-short` |
 | A post or short video for someone who has a kit (a small business, a coach, a product team) | `video_job.py` with `"kit"`: their photos as `file` scenes, `text` scenes in their colours | job | `kits/README.md` | |
-| A walkthrough, feature demo or release-notes video of an app whose source you can read | synthetic UI: `templates/ds-release-notes`, components `Stage`, `Cursor`, `cues` | session | `.claude/skills/synthetic-ui-demo/SKILL.md` | `examples/ds-release-649`, `examples/ds-free-schedule-demo` |
+| A walkthrough, feature demo or release-notes video of an app whose source you can read | synthetic UI: `templates/ds-release-notes`, components `Stage`, `Cursor`, `cues` (`Terminal` for a CLI or Claude Code session) | session | `.claude/skills/synthetic-ui-demo/SKILL.md` | `examples/ds-release-649`, `examples/ds-free-schedule-demo` |
 | The same, but you can't read the source | Playwright recording into `product-demo` | session | `.claude/skills/playwright-recording/` | |
 | A marketing or product launch video | `templates/product-demo` | session | the template's README | `examples/digital-samba-skill-demo` |
 | A sprint or monthly review | `templates/sprint-review`, `templates/sprint-review-v2` | session | the template's README | `examples/hello-world` |
 | A data story: a number or a trend drawn as the narration talks | `DataChart` (`LineChart`, `BarChart`, `Counter`, `SplitBar`) in Remotion; Matplotlib + moviepy without Node | session | `lib/components/DataChart.tsx`, `.claude/skills/moviepy/` | `examples/data-chart-stars`, `examples/data-viz-chart` |
+| A fun or holiday video about the user's own group (a release night as an action-show intro, a Christmas ad) starring their photos, or a spoof of a shared topic with an invented cast | Remotion shots + `LivingPhoto`, cast from `image_edit` then `ltx2.py --input` (`ltx_extend.py` for long shots), in-jokes from the group's own chat and docs | session | `.claude/skills/parody-short/SKILL.md` | |
 | A sub-30 s ad spot or a brand stinger | moviepy, audio-anchored | session | `.claude/skills/moviepy/` | `examples/quick-spot`, `examples/ds-crt-stinger` |
 | A presenter talking to camera | `soulx.py` (below), placed in a template with `NarratorPiP` | tool, or session | Talking heads, below | |
-| Change an existing video: new voice, music, vertical cut, watermark | `redub.py`, `addmusic.py`, `cutdown.py`, `dewatermark.py` | tool | QC, captions, cut-downs, below | |
+| Change an existing video: new voice, music, vertical cut, highlight reel, subtitles, watermark | `redub.py`, `addmusic.py`, `cutdown.py`, `highlights.py`, `captions.py --srt`, `dewatermark.py` | tool | QC, captions, cut-downs, below | |
 
 `ds-release-notes` is built for one product's screens, but the method isn't: keep its `Stage` and `Cursor`
 wiring and rebuild your own app's screens the way `.claude/skills/synthetic-ui-demo/` describes.
@@ -154,7 +155,9 @@ narration; a 45 s video is ~100 words in 3 to 5 scenes.
 - **Copy is checked before any spend.** Dashes and stock AI phrasing ("it's worth noting", "delve",
   "in today's world") in the narration, title, headlines or sublines are refused with the line named, and so is
   narration copied word for word from an earlier finished video on this host. Rewrite the named lines and submit
-  again; `"allowCopy": true` only when the person asked for the same words.
+  again; `"allowCopy": true` only when the person asked for the same words. The same rules
+  (`tools/copy_lint.py`) apply to every other word you send out: the message with the video, a title, a
+  description. Run `uv run tools/copy_lint.py --text "..."` on them first.
 - `voice`: an object as above, or a preset name: `assets/voices/<name>.json` (a cloned voice; its reference
   audio is gitignored, so the host needs its own copy) or a brand with a `voice.json`. `catalog` lists them. The title animates
   over the first scene and a soft music bed is mixed in by default; `"titleCard": false` and
@@ -321,10 +324,11 @@ for JSON-lines progress on stderr, and `--json` for a machine-readable result on
 | Voiceover | `voiceover.py --provider qwen3 --cloud modal --max-wpm 165` (free, self-hosted), `--provider elevenlabs`, or `--provider 60db` (`sixtydb_tts.py` standalone) | |
 | Talking head anyone will watch | `soulx.py` (SoulX-FlashHead Pro, Modal only) | `sadtalker.py` is drafts, or when Modal is down |
 | Music | `music_gen.py --variations 3`, then `pick_music.py` to rule takes out and `audition.py` to choose by watching | picking a take by ear alone |
-| Sound effects | `sfx.py` (ElevenLabs) | |
+| Sound effects | `sfx.py` (ElevenLabs, generated) or `sfx_search.py` (real recordings from Freesound via Openverse, free, no key) | |
 | Before delivering any render | `qc.py --render out.mp4 --fix` | shipping unchecked |
-| Captions for a Remotion template | `captions.py public/audio/scenes` | burning the recogniser's own transcript |
-| Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` | |
+| Captions for a Remotion template | `captions.py public/audio/scenes` (`--srt`/`--vtt` for subtitle files too) | burning the recogniser's own transcript |
+| Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` (`--mode track` keeps a talking head in frame) | |
+| A highlight reel from a long recording | `highlights.py` (picks final takes from a word-timed transcript), then `cutdown.py --segment` | cutting by eye |
 | Upload to YouTube | `youtube_upload.py` (OAuth, private by default) | |
 
 ### Voiceover
@@ -399,7 +403,12 @@ uv run tools/audition.py --video out/video.nomusic.mp4 --music bg_*.mp3 --volume
     --recommend --under voice    # -> out/audition/video.bg_1.mp4 ..., each normalised to -14 LUFS
 ```
 
-Sound effects: `uv run tools/sfx.py --prompt "soft whoosh" --output whoosh.mp3`.
+Sound effects: `uv run tools/sfx.py --prompt "soft whoosh" --output whoosh.mp3` generates one;
+`uv run tools/sfx_search.py --query "whoosh" --output whoosh.mp3` finds a real recording (CC0 and CC BY only by
+default, with a `<name>.attribution.txt` to credit; Openverse doesn't guarantee its licence data, so check the
+Freesound page before commercial use). To lay them on a finished video at set times, under ducked music:
+`uv run tools/addmusic.py -i in.mp4 -m bed.mp3 --duck --events effects.json -o mixed.mp4`, with
+`[{"path": "whoosh.mp3", "atSeconds": 1.5, "gain": 0.5}]`.
 
 ### QC, captions, cut-downs
 
@@ -409,7 +418,11 @@ uv run tools/qc.py --render out/video.mp4 --fix                  # -14 LUFS, wri
 uv run tools/qc.py --project projects/my-video --layout         # Remotion: text off canvas, too small, low contrast
 uv run tools/contact_sheet.py out/video.mp4                      # one frame per scene, to look at before delivering
 uv run tools/captions.py projects/my-video/public/audio/scenes  # word captions aligned to the script .txt
+uv run tools/captions.py public/audio/scenes --srt --vtt        # also subtitle files, timed per scene audio
 uv run tools/cutdown.py --input out/video.mp4 --platform shorts  # 16:9 -> 9:16, blur-fit
+uv run tools/cutdown.py --input talk.mp4 --platform shorts --mode track   # follow one face (uv sync --extra vision)
+uv run tools/highlights.py --video talk.mp4 --transcript words.json --seconds 45 --output reel.mp4 --save-plan edit.json
+                                                                 # final takes; the plan's cutdownArgs feed cutdown.py
 ```
 
 Run `qc.py --render` before every delivery: the templates mix voice and music without normalising, and
@@ -418,7 +431,7 @@ silent on purpose passes with `--allow-silent`. In sprint-review configs, `align
 `cap()` phrases to the audio.
 
 Fixing existing videos: `redub.py --input v.mp4 --voice-id ID --sync` (new voice, word-level re-timing),
-`addmusic.py` (a bed under a finished video), `locate_watermark.py` then `dewatermark.py` (ProPainter inpainting),
+`addmusic.py` (a bed under a finished video; `--duck` lowers it under speech, `--events` adds timed effects), `locate_watermark.py` then `dewatermark.py` (ProPainter inpainting),
 `notebooklm_brand.py` (a NotebookLM video with your logo and outro). Publishing: `youtube_upload.py --video
 out.mp4 --title "..." --json-out` (one-time `--auth`, private unless told otherwise; `docs/youtube-upload.md`).
 
