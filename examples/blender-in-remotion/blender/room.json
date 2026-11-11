@@ -1,0 +1,35 @@
+{
+  "title": "The reveal: a Remotion scene on the laptop, then the face",
+  "fps": 30,
+  "resolution": "1920x1080",
+  "engine": "eevee",
+  "look": {"view": "Standard", "exposure": -0.9},
+
+  "set": {
+    "kind": "desk_room",
+    "palette": {"wall": "#AEB6C8", "wall2": "#98A2B8", "floor": "#7C6A5E", "desk": "#B08A68",
+                "accent1": "#3771E0", "accent2": "#93B4F2", "rug": "#323E66"},
+    "screen": {"video": "../out/screen.mp4", "skip_frames": 150}
+  },
+
+  "cast": [
+    {"id": "dev", "kind": "clay_person", "colors": {"top": "#3771E0", "pants": "#232D49", "hair": "#2B211B"}}
+  ],
+
+  "shots": [
+    {"id": "A1_reveal", "dur": 4.5, "type": "pull_out", "subject": "screen"},
+    {"id": "A2_face",   "dur": 2.0, "type": "closeup", "az": -6}
+  ],
+
+  "beats": [
+    {"at": "A1_reveal",       "do": "type", "speed": "calm", "until": "A1_reveal.end-0.3"},
+    {"at": "A1_reveal",       "do": "head_bob", "until": "A1_reveal.end-0.3"},
+    {"at": "A1_reveal+2.6",   "do": "blink"},
+
+    {"at": "A2_face-0.2",     "do": "look", "target": "camera", "dur": 0.3},
+    {"at": "A2_face-0.2",     "do": "lean", "amount": "back", "dur": 0.4},
+    {"at": "A2_face+0.25",    "do": "expression", "face": "happy", "dur": 0.25},
+    {"at": "A2_face+1.1",     "do": "blink", "frames": 4},
+    {"at": "A2_face+1.3",     "do": "expression", "face": "content", "dur": 0.3}
+  ]
+}

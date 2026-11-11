@@ -1,0 +1,29 @@
+{
+  "name": "blender-in-remotion",
+  "version": "1.0.0",
+  "description": "Blender renders as elements of a Remotion video: a Remotion scene on a 3D laptop, and a transparent character in a flat scene",
+  "scripts": {
+    "studio": "npx remotion studio",
+    "screen": "npx remotion render src/index.ts Screen out/screen.mp4 --crf=8",
+    "blender:room": "cd ../.. && uv run tools/blender_render.py render examples/blender-in-remotion/blender/room.json --clips --to examples/blender-in-remotion/public/blender",
+    "blender:desk": "cd ../.. && uv run tools/blender_render.py render examples/blender-in-remotion/blender/desk.json --clips --alpha --to examples/blender-in-remotion/public/blender",
+    "blender": "npm run screen && npm run blender:room && npm run blender:desk",
+    "render": "npx remotion render src/index.ts BlenderInRemotion out/blender-in-remotion.mp4",
+    "render:preview": "npx remotion render src/index.ts BlenderInRemotion out/preview.mp4 --scale=0.5",
+    "build": "npx remotion bundle src/index.ts",
+    "upgrade": "npx remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.539",
+    "@remotion/paths": "4.0.539",
+    "@remotion/shapes": "4.0.539",
+    "@remotion/transitions": "4.0.539",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "4.0.539"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}

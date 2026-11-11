@@ -1,0 +1,371 @@
+{
+  "fps": 30,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "clips": [
+    {
+      "id": "A1_reveal",
+      "file": "A1_reveal.mp4",
+      "alpha": false,
+      "frames": 135,
+      "seconds": 4.5,
+      "fps": 30,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "spec": "blender/room.json",
+      "events": [
+        {
+          "frame": 5,
+          "kind": "key_click"
+        },
+        {
+          "frame": 10,
+          "kind": "key_click"
+        },
+        {
+          "frame": 15,
+          "kind": "key_click"
+        },
+        {
+          "frame": 20,
+          "kind": "key_click"
+        },
+        {
+          "frame": 25,
+          "kind": "key_click"
+        },
+        {
+          "frame": 30,
+          "kind": "key_click"
+        },
+        {
+          "frame": 35,
+          "kind": "key_click"
+        },
+        {
+          "frame": 40,
+          "kind": "key_click"
+        },
+        {
+          "frame": 45,
+          "kind": "key_click"
+        },
+        {
+          "frame": 50,
+          "kind": "key_click"
+        },
+        {
+          "frame": 55,
+          "kind": "key_click"
+        },
+        {
+          "frame": 60,
+          "kind": "key_click"
+        },
+        {
+          "frame": 65,
+          "kind": "key_click"
+        },
+        {
+          "frame": 70,
+          "kind": "key_click"
+        },
+        {
+          "frame": 75,
+          "kind": "key_click"
+        },
+        {
+          "frame": 80,
+          "kind": "key_click"
+        },
+        {
+          "frame": 85,
+          "kind": "key_click"
+        },
+        {
+          "frame": 90,
+          "kind": "key_click"
+        },
+        {
+          "frame": 95,
+          "kind": "key_click"
+        },
+        {
+          "frame": 100,
+          "kind": "key_click"
+        },
+        {
+          "frame": 105,
+          "kind": "key_click"
+        },
+        {
+          "frame": 110,
+          "kind": "key_click"
+        },
+        {
+          "frame": 115,
+          "kind": "key_click"
+        },
+        {
+          "frame": 120,
+          "kind": "key_click"
+        },
+        {
+          "frame": 125,
+          "kind": "key_click"
+        }
+      ],
+      "sound": "A1_reveal.wav"
+    },
+    {
+      "id": "A2_face",
+      "file": "A2_face.mp4",
+      "alpha": false,
+      "frames": 60,
+      "seconds": 2.0,
+      "fps": 30,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "spec": "blender/room.json",
+      "events": []
+    },
+    {
+      "id": "B1_act",
+      "file": "B1_act.webm",
+      "alpha": true,
+      "frames": 255,
+      "seconds": 8.5,
+      "fps": 30,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "spec": "blender/desk.json",
+      "events": [
+        {
+          "frame": 5,
+          "kind": "key_click"
+        },
+        {
+          "frame": 10,
+          "kind": "key_click"
+        },
+        {
+          "frame": 15,
+          "kind": "key_click"
+        },
+        {
+          "frame": 20,
+          "kind": "key_click"
+        },
+        {
+          "frame": 25,
+          "kind": "key_click"
+        },
+        {
+          "frame": 30,
+          "kind": "key_click"
+        },
+        {
+          "frame": 35,
+          "kind": "key_click"
+        },
+        {
+          "frame": 40,
+          "kind": "key_click"
+        },
+        {
+          "frame": 45,
+          "kind": "key_click"
+        },
+        {
+          "frame": 51,
+          "kind": "alert"
+        },
+        {
+          "frame": 78,
+          "kind": "plip"
+        },
+        {
+          "frame": 117,
+          "kind": "whoosh"
+        },
+        {
+          "frame": 126,
+          "kind": "whoosh"
+        },
+        {
+          "frame": 135,
+          "kind": "whoosh"
+        },
+        {
+          "frame": 143,
+          "kind": "whoosh"
+        },
+        {
+          "frame": 152,
+          "kind": "whoosh"
+        },
+        {
+          "frame": 173,
+          "kind": "key_click"
+        },
+        {
+          "frame": 174,
+          "kind": "progress"
+        },
+        {
+          "frame": 176,
+          "kind": "key_click"
+        },
+        {
+          "frame": 178,
+          "kind": "progress"
+        },
+        {
+          "frame": 179,
+          "kind": "key_click"
+        },
+        {
+          "frame": 181,
+          "kind": "key_click"
+        },
+        {
+          "frame": 182,
+          "kind": "progress"
+        },
+        {
+          "frame": 183,
+          "kind": "key_click"
+        },
+        {
+          "frame": 185,
+          "kind": "progress"
+        },
+        {
+          "frame": 186,
+          "kind": "key_click"
+        },
+        {
+          "frame": 189,
+          "kind": "key_click"
+        },
+        {
+          "frame": 189,
+          "kind": "progress"
+        },
+        {
+          "frame": 191,
+          "kind": "key_click"
+        },
+        {
+          "frame": 193,
+          "kind": "key_click"
+        },
+        {
+          "frame": 193,
+          "kind": "progress"
+        },
+        {
+          "frame": 196,
+          "kind": "key_click"
+        },
+        {
+          "frame": 196,
+          "kind": "progress"
+        },
+        {
+          "frame": 199,
+          "kind": "key_click"
+        },
+        {
+          "frame": 200,
+          "kind": "progress"
+        },
+        {
+          "frame": 201,
+          "kind": "key_click"
+        },
+        {
+          "frame": 203,
+          "kind": "key_click"
+        },
+        {
+          "frame": 204,
+          "kind": "progress"
+        },
+        {
+          "frame": 206,
+          "kind": "key_click"
+        },
+        {
+          "frame": 208,
+          "kind": "progress"
+        },
+        {
+          "frame": 209,
+          "kind": "key_click"
+        },
+        {
+          "frame": 211,
+          "kind": "key_click"
+        },
+        {
+          "frame": 212,
+          "kind": "progress"
+        },
+        {
+          "frame": 213,
+          "kind": "key_click"
+        },
+        {
+          "frame": 215,
+          "kind": "progress"
+        },
+        {
+          "frame": 216,
+          "kind": "key_click"
+        },
+        {
+          "frame": 219,
+          "kind": "success"
+        },
+        {
+          "frame": 227,
+          "kind": "tap"
+        }
+      ],
+      "sound": "B1_act.wav"
+    },
+    {
+      "id": "B2_cheer",
+      "file": "B2_cheer.webm",
+      "alpha": true,
+      "frames": 105,
+      "seconds": 3.5,
+      "fps": 30,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "spec": "blender/desk.json",
+      "events": [
+        {
+          "frame": 9,
+          "kind": "celebrate"
+        },
+        {
+          "frame": 18,
+          "kind": "confetti"
+        }
+      ],
+      "sound": "B2_cheer.wav"
+    }
+  ]
+}
