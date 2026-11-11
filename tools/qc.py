@@ -142,7 +142,7 @@ def measure_loudness(path: Path) -> dict | None:
         r = subprocess.run(
             ["ffmpeg", "-hide_banner", "-nostats", "-i", str(path), "-vn",
              "-af", "loudnorm=print_format=json", "-f", "null", "-"],
-            capture_output=True, text=True, timeout=600,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600,
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -178,7 +178,8 @@ def normalize_loudness(src: Path, dst: Path, target: float, true_peak: float,
         cmd += ["-b:a", "192k"]
     cmd.append(str(dst))
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=1200)
+        r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           timeout=1200)
     except (OSError, subprocess.TimeoutExpired) as e:
         return str(e)
     return r.stderr.strip()[-300:] if r.returncode != 0 else None
@@ -397,7 +398,7 @@ def probe_video(path: Path) -> dict | None:
         r = subprocess.run(
             ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,width,height:format=duration",
              "-of", "json", str(path)],
-            capture_output=True, text=True, timeout=60,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
         )
         data = json.loads(r.stdout)
     except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
@@ -625,7 +626,7 @@ def run_layout_audit(project: Path, composition: str | None, every: float, repor
     bundle = Path(tempfile.mkdtemp(prefix="qc-layout-"))
     try:
         r = subprocess.run([npx, "remotion", "bundle", "--out-dir", str(bundle)], cwd=project,
-                           capture_output=True, text=True, timeout=600)
+                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
         if r.returncode != 0:
             report.add("error", "layout", f"remotion bundle failed: {(r.stderr or r.stdout).strip()[-300:]}")
             return None
@@ -634,11 +635,22 @@ def run_layout_audit(project: Path, composition: str | None, every: float, repor
             cmd += ["--composition", composition]
         elif composition_id(project):
             cmd += ["--prefer", composition_id(project)]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+        # qc_layout.mjs prints the page's own text as UTF-8; without an explicit encoding Windows
+        # decodes it with the ANSI codepage and curly quotes kill the reader thread.
+        r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           timeout=1800)
         if r.returncode != 0:
-            report.add("error", "layout", f"layout audit failed: {r.stderr.strip()[-300:]}")
+            report.add("error", "layout", f"layout audit failed: {(r.stderr or '').strip()[-300:]}")
             return None
-        return json.loads(r.stdout)
+        if not r.stdout:
+            report.add("error", "layout", "layout audit printed nothing on stdout "
+                       f"(stderr: {(r.stderr or '').strip()[-300:] or 'empty'})")
+            return None
+        try:
+            return json.loads(r.stdout)
+        except json.JSONDecodeError as e:
+            report.add("error", "layout", f"layout audit output is not JSON ({e}): {r.stdout.strip()[:200]}")
+            return None
     except subprocess.TimeoutExpired as e:
         report.add("error", "layout", f"layout audit timed out ({e.cmd[1]})")
         return None
