@@ -38,6 +38,25 @@ Ordered roughly by priority. Each is sized to one session or one PR.
       Windows is reviewed but still unrun.
 - [x] **Narration-linked cues for `Stage`.** Done: `voice()` / `cue('save')` in `lib/components/cues.ts`, with
       `FreeCustomLink` in ds-release-notes as the worked example (render unchanged frame for frame).
+- [ ] **Blender shot specs, the next round.** Shipped experimental and optional (`tools/blender_render.py`,
+      `lib/blender/`, the `blender` skill, three examples). In order:
+      1. *Finish the product stage:* props that move (turn, slide in), a `text` prop, a tablet and a
+         browser-window prop, and its own exposure range so a light backdrop doesn't sit at the limit.
+      2. *Contact shadows on transparent clips:* a shadow pass rendered on its own and laid under the clip by
+         `BlenderClip`.
+      3. *A second character and a standing pose*, then walking.
+      4. *Your own `.blend` as a set:* a set kind that loads the user's scene and names its objects as subjects,
+         so the cameras, checks and clips work on anything built in Blender.
+      5. *A `script` hook in the spec:* a Python file run after the build and before `check`, so anything `bpy`
+         can do is repeatable and still verified. With 4, this is the path to all of Blender for a toolkit user.
+      6. *Imported rigs and actions:* a cast kind for a rigged glTF or FBX whose named actions become verbs.
+      7. *A `blender` visual kind in `video_job.py`:* the cast from a kit's `cast/`, the ETA from `doctor`.
+      8. *Platform proof:* a first Windows run, a Linux 4.2 re-run, and a weekly CI job that runs `check` on the
+         examples.
+      9. *Checks:* face brightness on dark skin; an idle big enough that a held pose doesn't read as a stopped
+         clip to `qc.py`.
+      10. *First real uses:* a video timed with `cue:`, 9:16 framing of the desk, a device reveal in
+          `ds-release-notes` (design note in its README), and a second "Made with itself".
 - [ ] **Chaptered long-form template.** 10–30 min YouTube videos: render chapter by chapter with a cache,
       one continuous ducked music bed, -14 LUFS, chapter timestamps and an `.srt`. Probably built on
       concept-explainer-short's 16:9 path. A contributor attempt (#127) had the right design.
@@ -178,6 +197,7 @@ Open items moved to Phase 4 below.
 - [x] Synthetic UI demos: `Stage` + `Cursor` in `lib/components`, the `synthetic-ui-demo` skill
 - [x] Clone prosody: `voice_prosody.py` measure/expand, `pick_takes.py`
 - [x] Agent video jobs (experimental): `video_job.py`, `video_mcp.py`, `skills/video-toolkit/`
+- [x] Blender shot specs (experimental, optional): `blender_render.py`, `lib/blender/`, `BlenderClip`, the `blender` skill
 
 **Open:**
 - [ ] Make Qwen3-TTS the default voiceover provider (replacing ElevenLabs)

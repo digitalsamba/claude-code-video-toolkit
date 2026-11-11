@@ -25,6 +25,7 @@ On invocation, assess current state and adapt:
 1. Check .env exists — if not, create from .env.example
 2. Read current .env values (which keys are set vs placeholder)
 3. Check prerequisites: node --version, uv --version, ffmpeg -version
+   (verify_setup.py also reports optional components: Blender)
 4. Check Python deps: uv run python -c "import dotenv; import requests"
 5. Check Modal CLI: uv run modal --version (if installed)
 6. Check for existing Modal apps: uv run modal app list (if authenticated)
@@ -48,6 +49,7 @@ Cloud GPU:      Not configured
 File transfer:  Not configured (using free fallback services)
 Voice:          Not configured
 ElevenLabs:     Not configured (optional, paid)
+3D (Blender):   Not installed (optional)
 
 Let's get you set up! We'll go through each feature one at a time.
 You can skip any step and come back later with /setup.
@@ -82,6 +84,14 @@ Check and report. Don't install anything automatically — just tell the user wh
 - **uv**: `uv --version`. If missing: "Install with `curl -LsSf https://astral.sh/uv/install.sh | sh` (macOS/Linux) or `powershell -c \"irm https://astral.sh/uv/install.ps1 | iex\"` (Windows) — manages Python and all toolkit dependencies; needed for AI voiceover, image editing, and all cloud GPU tools"
 - **Python deps**: `uv run python -c "import dotenv; import requests"`. If missing: run `uv sync` from the toolkit root (uv installs a compatible Python automatically if needed)
 - **FFmpeg**: `ffmpeg -version`. If missing: "Install with `brew install ffmpeg` (macOS) or see https://ffmpeg.org/ — needed for media conversion"
+
+### Optional
+
+- **Blender 4.2+**: reported by `verify_setup.py` under "Optional" (or `uv run tools/blender_render.py doctor
+  --no-bench`). Only `tools/blender_render.py` uses it (3D character shots, reveals and product shots from a shot
+  spec), and it is experimental. If it's found, say so in the status and that `/video` will suggest 3D shots where
+  they fit. If it isn't, show one line ("3D (Blender): not installed, optional") and move on: don't count it as
+  missing, and install nothing. `docs/blender.md` has the install command per platform.
 
 ### Windows only
 
@@ -465,6 +475,8 @@ Voice: Qwen3-TTS (Ryan)
   [check] Test generation successful
 
 ElevenLabs: Not configured (optional)
+
+3D: Blender 5.3 found (optional, experimental) — /video will suggest 3D shots
 
 Cost summary:
   - Modal: $30/mo free compute (you'll use ~$1-2/mo typical)

@@ -50,9 +50,16 @@ written, QC can judge the result, and there's a cost cap. Offer a `job` when one
 | A sprint or monthly review | `templates/sprint-review`, `templates/sprint-review-v2` | session | the template's README | `examples/hello-world` |
 | A data story: a number or a trend drawn as the narration talks | `DataChart` (`LineChart`, `BarChart`, `Counter`, `SplitBar`) in Remotion; Matplotlib + moviepy without Node | session | `lib/components/DataChart.tsx`, `.claude/skills/moviepy/` | `examples/data-chart-stars`, `examples/data-viz-chart` |
 | A fun or holiday video about the user's own group (a release night as an action-show intro, a Christmas ad) starring their photos, or a spoof of a shared topic with an invented cast | Remotion shots + `LivingPhoto`, cast from `image_edit` then `ltx2.py --input` (`ltx_extend.py` for long shots), in-jokes from the group's own chat and docs | session | `.claude/skills/parody-short/SKILL.md` | |
+| A 3D character acting out a gag as a film of its own, or a 3D reveal or character inside another video (the scene turns out to be on a laptop; a character reacts beside the content) | Blender shot spec: `tools/blender_render.py` (`check`, then `render`, or `render --clips --alpha` for `BlenderClip` in Remotion). The cast is described in JSON (build, face, hair, clothes, a seed) and can be kept in a kit's `cast/` folder. Needs Blender on the host: `blender_render.py doctor` | session | `.claude/skills/blender/`, `docs/blender.md` | `examples/blender-disk-panic`, `examples/blender-in-remotion` |
+| An app, a UI or a product shown as a 3D object: a screenshot or a render on a phone or a floating card, or a 3D model (glTF, OBJ, FBX, STL) on a studio stage, with the camera orbiting or pulling back from the screen | Blender shot spec with set kind `studio` and `product`, `orbit`, `reveal` shots; `render` is a film of its own, `--clips` a clip for any build, `--clips --alpha` a transparent clip for a Remotion scene | session | `.claude/skills/blender/`, `docs/blender.md` | `examples/blender-product-shot` |
 | A sub-30 s ad spot or a brand stinger | moviepy, audio-anchored | session | `.claude/skills/moviepy/` | `examples/quick-spot`, `examples/ds-crt-stinger` |
 | A presenter talking to camera | `soulx.py` (below), placed in a template with `NarratorPiP` | tool, or session | Talking heads, below | |
 | Change an existing video: new voice, music, vertical cut, highlight reel, subtitles, watermark | `redub.py`, `addmusic.py`, `cutdown.py`, `highlights.py`, `captions.py --srt`, `dewatermark.py` | tool | QC, captions, cut-downs, below | |
+
+**Blender is optional, so check before offering it.** `uv run tools/blender_render.py doctor --no-bench` exits 0
+when the host has it. If it does, suggest a 3D shot wherever one fits while planning any video, not only when the
+user says "3D": its clips are ordinary video files, so one can sit in a Remotion scene, in a moviepy build, or as a
+`file` scene in a `video_job.py` spec. If it doesn't, leave the two Blender routes out of what you offer.
 
 `ds-release-notes` is built for one product's screens, but the method isn't: keep its `Stage` and `Cursor`
 wiring and rebuild your own app's screens the way `.claude/skills/synthetic-ui-demo/` describes.

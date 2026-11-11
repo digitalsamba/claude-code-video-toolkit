@@ -83,6 +83,27 @@ npm run studio
 npm run render
 ```
 
+## 3D device shots (planned, not built)
+
+A design note for using Blender shot specs here (`.claude/skills/blender/`). Nothing in the template needs Blender
+today.
+
+- **What for:** at most one device reveal per release, on an item that is about a device. The flat scene cuts to
+  itself on a phone or tablet on a studio stage and the camera pulls back, which shows "this is on a tablet" in a
+  way the browser window can't.
+- **How:** render the scene with Remotion at 30 fps, name it as a studio prop's `screen.video` in a spec with
+  `"view": "Standard"` (so the product's colours survive the cut) and the backdrop at the field colour `#eef2f8`,
+  film it with a `reveal` shot, `render --clips`, and hard-cut to the clip on the frame `skip_frames` names. The
+  clip starts on a `cue()` frame, as the scenes' clicks do.
+- **Optional by construction:** the scene plays its flat version when `public/blender/clips.json` isn't there, so
+  the template renders without Blender. The clip is its own `npm run blender` step: 2 to 3 minutes for a
+  4-second shot on an M4.
+- **Waiting on:** a tablet prop and an exposure range for light backdrops (both on the roadmap). Pilot it in a
+  project copy first, on release 650's "Virtual backgrounds on Android tablets" scene.
+- **Not planned:** a character for the narrator, or 3D on the title and outro cards. The first is the brand's
+  decision; the second is decoration, which the design rules leave out.
+- **Limits to know:** `qc.py --layout` can't measure UI text inside a clip, so check the reveal's last frame by eye.
+
 ## What's real and what isn't
 
 | Real (from the product code) | Invented |
