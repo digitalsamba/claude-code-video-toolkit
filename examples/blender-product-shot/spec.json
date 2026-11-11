@@ -5,7 +5,7 @@
   "look": {"view": "Standard", "exposure": -0.9},
   "set": {
     "kind": "studio",
-    "palette": {"backdrop": "#E9EDF5"},
+    "palette": {"backdrop": "#DCE2EE"},
     "props": [
       {"id": "ui", "kind": "card", "width": 0.5, "screen": {"image": "assets/card.png"}},
       {"id": "app", "kind": "phone", "screen": {"image": "assets/phone.png"}, "at": [0.42, -0.12], "turn": -18},

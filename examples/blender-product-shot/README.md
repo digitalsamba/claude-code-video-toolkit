@@ -35,8 +35,8 @@ What it shows:
 For a clip to lay over a Remotion scene, add `--clips --alpha --to <project>/public/blender`: the backdrop is left
 out and each shot becomes a transparent WebM for `BlenderClip`.
 
-The stage is light, so its shots measure close to the top of the exposure range (0.66 to 0.69 against a limit of
-0.70). A shot that is mostly backdrop can fail with `exposure 0.73 outside (0.08, 0.7)`: darken `palette.backdrop` a
+The stage is light, so its shots measure near the top of the exposure range (up to 0.66 against a limit of 0.70).
+Cycles reads about 0.01 brighter than EEVEE, so leave that much room. A shot that is mostly backdrop can fail with `exposure 0.73 outside (0.08, 0.7)`: darken `palette.backdrop` a
 step or bring the prop closer with `fill`.
 
 Method and format: `.claude/skills/blender/SKILL.md`. Setup and timings: `docs/blender.md`. A character film:

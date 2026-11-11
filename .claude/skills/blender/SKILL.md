@@ -229,7 +229,7 @@ Screens take `skip_frames`, `at` and `brightness` as the laptop does, and want `
 reason.
 
 ```json
-"set": {"kind": "studio", "palette": {"backdrop": "#E9EDF5"},
+"set": {"kind": "studio", "palette": {"backdrop": "#DCE2EE"},
         "props": [{"id": "ui", "kind": "card", "screen": {"video": "../out/scene.mp4"}},
                   {"id": "app", "kind": "phone", "screen": {"image": "app.png"}, "at": [0.42, -0.12], "turn": -18}]},
 "shots": [{"id": "P1", "dur": 4, "type": "reveal", "subject": "ui"},

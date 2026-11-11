@@ -48,7 +48,7 @@ the Homebrew, winget and distro builds include.
 | System | Blender | Result |
 |---|---|---|
 | macOS, Apple M4 | 5.3 | Everything: both engines, films, transparent clips, the tests |
-| Linux x64, in a container with no GPU | 4.2 LTS | All three example specs build and pass `check` under Cycles; the film and the transparent-clip paths render. EEVEE also runs, on Mesa's software OpenGL, slowly |
+| Linux x64, in a container with no GPU | 4.2 LTS | All four example specs build and pass `check` under Cycles; the film, the clip and the transparent-clip paths render. EEVEE also runs, on Mesa's software OpenGL, slowly |
 | Windows | | Not run yet. The code finds Blender under `Program Files` and reads and writes UTF-8 throughout; treat it as untested |
 
 Transparent WebM clips have been played in Remotion on the Mac only.
