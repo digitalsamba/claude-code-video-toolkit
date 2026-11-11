@@ -9,7 +9,8 @@ per video.
 kits/<name>/
 ├── kit.json      # what the job fills in when the spec doesn't say
 ├── brand.json    # optional: {"colors": {"primary", "accent", "bgDark", ...}} for this kit only
-└── assets/       # their own photos and clips, used by "file" scenes
+├── assets/       # their own photos and clips, used by "file" scenes
+└── cast/         # optional: characters for Blender shot specs, one JSON file each
 ```
 
 `kit.json` (every field optional):
@@ -35,6 +36,30 @@ a presenter-paced recording with `voice_prosody.py expand --tempo 0.8` first (CL
 
 The kit's colours (its `brand.json`, else the named brand's) set the accent and the ground of the video:
 headline accent bars, and the local backgrounds that `text` scenes and scenes with no visual get.
+
+## A kit's cast
+
+`cast/<id>.json` is a character for a Blender shot spec (`tools/blender_render.py`): a description of a person as
+named choices and hex colours, as in `example/cast/maya.json`.
+
+```json
+{"id": "maya", "kind": "clay_person",
+ "description": "Maya, the product lead: slim, brown skin, a black bob, round glasses, a green shirt",
+ "body": {"build": "slim", "skin": "brown"},
+ "hair": {"style": "bob", "color": "black"},
+ "clothes": {"top": "shirt", "top_color": "#2E7D5B"},
+ "accessories": ["glasses", "earrings"]}
+```
+
+A spec names the file and may change the costume for one video, which keeps the person the same across videos:
+
+```json
+"cast": [{"id": "maya", "from": "../../kits/example/cast/maya.json", "clothes": {"top_color": "#B23A48"}}]
+```
+
+The path is relative to the spec. `description` is for the agent to read back; the build ignores it. The fields
+and their choices are in `.claude/skills/blender/SKILL.md`. The characters are cartoon caricatures, not
+likenesses. `video_job.py` does not read `cast/` yet: it is for shot specs written in a session.
 
 ## Where kits live
 

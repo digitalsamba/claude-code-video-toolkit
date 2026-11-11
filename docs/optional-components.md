@@ -11,6 +11,10 @@ Some toolkit features require additional software that isn't included by default
 | Component | Tool | Purpose | Size |
 |-----------|------|---------|------|
 | ProPainter | `dewatermark.py` | AI video inpainting for watermark removal | ~2GB |
+| Blender | `blender_render.py` | 3D scenes, character acting and product shots from a shot spec, as a film or as clips for Remotion and other builds | ~1GB |
+
+Blender is installed the usual way for your system, not into `~/.video-toolkit/`. Setup, timings and
+troubleshooting are in [blender.md](blender.md); `uv run tools/blender_render.py doctor` says whether it is ready.
 
 ## ProPainter (Watermark Removal)
 
