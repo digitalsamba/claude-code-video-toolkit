@@ -22,7 +22,7 @@ The deeper principle is **trustworthy text**: any genre where text *has to* be r
 Two runnable references for everything in this skill live in `examples/`:
 
 - **`examples/quick-spot/build.py`** — 15-second ad-style spot. Audio-anchored timeline, text overlay, optional VO + ducked music. Renders silent out of the box with zero external assets.
-- **`examples/data-viz-chart/build.py`** — animated time-series chart with deterministic title and source attribution. Demonstrates the matplotlib (data) + moviepy (trustworthy text) split.
+- **`examples/data-viz-chart/build.py`** calls the shared `tools/data_video.py` renderer with `chart.json`. It accepts CSV/JSON specs and a brand, spaces dated lines by calendar time, labels bar periods, and overlays author-written text with Pillow through MoviePy. The bundled headline fades in at the spec's time. See the example README for spec fields.
 
 Both run with `uv run build.py` and produce a real `out.mp4` immediately. Read them alongside this skill — every pattern below is shown working there.
 
@@ -247,6 +247,6 @@ final_audio = CompositeAudioClip([music] + vo)
 ## References
 
 - Runnable example — short ad-style spot: `examples/quick-spot/build.py`
-- Runnable example — data-viz with text overlay: `examples/data-viz-chart/build.py`
+- Spec-driven charts with author-written overlays: `examples/data-viz-chart/README.md`; `build.py` delegates to `tools/data_video.py`
 - Audio-anchored timelines: `CLAUDE.md → Video Timing → Audio-Anchored Timelines`
 - Related skills: `ltx2`, `ffmpeg`, `remotion`

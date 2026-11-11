@@ -144,8 +144,12 @@ uv run examples/data-viz-chart/build.py --spec chart.json --brand digital-samba 
 ```
 
 Specs name `dataset` relative to the spec, `type: "line" | "bar"`, and optional `title`, `source`,
-`headline`, `unit`, `width`, `height`, `fps`, `durationSeconds`. Rows use `period`, `series`, `value`,
-or an explicit `columns` mapping. `--narration` uses author-provided audio and sets duration;
+`headline`, `headlineStartSeconds` (default 0), `headlineFadeSeconds` (default 0.5), `unit`,
+`width`, `height`, `fps`, `durationSeconds`. The headline timing must fit the final duration.
+Rows use `period`, `series`, `value`, or an explicit `columns` mapping. Dated line periods use
+calendar spacing and month labels; categorical periods keep equal spacing. Bars show their
+current period or transition. Bars and the first line use the brand primary, with other lines
+in one neutral. A single line has no legend. `--narration` uses author-provided audio and sets duration;
 the tool never derives narration from data. `--save-report` records dataset/brand hashes and any
 font fallback. Reruns replace completed outputs; `--dry-run` validates without writes.
 
