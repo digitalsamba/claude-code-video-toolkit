@@ -175,6 +175,14 @@ class HostSideTests(unittest.TestCase):
         spec.write_text(json.dumps({}))
         self.assertEqual(blender_render.still_size(spec, None), '960x540')
 
+    def test_a_white_picture_on_a_screen_is_not_blown_out(self):
+        shows = blender_render.shows_a_picture
+        self.assertFalse(shows({'cast': [{'id': 'dev'}]}))
+        self.assertFalse(shows({'set': {'kind': 'studio', 'props': [{'id': 'p', 'kind': 'phone'}]}}))   # accent colour
+        self.assertTrue(shows({'set': {'kind': 'studio', 'props': [{'id': 'c', 'kind': 'card', 'screen': {'image': 'a.png'}}]}}))
+        self.assertTrue(shows({'set': {'kind': 'desk_room', 'screen': {'video': 'a.mp4'}}}))
+        self.assertFalse(shows({'set': {'kind': 'desk_room', 'screen': {'title': 'Storage'}}}))         # the drawn UI
+
     def test_shot_lists_ignore_spaces(self):
         self.assertEqual(blender_render.shot_ids(' A, B ,'), ['A', 'B'])
         self.assertEqual(blender_render.shot_ids(None), [])

@@ -226,8 +226,20 @@ def still_size(spec: Path, res: str | None, long_side: int = 960) -> str:
         return "960x540"  # the compiler names what is wrong with the spec
 
 
+def shows_a_picture(spec: dict) -> bool:
+    """A laptop, phone or card in the set shows a picture or a video. Its white (a document, a light UI) is the
+    picture's own, so it is not counted as blown out."""
+    st = spec.get("set") or {}
+    screens = [st.get("screen")] + [p.get("screen") for p in st.get("props") or [] if isinstance(p, dict)]
+    return any(isinstance(s, dict) and (s.get("image") or s.get("video")) for s in screens)
+
+
 def check(args) -> int:
     spec, out = out_dir(args)
+    try:
+        own_white = shows_a_picture(json.loads(spec.read_text(encoding="utf-8")))
+    except (ValueError, OSError):
+        own_white = False
     try:
         checks = run_compiler(spec, out, "check", still_size(spec, args.res), args.engine,
                               alpha=getattr(args, "alpha", False), shots=getattr(args, "shots", None))
@@ -246,7 +258,7 @@ def check(args) -> int:
         problems = list(shot["issues"])
         if not LUMA_RANGE[0] <= mean <= LUMA_RANGE[1]:
             problems.append(f"exposure {mean:.2f} outside {LUMA_RANGE}")
-        if clipped > CLIP_LIMIT and shot["type"] != "screen_fill":  # a screen's own picture may be white
+        if clipped > CLIP_LIMIT and shot["type"] != "screen_fill" and not own_white:  # a screen's picture may be white
             problems.append(f"{clipped:.1%} blown out")
         shot["passed"] = not problems
         shot["problems"] = problems
