@@ -85,6 +85,22 @@ def front_y(ob, x, z):
     return at.y
 
 
+def _in_triangle(pts, a, b, c, pad):
+    """Which of `pts` (n x 2, texels) lie inside triangle abc or within `pad` texels of its edges."""
+    inside = np.ones(len(pts), dtype=bool)
+    area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    if abs(area) < 1e-9:
+        return np.zeros(len(pts), dtype=bool)
+    for p, q in ((a, b), (b, c), (c, a)):
+        e = q - p
+        n = np.hypot(*e)
+        if n < 1e-9:
+            continue
+        side = ((e[0] * (pts[:, 1] - p[1]) - e[1] * (pts[:, 0] - p[0])) / n) * np.sign(area)
+        inside &= side > -pad
+    return inside
+
+
 def erase(ob, shapes):
     """Take painted features off the model: `shapes` are ellipses (x, z, rx, rz) on its front. Their texels take
     the median of the ring round each, in every texture, and the surface under them is smoothed flat."""
@@ -97,7 +113,7 @@ def erase(ob, shapes):
         inside, ring = [], []
         for poly in me.polygons:
             c = poly.center
-            if c.y > y0 + 0.04:
+            if c.y > y0 + 0.04 or c.y < y0 - 0.03:  # (not the back of the head, nor a fringe hanging in front)
                 continue
             d = ((c.x - x) / rx) ** 2 + ((c.z - z) / rz) ** 2
             if d <= 1:
@@ -107,12 +123,23 @@ def erase(ob, shapes):
         for img, px in imgs:
             h, w = px.shape[:2]
             at = np.array([[uv[li].uv[0] * w, uv[li].uv[1] * h] for poly in ring for li in poly.loop_indices])
-            fill = np.median(px[np.clip(at[:, 1].astype(int), 0, h - 1), np.clip(at[:, 0].astype(int), 0, w - 1)], axis=0)
+            ring_px = px[np.clip(at[:, 1].astype(int), 0, h - 1), np.clip(at[:, 0].astype(int), 0, w - 1)]
+            # the skin round it: the brighter half of the ring (blush, lashes and a fringe are darker than skin)
+            light = ring_px[:, :3].sum(axis=1)
+            fill = np.median(ring_px[light >= np.median(light)], axis=0)
             for poly in inside:
                 t = np.array([[uv[li].uv[0] * w, uv[li].uv[1] * h] for li in poly.loop_indices])
                 x0, x1 = int(max(0, t[:, 0].min() - 2)), int(min(w - 1, t[:, 0].max() + 2))
                 z0, z1 = int(max(0, t[:, 1].min() - 2)), int(min(h - 1, t[:, 1].max() + 2))
-                px[z0:z1 + 1, x0:x1 + 1] = fill  # (the box round a small triangle: it pads the seams too)
+                # the texels in the face, padded by a texel or two for the seams (not its whole box: a large
+                # triangle's box reaches into other parts of the texture, such as an eye beside a fringe)
+                gx, gz = np.meshgrid(np.arange(x0, x1 + 1) + 0.5, np.arange(z0, z1 + 1) + 0.5)
+                pts = np.stack([gx.ravel(), gz.ravel()], axis=1)
+                keep = np.zeros(len(pts), dtype=bool)
+                for i in range(1, len(t) - 1):  # (a fan of triangles over the face)
+                    keep |= _in_triangle(pts, t[0], t[i], t[i + 1], 2.0)
+                sub = px[z0:z1 + 1, x0:x1 + 1]
+                sub[keep.reshape(sub.shape[:2])] = fill
         bm_verts.update(v for poly in inside for v in poly.vertices)
     for img, px in imgs:
         img.pixels.foreach_set(px.ravel())
@@ -157,7 +184,9 @@ def load_donor(path: Path, centre_x: float | None):
 def face_shapes(face):
     m = 1.35  # a margin: the painted edge is soft
     out = [(x, z, face["eye_size"][0] / 2 * m, face["eye_size"][1] / 2 * m) for x, z in face["eyes"]]
-    return out + [(x, z, face["brow_size"][0] / 2 * 1.15, face["brow_size"][1] / 2 * 1.9) for x, z in face["brows"]]
+    hidden = set(face.get("brows_hidden", []))  # (a brow under a fringe: nothing painted there to take off)
+    return out + [(x, z, face["brow_size"][0] / 2 * 1.15, face["brow_size"][1] / 2 * 1.9)
+                  for i, (x, z) in enumerate(face["brows"]) if i not in hidden]
 
 
 def load_model(path: Path, centre_x: float, faces: int, face: dict):
@@ -378,6 +407,34 @@ def skin(body, head):
     return unweighted
 
 
+def part_legs(body) -> int:
+    """Cut the faces that join one leg to the other. A generator often makes the feet (or knees) touch, and the
+    mesh then runs from one shoe into the other: weighted, those faces stretch across the gap the moment a foot
+    moves (30x on a stride). A face is cut when one of its corners moves with the left leg and another with the
+    right. Returns how many faces were cut."""
+    legs = {}
+    for g in body.vertex_groups:
+        part, _, sd = g.name.rpartition(".")
+        if part in ("thigh", "shin", "foot") and sd in ("L", "R"):
+            legs[g.index] = sd
+    side = {}
+    for v in body.data.vertices:
+        w = {"L": 0.0, "R": 0.0}
+        for g in v.groups:
+            if g.group in legs:
+                w[legs[g.group]] += g.weight
+        if max(w.values()) > 0.5:
+            side[v.index] = "L" if w["L"] > w["R"] else "R"
+    bm = bmesh.new()
+    bm.from_mesh(body.data)
+    cut = [f for f in bm.faces if len({side.get(v.index) for v in f.verts} - {None}) > 1]
+    if cut:
+        bmesh.ops.delete(bm, geom=cut, context="FACES")  # (and the edges and vertices left loose)
+        bm.to_mesh(body.data)
+    bm.free()
+    return len(cut)
+
+
 def preview(body, folder: Path):
     """Three stills of the fitted body (Workbench, textured), to look at before a spec is run against it."""
     sc = bpy.context.scene
@@ -424,6 +481,9 @@ def main():
     D.objects.remove(proxy)
     D.objects.remove(proxy_rig)
     unweighted = skin(body, head_mask(body, fit["clothes"]))
+    parted = part_legs(body)
+    if parted:
+        print(f"fit: the legs touched in the model: {parted} faces joining one to the other were cut")
     if pieces:
         hand_graft.join(body, pieces)
         body["hand_material"] = len(body.data.materials) - 1  # (the rig measures a hand's whole skin by it)
