@@ -479,7 +479,7 @@ For "look what I made". It posts in the repo's [Show and tell](https://github.co
 
 Pick the project (`projects/*/project.json`), or ask for a video if it was made outside one. The post needs a link anyone can open:
 
-- `project.json` `publish.url` if `/publish` uploaded it to YouTube
+- `project.json` `publish.url` if `/publish` uploaded it to YouTube. If `publish.privacyStatus` is `private`, nobody else can open it: ask them to make it unlisted or public in YouTube Studio first, or to use another link
 - otherwise ask for a link (YouTube, Vimeo, their own site)
 - or they can drag the MP4 into the post on GitHub after it is created; leave a line saying where it goes
 
@@ -487,7 +487,7 @@ Never upload the video anywhere yourself.
 
 ### Step 2: Gather how it was made (read only)
 
-- **From `project.json`:** `title`, `template`, `formats`, the `sessions[]` summaries and `render` paths.
+- **From `project.json`:** `title` (or `publish.title`), `template`, `formats`, the `sessions[]` summaries and `render` paths. Not every template writes all of these; without `render`, look for the newest MP4 in the project's `out/`.
 - **Length:** `ffprobe -v error -show_entries format=duration -of csv=p=0 <render>`
 - **Tools used and cost:** the lines of `logs/media-spend.log` (JSON lines: `tool`, `cost_usd`, `args`, `job_id`) whose `args` mention the project's folder or whose `job_id` is the project's job. Sum `cost_usd` and list the tools. If nothing matches, leave the cost out rather than guess.
 - **What fought them:** the sessions in `project.json` often say (a retake, a QC warning, a fix). Ask the user too: "Anything that broke, was slow or took a few tries?" This is the part the toolkit learns most from.
@@ -504,7 +504,7 @@ Never upload the video anywhere yourself.
 
 Title it with the video's name. Keep out anything the user hasn't chosen to make public: client or company names, people's names, file paths, API keys, voice reference clips. If the video is for a client, ask what they're happy to say.
 
-Lint it before showing it:
+Write it to `.show-and-tell.md` at the toolkit root and lint it before showing it:
 
 ```bash
 uv run tools/copy_lint.py .show-and-tell.md --text "<post title>"
@@ -518,7 +518,7 @@ Show the draft and ask: post it as is, edit it, or cancel.
 REPO_ID=$(gh api graphql -f query='{repository(owner:"digitalsamba",name:"claude-code-video-toolkit"){id}}' --jq .data.repository.id)
 CAT_ID=$(gh api graphql -f query='{repository(owner:"digitalsamba",name:"claude-code-video-toolkit"){discussionCategories(first:20){nodes{id name}}}}' \
   --jq '.data.repository.discussionCategories.nodes[] | select(.name=="Show and tell") | .id')
-gh api graphql -F repositoryId="$REPO_ID" -F categoryId="$CAT_ID" -F title="<post title>" -F body=@.show-and-tell.md \
+gh api graphql -F repositoryId="$REPO_ID" -F categoryId="$CAT_ID" -f title="<post title>" -F body=@.show-and-tell.md \
   -f query='mutation($repositoryId:ID!,$categoryId:ID!,$title:String!,$body:String!){createDiscussion(input:{repositoryId:$repositoryId,categoryId:$categoryId,title:$title,body:$body}){discussion{url}}}' \
   --jq .data.createDiscussion.discussion.url
 ```
