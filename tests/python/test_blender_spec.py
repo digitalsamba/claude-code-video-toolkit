@@ -392,7 +392,7 @@ class BlenderCheckTests(unittest.TestCase):
             'beats': [{'at': 'A+0.3', 'do': 'hand', 'shape': 'point', 'hand': 'right', 'dur': 0.3},
                       {'at': 'A+1.0', 'do': 'hand', 'shape': 'fist'}]})
         self.assertTrue(checks['passed'], checks)
-        for key in ('grip_open', 'hands_apart_m', 'palm_tilt_deg', 'face', 'skin'):
+        for key in ('grip_open', 'hands_apart_m', 'palm_tilt_deg', 'palm_turn_deg', 'face', 'skin'):
             self.assertNotIn(key, checks)
         with self.assertRaises(RuntimeError) as ctx:
             self.compile({'shots': [{'id': 'A', 'dur': 2, 'type': 'wide'}],
@@ -415,6 +415,7 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertLessEqual(checks['grip_open'], 0.75)                 # the hand closes on the door handle
         self.assertGreaterEqual(checks['hands_apart_m'], 0.005)         # the hands never go into each other
         self.assertLessEqual(checks['palm_tilt_deg'], 35)               # and lie palm down on the desk
+        self.assertLessEqual(checks['palm_turn_deg'], 35)               # and stay palm to the leg in a walk
         for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
             self.assertLessEqual(checks[kind], 0.03, kind)
 

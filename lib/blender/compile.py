@@ -44,6 +44,7 @@ CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_h
 CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03}
 HANDS_APART = 0.005  # nearer than this the two hands are into each other (m)
 PALM_TILT = 35.0     # a hand resting over a table top is palm down to within this (degrees)
+PALM_TURN = 35.0     # a hanging hand keeps its palm to the leg through a walk to within this (degrees)
 GRIP_OPEN = 0.75  # a hand holding something has its fingertips within this share of a finger's length of it
 SKIN_LIMITS = {"leg_above_hips": 50, "stretch": 4.0}  # a fitted model's weights (character.skin_report)
 SET_VERBS = {"alert", "work", "done", "open_door", "close_door", "pull_in"}
@@ -443,6 +444,7 @@ def main():
     sunk, sunk_at = floor or (0.0, None)
     contacts = {k: c for k, c in (getattr(kit, "contacts", None) or {}).items() if k != "under_floor"}
     apart, tilt = contacts.pop("hands_apart", None), contacts.pop("palm_tilt", None)
+    turned = contacts.pop("palm_turn", None)
     touching = all(c["m"] <= CONTACT_LIMITS[k] for k, c in contacts.items())
     checks = {"passed": all(r["passed"] for r in reports) and ik < 0.01 and sunk <= 0.015 and touching,
               "duration": tl.duration, "fps": tl.fps,
@@ -473,6 +475,12 @@ def main():
             checks["passed"] = False
             problems.append(f'{tilt["hand"]} hand lies on the {tilt["what"]} tipped {tilt["deg"]:.0f} degrees from palm '
                             f'down at {(tilt["frame"] - 1) / tl.fps:.2f} s')
+    if turned and turned["frame"] is not None:
+        checks["palm_turn_deg"] = round(turned["deg"], 1)
+        if turned["deg"] > PALM_TURN:
+            checks["passed"] = False
+            problems.append(f'{turned["hand"]} palm turns {turned["deg"]:.0f} degrees away from the leg as the arm swings '
+                            f'in a walk at {(turned["frame"] - 1) / tl.fps:.2f} s')
     if getattr(kit, "moves", None):  # each posture verb: do its parts start and stop together, are the sides the same
         checks["moves"] = kit.moves
     if problems:  # in words, for the person or agent reading the check

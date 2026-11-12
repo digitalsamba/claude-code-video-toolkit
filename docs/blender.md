@@ -215,6 +215,9 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    The fit finds each by its skin colour up to the cuff, finds the fingers and thumb, uses the better formed
    hand for both arms (mirrored for the other), seats it in the cuff with the palm toward the leg, and gives
    every finger two bones.
+   Generated hands come out large: `"scale": 0.7` in `hands` makes both smaller before they are seated (compare
+   a hand with the face and the shoe in the fit's front still), and a spec that has them reach for something
+   says so if the shorter reach now falls short.
 4. **Name it.** A character file with `"model": "lead.blend"` beside it, and `"accessories": ["glasses"]` if they
    wear them. Keep the folder in a kit (`kits/<name>/cast/`).
 5. **Look at it** before writing beats: a `check` of any spec with the cast entry swapped, and read the contact

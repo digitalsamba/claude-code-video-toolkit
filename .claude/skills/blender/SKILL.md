@@ -246,6 +246,7 @@ and the second when it is over a centimetre: usually a step or a reach that was 
 | `grip_open` | over 0.75 | hands with fingers: how open a hand still is round what it holds (fingertips' distance from it over a finger's length; a flat hand is about 1) |
 | `hands_apart_m` | under 0.5 cm | hands with fingers: the nearest the two hands come to each other |
 | `palm_tilt_deg` | 35 degrees | hands with fingers: a hand resting over a table top, tipped from palm down |
+| `palm_turn_deg` | 35 degrees | hands with fingers: a hanging hand's palm turning away from the leg as the arm swings in a walk (it reads as a flapping hand) |
 
 A thin thing (a door leaf, a desk top) counts as gone through once anything is half way into it, and `through`
 says how long it lasted ("from 14.50 s to 20.67 s"). A hand is checked at its palm and at every fingertip.

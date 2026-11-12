@@ -481,7 +481,8 @@ class ClayPerson:
         own twist comes out of the IK, so a turn worked out in the rest pose points the palm somewhere else).
         With no `lay` the hand follows the forearm and only rolls: hanging at the side the palm faces the leg,
         and as the hand comes forward it turns palm down, as a hand does to take a handle. `lay` is how it lies
-        on something: "flat" (palm down, the hand level, on a desk) or a function of the frame giving the way
+        on something: "flat" (palm down, the hand level, on a desk), "side" (palm to the leg all through a
+        swing) or a function of the frame giving the way
         the palm faces and the way the fingers point, in the room (on a thigh). `was` and `mix` blend from one
         lay to another on the way between two things. Only a hand with fingers shows which way it faces, so
         the clay cast is left alone."""
@@ -506,6 +507,8 @@ class ClayPerson:
         def turn(how):
             if how is None:
                 palm, way = own @ Vector((-s, 0, 0)).lerp(Vector((0, 0, -1)), t), None
+            elif how == "side":  # an arm swinging in a walk: the palm stays to the leg, or the hand flaps
+                palm, way = own @ Vector((-s, 0, 0)), None
             elif how == "flat":
                 palm, way = Vector((0, 0, -1)), "level"
             else:
@@ -1542,7 +1545,7 @@ class ClayPerson:
             # (`out`: the hand on the stepping side stands off, for a leg that steps out sideways in a turn)
             self._arm_key(side, f, self._mirror(hand, side) + Vector((-side * max(0.0, fwd) * 0.15 + side * out * (side == s),
                                                                       -fwd, lift)),
-                          self._mirror(pole, side))
+                          self._mirror(pole, side), lay="side")
 
     def turn(self, f0: int, f1: int, facing: float):
         """Turn on the spot to face `facing` degrees, stepping round. The eyes and the head go first, the
@@ -1993,6 +1996,8 @@ class ClayPerson:
           hands_apart   the nearest the two hands come to each other (m; under half a centimetre they are
                         into each other)
           palm_tilt     degrees a hand resting over a table top is tipped from palm down, at its worst
+          palm_turn     degrees a hanging hand's palm turns away from the leg during a walk, at its worst (a
+                        palm that turns down and back on every swing reads as a hand flapping)
         `through` also says how long it lasted (`first` and `last` frame over `limit`)."""
         sc = bpy.context.scene
         arm = self._arm_mask()
@@ -2008,6 +2013,7 @@ class ClayPerson:
         hands, was_at, deep = {}, {}, {}
         if fingered:  # each hand's own vertices (one in four), and each fingertip
             out["hands_apart"], out["palm_tilt"] = {"m": 9.0, "frame": None}, {"deg": 0.0, "frame": None}
+            out["palm_turn"] = {"deg": 0.0, "frame": None}
             names = {g.index: g.name for g in self.body.vertex_groups}
             for sd in "LR":
                 mine = {i for i, nm in names.items() if nm.endswith("." + sd)
@@ -2076,6 +2082,13 @@ class ClayPerson:
                 for s, sd in ((1, "L"), (-1, "R")):
                     bone = pb["hand." + sd]
                     wrist = rw @ bone.head
+                    elbow = rw @ pb["fore." + sd].head
+                    if any(a <= f <= b for a, b, _curve in self.walks) and elbow.z - wrist.z > 0.6 * pb["fore." + sd].length:
+                        spin = (rw @ bone.matrix).to_3x3() @ self.rig.data.bones["hand." + sd].matrix_local.to_3x3().inverted()
+                        turn = math.degrees((spin @ self.palm[s]).angle(self.root.matrix_world.to_3x3() @ Vector((-s, 0, 0))))
+                        trace.append((f, "palm_turn", round(turn, 1), "left" if s > 0 else "right"))
+                        if turn > out["palm_turn"]["deg"]:
+                            out["palm_turn"] = {"deg": turn, "frame": f, "hand": "left" if s > 0 else "right"}
                     still = sd in was_at and (wrist - was_at[sd]).length < 0.002
                     was_at[sd] = wrist.copy()
                     if not still:  # (a hand on its way somewhere is still turning)
