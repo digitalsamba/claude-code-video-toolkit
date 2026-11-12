@@ -7,13 +7,13 @@
     "render": "remotion render Release649 out/release-649.mp4"
   },
   "dependencies": {
-    "@remotion/cli": "4.0.539",
-    "@remotion/paths": "4.0.539",
-    "@remotion/shapes": "4.0.539",
-    "@remotion/transitions": "4.0.539",
+    "@remotion/cli": "4.0.542",
+    "@remotion/paths": "4.0.542",
+    "@remotion/shapes": "4.0.542",
+    "@remotion/transitions": "4.0.542",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "remotion": "4.0.539"
+    "remotion": "4.0.542"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
