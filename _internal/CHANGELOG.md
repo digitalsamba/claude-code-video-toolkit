@@ -8,9 +8,42 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+---
+
+## 2026-11-12 (v0.28.0)
+
+3D arrives as an experimental, optional tool: a JSON shot spec becomes a Blender film, clips for any build, or
+transparent elements inside a Remotion video. Terminal demos get their own component, a brand can hold several
+narrators, and publishing to YouTube gets a whole-video SRT and chapters from the render. The toolkit's own video,
+Made with itself, ships as an example.
+
+### Added
+
+- **Blender shot specs** (experimental, optional, #214): `tools/blender_render.py check|render spec.json` builds 3D scenes from JSON: a rigged cartoon cast described by body, face, hair, clothes and a seed, a desk set and a product stage, shots by type, and acting beats in seconds or on narration words. `check` verifies every camera by geometry and writes a contact sheet before anything renders. `render --clips --alpha` gives one transparent clip per shot, which `BlenderClip` plays in a Remotion video; a Remotion render can play on the laptop in the scene. Three examples: `blender-disk-panic`, `blender-product-shot` and `blender-in-remotion`. Needs Blender 4.2+; without it nothing changes, and `/video` suggests it only when it is installed.
+- **`Terminal`** in `lib/components` (#207): commands type and output prints on narration cues, with menus and scrolling. `brands/video-toolkit` gives the toolkit its own look, with a terminal palette.
+- **Several narrators per brand** (#207): pick one per video with `voiceover.py --voice`; a brand's ElevenLabs model, settings and `maxWpm` now apply. The toolkit brand narrates with Marilyn and Bren.
+- **`tools/publish_kit.py`** (#211): one whole-video SRT and a chapter at each scene's cut, from a single transcription of the render. `/publish` runs it and passes both to the upload.
+- **`youtube_upload.py --check`** (#211): which channel a login is for, which scopes it has and whether the Data and Analytics APIs are on, with the fix for each.
+- **`youtube_upload.py --video-id`** (#209): adds captions, a thumbnail or a playlist to a video already uploaded.
+- **`examples/toolkit-made-itself`** (#217): the toolkit's own 93 second video, made in the toolkit. Every terminal line is the saved output of the command that made that part. The README and site lead with it.
+- **Show and tell** (#216): Discussions has a place to share videos made with the toolkit, `/contribute` drafts the post from `project.json` and the spend log, and `/publish` offers it after an upload.
+
+### Changed
+
+- `templates/ds-release-notes` and `examples/ds-release-649` use the DS act palette from `video-design` (#204): flat DS blue title and outro, cool grey cards with navy type.
+- `/video` offers music after the voiceover: `music_gen` takes, `pick_music`'s measured pick, then `audition.py` renders to choose by ear (#210).
+- Official Remotion skills synced to upstream v4.0.542 (#205).
+
 ### Fixed
 
-- **`modal_setup.py` deploys on a new Modal workspace**: a workspace created now builds images with builder version 2026.10, which the toolkit's Modal client (1.5) refuses before building anything. The tool now retries a refused deploy with `MODAL_IMAGE_BUILDER_VERSION=2025.06` and keeps it for the rest of the run; a version the user set is left alone, and older workspaces keep their own. `docs/modal-setup.md`, `/setup` and `.env.example` say to export the variable before a deploy by hand.
+- **`modal_setup.py` deploys on a new Modal workspace** (#212, jdela141252-lab): a workspace created now builds images with builder version 2026.10, which the toolkit's Modal client (1.5) refuses before building anything. The tool now retries a refused deploy with `MODAL_IMAGE_BUILDER_VERSION=2025.06` and keeps it for the rest of the run; a version the user set is left alone, and older workspaces keep their own. `docs/modal-setup.md`, `/setup` and `.env.example` say to export the variable before a deploy by hand.
+- **`qc.py --layout` on Windows** (#213, jdela141252-lab): subprocess output is read as UTF-8, so curly quotes on screen no longer crash the audit, and an empty or broken audit result is reported as an error.
+- `youtube_upload.py` asks for the captions scope and refuses `--captions` on an older token before uploading (#209).
+- `BarChart` grows a highlighted value by scaling it, instead of changing its font size every frame, which crashed Chrome mid-render (#217).
+- `Terminal` draws a line on the frame it is cued for, so a still at that frame shows it (#207).
+- Video jobs draw a local background one step off the caption pill's ink, so the pill no longer vanishes into it (#210).
+- `contact_sheet.py` takes `--at` more than once; `qc.py` messages pass the copy lint (#210).
+- A white picture on a Blender screen no longer fails `check` as blown out (#214).
 
 ---
 
