@@ -218,9 +218,9 @@ Character (`who` defaults to the first cast member):
 | `sweat`, `tremble` | `until` | a drop slides down / pupils jitter |
 | `celebrate` | `until` | arms up, wiggling |
 | `hold_arms` | | freeze the arms where they are |
-| `stand_up` / `sit_down` | `dur` | off the chair onto their feet (the feet plant, the weight goes forward, then up) / onto the chair behind them. Stand them a thigh's length in front of the seat first |
+| `stand_up` / `sit_down` | `dur` | off the chair onto their feet (the head lifts, hands to the knees, the chest comes forward over the feet, then up, the arms dropping last) / onto the chair behind them (a look down, the pelvis back before it goes down, hands to the knees, a small settle). Stand them a thigh's length in front of the seat first. About 1.7 s each reads well; under a second looks hurried |
 | `walk` | `to`: `[x, y]`, `facing`, `until` | walk to a spot and stop, facing `facing` degrees. They turn on the spot first when the way to go is more than 30 degrees off, and again at the end. With no `until` or `dur` it takes what the steps need. A footstep in the sound per step |
-| `turn` | `facing`, `dur` | turn on the spot, stepping round |
+| `turn` | `facing`, `dur` | turn on the spot, stepping round: the eyes and head go first, the chest follows, and it swings a little past at the end |
 | `wink` | `side`: `left`/`right` | one eye, the brow dipping with it |
 | `look_at` | `target`: `[x, y, z]`, `camera` or `screen`, `dur` | head and eyes to a point: the neck turns most of the way, the eyes the rest |
 | `glance` | `yaw`, `pitch`, `dur` | the eyes alone, in degrees (up to about 25) |
@@ -231,9 +231,26 @@ Poses also has `down` (arms at the sides), which a standing character starts in;
 (stand_up first)"). `ik_max_error_m` in the report covers feet as well as hands, and `ik_worst` names the limb
 and the second when it is over a centimetre: usually a step or a reach that was too far.
 
+**Contact is checked for anyone on their feet.** The report measures, on every frame, what a still can't show:
+
+| in `checks.json` | fails over | |
+|---|---|---|
+| `under_floor_m` | 1.5 cm | any of the body below the floor |
+| `hand_in_body_m` | 3 cm | a hand inside the torso, head or legs |
+| `through_m` | 3 cm | the body inside the seat, chair back, desk, laptop or door (a seat cushion gives 3 cm) |
+| `foot_slide_m` | 3 cm | a foot travelling along the floor while it stands flat on it |
+| `touch_miss_m` | 3 cm | a hand off the thing it was put on (the door handle, the desk's edge) |
+
+A failure is said in words in `body_problems` ("left hand 9 cm inside the body at 5.12 s") and each number gets an
+`_at` with the frame. `moves` lists every posture verb with how far apart in time its parts start and stop and how
+different left is from right: all zeros would be a machine. To look at a move yourself, render the shot as a clip
+with `--keep-frames` and tile every second or third frame.
+
 Set (`desk_room`): `alert` (popup + red screen light), `work` (`until`: bar drains bad → mid → good),
-`done` (the "after" line pops in), `open_door` / `close_door` (`dur`, `angle`), `pull_in` (the chair and whoever
-sits on it come in to the desk, feet shuffling). The screen's words and numbers come from `set.screen`
+`done` (the "after" line pops in), `open_door` / `close_door` (`dur`, `angle`, and `by`: a cast member whose hand
+takes the handle and goes with the door as far as the arm reaches; an error says how far short they stand),
+`pull_in` (the chair and whoever sits on it come in to the desk: the feet walk it in with short steps and, once
+the desk is in reach, the hands take its edge and pull). The screen's words and numbers come from `set.screen`
 (`title`, `subtitle`, `before`, `after`, `fill_before`, `fill_after`, `alert` [2 lines], `working`).
 
 Effects: `confetti` (`count`, `colors`: a list of hex colours, for the brand's), `title` (`text`, `color`): 3D text above the character, wobbles to the end.
@@ -242,8 +259,8 @@ Effects: `confetti` (`count`, `colors`: a list of hex colours, for the brand's),
 
 `desk_room` takes `"door": {}` (a doorway in the wall behind the chair, at `x` 2.6 unless given, as tall as the
 character needs and with the handle where their hand falls, opening onto a dim hall) and `"chair_out"` (metres the
-chair starts pulled back from the desk). An entrance: the character starts in the hall at `[2.6, 3.7]`,
-`open_door`, `walk` in, `walk` to a thigh's length in front of the pulled-out chair, `sit_down`, `pull_in`.
+chair starts pulled back from the desk). An entrance: the character starts in the hall at `[2.6, 3.5]` (in reach
+of the handle), `open_door` with `"by"`, `walk` in, `walk` to a thigh's length in front of the pulled-out chair, `sit_down`, `pull_in`.
 
 | `kind` | |
 |---|---|

@@ -312,6 +312,43 @@ class BlenderCheckTests(unittest.TestCase):
         kinds = [e['kind'] for e in events['events']]
         self.assertIn('door_open', kinds)
         self.assertGreater(kinds.count('step'), 8)
+        # contact: no hand inside the body, nothing passed through the furniture, no planted foot slid
+        for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
+            self.assertLessEqual(checks[kind], 0.03, kind)
+        self.assertNotIn('body_problems', checks)
+
+    def test_a_body_does_not_move_like_a_machine(self):
+        """Standing up, turning, sitting down and pulling in: the parts of the body do not all start and stop
+        on one frame, and the left side does not mirror the right."""
+        checks, _ = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'sit', 'at': [0, 0.8]}],
+            'set': {'kind': 'desk_room', 'chair_out': 0.8},
+            'shots': [{'id': 'A', 'dur': 11, 'type': 'wide'}],
+            'beats': [{'at': 'A+0.3', 'do': 'stand_up', 'dur': 1.7},
+                      {'at': 'A+2.4', 'do': 'turn', 'facing': 110, 'dur': 1.3},
+                      {'at': 'A+4.0', 'do': 'turn', 'facing': 0, 'dur': 1.3},
+                      {'at': 'A+5.8', 'do': 'sit_down', 'dur': 1.8},
+                      {'at': 'A+8.0', 'do': 'pull_in', 'dur': 1.5}]})
+        self.assertTrue(checks['passed'], checks)
+        self.assertEqual([m['do'] for m in checks['moves']], ['stand_up', 'turn', 'turn', 'sit_down', 'pull_in'])
+        for move in checks['moves']:
+            self.assertGreaterEqual(move['starts_spread_s'] + move['stops_spread_s'], 0.2, move)  # something leads, something settles
+            self.assertGreater(move['sides_differ_m'], 0.02, move)
+
+    def test_a_hand_opens_the_door_and_the_check_says_if_it_cannot(self):
+        shots = [{'id': 'A', 'dur': 4, 'type': 'full', 'reveal': True}]
+        door = {'kind': 'desk_room', 'door': {}}
+        checks, events = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 3.5]}], 'set': door, 'shots': shots,
+            'beats': [{'at': 'A+0.5', 'do': 'open_door', 'dur': 0.8, 'by': 'dev'},
+                      {'at': 'A+1.4', 'do': 'walk', 'to': [2.6, 1.8]}]})
+        self.assertLessEqual(checks['touch_miss_m'], 0.03)  # the knuckles are on the handle when it starts to move
+        self.assertIn('touch', [e['kind'] for e in events['events']])
+        for cast_at, by, said in (([2.6, 4.6], 'dev', 'stand them closer'), ([2.6, 3.5], 'sam', 'sam')):
+            with self.assertRaises(RuntimeError) as ctx:
+                self.compile({'cast': [{'id': 'dev', 'posture': 'stand', 'at': cast_at}], 'set': door, 'shots': shots,
+                              'beats': [{'at': 'A+0.5', 'do': 'open_door', 'by': by}]})
+            self.assertIn(said, str(ctx.exception))
 
     def test_mistakes_with_postures_are_named(self):
         shots = [{'id': 'A', 'dur': 3, 'type': 'wide'}]

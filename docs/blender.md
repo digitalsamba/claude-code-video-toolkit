@@ -169,8 +169,18 @@ From there the verbs are `walk` (to a spot, turning into it and out of it), `tur
 the set `open_door` and `pull_in`. The feet are planted: a foot on the floor stays where it is while the body
 moves over it, and the report's `ik_max_error_m` says so (under a centimetre), naming the limb and the second if
 a step was too far. Three shot types film someone standing: `full`, `feet` and `tilt_up`; `"follow": true` makes
-any character shot travel with a walk. The clay cast gets its leg controls only when a spec uses one of these, so
-a desk-only spec renders exactly as it did before they existed.
+any character shot travel with a walk (the camera glides: its path is the walker's, smoothed over about a second).
+The clay cast gets its leg controls only when a spec uses one of these, so a desk-only spec renders exactly as it
+did before they existed.
+
+The posture verbs are built from the same few pieces, so they move alike: the eyes and head lead, the weight
+shifts before a foot lifts, the chest follows the pelvis and the hands follow the chest, a move lands a little
+past its mark and settles, and one side goes before the other. Hands are put on things (the knees, the desk's
+edge, a door handle with `"by"` on `open_door`) and stay on them while the body moves.
+
+Contact is measured on every frame and fails the check: a foot under the floor, a hand inside the body, the body
+through furniture, a planted foot sliding, a hand off what it holds. The report says which, how far and when
+(`body_problems`), and `moves` gives each posture verb's timing spread. The table is in the skill.
 
 ### A character from a generated 3D model (experimental)
 
