@@ -199,10 +199,10 @@
     },
     "contribute": {
       "path": ".claude/commands/contribute.md",
-      "description": "Share improvements - issues, PRs, skills, templates",
+      "description": "Share improvements - issues, PRs, skills, templates, and videos you made",
       "status": "stable",
       "created": "2025-12-10",
-      "updated": "2025-12-10"
+      "updated": "2026-11-12"
     },
     "scene-review": {
       "path": ".claude/commands/scene-review.md",

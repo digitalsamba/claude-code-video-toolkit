@@ -103,6 +103,8 @@ Schedule: <publishAt or "—">
 user plainly: this is the unverified-app lock — the video uploaded but won't go public
 until their Google Cloud OAuth app is verified. They can publish manually in YouTube Studio.
 
+Then offer once, in one line: "Want to share it in the toolkit's Show and tell? `/contribute` option 6 drafts the post for you to check." Don't post anything from here.
+
 ---
 
 ## Quick Mode
