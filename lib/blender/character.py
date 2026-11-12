@@ -16,6 +16,7 @@ character. It is built at the origin, sitting, facing -Y (one character per set 
 """
 from __future__ import annotations
 
+import json
 import math
 import random
 
@@ -58,6 +59,29 @@ TYPING = {"calm": (4, 0.03), "frantic": (2, 0.035)}  # frames per key at 24 fps,
 # Every length below written as n(x) is frames at 24 fps, converted to the scene's rate.
 
 
+def skeleton():
+    """The seated rest pose every character shares: joints as (position, Skin radii), and the edges between them."""
+    SK = {"pelvis": ((0, 0, 0.62), (0.22, 0.2)), "waist": ((0, 0, 0.82), (0.27, 0.22)),
+          "chest": ((0, 0, 1.04), (0.29, 0.23)), "upch": ((0, 0, 1.2), (0.25, 0.19)),
+          "neckb": ((0, 0, 1.33), (0.09, 0.09)), "necktop": ((0, 0, 1.47), (0.08, 0.08))}
+    for s, sd in ((1, "L"), (-1, "R")):
+        SK["sh" + sd] = ((0.3 * s, 0, 1.22), (0.085, 0.085))
+        SK["el" + sd] = ((0.4 * s, -0.08, 0.88), (0.066, 0.066))
+        SK["wr" + sd] = ((0.4 * s, -0.42, 0.8), (0.055, 0.05))
+        SK["tip" + sd] = ((0.4 * s, -0.55, 0.79), (0.068, 0.045))
+        SK["th" + sd] = ((0.35 * s, -0.47, 0.83), (0.03, 0.03))
+        SK["hip" + sd] = ((0.13 * s, 0, 0.6), (0.11, 0.11))
+        SK["kn" + sd] = ((0.13 * s, -0.47, 0.6), (0.095, 0.095))
+        SK["an" + sd] = ((0.13 * s, -0.47, 0.1), (0.075, 0.075))
+        SK["toe" + sd] = ((0.13 * s, -0.64, 0.06), (0.078, 0.06))
+    edges = [("pelvis", "waist"), ("waist", "chest"), ("chest", "upch"), ("upch", "neckb"), ("neckb", "necktop")]
+    for sd in "LR":
+        edges += [("upch", "sh" + sd), ("sh" + sd, "el" + sd), ("el" + sd, "wr" + sd), ("wr" + sd, "tip" + sd),
+                  ("wr" + sd, "th" + sd), ("pelvis", "hip" + sd), ("hip" + sd, "kn" + sd),
+                  ("kn" + sd, "an" + sd), ("an" + sd, "toe" + sd)]
+    return SK, edges
+
+
 class ClayPerson:
     def __init__(self, cid: str, look: dict):
         """`look` is a description from cast.resolve(): body, face, hair, clothes, accessories, seed."""
@@ -71,6 +95,7 @@ class ClayPerson:
             "hair": mat(f"{cid}_hair", look["hair"]["color"], 0.6), "eyew": mat(f"{cid}_eyew", "#F3F3F3", 0.15),
             "iris": mat(f"{cid}_iris", look["face"]["eyes"], 0.2),
             "frame": mat(f"{cid}_frame", (0.03, 0.03, 0.035), 0.3),
+            "rivet": mat(f"{cid}_rivet", (0.75, 0.76, 0.78), 0.3, 1.0),
             "gold": mat(f"{cid}_gold", (0.9, 0.62, 0.2), 0.25, 1.0),
             "pupil": mat(f"{cid}_pupil", (0.02, 0.02, 0.025), 0.05),
             "glint": mat(f"{cid}_glint", (1, 1, 1), 0.1, emit=6),
@@ -93,8 +118,8 @@ class ClayPerson:
         self.hips = empty(f"{cid}_hips", None, (0, 0, 0.62))
         self.breath = empty(f"{cid}_breath", self.hips)  # a slow idle under every lean, so a hold is never a freeze
         self.spine = empty(f"{cid}_spine", self.breath)
-        self.neck = empty(f"{cid}_neck", self.spine, (0, 0, 0.8))
-        top = self.desc["clothes"]["top"]
+        model = self.desc.get("model")
+        top = None if model else self.desc["clothes"]["top"]
         torso, limb = BUILD[self.desc["body"]["build"]]
         if top == "hoodie":
             sphere(f"{cid}_hood", 1, M["top"], self.spine, (0, 0.17, 0.66), (0.2, 0.12, 0.11))
@@ -107,27 +132,33 @@ class ClayPerson:
                 box(f"{cid}_collar", (0.1, 0.02, 0.06), M["top"], self.spine, (0.055 * s, -0.1, 0.705),
                     (R(-38), R(-24 * s), R(-28 * s)), bevel=0.006)
 
-        SK = {"pelvis": ((0, 0, 0.62), (0.22, 0.2)), "waist": ((0, 0, 0.82), (0.27, 0.22)),
-              "chest": ((0, 0, 1.04), (0.29, 0.23)), "upch": ((0, 0, 1.2), (0.25, 0.19)),
-              "neckb": ((0, 0, 1.33), (0.09, 0.09)), "necktop": ((0, 0, 1.47), (0.08, 0.08))}
-        for s, sd in ((1, "L"), (-1, "R")):
-            SK["sh" + sd] = ((0.3 * s, 0, 1.22), (0.085, 0.085))
-            SK["el" + sd] = ((0.4 * s, -0.08, 0.88), (0.066, 0.066))
-            SK["wr" + sd] = ((0.4 * s, -0.42, 0.8), (0.055, 0.05))
-            SK["tip" + sd] = ((0.4 * s, -0.55, 0.79), (0.068, 0.045))
-            SK["th" + sd] = ((0.35 * s, -0.47, 0.83), (0.03, 0.03))
-            SK["hip" + sd] = ((0.13 * s, 0, 0.6), (0.11, 0.11))
-            SK["kn" + sd] = ((0.13 * s, -0.47, 0.6), (0.095, 0.095))
-            SK["an" + sd] = ((0.13 * s, -0.47, 0.1), (0.075, 0.075))
-            SK["toe" + sd] = ((0.13 * s, -0.64, 0.06), (0.078, 0.06))
-        edges = [("pelvis", "waist"), ("waist", "chest"), ("chest", "upch"), ("upch", "neckb"), ("neckb", "necktop")]
-        for sd in "LR":
-            edges += [("upch", "sh" + sd), ("sh" + sd, "el" + sd), ("el" + sd, "wr" + sd), ("wr" + sd, "tip" + sd),
-                      ("wr" + sd, "th" + sd), ("pelvis", "hip" + sd), ("hip" + sd, "kn" + sd),
-                      ("kn" + sd, "an" + sd), ("an" + sd, "toe" + sd)]
+        SK, edges = skeleton()
+        if model:  # a fitted model keeps its own proportions: the rig is built on its joints, not the clay ones
+            self.body = self._model_body(model)
+            for name, at in json.loads(self.body["joints"]).items():
+                SK[name] = (tuple(at), SK[name][1])
+        # how far this character's neck and head sit above the clay cast's (0 for the clay cast)
+        self.rise = SK["neckb"][0][2] - 1.33
+        self.neck = empty(f"{cid}_neck", self.spine, (0, 0, 0.8 + self.rise))
         for name, (at, (rx, ry)) in list(SK.items()):  # the build: a thicker or thinner torso and limbs
             k = torso if name in ("waist", "chest", "upch") else limb if name[:2] in ("sh", "el", "hi", "kn") else 1
             SK[name] = (at, (rx * k, ry * k))
+        if not model:
+            self.body = self._bake_body(SK, edges, top)
+        self._build_rig(SK, self.body, auto_weights=not model)
+
+    def _model_body(self, path):
+        """A body fitted to this skeleton by fit_model.py: one textured mesh, head included, already weighted."""
+        with D.libraries.load(path) as (src, dst):
+            if "model_body" not in src.objects:
+                raise RuntimeError(f"{path} has no object named model_body: make it with lib/blender/fit_model.py")
+            dst.objects = ["model_body"]
+        body = link(dst.objects[0])
+        body.name = f"{self.id}_body"
+        return body
+
+    def _bake_body(self, SK, edges, top):
+        cid, M = self.id, self.m
         names = list(SK)
         idx = {n: i for i, n in enumerate(names)}
         P = lambda n: Vector(SK[n][0])  # noqa: E731
@@ -144,7 +175,7 @@ class ClayPerson:
         skel.modifiers.new("Pre", "SUBSURF").levels = 2
         body_me = D.meshes.new_from_object(skel.evaluated_get(bpy.context.evaluated_depsgraph_get()))
         D.objects.remove(skel)
-        self.body = body = link(D.objects.new(f"{cid}_body", body_me))
+        body = link(D.objects.new(f"{cid}_body", body_me))
 
         # 2) clothing regions by nearest skeleton segment
         def seg_dist(p, a, b):
@@ -190,6 +221,12 @@ class ClayPerson:
                     poly.material_index = m_after if (c - j).dot(normal) > 0 else m_before
             poly.use_smooth = True
 
+        return body
+
+    def _build_rig(self, SK, body, auto_weights=True):
+        cid = self.id
+        P = lambda n: Vector(SK[n][0])  # noqa: E731
+
         # 3) armature in the same seated rest pose
         rig_data = D.armatures.new(f"{cid}_rig")
         self.rig = rig = link(D.objects.new(f"{cid}_rig", rig_data))
@@ -220,12 +257,15 @@ class ClayPerson:
         body.select_set(True)
         rig.select_set(True)
         bpy.context.view_layer.objects.active = rig
-        bpy.ops.object.parent_set(type="ARMATURE_AUTO")
-        sub = body.modifiers.new("Subsurf", "SUBSURF")
-        sub.levels, sub.render_levels = 0, 1
+        if auto_weights:
+            bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+            sub = body.modifiers.new("Subsurf", "SUBSURF")
+            sub.levels, sub.render_levels = 0, 1
+        else:  # a fitted model carries its own weights, in vertex groups named for these bones
+            bpy.ops.object.parent_set(type="ARMATURE")
 
         # 5) controls: spine/neck empties -> Child Of; wrist + pole empties -> IK (pole angle +90 for roll-0 bones)
-        self.SH = {s: Vector((0.3 * s, 0, 0.6)) for s in (1, -1)}
+        self.SH = {s: Vector((P("shL").x * s, 0, P("shL").z - 0.62)) for s in (1, -1)}
         self.hand_t = {s: empty(f"{cid}_hand_t{s}", self.spine) for s in (1, -1)}
         self.pole_t = {s: empty(f"{cid}_pole_t{s}", self.spine) for s in (1, -1)}
         bpy.context.view_layer.update()
@@ -240,18 +280,46 @@ class ClayPerson:
     def _build_head(self):
         cid, M = self.id, self.m
         face = self.desc["face"]
-        self.head = head = sphere(f"{cid}_head", 0.3, M["skin"], self.neck, (0, 0, 0.3), seg=48)
-        head.scale = HEAD[face["shape"]]  # everything on the head is its child, so the face follows the shape
-        for s in (1, -1):
-            sphere(f"{cid}_ear", 0.06, M["skin"], head, (0.29 * s, 0, 0), (0.45, 1, 1), seg=16)
-        nose_r, nose_scale = NOSE[face["nose"]]
-        sphere(f"{cid}_nose", nose_r, M["skin"], head, (0, -0.3, -0.02), nose_scale, seg=16)
-        self._build_hair(head)
-        self._build_extras(head)
+        fit = json.loads(self.body["face"]) if self.desc.get("model") else None
+        self.head_r, self.brow_at, self.sweat_x, eye_parent, mouth_parent = 0.3, (0.1, -0.275, 0.0), 0.27, {}, None
+        if fit:
+            # the model's head is part of the body mesh, on the neck bone. The face parts are made for a head
+            # 0.3 m in radius, so they go on an empty scaled to the model's face: verbs and checks are unchanged
+            eyes = [Vector(e) for e in fit["eyes"]]  # character's right, then left: points on the face
+            mid = (eyes[0] + eyes[1]) / 2
+            k = (eyes[1].x - eyes[0].x) / 0.2
+            at = Vector((mid.x, mid.y + 0.278 * k, mid.z - 0.05 * k))
+            self.head = head = empty(f"{cid}_head", self.neck, at - Vector((0, 0, 1.42 + self.rise)))
+            head.scale = (k, k, k)
+            self.head_at, self.head_r = tuple(at), fit["half_width"]
+            local = lambda p: (Vector(p) - at) / k  # noqa: E731  a point on the model, in the head's own units
+            ew, eh = fit["eye_size"][0] / k / 0.15, fit["eye_size"][1] / k / 0.15
+            for s, e in ((-1, eyes[0]), (1, eyes[1])):
+                eye_parent[s] = empty(f"{cid}_socket{s}", head, local(e) + Vector((0, 0.3 * 0.056 * ew, 0)))
+                eye_parent[s].scale = (ew, ew * 0.5, eh)
+            brow = local((Vector(fit["brows"][0]) + Vector(fit["brows"][1])) / 2)
+            self.brow_at = ((fit["brows"][1][0] - fit["brows"][0][0]) / 2 / k, brow.y - 0.004, brow.z - 0.16)
+            m = fit["mouth_width"] / k / 0.14
+            mouth_parent = empty(f"{cid}_mouth_at", head, local(fit["mouth"]) - Vector((0, -0.288, -0.12)) * m)
+            mouth_parent.scale = (m, m, m)
+            self.sweat_x = self.head_r / k + 0.02
+            if "glasses" in self.desc["accessories"]:
+                self._build_frames(head, (local(eyes[0]).y + local(eyes[1]).y) / 2)
+        else:
+            self.head = head = sphere(f"{cid}_head", 0.3, M["skin"], self.neck, (0, 0, 0.3), seg=48)
+            head.scale = HEAD[face["shape"]]  # everything on the head is its child, so the face follows the shape
+            for s in (1, -1):
+                sphere(f"{cid}_ear", 0.06, M["skin"], head, (0.29 * s, 0, 0), (0.45, 1, 1), seg=16)
+            nose_r, nose_scale = NOSE[face["nose"]]
+            sphere(f"{cid}_nose", nose_r, M["skin"], head, (0, -0.3, -0.02), nose_scale, seg=16)
+            self._build_hair(head)
+            self._build_extras(head)
         self.brow_len, brow_h = BROW[face["brows"]]
+        if fit:
+            self.brow_len, brow_h = fit["brow_size"][0] / head.scale[0], fit["brow_size"][1] / head.scale[0]
         self.eyes, self.pupils, self.brows = {}, {}, {}
         for s in (1, -1):
-            e = empty(f"{cid}_eye{s}", head, (0.1 * s, -0.235, 0.05))
+            e = empty(f"{cid}_eye{s}", eye_parent[s]) if fit else empty(f"{cid}_eye{s}", head, (0.1 * s, -0.235, 0.05))
             self.eyes[s] = e
             sphere(f"{cid}_eyewhite", 0.075, M["eyew"], e, (0, 0, 0), (1, 0.75, 1))
             p = sphere(f"{cid}_pupil", 0.036, M["pupil"], e, (0, -0.052, -0.012))
@@ -260,19 +328,21 @@ class ClayPerson:
                 sphere(f"{cid}_iris", 0.052, M["iris"], p, (0, 0.016, 0), (1, 0.5, 1), seg=24)
             sphere(f"{cid}_glint", 0.011, M["glint"], p, (0.012, -0.03, 0.014), seg=12)
             self.brows[s] = box(f"{cid}_brow", (self.brow_len, 0.025, brow_h), M["hair"], head,
-                                (0.1 * s, -0.275, 0.16), bevel=min(0.01, brow_h * 0.4))
+                                (self.brow_at[0] * s, self.brow_at[1], 0.16 + self.brow_at[2]),
+                                bevel=min(0.01, brow_h * 0.4))
+        mouth_at = mouth_parent or head
         self.mouths = {
-            "smile": arc_tube(f"{cid}_smile", 0.07, 0.014, math.pi * 1.08, math.pi * 1.92, M["mouth"], head,
+            "smile": arc_tube(f"{cid}_smile", 0.07, 0.014, math.pi * 1.08, math.pi * 1.92, M["mouth"], mouth_at,
                               (0, -0.288, -0.09), wrap=0.3),
-            "frown": arc_tube(f"{cid}_frown", 0.06, 0.014, math.pi * 0.1, math.pi * 0.9, M["mouth"], head,
+            "frown": arc_tube(f"{cid}_frown", 0.06, 0.014, math.pi * 0.1, math.pi * 0.9, M["mouth"], mouth_at,
                               (0, -0.29, -0.16), wrap=0.3),
-            "o": sphere(f"{cid}_mouth_o", 0.045, M["mouthin"], head, (0, -0.282, -0.12), (0.8, 0.35, 1.0)),
+            "o": sphere(f"{cid}_mouth_o", 0.045, M["mouthin"], mouth_at, (0, -0.282, -0.12), (0.8, 0.35, 1.0)),
         }
         for ob in self.mouths.values():  # a mouth is drawn on the face: it shouldn't shadow the chin
             ob.visible_shadow = False
         self.mouths["smile"].scale = (0.8,) * 3
         self.mouths["frown"].scale = self.mouths["o"].scale = (0, 0, 0)
-        self.sweat_drop = sphere(f"{cid}_sweat", 0.03, M["sweat"], head, (0.27, -0.12, 0.15), (0, 0, 0), seg=16)
+        self.sweat_drop = sphere(f"{cid}_sweat", 0.03, M["sweat"], head, (self.sweat_x, -0.12, 0.15), (0, 0, 0), seg=16)
 
     def _build_hair(self, head):
         """Hair is a cap and a few volumes, all spheres: the style decides which."""
@@ -308,6 +378,31 @@ class ClayPerson:
                      (x / length * 0.3, y / length * 0.3 + 0.03, z / length * 0.3 + 0.04))
                 made += 1
 
+    def _build_frames(self, head, face_y=-0.29):
+        """Thick rectangular glasses, a separate item on the head: one front cut from a slab (two lens openings
+        and a notch for the nose), a rivet at each top corner, and the arms."""
+        cid, m = self.id, self.m["frame"]
+        y, z, wide, tall, deep = face_y - 0.03, 0.035, 0.5, 0.155, 0.035
+        front = box(f"{cid}_frames", (wide, deep, tall), m, head, (0, y, z), bevel=0.018)
+        cutters = [box(f"{cid}_cut", (0.175, 0.2, 0.095), m, head, (0.124 * s, y, z - 0.012), bevel=0.028) for s in (1, -1)]
+        cutters.append(box(f"{cid}_cut", (0.05, 0.2, 0.09), m, head, (0, y, z - tall / 2), bevel=0.02))
+        solvers = bpy.types.BooleanModifier.bl_rna.properties["solver"].enum_items.keys()
+        for c in cutters:
+            mod = front.modifiers.new("cut", "BOOLEAN")
+            mod.object, mod.operation = c, "DIFFERENCE"
+            # (the exact solver returned nothing for the nose notch on 5.3; the names differ before 4.5)
+            mod.solver = next(x for x in ("MANIFOLD", "FLOAT", "FAST") if x in solvers)
+        bpy.context.view_layer.update()
+        front.data = D.meshes.new_from_object(front.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+        front.modifiers.clear()
+        for c in cutters:
+            D.objects.remove(c)
+        for poly in front.data.polygons:
+            poly.use_smooth = True
+        for s in (1, -1):
+            cyl(f"{cid}_rivet", 0.011, 0.008, self.m["rivet"], head, (0.22 * s, y - deep / 2, z + 0.047), (R(90), 0, 0))
+            box(f"{cid}_temple", (0.024, 0.36, 0.04), m, head, (0.239 * s, y + 0.18, z + 0.04), bevel=0.006)
+
     def _build_extras(self, head):
         """Beard, glasses, headphones, earrings: rigid parts on the head."""
         cid, M = self.id, self.m
@@ -333,7 +428,10 @@ class ClayPerson:
 
     # ------------------------------------------------------------ anchors (for cameras and checks)
     def anchors(self) -> dict:
-        return {"head": (0, 0, 1.72), "face": (0, -0.3, 1.72), "torso": (0, -0.1, 1.25), "body": (0, -0.3, 1.2)}
+        x, y, z = getattr(self, "head_at", (0, 0, 1.72))
+        reach = 0.3 * self.head.scale[1]
+        return {"head": (x, y, z), "face": (x, y - reach, z), "torso": (0, -0.1, 1.25 + self.rise / 2),
+                "body": (0, -0.3, 1.2 + self.rise / 2)}
 
     def visible_objects(self) -> set:
         """Objects that count as 'seeing the character' when a ray from the camera hits them."""
@@ -372,8 +470,20 @@ class ClayPerson:
         key(self.hand_t[s], "location", f, hand)
         key(self.pole_t[s], "location", f, self._pole_pos(s, hand, Vector(pole)))
 
+    def _pose(self, name):
+        """A pose's wrist target and elbow pole. The poses that reach for the head follow this character's head:
+        how high it sits and how wide it is (the clay cast's head is 0.3 m in radius, centred 1.72 m up)."""
+        (x, y, z), pole = POSES[name]
+        if name in ("hands_on_head", "hands_behind_head"):
+            up = getattr(self, "head_at", (0, 0, 1.72))[2] - 1.72
+            wide = self.head_r / 0.3
+            x, y, z = (x - 0.3 + self.head_r, y, z + up) if name == "hands_on_head" else (x * wide, y * wide, z + up)
+        elif name == "arms_up":
+            z += self.rise
+        return (x, y, z), pole
+
     def pose(self, f0: int, f1: int, name: str):
-        hand, pole = POSES[name]
+        hand, pole = self._pose(name)
         for s in (1, -1):
             self.hand_t[s].keyframe_insert("location", frame=f0)
             self.pole_t[s].keyframe_insert("location", frame=f0)
@@ -405,7 +515,7 @@ class ClayPerson:
 
     def celebrate(self, f0: int, f1: int):
         self.pose(f0, f0 + n(12), "arms_up")
-        hand, pole = POSES["arms_up"]
+        hand, pole = self._pose("arms_up")
         for i, f in enumerate(ticks(f0 + n(16), f1, 6)):
             w = 0.06 if i % 2 else -0.06
             for s in (1, -1):
@@ -459,7 +569,8 @@ class ClayPerson:
             b = self.brows[s]
             b.keyframe_insert("rotation_euler", frame=f + n(2))
             b.keyframe_insert("location", frame=f + n(2))
-            b.rotation_euler, b.location = (0, R(ang * s), 0), (0.1 * s, -0.275, z)  # (the length is in the mesh)
+            b.rotation_euler = (0, R(ang * s), 0)  # (the length is in the mesh)
+            b.location = (self.brow_at[0] * s, self.brow_at[1], z + self.brow_at[2])
             b.keyframe_insert("rotation_euler", frame=f + dur + n(2))
             b.keyframe_insert("location", frame=f + dur + n(2))
         for name, ob in self.mouths.items():
@@ -484,8 +595,8 @@ class ClayPerson:
         d = self.sweat_drop
         key(d, "scale", f0 - n(4), (0, 0, 0))
         key(d, "scale", f0, (1, 1, 1.5))
-        key(d, "location", f0, (0.27, -0.12, 0.15))
-        key(d, "location", f1, (0.27, -0.17, -0.1))
+        key(d, "location", f0, (self.sweat_x, -0.12, 0.15))
+        key(d, "location", f1, (self.sweat_x, -0.17, -0.1))
         key(d, "scale", f1, (1, 1, 1.5))
         key(d, "scale", f1 + n(3), (0, 0, 0))
         self.events.append({"frame": f0, "kind": "plip"})

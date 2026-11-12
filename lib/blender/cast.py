@@ -88,6 +88,8 @@ def load(entry: dict, base: Path | None = None) -> dict:
     if not path.exists():
         raise SpecError(f"cast member {entry.get('id')!r}: character file not found: {path}")
     stored = json.loads(path.read_text(encoding="utf-8"))
+    if stored.get("model") and not Path(stored["model"]).is_absolute():  # beside the character file
+        stored["model"] = str(path.parent / stored["model"])
     merged = {**stored, **{k: v for k, v in entry.items() if k != "from"}}
     for group in ("body", "face", "hair", "clothes"):
         if isinstance(stored.get(group), dict) and isinstance(entry.get(group), dict):
@@ -132,4 +134,10 @@ def resolve(entry: dict, base: Path | None = None) -> dict:
     if not isinstance(acc, list) or any(a not in ACCESSORIES for a in acc):
         raise SpecError(f'{where}: "accessories" is a list from {", ".join(ACCESSORIES)}, not {acc!r}')
     out["accessories"] = list(acc)
+    if entry.get("model"):  # a body fitted to the rig by fit_model.py, in place of the clay one
+        model = Path(entry["model"])
+        model = model if model.is_absolute() else (base or Path(".")) / model
+        if not model.exists():
+            raise SpecError(f"{where}: model file not found: {model}")
+        out["model"] = str(model)
     return out
