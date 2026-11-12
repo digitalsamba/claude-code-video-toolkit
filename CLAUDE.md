@@ -748,7 +748,18 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
 
 # Validate everything without uploading (also reports auth readiness)
 uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
+
+# Setup check: channel, scopes, Data/Analytics API on or off, with the fix for each (read-only)
+uv run tools/youtube_upload.py --check --account personal
+
+# Subtitles and chapters from the render: one SRT for --captions, chapter lines for the description
+uv run tools/publish_kit.py --project projects/my-video --video out/video.mp4
 ```
+
+The publish kit transcribes the render once (Scribe, about $0.01 for 90 s, or `--engine whisper`) and aligns it to
+the scene scripts, so the subtitles are spelled as written and timed to the render, with no scene offsets to add
+up. Chapters sit at each scene's cut, titled from `project.json` `scenes[].title` or the file names, under
+YouTube's rules (first at 0:00, three or more, 10 s each). Re-runs reuse the saved transcript.
 
 **Setup is OAuth, not an API key** (uploads act on behalf of a channel). See
 `docs/youtube-upload.md` for the one-time Google Cloud Console walkthrough and
