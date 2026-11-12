@@ -420,7 +420,7 @@ class BlenderCheckTests(unittest.TestCase):
 
     FITTED = ROOT / 'projects' / 'character-conal' / 'test' / 'enter.json'
 
-    @unittest.skipUnless(FITTED.exists(), 'needs a fitted model with a face and fingers (none is in the repo)')
+    @unittest.skipUnless(FITTED.exists(), 'needs the private fitted model of the toolkit\'s author (Mara, in tests/fixtures, is the one in the repo)')
     def test_a_fitted_character_with_fingers_passes_its_own_checks(self):
         """A generated model fitted to the rig, where one is on this machine: its face, its skin and its hands
         are measured, and the walk-in passes."""
@@ -442,6 +442,46 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertGreaterEqual(checks['typing']['finger_travel_m'], 0.006)  # and press them
         for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
             self.assertLessEqual(checks[kind], 0.03, kind)
+
+    MARA = ROOT / 'tests' / 'fixtures' / 'blender-fitted'
+
+    def test_an_invented_model_is_fitted_with_a_face_and_fingers_and_acts(self):
+        """Mara (tests/fixtures/blender-fitted, made up, not a likeness) goes through the fit as anyone's model
+        would: five fingers found on each hand, the thumb laid in to the palm, legs that touched parted; then she
+        takes hand shapes, points, pulls faces and winks, and the checks pass."""
+        import contextlib
+        import io
+        import re
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            for name in ('spec.json', 'mara.json'):
+                shutil.copy(self.MARA / name, tmp / name)
+            said = io.StringIO()
+            args = mock.Mock(model=str(self.MARA / 'mara.glb'), fit=str(self.MARA / 'fit.json'),
+                             out=str(tmp / 'mara-fitted.blend'), preview=None)
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(args)
+            said = said.getvalue()
+            self.assertEqual(code, 0, said)
+            self.assertEqual(len(re.findall(r'fit: hands, [LR] 5 fingers', said)), 2, said)
+            depth = re.search(r"thumb root (\d+)% of the hand's length out of the palm \(made (\d+)%\)", said)
+            self.assertIsNotNone(depth, said)
+            self.assertLessEqual(int(depth.group(1)), 10)                  # laid in from the generator's 20%
+            self.assertGreater(int(depth.group(2)), int(depth.group(1)))
+            self.assertIn('legs touched', said)                            # her shoes are one piece in the model
+            checks = blender_render.run_compiler(tmp / 'spec.json', tmp / 'out', 'check', '480x270', None)
+            events = json.loads((tmp / 'out' / 'events.json').read_text())
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        self.assertGreaterEqual(checks['face']['mouth_share'], 0.18)
+        self.assertGreater(checks['face']['mouth_travel_m'], 0.005)        # the mouth moves for the faces
+        self.assertEqual(checks['skin']['leg_above_hips'], 0)
+        self.assertLessEqual(checks['skin']['stretch'], 4.0)
+        self.assertGreaterEqual(checks['hands_apart_m'], 0.005)
+        points = [e for e in events['events'] if e['kind'] == 'point']
+        self.assertEqual(len(points), 1)
+        self.assertLessEqual(points[0]['aim_deg'], 12)
+        for shot in checks['shots']:                                       # the close-up finds her own head
+            self.assertTrue(shot['passed'], shot)
 
     def test_flicker_is_a_still_point_that_jumps_for_a_frame_and_comes_back(self):
         """The render check reads still points of the set out of the frames: one that jumps and comes back on
