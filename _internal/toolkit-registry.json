@@ -1752,6 +1752,16 @@
       "created": "2026-11-04",
       "demo": "https://demos.digitalsamba.com/video/data-chart-stars.mp4"
     },
+    "toolkit-made-itself": {
+      "path": "examples/toolkit-made-itself/",
+      "description": "93s video about the toolkit made in the toolkit: each stage shown as the real command in the Terminal component, every line from capture/ (pick() fails the bundle if one is missing), the bill measured, the QC finding real; Marilyn narrates through brands/video-toolkit",
+      "template": "custom",
+      "stack": "remotion",
+      "complexity": "intermediate",
+      "contributor": "Digital Samba",
+      "created": "2026-11-12",
+      "demo": "https://www.youtube.com/watch?v=3HjPatdeal4"
+    },
     "ds-crt-stinger": {
       "path": "examples/ds-crt-stinger/",
       "description": "6s brand stinger — LTX-2 crt-terminal LoRA footage + post-processed grunged logo",

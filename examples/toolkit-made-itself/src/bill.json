@@ -1,0 +1,36 @@
+{
+  "rows": [
+    {
+      "label": "Voice",
+      "short": "18 takes",
+      "detail": "18 takes, 1000 ElevenLabs credits",
+      "usd": 0.1667
+    },
+    {
+      "label": "Captions",
+      "short": "Scribe",
+      "detail": "71 s through Scribe",
+      "usd": 0.0079
+    },
+    {
+      "label": "Music",
+      "short": "8 takes",
+      "detail": "8 takes on acemusic",
+      "usd": 0.0
+    },
+    {
+      "label": "Stills",
+      "short": "3 tries",
+      "detail": "3 tries on FLUX.2",
+      "usd": 0.014
+    },
+    {
+      "label": "Video",
+      "short": "1 clip",
+      "detail": "1 clip on LTX-2.3",
+      "usd": 0.1402
+    }
+  ],
+  "total_usd": 0.3288,
+  "measured": "2026-11-09T22:51:32+00:00"
+}

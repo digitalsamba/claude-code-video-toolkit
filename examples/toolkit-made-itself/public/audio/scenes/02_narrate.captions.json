@@ -1,0 +1,226 @@
+[
+ {
+  "text": "First",
+  "startMs": 120,
+  "endMs": 460,
+  "timestampMs": 290,
+  "confidence": null
+ },
+ {
+  "text": " it",
+  "startMs": 560,
+  "endMs": 660,
+  "timestampMs": 610,
+  "confidence": null
+ },
+ {
+  "text": " wrote",
+  "startMs": 680,
+  "endMs": 900,
+  "timestampMs": 790,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 940,
+  "endMs": 1020,
+  "timestampMs": 980,
+  "confidence": null
+ },
+ {
+  "text": " script,",
+  "startMs": 1080,
+  "endMs": 1560,
+  "timestampMs": 1320,
+  "confidence": null
+ },
+ {
+  "text": " one",
+  "startMs": 2000,
+  "endMs": 2160,
+  "timestampMs": 2080,
+  "confidence": null
+ },
+ {
+  "text": " file",
+  "startMs": 2300,
+  "endMs": 2580,
+  "timestampMs": 2440,
+  "confidence": null
+ },
+ {
+  "text": " for",
+  "startMs": 2680,
+  "endMs": 2840,
+  "timestampMs": 2760,
+  "confidence": null
+ },
+ {
+  "text": " each",
+  "startMs": 2900,
+  "endMs": 3100,
+  "timestampMs": 3000,
+  "confidence": null
+ },
+ {
+  "text": " scene,",
+  "startMs": 3220,
+  "endMs": 3560,
+  "timestampMs": 3390,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 3860,
+  "endMs": 3960,
+  "timestampMs": 3910,
+  "confidence": null
+ },
+ {
+  "text": " voiced",
+  "startMs": 4059,
+  "endMs": 4400,
+  "timestampMs": 4229,
+  "confidence": null
+ },
+ {
+  "text": " it.",
+  "startMs": 4480,
+  "endMs": 4660,
+  "timestampMs": 4570,
+  "confidence": null
+ },
+ {
+  "text": " That's",
+  "startMs": 5120,
+  "endMs": 5380,
+  "timestampMs": 5250,
+  "confidence": null
+ },
+ {
+  "text": " me.",
+  "startMs": 5440,
+  "endMs": 5660,
+  "timestampMs": 5550,
+  "confidence": null
+ },
+ {
+  "text": " I'm",
+  "startMs": 6200,
+  "endMs": 6320,
+  "timestampMs": 6260,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 6380,
+  "endMs": 6440,
+  "timestampMs": 6410,
+  "confidence": null
+ },
+ {
+  "text": " voice",
+  "startMs": 6460,
+  "endMs": 6780,
+  "timestampMs": 6620,
+  "confidence": null
+ },
+ {
+  "text": " from",
+  "startMs": 6820,
+  "endMs": 6980,
+  "timestampMs": 6900,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 7040,
+  "endMs": 7100,
+  "timestampMs": 7070,
+  "confidence": null
+ },
+ {
+  "text": " ElevenLabs",
+  "startMs": 7140,
+  "endMs": 7860,
+  "timestampMs": 7500,
+  "confidence": null
+ },
+ {
+  "text": " library,",
+  "startMs": 7980,
+  "endMs": 8460,
+  "timestampMs": 8220,
+  "confidence": null
+ },
+ {
+  "text": " paced",
+  "startMs": 8760,
+  "endMs": 9060,
+  "timestampMs": 8910,
+  "confidence": null
+ },
+ {
+  "text": " to",
+  "startMs": 9100,
+  "endMs": 9200,
+  "timestampMs": 9150,
+  "confidence": null
+ },
+ {
+  "text": " about",
+  "startMs": 9260,
+  "endMs": 9600,
+  "timestampMs": 9430,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 9600,
+  "endMs": 9870,
+  "timestampMs": 9735,
+  "confidence": null
+ },
+ {
+  "text": " hundred",
+  "startMs": 9870,
+  "endMs": 10140,
+  "timestampMs": 10005,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 10140,
+  "endMs": 10410,
+  "timestampMs": 10275,
+  "confidence": null
+ },
+ {
+  "text": " sixty",
+  "startMs": 10410,
+  "endMs": 10680,
+  "timestampMs": 10545,
+  "confidence": null
+ },
+ {
+  "text": " words",
+  "startMs": 10680,
+  "endMs": 10920,
+  "timestampMs": 10800,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 10980,
+  "endMs": 11040,
+  "timestampMs": 11010,
+  "confidence": null
+ },
+ {
+  "text": " minute.",
+  "startMs": 11080,
+  "endMs": 11480,
+  "timestampMs": 11280,
+  "confidence": null
+ }
+]

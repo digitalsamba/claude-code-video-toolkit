@@ -1,0 +1,1 @@
+Every scene is React, rendered with Remotion. This terminal is a component too: each line waits for the word that names it.

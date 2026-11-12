@@ -1,0 +1,135 @@
+[
+ {
+  "text": "One",
+  "startMs": 100,
+  "endMs": 240,
+  "timestampMs": 170,
+  "confidence": null
+ },
+ {
+  "text": " sentence",
+  "startMs": 340,
+  "endMs": 760,
+  "timestampMs": 550,
+  "confidence": null
+ },
+ {
+  "text": " in,",
+  "startMs": 860,
+  "endMs": 1040,
+  "timestampMs": 950,
+  "confidence": null
+ },
+ {
+  "text": " this",
+  "startMs": 1420,
+  "endMs": 1620,
+  "timestampMs": 1520,
+  "confidence": null
+ },
+ {
+  "text": " video",
+  "startMs": 1660,
+  "endMs": 1980,
+  "timestampMs": 1820,
+  "confidence": null
+ },
+ {
+  "text": " out.",
+  "startMs": 2200,
+  "endMs": 2440,
+  "timestampMs": 2320,
+  "confidence": null
+ },
+ {
+  "text": " It's",
+  "startMs": 2900,
+  "endMs": 3060,
+  "timestampMs": 2980,
+  "confidence": null
+ },
+ {
+  "text": " open",
+  "startMs": 3160,
+  "endMs": 3380,
+  "timestampMs": 3270,
+  "confidence": null
+ },
+ {
+  "text": " source,",
+  "startMs": 3500,
+  "endMs": 3880,
+  "timestampMs": 3690,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 4040,
+  "endMs": 4140,
+  "timestampMs": 4090,
+  "confidence": null
+ },
+ {
+  "text": " every",
+  "startMs": 4360,
+  "endMs": 4580,
+  "timestampMs": 4470,
+  "confidence": null
+ },
+ {
+  "text": " model",
+  "startMs": 4660,
+  "endMs": 4920,
+  "timestampMs": 4790,
+  "confidence": null
+ },
+ {
+  "text": " runs",
+  "startMs": 5020,
+  "endMs": 5240,
+  "timestampMs": 5130,
+  "confidence": null
+ },
+ {
+  "text": " on",
+  "startMs": 5280,
+  "endMs": 5380,
+  "timestampMs": 5330,
+  "confidence": null
+ },
+ {
+  "text": " your",
+  "startMs": 5420,
+  "endMs": 5620,
+  "timestampMs": 5520,
+  "confidence": null
+ },
+ {
+  "text": " own",
+  "startMs": 5680,
+  "endMs": 5840,
+  "timestampMs": 5760,
+  "confidence": null
+ },
+ {
+  "text": " account,",
+  "startMs": 5880,
+  "endMs": 6360,
+  "timestampMs": 6120,
+  "confidence": null
+ },
+ {
+  "text": " at",
+  "startMs": 6720,
+  "endMs": 6880,
+  "timestampMs": 6800,
+  "confidence": null
+ },
+ {
+  "text": " cost.",
+  "startMs": 6940,
+  "endMs": 7420,
+  "timestampMs": 7180,
+  "confidence": null
+ }
+]

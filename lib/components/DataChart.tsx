@@ -381,14 +381,21 @@ export const BarChart: React.FC<BarChartProps> = ({
           const pop = 1 + 0.06 * Math.sin(Math.PI * hi);
           const bh = (b.value / max) * h * t * pop;
           const x = slot * i + (slot - bw * pop) / 2;
+          const cx = slot * i + slot / 2;
+          const vy = h - bh - fontSize * 0.6;
+          const grow = (1.1 + 0.45 * hi) / 1.1;
           return (
             <g key={i}>
               <rect x={x} y={h - bh} width={bw * pop} height={Math.max(0, bh)} rx={radius ?? Math.min(10, bw / 6)}
                 fill={interpolateColors(hi, [0, 1], [theme.other ?? theme.muted, b.highlightColor ?? theme.primary])}
                 opacity={theme.other ? 1 : 0.45 + 0.55 * hi} />
-              {t > 0.01 && <text x={slot * i + slot / 2} y={h - bh - fontSize * 0.6} textAnchor="middle"
+              {/* the highlight grows the value by scaling it about its baseline, not by changing fontSize every
+                  frame: a font size that changes each frame crashed Chrome after a few dozen frames (Remotion
+                  4.0.539's headless shell, "Page crashed!") */}
+              {t > 0.01 && <text x={cx} y={vy} textAnchor="middle"
+                transform={hi > 0 ? `translate(${cx} ${vy}) scale(${grow}) translate(${-cx} ${-vy})` : undefined}
                 fill={interpolateColors(hi, [0, 1], [theme.other ? theme.text : theme.muted, theme.text])}
-                fontSize={fontSize * (1.1 + 0.45 * hi)} fontWeight={700} opacity={clamp01(t * 3)} style={tabular}>
+                fontSize={fontSize * 1.1} fontWeight={700} opacity={clamp01(t * 3)} style={tabular}>
                 {formatValue(b.value * clamp01(t))}
               </text>}
               <text x={slot * i + slot / 2} y={h + fontSize * 1.5} textAnchor="middle" fill={theme.muted} fontSize={fontSize}>

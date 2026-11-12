@@ -1,0 +1,7 @@
+$ uv run tools/captions.py projects/toolkit-made-itself/public/audio/scenes
+engine: scribe
+  01_open.captions.json: 18 words, aligned to 01_open.txt (100% matched)
+  02_narrate.captions.json: 32 words, aligned to 02_narrate.txt (88% matched)
+  03_score.captions.json: 25 words, aligned to 03_score.txt (100% matched)
+  05_compose.captions.json: 22 words, aligned to 05_compose.txt (100% matched)
+  07_close.captions.json: 19 words, aligned to 07_close.txt (100% matched)

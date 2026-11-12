@@ -1,0 +1,25 @@
+$ uv run tools/voiceover.py --brand video-toolkit --max-wpm 165 --scene-dir projects/toolkit-made-itself/public/audio/s6 --json
+{
+  "success": true,
+  "mode": "per_scene",
+  "provider": "elevenlabs",
+  "scene_dir": "projects/toolkit-made-itself/public/audio/s6",
+  "total_chars": 224,
+  "total_duration_seconds": 15.52,
+  "total_duration_frames_30fps": 465,
+  "scenes": [
+    {
+      "success": true,
+      "output": "projects/toolkit-made-itself/public/audio/s6/06_check.mp3",
+      "script_chars": 224,
+      "duration_seconds": 15.52,
+      "duration_frames_30fps": 465,
+      "wpm": 158.5,
+      "pacing": "ok",
+      "script": "projects/toolkit-made-itself/public/audio/s6/06_check.txt"
+    }
+  ],
+  "voice_id": "CyuaHFjYAn74u3mOqDX6",
+  "model": "eleven_v4"
+}
+# elapsed 4s, exit 0
