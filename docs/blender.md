@@ -209,7 +209,8 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    of the face's width fails the check as too small to read), `moustache` (true when the upper lip is under
    hair) and `chin` (the height of the chin's underside). From these the fit builds a lower lip, teeth and the
    dark of an open mouth on the model's own lip line, smile, frown and jaw shapes in the head's surface, and
-   skin-coloured lids that close for a blink or a wink.
+   skin-coloured lids that close for a blink or a wink. A brow hidden under a fringe goes in `brows_hidden` (its
+   index in `brows`, the character's right first): the rig still gives it a brow, and nothing is erased there.
    **Hands with fingers** are optional: `"hands": {"model": "lead_open.glb"}` names a second model made from
    the same sheet with the hands open and the fingers apart (one more generation). Only its hands are used.
    The fit finds each by its skin colour up to the cuff, finds the fingers and thumb, uses the better formed
@@ -227,7 +228,9 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
 5. **Look at it** before writing beats: a `check` of any spec with the cast entry swapped, and read the contact
    sheet. Arms up, hands on head and sitting show the skin weights at their worst.
 
-What the fit does for you: weights come from a clean stand-in body on the same joints, copied only between
+What the fit does for you: legs that touch in the model (shoes generated as one piece) are parted, since a face
+joining one leg to the other tears across the gap on the first step; weights come from a clean stand-in body on
+the same joints, copied only between
 surfaces that face the same way (so a sleeve does not take the chest's weights), and kept inside the sleeve; bends
 keep their volume; the seat is as high as the character's knees and the desk comes to its hands, so nobody is
 stretched to fit furniture.
@@ -236,7 +239,9 @@ What it does not do: without a `hands` model the hands are whatever the model ha
 bone; generated hands are thick and cupped, so they read as mitts with finger grooves. A typing hand slopes down
 from the wrist 20 degrees, as a typist's does, with the fingertips on the keys; a hand laid flat slopes just
 enough for the heel of the hand and the fingers to rest together (a generated hand's heel is deep). A likeness
-of a real person belongs in your own project folder, not in a repository.
+of a real person belongs in your own project folder, not in a repository. `tests/fixtures/blender-fitted` is a worked
+example with an invented character: both models, the `fit.json` read off gridded stills, and a README saying how
+each was made (her generated hands had the fingers joined, so the hands came from a second model).
 
 How the hands are held is measured, not set: the rig poses the fingers in each shape, reads how far the hand's
 underside is below its wrist (on a desk or the keys, the whole hand, heel and all), and holds the wrist that far over the desk, the keys or a thigh. The wrist is

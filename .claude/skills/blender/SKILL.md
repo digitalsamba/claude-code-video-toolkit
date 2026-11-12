@@ -159,7 +159,8 @@ at its knee height, keyboard under its hands). `glasses` is the one accessory a 
 lip, teeth and lids on the model's lip line and eyes, with the cheeks and chin moving for a smile or an open
 mouth), and with a second model of the same character with open hands the fit gives it fingers: hand shapes, a
 grip on a door handle, hands laid flat on the desk, fingertips on the keys. The fit lays a generated thumb in to
-the palm (it stands off it on a thick wedge), so the hands type at a typist's slope. The steps and their costs are in `docs/blender.md`.
+the palm (it stands off it on a thick wedge), so the hands type at a typist's slope. Head shots aim at a fitted character's own head, whatever its
+proportions. A worked example with an invented character is `tests/fixtures/blender-fitted`. The steps and their costs are in `docs/blender.md`.
 
 ### Shots
 
