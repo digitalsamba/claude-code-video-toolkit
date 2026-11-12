@@ -43,8 +43,10 @@ CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_h
 # how far (m) each kind of contact may be out before the check fails and says where (see ClayPerson.contacts)
 CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03}
 HANDS_APART = 0.005  # nearer than this the two hands are into each other (m)
-PALM_TILT = 35.0     # a hand resting over a table top is palm down to within this (degrees)
+PALM_TILT = 35.0     # a hand resting over a table top is palm down to within this, about its fingers (degrees)
 PALM_TURN = 35.0     # a hanging hand keeps its palm to the leg through a walk to within this (degrees)
+ARM_LIMITS = {"elbow_deg": 35.0, "forearm_deg": 40.0, "hand_off_m": 0.04}  # a fitted model's arms in a walk (arms_report)
+TYPING_LIMITS = {"rest_m": 0.008, "into_m": -0.004, "finger_travel_m": 0.006}  # hands with fingers on the keys
 GRIP_OPEN = 0.75  # a hand holding something has its fingertips within this share of a finger's length of it
 SKIN_LIMITS = {"leg_above_hips": 50, "stretch": 4.0}  # a fitted model's weights (character.skin_report)
 SET_VERBS = {"alert", "work", "done", "open_door", "close_door", "pull_in"}
@@ -261,6 +263,8 @@ def build(spec, args):
                     door=({**next(iter(cast.values())).door_fit(), **st["door"]} if isinstance(st.get("door"), dict)
                           else None), chair_out=float(st.get("chair_out", 0.0)))
     bpy.context.view_layer.update()  # the cameras read where the screen is: it has to have been worked out
+    for p in cast.values():  # (hands with fingers are put on the keys where they are in the room)
+        p.keys = bpy.data.objects.get("lap_keys")
     default_who = next(iter(cast))
 
     fx_events, at_camera = [], []
@@ -396,6 +400,7 @@ def build(spec, args):
               for e in sorted(p.events + room.events + fx_events, key=lambda e: e["frame"])]
     kit.grips = p.grips
     kit.walks = [{"t": round((a - 1) / fps, 2), **p.walk_report(a, b, curved)} for a, b, curved in p.walks]
+    kit.typing = p.typing_report(p.keys)
     kit.face = p.face_report()
     kit.skin = p.skin_report(range(1, tl.frames, max(1, tl.frames // 14)))
     kit.fighting = cameras.fighting(cams)  # faces in one plane that a camera sees: they would flicker
@@ -473,8 +478,8 @@ def main():
         checks["palm_tilt_deg"] = round(tilt["deg"], 1)
         if tilt["deg"] > PALM_TILT:
             checks["passed"] = False
-            problems.append(f'{tilt["hand"]} hand lies on the {tilt["what"]} tipped {tilt["deg"]:.0f} degrees from palm '
-                            f'down at {(tilt["frame"] - 1) / tl.fps:.2f} s')
+            problems.append(f'{tilt["hand"]} hand lies on the {tilt["what"]} rolled {tilt["deg"]:.0f} degrees from palm '
+                            f'down onto its side at {(tilt["frame"] - 1) / tl.fps:.2f} s')
     if turned and turned["frame"] is not None:
         checks["palm_turn_deg"] = round(turned["deg"], 1)
         if turned["deg"] > PALM_TURN:
@@ -509,6 +514,35 @@ def main():
                 checks["body_problems"] = checks.get("body_problems", []) + [
                     f'the walk at {w["t"]} s turns {abs(w["turn_deg"]):.0f} degrees and the body does not lean into '
                     f'the bend (lean {w["lean_deg"]} degrees, {w["into_bend"]:+.2f} of it inward)']
+            arms = w.get("arms")
+            if arms:  # a fitted model's arms: straight enough, low enough in front, near enough the body
+                said_arms = []
+                if arms["elbow_deg"] > ARM_LIMITS["elbow_deg"]:
+                    said_arms.append(f'the elbows bend {arms["elbow_deg"]:.0f} degrees in the walk at {w["t"]} s '
+                                     f'(frame {arms["frames"]["elbow"]}): arms that swing from the shoulder stay nearly straight')
+                if arms["forearm_deg"] < ARM_LIMITS["forearm_deg"]:
+                    said_arms.append(f'a forearm comes up to {arms["forearm_deg"]:.0f} degrees below level in the walk at '
+                                     f'{w["t"]} s (frame {arms["frames"]["fore"]}): it reads as marching')
+                if arms["hand_off_m"] > ARM_LIMITS["hand_off_m"]:
+                    said_arms.append(f'a hand stands {arms["hand_off_m"] * 100:.0f} cm off the body in the walk at {w["t"]} s '
+                                     f'(frame {arms["frames"]["off"]}): arms held out from the sides')
+                if said_arms:
+                    checks["passed"] = False
+                    checks["body_problems"] = checks.get("body_problems", []) + said_arms
+    typing = getattr(kit, "typing", None)
+    if typing:  # hands with fingers typing: do they rest on the keys, and do the fingers move
+        checks["typing"] = typing
+        said_typing = []
+        if typing["rest_m"] > TYPING_LIMITS["rest_m"]:
+            said_typing.append(f'the hands type {typing["rest_m"] * 100:.1f} cm over the keys: they should rest on them')
+        if typing["into_m"] < TYPING_LIMITS["into_m"]:
+            said_typing.append(f'a fingertip goes {-typing["into_m"] * 100:.1f} cm into the keys')
+        if typing["finger_travel_m"] < TYPING_LIMITS["finger_travel_m"]:
+            said_typing.append(f'a finger moves only {typing["finger_travel_m"] * 1000:.0f} mm while typing: the fingers '
+                               f'should press the keys, not the hands')
+        if said_typing:
+            checks["passed"] = False
+            checks["body_problems"] = checks.get("body_problems", []) + said_typing
     skin = getattr(kit, "skin", None)
     if skin:  # a fitted model's weights: does a leg pull on the top's hem, is anything stretched apart
         checks["skin"] = skin
