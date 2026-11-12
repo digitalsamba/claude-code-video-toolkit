@@ -110,6 +110,15 @@ def render(events_path, out_path, seed=3, start=0.0, end=None, score=True, room=
                 mix.add(t + 0.11 * j, 0.6, tone(note(n), 5, (1, 0.35, 0.1)), 0.15)
             for j in range(10):
                 mix.add(t + 0.9 + 0.36 * j, 0.3, tone(note((48, 55, 52, 55)[j % 4]), 8, (1, 0.5)), 0.22)
+        elif k == "step":  # a soft footfall: a low thud and a little scuff
+            mix.add(t, 0.09, lambda t: math.exp(-45 * t) * (math.sin(2 * math.pi * (95 - 200 * t) * t)
+                                                            + 0.35 * rng.uniform(-1, 1)), rng.uniform(0.2, 0.28))
+        elif k in ("door_open", "door_close"):  # the latch, then the hinge
+            mix.add(t, 0.05, lambda t: math.exp(-80 * t) * math.sin(2 * math.pi * 900 * t), 0.25)
+            mix.add(t + 0.08, 0.6, lambda t: math.sin(math.pi * t / 0.6) * 0.5
+                    * math.sin(2 * math.pi * (240 + 90 * math.sin(11 * t)) * t), 0.05)
+        elif k in ("chair", "rustle"):  # cloth and chair legs: filtered noise that swells and goes
+            mix.add(t, 0.5, lambda t: math.sin(math.pi * t / 0.5) * rng.uniform(-1, 1), 0.05 if k == "rustle" else 0.09)
         elif k == "title":
             mix.add(t, 0.1, lambda t: math.exp(-40 * t) * math.sin(2 * math.pi * (600 + 2000 * t) * t), 0.3)
     mix.write(out_path, dur, normalise=score or room)

@@ -27,7 +27,7 @@ import bpy  # noqa: E402
 import cameras  # noqa: E402
 import cast as casting  # noqa: E402
 import kit  # noqa: E402
-from character import FACES, LEANS, LOOKS, POSES, TYPING, ClayPerson  # noqa: E402
+from character import FACES, LEANS, LOOKS, POSES, POSTURES, TYPING, ClayPerson  # noqa: E402
 from sets import DeskRoom, confetti, title3d  # noqa: E402
 from studio import PROP_KINDS, Studio  # noqa: E402
 from timeline import SpecError, Timeline  # noqa: E402
@@ -35,8 +35,10 @@ from timeline import SpecError, Timeline  # noqa: E402
 SET_KINDS = ("desk_room", "desk", "studio")
 SCORE_MOODS = ("calm", "tension", "resolve")
 CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_head", "gulp", "blink", "sweat",
-              "tremble", "tap", "celebrate", "hold_arms"}
-SET_VERBS = {"alert", "work", "done"}
+              "tremble", "tap", "celebrate", "hold_arms", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
+              "look_at", "reach"}
+SET_VERBS = {"alert", "work", "done", "open_door", "close_door", "pull_in"}
+LOOK_AT = ("camera", "screen")  # things a look_at or a reach can name in place of a point
 FX_VERBS = {"confetti", "title"}
 
 
@@ -47,6 +49,14 @@ def _one_of(beat, field, table, numbers=False, default=None):
     if not isinstance(v, str) or v not in table:
         raise SpecError(f'beat at {beat["at"]!r}: {beat["do"]} needs "{field}" to be one of {", ".join(table)}'
                         + (" or a number of degrees" if numbers else "") + f", not {v!r}")
+
+
+def _number(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def _point(v):
+    return isinstance(v, (list, tuple)) and len(v) == 2 and all(_number(x) for x in v)
 
 
 def validate(spec):
@@ -61,6 +71,10 @@ def validate(spec):
     if kind not in SET_KINDS:
         raise SpecError(f"unknown set kind {kind!r} (have: {', '.join(SET_KINDS)})")
     studio = kind == "studio"
+    if st.get("door") is not None and (not isinstance(st["door"], dict) or kind != "desk_room"):
+        raise SpecError('"door" is an object (it may be empty: {}), and only a desk_room has a wall to put it in')
+    if not _number(st.get("chair_out", 0)):
+        raise SpecError('"chair_out" is how far the chair starts pulled back from the desk, in metres')
     spec.setdefault("cast", [])
     if not isinstance(spec.get("shots"), list) or not spec["shots"]:
         raise SpecError('spec needs a "shots" list')
@@ -69,6 +83,13 @@ def validate(spec):
     if studio and spec["cast"]:
         raise SpecError("a studio set has props and no characters yet: leave out the cast")
     ids = [c.get("id") for c in spec["cast"]]
+    for c in spec["cast"]:
+        if c.get("posture", "sit") not in POSTURES:
+            raise SpecError(f'cast member {c.get("id")!r}: "posture" is one of {", ".join(POSTURES)}, '
+                            f'not {c["posture"]!r}')
+        if not _point(c.get("at", [0, 0])) or not _number(c.get("facing", 0)):
+            raise SpecError(f'cast member {c.get("id")!r}: "at" is a spot on the floor as [x, y] in metres and '
+                            f'"facing" a number of degrees (0 faces -Y, positive turns to their left)')
     props = st.get("props") or [] if studio else []
     for p in props:
         if not isinstance(p.get("id"), str) or p.get("kind") not in PROP_KINDS:
@@ -117,6 +138,22 @@ def validate(spec):
             _one_of(b, "target", LOOKS, numbers=True, default="screen")
         elif verb == "lean":
             _one_of(b, "amount", LEANS, numbers=True, default="none")
+        elif verb == "walk" and (not _point(b.get("to")) or not _number(b.get("facing", 0))):
+            raise SpecError(f'beat at {b["at"]!r}: walk needs "to", a spot on the floor as [x, y] in metres '
+                            f'(and takes "facing", degrees, for the way they end up looking)')
+        elif verb == "wink" and b.get("side", "left") not in ("left", "right"):
+            raise SpecError(f'beat at {b["at"]!r}: wink takes "side": "left" or "right" (the character\'s own)')
+        elif verb == "reach" and b.get("hand", "right") not in ("left", "right"):
+            raise SpecError(f'beat at {b["at"]!r}: reach takes "hand": "left" or "right" (the character\'s own)')
+        elif verb in ("look_at", "reach") and not (b.get("target") in LOOK_AT or (
+                isinstance(b.get("target"), list) and len(b["target"]) == 3 and all(_number(x) for x in b["target"]))):
+            raise SpecError(f'beat at {b["at"]!r}: {verb} needs "target": a point in the room as [x, y, z] in metres'
+                            f', or one of {", ".join(LOOK_AT)}')
+        elif verb == "glance" and not (_number(b.get("yaw", 0)) and _number(b.get("pitch", 0))):
+            raise SpecError(f'beat at {b["at"]!r}: glance takes "yaw" and "pitch" in degrees')
+        elif verb == "turn" and not _number(b.get("facing")):
+            raise SpecError(f'beat at {b["at"]!r}: turn needs "facing", a number of degrees '
+                            f'(0 faces -Y, positive turns to their left)')
         elif verb == "title" and not isinstance(b.get("text"), str):
             raise SpecError(f'beat at {b["at"]!r}: title needs "text"')
 
@@ -187,10 +224,6 @@ def build(spec, args):
             if rate and abs(rate - fps) > 0.01:
                 raise SpecError(f'screen video {media_path.name} is {rate:g} fps and the spec is {fps} fps: render '
                                 f'it at {fps} fps, or set "fps": {rate:g}')
-    # the picture's emission cancels the film's exposure, so under the Standard view its colours come out as made
-    room = DeskRoom(st.get("palette"), scr, walls=kind == "desk_room", media_path=media_path,
-                    media_start=tl.frame(tl.time(scr.get("at", 0))), media_offset=int(scr.get("skip_frames", 0)),
-                    media_strength=float(scr.get("brightness", 1.0)) * 2 ** -exposure)
     cast = {}
     for c in spec.get("cast", []):
         if c.get("kind", "clay_person") != "clay_person":
@@ -198,11 +231,21 @@ def build(spec, args):
         if cast:
             raise SpecError("prototype supports one character per set")
         cast[c["id"]] = ClayPerson(c["id"], casting.resolve(c, base))
+        if any(k in c for k in ("posture", "at", "facing")):
+            cast[c["id"]].place(c.get("posture", "sit"), c.get("at", (0, 0)), float(c.get("facing", 0)))
     if not cast:
         raise SpecError("spec needs a cast")
+    # the picture's emission cancels the film's exposure, so under the Standard view its colours come out as made
+    room = DeskRoom(st.get("palette"), scr, walls=kind == "desk_room", media_path=media_path,
+                    media_start=tl.frame(tl.time(scr.get("at", 0))), media_offset=int(scr.get("skip_frames", 0)),
+                    media_strength=float(scr.get("brightness", 1.0)) * 2 ** -exposure,
+                    fit=next(iter(cast.values())).furniture(),
+                    door=({**next(iter(cast.values())).door_fit(), **st["door"]} if isinstance(st.get("door"), dict)
+                          else None), chair_out=float(st.get("chair_out", 0.0)))
+    bpy.context.view_layer.update()  # the cameras read where the screen is: it has to have been worked out
     default_who = next(iter(cast))
 
-    fx_events = []
+    fx_events, at_camera = [], []
     F = tl.frame
     for b in sorted(spec.get("beats", []), key=lambda b: tl.time(b["at"])):
         verb = b.get("do")
@@ -239,6 +282,31 @@ def build(spec, args):
                 p.celebrate(f0, f1)
             elif verb == "hold_arms":
                 p.hold_arms(f0)
+            elif verb == "wink":
+                p.wink(f0, b.get("side", "left"))
+            elif verb == "glance":
+                p.glance(f0, f1, float(b.get("yaw", 0)), float(b.get("pitch", 0)))
+            elif verb == "look_at" and b["target"] == "camera":
+                at_camera.append((p, f0, f1))  # (the cameras are placed after the acting)
+            else:  # the verbs that move the whole body: a second or so unless the beat says
+                timed = "until" in b or "dur" in b
+                try:
+                    if verb in ("look_at", "reach"):
+                        point = room.screen_center() if b["target"] == "screen" else b["target"]
+                        if verb == "look_at":
+                            p.look_at(f0, f1, point)
+                        else:
+                            p.reach(f0, f1, point, b.get("hand", "right"))
+                    elif verb == "walk":  # (untimed, a walk takes what its steps need)
+                        p.walk(f0, f1 if timed else None, b["to"], b.get("facing"))
+                    elif verb == "turn":
+                        p.turn(f0, f1 if timed else f0 + kit.n(20), b["facing"])
+                    elif verb == "stand_up":
+                        p.stand_up(f0, f1 if timed else f0 + kit.n(28))
+                    elif verb == "sit_down":
+                        p.sit_down(f0, f1 if timed else f0 + kit.n(30))
+                except ValueError as e:
+                    raise SpecError(f'beat at {b["at"]!r}: {e}')
         elif verb in SET_VERBS:
             if verb == "alert":
                 room.alert(f0)
@@ -246,8 +314,20 @@ def build(spec, args):
                 room.work(f0, f1)
             elif verb == "done":
                 room.done(f0)
+            else:
+                timed = "until" in b or "dur" in b
+                try:
+                    if verb == "pull_in":  # whoever sits on the chair comes in to the desk with it
+                        end = f1 if timed else f0 + kit.n(20)
+                        room.move_chair(f0, end, 0.0)
+                        cast[b.get("who", default_who)].scoot(f0, end, (0, 0))
+                    else:
+                        room.open_door(f0, f1 if timed else f0 + kit.n(18),
+                                       float(b.get("angle", 100)) if verb == "open_door" else 0.0)
+                except ValueError as e:
+                    raise SpecError(f'beat at {b["at"]!r}: {e}')
         elif verb == "confetti":
-            confetti(f0, int(b.get("count", 60)), colors=b.get("colors"))
+            confetti(f0, int(b.get("count", 60)), colors=b.get("colors"), desk=(room.desk_y, room.desk_z))
             fx_events.append({"frame": f0, "kind": "confetti"})
         elif verb == "title":
             title3d(f0, b["text"], tl.frames - 1, c=b.get("color", "#FFD24A"))
@@ -271,9 +351,18 @@ def build(spec, args):
         cams.append((f0, f1, cam))
         reports.append(rep)
     sc.camera = cams[0][2]
+    for person, a, b in at_camera:  # a look into the lens of whichever shot it happens in
+        cam = next((c for c0, c1, c in cams if c0 <= b <= c1), cams[-1][2])
+        sc.frame_set(b)
+        bpy.context.view_layer.update()
+        person.look_at(a, b, cam.matrix_world.translation)
 
     p = cast[default_who]
-    ik = p.ik_error(range(1, tl.frames, 6))
+    ik = p.ik_error(range(1, tl.frames, 6 if not p.foot_t else 2))
+    kit.ik_worst = p.ik_worst
+    # someone on their feet is checked against the floor too (the clay cast at its desk has its feet where they
+    # were made, and is left alone)
+    kit.under_floor = (round(p.under_floor(range(1, tl.frames)), 3), p.floor_worst) if p.foot_t else None
     events = [{"t": round((e["frame"] - 1) / fps, 3), "shot": tl.shot_at((e["frame"] - 1) / fps), **e}
               for e in sorted(p.events + room.events + fx_events, key=lambda e: e["frame"])]
     return tl, cams, reports, ik, events
@@ -317,10 +406,19 @@ def main():
         sys.exit(2)
     for r in reports:
         r["start"], r["dur"] = round(tl.shots[r["id"]][0], 4), round(tl.shots[r["id"]][1] - tl.shots[r["id"]][0], 4)
-    checks = {"passed": all(r["passed"] for r in reports) and ik < 0.01, "duration": tl.duration, "fps": tl.fps,
+    floor = getattr(kit, "under_floor", None)
+    sunk, sunk_at = floor or (0.0, None)
+    checks = {"passed": all(r["passed"] for r in reports) and ik < 0.01 and sunk <= 0.015, "duration": tl.duration, "fps": tl.fps,
               "resolution": [sc.render.resolution_x, sc.render.resolution_y], "alpha": alpha,
               "engine": sc.render.engine, "blender": bpy.app.version_string,
               "frames": tl.frames - 1, "ik_max_error_m": round(ik, 4), "shots": reports}
+    worst = getattr(kit, "ik_worst", None)
+    if floor is not None:  # someone on their feet: how deep a foot went through the floor, and when
+        checks["under_floor_m"] = sunk
+        if sunk > 0.015:
+            checks["under_floor_at"] = {"frame": sunk_at, "t": round((sunk_at - 1) / tl.fps, 2)}
+    if worst and ik >= 0.01:  # which limb could not reach, and when
+        checks["ik_worst"] = {**worst, "t": round((worst["frame"] - 1) / tl.fps, 2)}
     (out / "checks.json").write_text(json.dumps(checks, indent=2))
     (out / "events.json").write_text(json.dumps({"fps": tl.fps, "duration": tl.duration, "events": events,
                                                  "score": score}, indent=2))
@@ -348,7 +446,8 @@ def main():
                 continue
             # a move is judged at its far end (where it shows the room); everything else mid-shot
             move = cameras.SHOT_TYPES[next(s["type"] for s in spec["shots"] if s["id"] == cam.name)].get("move")
-            f = f1 if move == "out" else f0 if move == "in" else (f0 + f1) // 2
+            tilt = cameras.SHOT_TYPES[next(s["type"] for s in spec["shots"] if s["id"] == cam.name)].get("tilt")
+            f = f1 if move == "out" or tilt else f0 if move == "in" else (f0 + f1) // 2
             sc.frame_set(f)
             sc.camera = cam
             kit.set_output(out / "stills" / f"{cam.name}.png", video=False, alpha=alpha)
