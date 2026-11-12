@@ -8,6 +8,10 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+### Fixed
+
+- **`modal_setup.py` deploys on a new Modal workspace**: a workspace created now builds images with builder version 2026.10, which the toolkit's Modal client (1.5) refuses before building anything. The tool now retries a refused deploy with `MODAL_IMAGE_BUILDER_VERSION=2025.06` and keeps it for the rest of the run; a version the user set is left alone, and older workspaces keep their own. `docs/modal-setup.md`, `/setup` and `.env.example` say to export the variable before a deploy by hand.
+
 ---
 
 ## 2026-11-09 (v0.27.0)

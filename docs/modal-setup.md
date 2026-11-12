@@ -107,6 +107,36 @@ uv run modal deploy docker/modal-ltx2/app.py
 `App create rate limit exceeded`. Image builds happen server-side, so serial
 deploys cost you nothing extra in compute — only wall-clock.
 
+**On a new workspace, set `MODAL_IMAGE_BUILDER_VERSION=2025.06` before a deploy by
+hand.** A Modal workspace created now (seen 2026-11-10) builds images with builder
+version `2026.10` by default. The Modal client in the toolkit's `uv.lock` (1.5) doesn't
+know that version and refuses every deploy before building anything:
+
+```
+This version of the modal client supports the following image builder versions:
+{'2023.12', '2024.04', '2024.10', '2025.06'}. You are using '2026.10'.
+Please update your client library (pip install --upgrade modal).
+```
+
+`modal_setup.py` handles it: it sees that error, retries with `2025.06`, and keeps that
+version for the rest of the run. By hand, set the variable in the shell first:
+
+```bash
+export MODAL_IMAGE_BUILDER_VERSION=2025.06   # macOS, Linux, Git Bash
+uv run modal deploy docker/modal-qwen3-tts/app.py
+```
+
+```powershell
+$env:MODAL_IMAGE_BUILDER_VERSION = '2025.06'
+uv run modal deploy docker/modal-qwen3-tts/app.py
+```
+
+Upgrading `modal` instead is not the fix: `2026.10` drops Python 3.10, which the
+`sadtalker` and `propainter` images still use. A workspace older than that keeps its own
+builder version and needs nothing. Setting the variable there would rebuild every image
+under the new version, so leave it unset unless a deploy asks for it. `modal_setup.py`
+also reads it from `.env`; `uv run modal deploy` doesn't.
+
 **Every GPU app needs a payment method on the account.** On a new workspace even the
 `A10G` apps fail at deploy time with `Please add a payment method to use A10G GPU
 functions` (seen 2026-10-02), not just the bigger GPUs. The Starter plan's $30/month of

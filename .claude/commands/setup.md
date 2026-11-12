@@ -340,8 +340,15 @@ the Hugging Face secret and their Gemma 3 access (see `docs/modal-setup.md`).
 
 Deploys stream their logs and can take 5-15 minutes each on a first build, so run the
 command in the background and report each app's `OK`/`!!` line as it lands. A failed app
-prints a hint (payment method, rate limit, Hugging Face access); fix it and re-run with
-just that app's name.
+prints a hint (payment method, rate limit, Hugging Face access, image builder version);
+fix it and re-run with just that app's name.
+
+On a new Modal workspace the first deploy fails at once with `This version of the modal
+client supports the following image builder versions ... You are using '2026.10'`, and
+the tool retries it with `MODAL_IMAGE_BUILDER_VERSION=2025.06`, which the rest of the run
+keeps. That is expected: the workspace defaults to a builder version newer than the
+toolkit's Modal client knows. Don't stop the run or upgrade `modal`. Only a deploy by
+hand needs the variable exported first (see `docs/modal-setup.md`).
 
 If the user already deployed some apps by hand, `uv run tools/modal_setup.py --sync-env`
 writes the live URLs to `.env` without redeploying anything. `--list` shows what's
@@ -527,6 +534,9 @@ lines = Path('.env').read_text().splitlines()
 ## Error Handling
 
 - If `modal deploy` fails: show the error, suggest checking `uv run modal app logs`, offer to retry
+- If a deploy by hand says `You are using '2026.10'` after a list of image builder versions:
+  export `MODAL_IMAGE_BUILDER_VERSION=2025.06` in that shell and re-run (`modal_setup.py`
+  does this on its own)
 - If R2 test fails: re-check credentials, common issue is wrong bucket name or region
 - If RunPod setup fails: check API key, check account has billing enabled
 - If any step fails, don't block subsequent steps — mark as failed and continue
