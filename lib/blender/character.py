@@ -25,8 +25,10 @@ import random
 import bmesh
 import bpy
 import numpy as np
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Quaternion, Vector
 
+import face as fitted_face
+import kit
 from kit import (R, arc_tube, box, cyl, empty, key, link, mat, n, sphere, ticks, tween)
 
 D = bpy.data
@@ -114,9 +116,16 @@ class ClayPerson:
         self.foot_t, self.knee_t, self.foot_at, self.foot_yaw = {}, {}, {}, {}
         self.touches: list[dict] = []  # each time a hand was put on something: how far off it was
         self.moves: list[tuple] = []   # each posture verb's stretch (verb, first frame, last), for how_it_moves
+        self.walks: list[tuple] = []   # each walk (first frame, last, curved or not), for walk_report
+        self.grips: list[dict] = []    # each time a hand with fingers held something: how open it still was
         self.posture, self.at, self.yaw, self.arm_pose = "sit", Vector((0, 0)), 0.0, "type"
         self._build_body()
         self._build_head()
+        self.under = {}     # each hand's underside below its wrist, by shape (_hand_under)
+        self.wrist_q = {}   # each hand's last turn on the forearm (so the next key goes the short way round)
+        self.palm_off = []  # each time a hand was laid on something: how far its palm was from facing it (degrees)
+        self.hold_at, self.holding = {}, {1: False, -1: False}  # where a hand holds a bar (the hand bone's space)
+        self._finger_setup()
         self.neck_pitch, self.spine_pitch, self.height = 7.0, 0.0, self.seat_h
         key(self.spine, "rotation_euler", 1, (0, 0, 0))
         key(self.neck, "rotation_euler", 1, (R(self.neck_pitch), 0, 0))
@@ -287,6 +296,18 @@ class ClayPerson:
             bone("thigh." + sd, P("hip" + sd), P("kn" + sd), "hips")
             bone("shin." + sd, P("kn" + sd), P("an" + sd), "thigh." + sd, True)
             bone("foot." + sd, P("an" + sd), P("toe" + sd), "shin." + sd, True)
+        # fingers, if the fit found any (hands.py): two bones each, root to middle and middle to tip
+        found = json.loads(body["fingers"]) if a_pose and "fingers" in body else {}
+        self.fingers, self.palm, self.hand_way = {1: [], -1: []}, {}, {}
+        for sd, hand in found.items():
+            s = 1 if sd == "L" else -1
+            self.palm[s] = Vector(hand["palm"]).normalized()
+            self.hand_way[s] = Vector(hand["axis"]).normalized()  # the way the fingers point (not quite the bone's)
+            for f in hand["fingers"]:
+                a, m, t = (Vector(j) + self.seat for j in f["joints"])
+                bone(f"{f['name']}.a.{sd}", a, m, "hand." + sd)
+                bone(f"{f['name']}.b.{sd}", m, t, f"{f['name']}.a.{sd}", True)
+                self.fingers[s].append({"name": f["name"], "way": (t - a).normalized(), "length": (m - a).length + (t - m).length})
         bpy.ops.object.mode_set(mode="OBJECT")
 
         # 4) bone-heat weights (distance weights bled the chest into the arms when they were raised)
@@ -325,6 +346,216 @@ class ClayPerson:
                 self.hand_t[s].location = end - Vector((0, 0, self.seat_h))
                 self.pole_t[s].location = mid + (mid - (root + end) / 2).normalized() - Vector((0, 0, self.seat_h))
                 self._fit_pole(c, "fore." + sd)
+
+    # ------------------------------------------------------------ hands
+    # degrees each finger's two bones curl towards the palm, then the thumb's two, whether the index stays out,
+    # and how far the thumb lies out to the side (0: as it was made, standing off the palm to close on
+    # something; 1: flat beside the first finger, in the palm's plane)
+    HAND_SHAPES = {
+        "open":    ((0, 0), (0, 0), False, 0.5),
+        "relaxed": ((24, 20), (6, 10), False, 0.5),
+        "grip":    ((58, 64), (30, 36), False, 0.0),
+        "flat":    ((5, 4), (0, 6), False, 0.6),    # laid on a table top
+        "fist":    ((84, 86), (40, 50), False, 0.3),
+        "point":   ((84, 86), (40, 50), True, 0.3),
+    }
+
+    def _finger_setup(self):
+        """Work out which way each finger curls (about an axis across it, towards the palm; the thumb towards
+        the fingers), and rest the hands relaxed. A fitted model without fingers has none of this."""
+        pb = self.rig.pose.bones
+        self.hand_shape_now = {1: "relaxed", -1: "relaxed"}
+        for s, sd in ((1, "L"), (-1, "R")):
+            hand = pb.get("hand." + sd)
+            if hand:
+                hand.rotation_mode = "QUATERNION"
+            fingers = self.fingers.get(s, [])
+            if not fingers:
+                continue
+            along = self.hand_way[s]
+            # where a bar is held: past the knuckles in the crook of the fingers, off the palm by a finger's thickness
+            bone = self.rig.data.bones["hand." + sd]
+            size = sum(f["length"] for f in fingers[1:]) / max(1, len(fingers) - 1)
+            self.hold_at[s] = bone.matrix_local.inverted() @ (bone.tail_local + along * 0.3 * size + self.palm[s] * 0.35 * size)
+            roots = [self.rig.data.bones[f"{f['name']}.a.{sd}"].head_local for f in fingers]
+            for f, at in zip(fingers, roots):
+                towards = self.palm[s]
+                if f["name"] == "thumb":  # a thumb closes across the palm, towards the first finger
+                    towards = (0.6 * self.palm[s] + 0.8 * (roots[1] - at).normalized()).normalized()
+                axis = f["way"].cross(towards).normalized()
+                if f["name"] == "thumb":
+                    # generators make the thumb standing straight off the palm: how far round the hand's own
+                    # length it has to swing to lie beside the first finger, pointing away from the others
+                    flat = lambda v: (v - along * v.dot(along)).normalized()  # noqa: E731
+                    names = [g["name"] for g in fingers]
+                    first, last = roots[names.index("index")], roots[names.index(names[1] if names[1] != "index" else names[-1])]
+                    now, want = flat(f["way"]), flat(first - last)
+                    f["out"] = (self.rig.data.bones[f"thumb.a.{sd}"].matrix_local.to_3x3().transposed() @ along,
+                                math.atan2(now.cross(want).dot(along), now.dot(want)))
+                f["axes"] = []
+                for part in "ab":
+                    b = pb[f"{f['name']}.{part}.{sd}"]
+                    b.rotation_mode = "QUATERNION"
+                    f["axes"].append((b, self.rig.data.bones[b.name].matrix_local.to_3x3().transposed() @ axis))
+            self._fingers_key(s, 1, "relaxed")
+
+    def _fingers_set(self, s, shape):
+        (fa, fb), (ta, tb), point, out = self.HAND_SHAPES[shape]
+        bones = []
+        for finger in self.fingers.get(s, []):
+            if finger["name"] == "thumb":
+                a, b = ta, tb
+            elif point and finger["name"] == "index":
+                a, b = 4, 4
+            else:
+                a, b = fa, fb
+            for i, ((bone, axis), deg) in enumerate(zip(finger["axes"], (a, b))):
+                q = Quaternion(axis, R(deg))
+                if i == 0 and "out" in finger:
+                    q = Quaternion(finger["out"][0], finger["out"][1] * out) @ q
+                bone.rotation_quaternion = q
+                bones.append(bone)
+        return bones
+
+    def _fingers_key(self, s, f, shape):
+        for bone in self._fingers_set(s, shape):
+            bone.keyframe_insert("rotation_quaternion", frame=f)
+        self.hand_shape_now[s] = shape
+
+    def _hand_under(self, s, shape="flat"):
+        """How far the underside of hand `s` is below its wrist when it lies palm down in a shape, and how far
+        below the wrist its knuckles are (m), measured on the mesh with the fingers posed: a generated hand is
+        cupped and thick, and its thumb stands off the palm, so neither can be told from its bones. This is
+        what sets how high a wrist is held over a desk or a leg for the hand to lie on it and not in it."""
+        got = self.under.get((s, shape))
+        if got:
+            return got
+        sd = "L" if s > 0 else "R"
+        pb = self.rig.pose.bones
+        mine = [pb[f"{f['name']}.{part}.{sd}"] for f in self.fingers[s] for part in "ab"]
+        was = [b.rotation_quaternion.copy() for b in mine]
+        self._fingers_set(s, shape)
+        bpy.context.view_layer.update()
+        ev = self.body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        me = ev.to_mesh()
+        co = np.empty(len(me.vertices) * 3, dtype=np.float32)
+        me.vertices.foreach_get("co", co)
+        ev.to_mesh_clear()
+        mw = np.array(ev.matrix_world)
+        W = co.reshape(-1, 3) @ mw[:3, :3].T + mw[:3, 3]
+        names = {"hand." + sd} | {b.name for b in mine}
+        groups = {g.index for g in self.body.vertex_groups if g.name in names}
+        mask = np.array([sum(g.weight for g in v.groups if g.group in groups) > 0.5 for v in self.body.data.vertices])
+        bone, rest = pb["hand." + sd], self.rig.data.bones["hand." + sd]
+        spin = (self.rig.matrix_world @ bone.matrix).to_3x3() @ rest.matrix_local.to_3x3().inverted()
+        palm, way = np.array(spin @ self.palm[s]), np.array(spin @ self.hand_way[s])
+        wrist, knuckle = self.rig.matrix_world @ bone.head, self.rig.matrix_world @ bone.tail
+        rel = W[mask] - np.array(wrist)
+        rel = rel[rel @ way > 0.0]  # (not the stub that sits inside the cuff)
+        for b, q in zip(mine, was):
+            b.rotation_quaternion = q
+        self.under[(s, shape)] = (float((rel @ palm).max()), float(np.array(knuckle - wrist) @ palm))
+        return self.under[(s, shape)]
+
+    def _desk_lift(self, s):
+        """How much lower than the other this hand's wrist is held over a desk for both to lie on it (m, 0 or less)."""
+        if not (self.fingers.get(1) and self.fingers.get(-1)):
+            return 0.0
+        return self._hand_under(s)[0] - max(self._hand_under(1)[0], self._hand_under(-1)[0])
+
+    def hand_shape(self, f0: int, f1: int, shape: str, hand: str | None = None):
+        """The fingers take a shape by f1: open, relaxed, grip, point or fist. `hand` is "left" or "right"
+        (the character's own); with none, both. A character without fingers (the clay cast) is left as it is."""
+        if shape not in self.HAND_SHAPES:
+            raise ValueError(f"unknown hand shape {shape!r}: one of {', '.join(self.HAND_SHAPES)}")
+        for s in ((1, -1) if hand is None else (1 if hand == "left" else -1,)):
+            if self.fingers.get(s):
+                self._fingers_key(s, f0, self.hand_shape_now[s])
+                self._fingers_key(s, f1, shape)
+
+    WRIST_BEND = 65.0   # degrees a hand can bend at the wrist from the forearm's line
+    WRIST_SIDE = 20.0   # and how far it turns sideways toward straight ahead when it lies on a desk
+
+    def _wrist_key(self, s, f, hand, lay=None, was=None, mix=1.0):
+        """Turn the hand on the forearm for frame f, from the arm as it is posed on that frame (the forearm's
+        own twist comes out of the IK, so a turn worked out in the rest pose points the palm somewhere else).
+        With no `lay` the hand follows the forearm and only rolls: hanging at the side the palm faces the leg,
+        and as the hand comes forward it turns palm down, as a hand does to take a handle. `lay` is how it lies
+        on something: "flat" (palm down, the hand level, on a desk) or a function of the frame giving the way
+        the palm faces and the way the fingers point, in the room (on a thigh). `was` and `mix` blend from one
+        lay to another on the way between two things. Only a hand with fingers shows which way it faces, so
+        the clay cast is left alone."""
+        if not self.fingers.get(s):
+            return
+        sc = bpy.context.scene
+        if sc.frame_current != f:
+            sc.frame_set(f)
+        bpy.context.view_layer.update()
+        sd = "L" if s > 0 else "R"
+        bone, rest = self.rig.pose.bones["hand." + sd], self.rig.data.bones["hand." + sd]
+        plain = bone.matrix.to_3x3() @ bone.rotation_quaternion.to_matrix().inverted()  # with no turn of its own
+        posed = plain @ rest.matrix_local.to_3x3().inverted()
+        way0, palm0 = (posed @ self.hand_way[s]).normalized(), (posed @ self.palm[s]).normalized()
+        to_rig = self.rig.matrix_world.to_3x3().inverted()
+        own = self.root.matrix_world.to_3x3()
+        ahead = self.SH[s].y - hand.y  # how far in front of the shoulder
+        up = hand.z - self.SH[s].z
+        t = max(0.0, min(1.0, (ahead - 0.12 * self.arm) / (0.2 * self.arm)))
+        t = t * t * (3 - 2 * t) * (1.0 if up < 0.1 else max(0.0, 1 - (up - 0.1) / 0.2))
+
+        def turn(how):
+            if how is None:
+                palm, way = own @ Vector((-s, 0, 0)).lerp(Vector((0, 0, -1)), t), None
+            elif how == "flat":
+                palm, way = Vector((0, 0, -1)), "level"
+            else:
+                palm, way = how(f)
+            palm = to_rig @ Vector(palm)
+            if way is None:
+                way = way0
+            else:
+                if isinstance(way, str):  # level, and turned a little toward straight ahead
+                    flat = Vector((way0.x, way0.y, 0.0))
+                    flat = flat.normalized() if flat.length > 1e-3 else to_rig @ (own @ Vector((0, -1, 0)))
+                    fwd = to_rig @ (own @ Vector((0, -1, 0)))
+                    side = flat.angle(fwd, 0.0)
+                    way = flat.slerp(fwd, min(1.0, R(self.WRIST_SIDE) / side)) if side > 1e-3 else flat
+                else:
+                    way = (to_rig @ Vector(way)).normalized()
+                bend = way0.angle(way, 0.0)
+                if bend > R(self.WRIST_BEND):
+                    way = way0.slerp(way, R(self.WRIST_BEND) / bend).normalized()
+            palm = palm - way * palm.dot(way)
+            palm = palm.normalized() if palm.length > 1e-3 else palm0
+            a = Matrix((way0, palm0, way0.cross(palm0))).transposed()
+            b = Matrix((way, palm, way.cross(palm))).transposed()
+            return (plain.inverted() @ (b @ a.inverted()) @ plain).to_quaternion()
+
+        q = turn(lay)
+        if mix < 1.0:
+            q = turn(was).slerp(q, mix)
+        last = self.wrist_q.get(s)
+        if last is not None and last.dot(q) < 0:
+            q = -q
+        self.wrist_q[s] = q.copy()
+        bone.rotation_quaternion = q
+        bone.keyframe_insert("rotation_quaternion", frame=f)
+
+    def _hold_point(self, s) -> Vector:
+        """The point of hand `s` that goes on a thing, in the world, now: the knuckles, or for a hand with
+        fingers that is taking hold of a bar, the crook of its fingers."""
+        bone = self.rig.pose.bones["hand." + ("L" if s > 0 else "R")]
+        if self.holding[s] and s in self.hold_at:
+            return self.rig.matrix_world @ (bone.matrix @ self.hold_at[s])
+        return self.rig.matrix_world @ bone.tail
+
+    def grip_open(self, s, point) -> float:
+        """How open hand `s` is round a point it holds, now: the mean distance of its fingertips from the point
+        over the fingers' own length. About 1 is a flat hand laid on it, under 0.7 is closed round it."""
+        sd = "L" if s > 0 else "R"
+        tips = [self.rig.matrix_world @ self.rig.pose.bones[f"{f['name']}.b.{sd}"].tail for f in self.fingers[s][1:]]
+        length = sum(f["length"] for f in self.fingers[s][1:]) / len(tips)
+        return sum((t - Vector(point)).length for t in tips) / len(tips) / length
 
     def _fit_pole(self, con, tip):
         """Set an IK constraint's pole angle by trying it: with the target and pole where they are, the angle
@@ -383,7 +614,9 @@ class ClayPerson:
         cid, M = self.id, self.m
         face = self.desc["face"]
         fit = json.loads(self.body["face"]) if self.desc.get("model") else None
-        self.head_r, self.brow_at, self.sweat_x, eye_parent, mouth_parent = 0.3, (0.1, -0.275, 0.0), 0.27, {}, None
+        self.head_r, self.brow_at, self.sweat_x, eye_parent = 0.3, (0.1, -0.275, 0.0), 0.27, {}
+        self.mouth, self.lids = None, {}
+        marks = json.loads(self.body["face"]) if fit else None  # (as fitted: the mesh's own space)
         if fit:
             # the model's head is part of the body mesh, on the neck bone. The face parts are made for a head
             # 0.3 m in radius, so they go on an empty scaled to the model's face: verbs and checks are unchanged
@@ -404,9 +637,6 @@ class ClayPerson:
                 eye_parent[s].scale = (ew, ew * 0.5, eh)
             brow = local((Vector(fit["brows"][0]) + Vector(fit["brows"][1])) / 2)
             self.brow_at = ((fit["brows"][1][0] - fit["brows"][0][0]) / 2 / k, brow.y - 0.004, brow.z - 0.16)
-            m = fit["mouth_width"] / k / 0.14
-            mouth_parent = empty(f"{cid}_mouth_at", head, local(fit["mouth"]) - Vector((0, -0.288, -0.12)) * m)
-            mouth_parent.scale = (m, m, m)
             self.sweat_x = self.head_r / k + 0.02
             if "glasses" in self.desc["accessories"]:
                 self._build_frames(head, (local(eyes[0]).y + local(eyes[1]).y) / 2)
@@ -435,18 +665,30 @@ class ClayPerson:
             self.brows[s] = box(f"{cid}_brow", (self.brow_len, 0.025, brow_h), M["hair"], head,
                                 (self.brow_at[0] * s, self.brow_at[1], 0.16 + self.brow_at[2]),
                                 bevel=min(0.01, brow_h * 0.4))
-        mouth_at = mouth_parent or head
-        self.mouths = {
-            "smile": arc_tube(f"{cid}_smile", 0.07, 0.014, math.pi * 1.08, math.pi * 1.92, M["mouth"], mouth_at,
-                              (0, -0.288, -0.09), wrap=0.3),
-            "frown": arc_tube(f"{cid}_frown", 0.06, 0.014, math.pi * 0.1, math.pi * 0.9, M["mouth"], mouth_at,
-                              (0, -0.29, -0.16), wrap=0.3),
-            "o": sphere(f"{cid}_mouth_o", 0.045, M["mouthin"], mouth_at, (0, -0.282, -0.12), (0.8, 0.35, 1.0)),
-        }
-        for ob in self.mouths.values():  # a mouth is drawn on the face: it shouldn't shadow the chin
-            ob.visible_shadow = False
-        self.mouths["smile"].scale = (0.8,) * 3
-        self.mouths["frown"].scale = self.mouths["o"].scale = (0, 0, 0)
+        if fit:
+            # a fitted face has its own mouth: made on the model's lip line, with keys on the head for the corners,
+            # cheeks and jaw (face.py). The clay cast keeps its three drawn shapes.
+            FM = fitted_face.materials(cid, self.body, marks)
+            fitted_face.body_keys(self.body, marks)
+            self.mouths = {}
+            self.mouth = fitted_face.mouth(f"{cid}_mouth", self.body, marks, {**M, **FM}, head,
+                                           lambda p: (p + self.seat - Vector(self.head_at)) / head.scale[0])
+            self.face_marks = marks
+            self.lids = {s: fitted_face.eyelid(f"{cid}_eye{s}", self.eyes[s], FM["lid"], FM["lash"]) for s in (1, -1)}
+            self._mouth_now = (0.0, 0.0, 0.0, 0.0)
+            self._face_keys(1, 1, "neutral")
+        else:
+            self.mouths = {
+                "smile": arc_tube(f"{cid}_smile", 0.07, 0.014, math.pi * 1.08, math.pi * 1.92, M["mouth"], head,
+                                  (0, -0.288, -0.09), wrap=0.3),
+                "frown": arc_tube(f"{cid}_frown", 0.06, 0.014, math.pi * 0.1, math.pi * 0.9, M["mouth"], head,
+                                  (0, -0.29, -0.16), wrap=0.3),
+                "o": sphere(f"{cid}_mouth_o", 0.045, M["mouthin"], head, (0, -0.282, -0.12), (0.8, 0.35, 1.0)),
+            }
+            for ob in self.mouths.values():  # a mouth is drawn on the face: it shouldn't shadow the chin
+                ob.visible_shadow = False
+            self.mouths["smile"].scale = (0.8,) * 3
+            self.mouths["frown"].scale = self.mouths["o"].scale = (0, 0, 0)
         self.sweat_drop = sphere(f"{cid}_sweat", 0.03, M["sweat"], head, (self.sweat_x, -0.12, 0.15), (0, 0, 0), seg=16)
 
     def _build_hair(self, head):
@@ -542,6 +784,11 @@ class ClayPerson:
         hand = Vector(self.SH[1]) + (Vector((x, y, z)) - Vector((0.3, 0, 0.6))) * self.arm
         # (under the hand, not under the wrist: a thicker hand than the clay cast's needs the desk that much lower)
         dy, dz = hand.y - y, hand.z + self.seat_h - (z + SEAT) - max(0.0, self._girth()["hand"] - 0.05)
+        if self.fingers.get(1) and self.fingers.get(-1):
+            # a hand with fingers is measured as it lies flat: the keys (0.925 up for the clay cast) come to its
+            # underside, with a few millimetres of air
+            under = max(self._hand_under(1)[0], self._hand_under(-1)[0])
+            dz = hand.z + self.seat_h - under - 0.004 - 0.925
         if self.belly is None:  # the body's front at desk height (the mesh rests standing: the torso is the same)
             co = np.empty(len(self.body.data.vertices) * 3, dtype=np.float32)
             self.body.data.vertices.foreach_get("co", co)
@@ -597,10 +844,15 @@ class ClayPerson:
         n = (pole - ax * pole.dot(ax)).normalized()
         return (sh + hand) / 2 + n * 0.6
 
-    def _arm_key(self, s, f, hand, pole):
+    def _arm_key(self, s, f, hand, pole, lay=None, was=None, mix=1.0):
         hand = Vector(hand)
         key(self.hand_t[s], "location", f, hand)
         key(self.pole_t[s], "location", f, self._pole_pos(s, hand, Vector(pole)))
+        self._wrist_key(s, f, hand, lay, was, mix)
+
+    def _lay(self, name=None):
+        """How the hands lie in a pose: flat on the desk to type or rest, otherwise as the forearm leaves them."""
+        return "flat" if (name or self.arm_pose) in ("type", "rest") else None
 
     def _pose(self, name):
         """A pose's wrist target and elbow pole. The poses that reach for the head follow this character's head:
@@ -612,6 +864,8 @@ class ClayPerson:
             at = Vector(self.SH[1]) + (Vector((x, y, z)) - Vector((0.3, 0, 0.6))) * self.arm
             if name in ("type", "rest"):  # (and out to the keyboard, if the desk had to stand off a round belly)
                 at.y = y + self.furniture()["desk"][0]
+                if self.fingers.get(1):  # (broad hands side by side, not into each other: checked as hands_apart)
+                    at.x += 0.035
             if name == "down":  # as near the body as the hips and the hand allow, not a set distance out
                 at.x = self._side_clear()
             return tuple(at), pole
@@ -626,10 +880,20 @@ class ClayPerson:
     def pose(self, f0: int, f1: int, name: str):
         self.arm_pose = name
         hand, pole = self._pose(name)
-        for s in (1, -1):
+        # (hands with fingers lie flat on a desk and hang or lift relaxed)
+        self.hand_shape(f0, f1, "flat" if name in ("type", "rest") else "open" if name == "arms_up" else "relaxed")
+        for s in (1, -1):  # (both held before either moves: keying a hand with fingers looks at the frame it is for)
             self.hand_t[s].keyframe_insert("location", frame=f0)
             self.pole_t[s].keyframe_insert("location", frame=f0)
-            self._arm_key(s, f1, self._mirror(hand, s), self._mirror(pole, s))
+            if self.fingers.get(s):
+                self.rig.pose.bones["hand." + ("L" if s > 0 else "R")].keyframe_insert("rotation_quaternion", frame=f0)
+        for s in (1, -1):
+            lift = Vector((0, 0, self._desk_lift(s))) if self._lay(name) else Vector()
+            if self._lay(name) and self.fingers.get(s) and f1 - f0 >= 4:
+                # (lifted on the way: a hand slid along a desk goes through whatever lies on it)
+                mid = self.hand_t[s].location.lerp(self._mirror(hand, s) + lift, 0.5) + Vector((0, 0, 0.035))
+                self._arm_key(s, (f0 + f1) // 2, mid, self._mirror(pole, s), self._lay(name))
+            self._arm_key(s, f1, self._mirror(hand, s) + lift, self._mirror(pole, s), self._lay(name))
 
     def hold_arms(self, f: int):
         for s in (1, -1):
@@ -642,8 +906,9 @@ class ClayPerson:
         for i, f in enumerate(ticks(f0, f1 + 1, step)):
             for s in (1, -1):
                 up = amp if (i + (s > 0)) % 2 else 0.0
-                h = self._mirror(hand, s) + Vector((self.rng.uniform(-.012, .012), self.rng.uniform(-.02, .02), up))
-                self._arm_key(s, f, h, self._mirror(pole, s))
+                h = self._mirror(hand, s) + Vector((self.rng.uniform(-.012, .012), self.rng.uniform(-.02, .02),
+                                                    up + self._desk_lift(s)))
+                self._arm_key(s, f, h, self._mirror(pole, s), "flat")
             if i:
                 self.events.append({"frame": f, "kind": "key_click"})
 
@@ -651,8 +916,9 @@ class ClayPerson:
         """Both hands lift and land: 'done!'"""
         hand, pole = self._pose("type")
         for s in (1, -1):
-            self._arm_key(s, f, self._mirror(hand, s) + Vector((0, 0, 0.06)), self._mirror(pole, s))
-            self._arm_key(s, f + n(6), self._mirror(hand, s), self._mirror(pole, s))
+            lift = Vector((0, 0, self._desk_lift(s)))
+            self._arm_key(s, f, self._mirror(hand, s) + lift + Vector((0, 0, 0.06)), self._mirror(pole, s), "flat")
+            self._arm_key(s, f + n(6), self._mirror(hand, s) + lift, self._mirror(pole, s), "flat")
         self.events.append({"frame": f + n(6), "kind": "tap"})
 
     def celebrate(self, f0: int, f1: int):
@@ -769,7 +1035,8 @@ class ClayPerson:
     def _arm_mask(self):
         """Which of the body's vertices belong to an arm or a hand (the rest is torso, head and legs)."""
         if getattr(self, "arm_mask", None) is None:
-            groups = {g.index for g in self.body.vertex_groups if g.name.split(".")[0] in ("upper", "fore", "hand")}
+            arm = ("upper", "fore", "hand", "thumb", "index", "middle", "ring", "little")
+            groups = {g.index for g in self.body.vertex_groups if g.name.split(".")[0] in arm}
             self.arm_mask = np.zeros(len(self.body.data.vertices), dtype=bool)
             for v in self.body.data.vertices:
                 self.arm_mask[v.index] = sum(g.weight for g in v.groups if g.group in groups) > 0.2
@@ -788,6 +1055,10 @@ class ClayPerson:
             band = co[(z > lo) & (z < lo + self.hand_len * 1.6) & (np.abs(co[:, 1]) < 0.12)]
             half = float(np.percentile(np.abs(band[:, 0]), 99)) if len(band) else self.SH[1].x
             self.side_clear = half + self._girth()["hand"] + 0.012
+            if self.fingers.get(1) and self.fingers.get(-1):
+                # (hands with fingers hang relaxed, palm to the leg: curled fingers and a thumb reach further
+                # toward it than the palm does)
+                self.side_clear = half + max(self._hand_under(1, "relaxed")[0], self._hand_under(-1, "relaxed")[0]) + 0.012
         return self.side_clear
 
     def _girth(self):
@@ -807,6 +1078,10 @@ class ClayPerson:
             radial = np.linalg.norm(rel - np.outer(along, axis), axis=1)
             ring = radial[(np.abs(along) < 0.03) & (radial < reach)]
             self.girth[name] = float(np.percentile(ring, 75)) if len(ring) else reach / 2
+            if name == "hand" and self.palm.get(1):  # an open hand is flat: its thickness, not half its width
+                near = (np.abs(along) < 0.03) & (radial < reach)
+                if near.any():
+                    self.girth[name] = float(np.percentile(np.abs(rel[near] @ np.array(self.palm[1])), 90))
         return self.girth
 
     def _lap(self):
@@ -829,6 +1104,9 @@ class ClayPerson:
         frame, read from the leg as it is on that frame, so the hand rides the leg as it bends."""
         # (the leg's surface, and the hand's own thickness off it: the knuckles' middle, not the skin)
         sd, r = "L" if s > 0 else "R", self._girth()["thigh"] + 0.8 * self._girth()["hand"]
+        if self.fingers.get(s):  # (a hand with fingers, measured as it lies relaxed: knuckles that far off the leg)
+            under, knuckles = self._hand_under(s, "relaxed")
+            r = self._girth()["thigh"] + under - knuckles
 
         def at(f):
             bone, mw = self.rig.pose.bones["thigh." + sd], self.rig.matrix_world
@@ -836,6 +1114,14 @@ class ClayPerson:
             left = self.root.matrix_world.to_3x3() @ Vector((1, 0, 0))
             top = (knee - hip).normalized().cross(left).normalized()  # the leg's front standing, its top sitting
             return hip.lerp(knee, u) + (top * math.cos(R(round_)) + left * s * math.sin(R(round_))) * r
+
+        def lay(f):  # the palm on the leg, the fingers along it toward the knee
+            bone, mw = self.rig.pose.bones["thigh." + sd], self.rig.matrix_world
+            hip, knee = mw @ bone.head, mw @ bone.tail
+            left = self.root.matrix_world.to_3x3() @ Vector((1, 0, 0))
+            top = (knee - hip).normalized().cross(left).normalized()
+            return -(top * math.cos(R(round_)) + left * s * math.sin(R(round_))), (knee - hip).normalized()
+        at.lay = lay
         return at
 
     def _wrist_for(self, s, point):
@@ -882,27 +1168,37 @@ class ClayPerson:
                 u = u * u * (3 - 2 * u)
                 at = spot(ta).lerp(spot(tb), u) + Vector((0, -0.4, 0.9)) * arc * math.sin(math.pi * u)
                 pole = self._mirror(Vector(pa).lerp(Vector(pb), u), s)
-                self._arm_key(s, f, at, pole)
+                # how the hand lies on what it is leaving and on what it is going to
+                was, lay = (getattr(t, "lay", None) if callable(t) else self._lay() if t is st[0][1] else None
+                            for t in (ta, tb))
+                self._arm_key(s, f, at, pole, lay, was, u)
                 on = ta if callable(ta) and (u == 0 or callable(tb)) else tb if callable(tb) and u >= 1 else None
                 if on:
                     # on the thing: the hand points where the forearm does, so see where the knuckles came out
                     # and move the wrist by what they missed (a few times: moving it turns the forearm)
-                    name, inv = "hand." + ("L" if s > 0 else "R"), self.spine.matrix_world.inverted().to_3x3()
+                    inv = self.spine.matrix_world.inverted().to_3x3()
                     for _ in range(4):
                         bpy.context.view_layer.update()
-                        miss = inv @ (on(f) - self.rig.matrix_world @ self.rig.pose.bones[name].tail)
+                        miss = inv @ (on(f) - self._hold_point(s))
                         if miss.length < 0.004:
                             break
                         arm = at + miss - self.SH[s]
                         at = self.SH[s] + arm * min(1.0, 0.985 * 0.7122 * self.arm / max(arm.length, 1e-6))
-                        self._arm_key(s, f, at, pole)
+                        self._arm_key(s, f, at, pole, lay, was, u)
 
-    def _touched(self, s, f, point, what):
-        """Note how far hand `s` is from what it is meant to be touching on frame f (checked by contacts())."""
+    def _touched(self, s, f, point, what, held=False):
+        """Note how far hand `s` is from what it is meant to be touching on frame f (checked by contacts());
+        `held` also notes how open its fingers are round it, for a hand that has fingers."""
         bpy.context.scene.frame_set(f)
-        tip = self.rig.matrix_world @ self.rig.pose.bones["hand." + ("L" if s > 0 else "R")].tail
+        bpy.context.view_layer.update()
+        self.holding[s] = held
+        tip = self._hold_point(s)
+        self.holding[s] = False
         self.touches.append({"frame": f, "m": (tip - Vector(point(f))).length, "hand": "left" if s > 0 else "right",
                              "what": what})
+        if held and self.fingers.get(s):
+            self.grips.append({"frame": f, "open": round(self.grip_open(s, point(f)), 2),
+                               "hand": "left" if s > 0 else "right", "what": what})
 
     def push(self, f0: int, f1: int, where, hand: str | None = None, what: str = "handle"):
         """A hand takes hold of something that is about to move (a door's handle) and goes with it for as long
@@ -929,11 +1225,17 @@ class ClayPerson:
         self._torso(let_go + n(6), pitch=-1)
         self._torso(let_go + n(12))
         hang = self._mirror(self._pose("down")[0], s) if self.posture == "stand" else start
+        self.holding[s] = True  # (a hand with fingers takes the thing in the crook of them)
         self._hands_path({s: [(out, start, pole, 0), (f0, where, (1, 0.5, -0.6), 0.05), (let_go, where, (1, 0.5, -0.6), 0),
                               (let_go + n(8), hang + Vector((0, -0.05, 0.02)), self.HANG, 0.04),
                               (let_go + n(14), hang, self.HANG, 0)]})
-        self._touched(s, f0, where, what)
-        self._touched(s, let_go, where, what)
+        self.holding[s] = False
+        # (not opened flat on its way: straight fingers arrive at the door before the hand does, and go through it)
+        self.hand_shape(out, f0 - n(4), "relaxed", "left" if s > 0 else "right")
+        self.hand_shape(f0 - n(3), f0, "grip", "left" if s > 0 else "right")   # closes on the thing
+        self.hand_shape(let_go, let_go + n(6), "relaxed", "left" if s > 0 else "right")  # and lets go
+        self._touched(s, f0, where, what, held=True)
+        self._touched(s, let_go, where, what, held=True)
         self.events.append({"frame": f0, "kind": "touch"})
 
     def _hands_now(self, f):
@@ -1148,18 +1450,37 @@ class ClayPerson:
             stages[s] = [(f0 + d, begin, pole, 0), (go + d, on_knee, self.LAP, 0.03)]
             took = None
             if grip:
-                point = Vector(grip(s)) + Vector((0, 0, 0.6 * self._girth()["hand"]))
+                # (the knuckles' own height over the desk top with the hand laid flat on it)
+                over = 0.6 * self._girth()["hand"]
+                if self.fingers.get(s):
+                    under, knuckles = self._hand_under(s)
+                    over = under - knuckles + 0.004
+                point = Vector(grip(s)) + Vector((0, 0, over))
+                if self.fingers.get(s):  # (wide of a laptop: a hand laid flat reaches a hand's length onto the desk)
+                    point.x = s * max(abs(point.x), 0.42)
                 took = next((f for f in edge[2:-1:2] + [stop - n(2)] if self._reaches(s, point, f + d)), None)
             if took is None:
                 stages[s] += [(f1 - (late - d), self._on_thigh(s, lap, 20), self.LAP, 0.01), (f1, self._on_thigh(s, lap, 20), self.LAP, 0)]
             else:
-                stages[s] += [(took - n(5) + d, on_knee, self.LAP, 0), (took + d, lambda f, p=point: p, (1, 0.3, -0.8), 0.07),
-                              (f1, lambda f, p=point: p, (1, 0.3, -0.8), 0)]
+                edge_at = lambda f, p=point: p  # noqa: E731
+                edge_at.lay = "flat"  # (laid on the desk top, not hooked on it side on)
+                # (up past the desk's edge before forward onto it: fingers lead the hand, and would go through it)
+                over_edge = lambda f, p=point + Vector((0, 0.13, 0.07)): p  # noqa: E731
+                over_edge.lay = "flat"
+                rise = [(took - n(7) + d, on_knee, self.LAP, 0), (took - n(2) + d, over_edge, (1, 0.3, -0.8), 0.03),
+                        (took + d, edge_at, (1, 0.3, -0.8), 0)]
+                if not self.fingers.get(s):  # (a mitten on one bone goes straight to the edge)
+                    rise = [(took - n(5) + d, on_knee, self.LAP, 0), (took + d, edge_at, (1, 0.3, -0.8), 0.07)]
+                stages[s] += rise + [
+                              (f1, edge_at, (1, 0.3, -0.8), 0)]
                 self.events.append({"frame": took + d, "kind": "touch"})
                 grips.append((s, took + d, point))
         self._hands_path(stages)
         for s, f, point in grips:
-            self._touched(s, f, lambda f, p=point: p, "desk")
+            side = "left" if s > 0 else "right"
+            self.hand_shape(f - n(8), f - n(3), "open", side)  # open over the desk's edge, then laid flat on it,
+            self.hand_shape(f - n(2), f + n(2), "flat", side)  # the thumb under
+            self._touched(s, f + n(2), lambda f, p=point: p, "desk")
             self._touched(s, f1, lambda f, p=point: p, "desk")
         self.arm_pose = "lap"
 
@@ -1167,9 +1488,12 @@ class ClayPerson:
         """The door this character needs: clear of their head, the handle where their hand falls."""
         self._leg_rig()
         top = self.stand_h + (getattr(self, "head_at", (0, 0, 1.72))[2] - self.seat_h) + self.head_r * 1.1
-        wide = 2 * (self._side_clear() + self._girth()["hand"]) + 0.3  # hands at the sides, and room to spare
-        return {"height": round(top * 1.12, 3), "width": round(max(0.9, top * 0.45, wide), 3),
-                "handle": round(self.stand_h + self.SH[1].z - 0.62 * 0.7122 * self.arm, 3)}
+        wide = 2 * (self._side_clear() + self._girth()["hand"]) + 0.4  # hands at the sides, elbows, and room to spare
+        fit = {"height": round(top * 1.12, 3), "width": round(max(0.9, top * 0.45, wide), 3),
+               "handle": round(self.stand_h + self.SH[1].z - 0.62 * 0.7122 * self.arm, 3)}
+        if self.fingers.get(1):  # fingers close behind the bar: it stands off the leaf by their thickness and more
+            fit["handle_off"] = round(max(0.07, 2.2 * self._girth()["hand"]), 3)
+        return fit
 
     def _step(self, s, f0, f1, to, yaw, roll=True):
         """One step: foot `s` peels off the floor heel first, swings through and lands on its heel at `to` by
@@ -1189,14 +1513,20 @@ class ClayPerson:
         self._foot_key(-s, f1)
         self.events.append({"frame": f1, "kind": "step"})
 
-    def _carry(self, f, s=0, lean=0.0, amount=1.0):
+    def _carry(self, f, s=0, lean=0.0, amount=1.0, bank=None, look=0.0):
         """How the body rides a step, keyed at f: the pelvis shifts over the planted foot, drops a little on
         the swinging side and turns with the leading leg, and the chest turns the other way. `s` is the foot
-        in the air or just landed (0 squares everything up again)."""
+        in the air or just landed (0 squares everything up again). On a curved path `bank` leans the whole
+        body into the bend (degrees to their left, shared by the pelvis and the chest) and `look` turns the
+        head to where the path goes; the head stays nearer level than the chest."""
         sway = -s * abs(self.hip_at.x) * 0.22 * amount
-        key(self.hips, "rotation_euler", f, (0, R(-3.0 * s * amount), R(-6.0 * s * amount)))
+        lean_in = bank or 0.0
+        key(self.hips, "rotation_euler", f, (0, R(-3.0 * s * amount + 0.4 * lean_in), R(-6.0 * s * amount)))
         key(self.hips, "location", f, (sway, 0, self.hips.location.z))
-        key(self.spine, "rotation_euler", f, (R(self.spine_pitch + lean), R(2.0 * s * amount), R(10.0 * s * amount)))
+        key(self.spine, "rotation_euler", f, (R(self.spine_pitch + lean), R(2.0 * s * amount + 0.6 * lean_in),
+                                              R(10.0 * s * amount)))
+        if bank is not None:
+            key(self.neck, "rotation_euler", f, (R(self.neck_pitch), R(-0.5 * lean_in), R(look)))
 
     def _swing(self, f, s=0, reach=0.0, out=0.0, late=True):
         """Arms at the sides, the one opposite foot `s` forward by `reach` (m), the other back by less; the
@@ -1257,11 +1587,40 @@ class ClayPerson:
         self._swing(f1)
         return f1
 
-    def walk(self, f0: int, f1: int | None, to, facing: float | None = None):
+    def _curve(self, p0, p1, yaw0, heading):
+        """A curved way from p0 to p1: it leaves the way they face (`yaw0`) and arrives travelling `heading`
+        (radians; None is straight at the spot from wherever the bend has brought them). Returns its length and
+        three functions of the distance along it: the point, the direction of travel (unwrapped from yaw0) and
+        the bend (radians of turn per metre, left positive)."""
+        chord = (p1 - p0).length
+        ahead = lambda a: Vector((math.sin(a), -math.cos(a)))  # noqa: E731
+        m0 = ahead(yaw0) * chord
+        m1 = (ahead(heading) if heading is not None else (p1 - p0).normalized() * 0.6 + ahead(yaw0) * -0.1) * chord
+        us = np.linspace(0.0, 1.0, 161)
+        h = [2 * us ** 3 - 3 * us ** 2 + 1, us ** 3 - 2 * us ** 2 + us, -2 * us ** 3 + 3 * us ** 2, us ** 3 - us ** 2]
+        pts = np.outer(h[0], p0) + np.outer(h[1], m0) + np.outer(h[2], p1) + np.outer(h[3], m1)
+        seg = np.diff(pts, axis=0)
+        along = np.concatenate([[0.0], np.cumsum(np.linalg.norm(seg, axis=1))])
+        yaw = np.unwrap(np.arctan2(seg[:, 0], -seg[:, 1]))
+        yaw += round((yaw0 - yaw[0]) / (2 * math.pi)) * 2 * math.pi
+        mid = (along[:-1] + along[1:]) / 2
+        bend = np.gradient(yaw, mid)
+        soft = np.convolve(np.pad(bend, 6, mode="edge"), np.ones(13) / 13, mode="valid")  # (no jerk in the lean)
+        return (float(along[-1]),
+                lambda d: Vector((float(np.interp(d, along, pts[:, 0])), float(np.interp(d, along, pts[:, 1])))),
+                lambda d: float(np.interp(d, mid, yaw)), lambda d: float(np.interp(d, mid, soft)))
+
+    def walk(self, f0: int, f1: int | None, to, facing: float | None = None, curve: bool = False,
+             heading: float | None = None):
         """Walk to a point on the floor and stop there, facing `facing` degrees (or the way they came). A small
         change of direction happens on the first step; for a bigger one they turn on the spot first. They turn
         to `facing` on the last step. With no f1 they take the time the steps need at a stroll; returns the
-        frame they arrive on."""
+        frame they arrive on.
+
+        With `curve` the way there is a bend and not a line: they set off the way they are facing and come round
+        to the spot, arriving in the direction `heading` (degrees) if one is given. The feet land along the
+        bend, the body turns with it and leans into it, as a body does to stay over its feet (more when the
+        bend is tighter or the walk faster), and the head looks along the path ahead."""
         self._need("stand", "walk")
         p0, p1 = self.at.copy(), Vector(to[:2])
         dist = (p1 - p0).length
@@ -1269,12 +1628,19 @@ class ClayPerson:
             return self.turn(f0, f1 or f0 + n(18), math.degrees(self.yaw) if facing is None else facing)
         way = (p1 - p0) / dist
         yaw_w = self._near(math.atan2(way.x, -way.y), self.yaw)
-        if abs(yaw_w - self.yaw) > R(30):  # a leg can't swing round that far in one step
+        f_start = f0
+        # a leg can't swing round that far in one step (on a curve the path itself turns them, up to a point)
+        if abs(yaw_w - self.yaw) > (R(110) if curve else R(30)):
             pivots = 2 * max(1, math.ceil(abs(yaw_w - self.yaw) / R(100)))
             turned = f0 + pivots * n(8) if f1 is None else f0 + round((f1 - f0) * 0.3)
             self.turn(f0, turned, math.degrees(yaw_w))
             f0 = turned
         yaw0 = self.yaw
+        point, travel, bend = (lambda d: p0 + way * d), (lambda d: yaw_w), (lambda d: 0.0)
+        if curve:
+            dist, point, travel, bend = self._curve(p0, p1, yaw0, None if heading is None else
+                                                    self._near(R(heading), yaw0))
+            yaw_w = travel(dist)  # the way they are going as they arrive
         yaw1 = yaw_w if facing is None else self._near(R(facing), yaw_w)
         leg = self.thigh + self.shin
         after = None  # a big turn at the end is made on the spot too, once they have arrived
@@ -1293,30 +1659,69 @@ class ClayPerson:
         frames = [f0 + round((f1 - f0) * sum(beat[:k]) / sum(beat)) for k in range(steps + 1)]
         off = [0.0] + [self.rng.uniform(-0.07, 0.07) * half for _ in range(max(0, steps - 2))] + [0.0, 0.0]
         land = lambda k: min(k, steps - 1) * half + off[min(k, steps)]  # noqa: E731
-        first = 1 if yaw_w > yaw0 + 1e-3 else -1
+        first = 1 if (bend(0.2 * dist) if curve else yaw_w - yaw0) > 1e-3 else -1
+        speed = dist / max(1e-3, (f1 - f0) / kit.FPS)
+
+        def lean_in(d):
+            """Degrees to lean into the bend at d along the path: what keeps a body over its feet at this speed
+            (speed squared over the bend's radius, against gravity), a little more than life, and none on a line."""
+            if not curve:
+                return None, 0.0
+            bank = max(-9.0, min(9.0, 1.4 * math.degrees(math.atan(speed * speed * bend(d) / 9.81))))
+            look = max(-28.0, min(28.0, 0.6 * math.degrees(travel(min(dist, d + 0.9)) - travel(d))))
+            return bank, look
+
         self._body_key(f0)
         self._swing(f0)
-        self._carry(f0)
+        self._carry(f0, bank=0.0 if curve else None)
         for k in range(1, steps + 1):
             s = first if k % 2 else -first
             a, b = frames[k - 1], frames[k]
-            yaw = yaw1 if k == steps else yaw_w
+            last = k == steps
+            yaw = yaw1 if last else travel(land(k))
             spot = self._foot_spot(s, "stand")
             spot.x *= 0.8  # feet fall nearer the line of travel than they stand
-            last = k == steps
             self._step(s, a, b, self._world(spot if not last else self._foot_spot(s, "stand"),
-                                            at=p0 + way * land(k), yaw=yaw), yaw)
+                                            at=point(land(k)), yaw=yaw), yaw)
             apart = land(k) - land(k - 1)
             low = self.ankle_h - self.hip_at.z + math.sqrt((0.985 * leg) ** 2 - (apart / 2) ** 2) - 0.012
             mid = (a + b) // 2
+            under = (land(k) + land(k - 1)) / 2  # where the body is as the foot lands: between its feet
             key(self.hips, "location", mid, (0, 0, self.stand_h - 0.006))  # tallest as one leg passes the other
-            self._carry(mid, s, lean=3.5, amount=0.6)
-            self._body_key(b, p0 + way * (land(k) + land(k - 1)) / 2, yaw, low)
-            self._carry(b, 0 if last else s, lean=0.0 if last else 3.5)
+            bank, look = lean_in((under + (land(k - 1) + land(max(0, k - 2))) / 2) / 2)
+            self._carry(mid, s, lean=3.5, amount=0.6, bank=bank, look=look)
+            self._body_key(b, point(under), yaw1 if last else travel(under), low)
+            bank, look = (0.0 if curve else None, 0.0) if last else lean_in(under)
+            self._carry(b, 0 if last else s, lean=0.0 if last else 3.5, bank=bank, look=look)
             self._swing(b, s if not last else 0, apart * 0.85)
+        self.walks.append((f_start, f1, bool(curve)))
         if after:
             f1 = self.turn(f1, f1 + after[0], after[1])
         return f1
+
+    def walk_report(self, f0: int, f1: int, curve: bool) -> dict:
+        """What a walk did, read back from the animation: how far its path bows from the straight line between
+        its ends (`bow_m`), how far it turns on the way (`turn_deg`), the most the chest leans sideways
+        (`lean_deg`) and how much of that lean is into the bend (`into_bend`: 1 is all of it, -1 is leaning out)."""
+        sc = bpy.context.scene
+        rows = []
+        for f in range(f0, f1 + 1):
+            sc.frame_set(f)
+            up = self.spine.matrix_world.to_3x3() @ Vector((0, 0, 1))
+            mw = self.root.matrix_world
+            left = mw.to_3x3() @ Vector((1, 0, 0))
+            rows.append((mw.translation.x, mw.translation.y, mw.to_euler().z, math.degrees(math.asin(max(-1, min(1, up.dot(left)))))))
+        xy = np.array([r[:2] for r in rows])
+        yaw = np.unwrap(np.array([r[2] for r in rows]))
+        lean = np.array([r[3] for r in rows])
+        chord = xy[-1] - xy[0]
+        span = float(np.linalg.norm(chord)) or 1.0
+        bow = np.abs((xy[:, 0] - xy[0, 0]) * chord[1] - (xy[:, 1] - xy[0, 1]) * chord[0]) / span
+        rate = np.gradient(yaw)
+        turning = np.abs(rate) > math.radians(0.4)
+        into = float(np.sum(lean[turning] * np.sign(rate[turning])) / max(1e-6, np.sum(np.abs(lean[turning])))) if turning.any() else 0.0
+        return {"curve": curve, "bow_m": round(float(bow.max()), 3), "turn_deg": round(math.degrees(float(yaw[-1] - yaw[0])), 1),
+                "lean_deg": round(float(np.abs(lean).max()), 1), "into_bend": round(into, 2)}
 
     # ------------------------------------------------------------ body + head
     def _set_spine(self, f0, f1, pitch=None, roll=0.0):
@@ -1372,6 +1777,78 @@ class ClayPerson:
         for name, ob in self.mouths.items():
             full = (0.8, 0.35, 1.0) if name == "o" else (size,) * 3
             tween(ob, "scale", f + max(0, dur - n(3)), f + dur, full if name == mouth else (0, 0, 0))
+        if self.mouth:
+            self._face_keys(f, f + dur, face)
+
+    def _face_keys(self, f0: int, f1: int, face: str):
+        """A fitted face takes an expression in its keys: the mouth's own (smile, frown, open, round) and the
+        head's (the corners and cheeks with smile and frown, the jaw with open)."""
+        want = fitted_face.MOUTHS[face]
+        blocks = self.mouth.data.shape_keys.key_blocks
+        head = self.body.data.shape_keys.key_blocks
+        was = dict(zip(fitted_face.KEYS, self._mouth_now))
+        to = dict(zip(fitted_face.KEYS, want))
+        moves = [(blocks[name], was[name], to[name]) for name in fitted_face.KEYS]
+        moves += [(head[name], was[name], to[name]) for name in ("smile", "frown")]
+        moves.append((head["jaw"], min(1.0, was["open"] + was["round"]), min(1.0, to["open"] + to["round"])))
+        for kb, a, b in moves:
+            kb.value = a
+            kb.keyframe_insert("value", frame=f0)
+            kb.value = b
+            kb.keyframe_insert("value", frame=f1)
+        self._mouth_now = want
+
+    def face_report(self) -> dict | None:
+        """A fitted face's numbers for the check (None for the clay cast, whose face is drawn to size)."""
+        if not self.mouth:
+            return None
+        k, at = self.head.scale[0], Vector(self.head_at)
+        return fitted_face.report(self.body, self.mouth, self.face_marks, lambda p: Vector(p) * k + at - self.seat)
+
+    def skin_report(self, frames) -> dict | None:
+        """How a fitted body's skin holds up (None for the clay cast, whose mesh is made for the rig): how many
+        vertices well above the hips still move with a leg (a hem or a waistband tears into spikes when the
+        thighs bend), and the worst stretch of its edges over `frames` (posed length over rest length, at the
+        99.9th percentile: a bent knee gives 2 to 3, weights that pull vertices apart give 5 and up)."""
+        if not self.desc.get("model"):
+            return None
+        me, sc = self.body.data, bpy.context.scene
+        joints = json.loads(self.body["joints"])
+        hip, knee = Vector(joints["hipL"]), Vector(joints["knL"])
+        legs = {self.body.vertex_groups[b].index for b in ("thigh.L", "thigh.R", "shin.L", "shin.R")}
+        line = hip.z + 0.6 * (hip - knee).length
+        high = sum(1 for v in me.vertices
+                   if v.co.z > line and sum(g.weight for g in v.groups if g.group in legs) > 0.15)
+        count = len(me.vertices)
+        rest = np.empty(count * 3, dtype=np.float32)
+        me.vertices.foreach_get("co", rest)
+        rest = rest.reshape(-1, 3)
+        ed = np.empty(len(me.edges) * 2, dtype=np.int32)
+        me.edges.foreach_get("vertices", ed)
+        ed = ed.reshape(-1, 2)
+        length = np.linalg.norm(rest[ed[:, 0]] - rest[ed[:, 1]], axis=1)
+        # (not the head or its join to the collar: the head is rigid, and the join is a band inside the collar
+        # that has to stretch when the head turns)
+        neck = self.body.vertex_groups["neck"].index
+        on_head = np.array([any(g.group == neck and g.weight > 0.01 for g in v.groups) for v in me.vertices])
+        keep = (length > 0.002) & ~on_head[ed[:, 0]] & ~on_head[ed[:, 1]]
+        ed, length = ed[keep], length[keep]
+        worst, at = 0.0, None
+        for f in frames:
+            sc.frame_set(f)
+            ev = self.body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+            mesh = ev.to_mesh()
+            co = np.empty(count * 3, dtype=np.float32)
+            mesh.vertices.foreach_get("co", co)
+            ev.to_mesh_clear()
+            co = co.reshape(-1, 3)
+            ratio = float(np.percentile(np.linalg.norm(co[ed[:, 0]] - co[ed[:, 1]], axis=1) / length, 99.9))
+            if ratio > worst:
+                worst, at = ratio, f
+        return {"leg_above_hips": high, "stretch": round(worst, 2), "frame": at}
+
+    def _lid(self, s, f, shut: bool):
+        key(self.lids[s], "rotation_euler", f, (R(fitted_face.LID_SHUT if shut else fitted_face.LID_OPEN), 0, 0))
 
     def breathe(self, f0: int, f1: int, period: float = 3.4, pitch: float = 0.7):
         """Idle from f0 to f1: the torso rocks a little, once every `period` seconds."""
@@ -1381,6 +1858,12 @@ class ClayPerson:
             key(self.breath, "rotation_euler", f, (R(pitch if up else -pitch * 0.4), 0, 0))
 
     def blink(self, f: int, dur: int = 3):
+        if self.lids:  # a fitted face shuts its lids; the clay cast squashes its eyes
+            for s in (1, -1):
+                self._lid(s, f - dur, False)
+                self._lid(s, f, True)
+                self._lid(s, f + dur, False)
+            return
         for s in (1, -1):
             sc = tuple(self.eyes[s].scale)
             key(self.eyes[s], "scale", f - dur, sc)
@@ -1392,10 +1875,14 @@ class ClayPerson:
         s = 1 if side == "left" else -1
         e, b = self.eyes[s], self.brows[s]
         sc = tuple(e.scale)
-        key(e, "scale", f - dur, sc)
-        key(e, "scale", f, (sc[0], sc[1], 0.08))
-        key(e, "scale", f + hold, (sc[0], sc[1], 0.08))
-        key(e, "scale", f + hold + dur, sc)
+        if self.lids:
+            for at, shut in ((f - dur, False), (f, True), (f + hold, True), (f + hold + dur, False)):
+                self._lid(s, at, shut)
+        else:
+            key(e, "scale", f - dur, sc)
+            key(e, "scale", f, (sc[0], sc[1], 0.08))
+            key(e, "scale", f + hold, (sc[0], sc[1], 0.08))
+            key(e, "scale", f + hold + dur, sc)
         at = tuple(b.location)
         key(b, "location", f - dur, at)
         key(b, "location", f, (at[0], at[1], at[2] - 0.022))
@@ -1493,7 +1980,7 @@ class ClayPerson:
                 worst, self.floor_worst = -low, f
         return worst
 
-    def contacts(self, frames, solids=()) -> dict:
+    def contacts(self, frames, solids=(), limit=0.03) -> dict:
         """What the body touches that it should not, and what it should hold that it does not, over the given
         frames, each as the worst case in metres with the frame it happens on:
           under_floor   how far any of the body is below the floor
@@ -1502,7 +1989,11 @@ class ClayPerson:
                         being how far that thing may be pressed into (a seat cushion)
           foot_slide    how far a foot travels along the floor in one stretch of standing flat on it
           touch_miss    how far a hand was from the thing it was put on (a door handle, the desk's edge)
-        """
+        and for a character whose hands have fingers:
+          hands_apart   the nearest the two hands come to each other (m; under half a centimetre they are
+                        into each other)
+          palm_tilt     degrees a hand resting over a table top is tipped from palm down, at its worst
+        `through` also says how long it lasted (`first` and `last` frame over `limit`)."""
         sc = bpy.context.scene
         arm = self._arm_mask()
         hand_r = 0.8 * self._girth()["hand"]
@@ -1513,6 +2004,16 @@ class ClayPerson:
         out = {k: {"m": 0.0, "frame": None} for k in ("under_floor", "hand_in_body", "through", "foot_slide")}
         out["touch_miss"] = max(self.touches, key=lambda t: t["m"], default={"m": 0.0, "frame": None})
         run = {sd: [0.0, None] for sd in "LR"}  # this stretch's travel, and where the foot was last frame
+        fingered = bool(self.fingers.get(1) and self.fingers.get(-1))
+        hands, was_at, deep = {}, {}, {}
+        if fingered:  # each hand's own vertices (one in four), and each fingertip
+            out["hands_apart"], out["palm_tilt"] = {"m": 9.0, "frame": None}, {"deg": 0.0, "frame": None}
+            names = {g.index: g.name for g in self.body.vertex_groups}
+            for sd in "LR":
+                mine = {i for i, nm in names.items() if nm.endswith("." + sd)
+                        and nm.split(".")[0] in ("hand", "thumb", "index", "middle", "ring", "little")}
+                hands[sd] = np.array([v.index for v in self.body.data.vertices
+                                      if sum(g.weight for g in v.groups if g.group in mine) > 0.5])[::4]
 
         self.contact_trace = trace = []  # every frame's numbers, for looking into a failure
         tris = None
@@ -1539,7 +2040,12 @@ class ClayPerson:
                 if inside.any():
                     scale = np.array(ob.matrix_world.to_scale())
                     depth = (np.minimum(L[inside] - lo, hi - L[inside]) * scale).min(axis=1).max()
+                    # (a thin thing is pierced by the time anything is half way into it: a finger through a
+                    # door leaf is never more than 2.5 cm from one of its faces)
+                    depth *= max(1.0, 0.065 / float(((hi - lo) * scale).min()))
                     worst("through", depth - give, f, what=ob.name)
+                    if depth - give > limit:
+                        deep.setdefault(ob.name, []).append(f)
             if len(W) == len(arm):
                 B = W[~arm]
                 if tris is None:  # the triangles of everything that is not an arm (the same on every frame)
@@ -1547,7 +2053,10 @@ class ClayPerson:
                 pb, rw = self.rig.pose.bones, self.rig.matrix_world
                 for sd in "LR":
                     h, t = rw @ pb["hand." + sd].head, rw @ pb["hand." + sd].tail
-                    for probe in (h.lerp(t, 0.35), h.lerp(t, 0.8)):
+                    # the palm (two spots, as thick as the hand) and each fingertip (as thick as a finger)
+                    probes = [(h.lerp(t, 0.35), hand_r), (h.lerp(t, 0.8), hand_r)]
+                    probes += [(rw @ pb[f"{g['name']}.b.{sd}"].tail, 0.012) for g in self.fingers.get(1 if sd == "L" else -1, [])]
+                    for probe, thick in probes:
                         d = np.array(probe) - B
                         near = float(np.sqrt(np.einsum("ij,ij->i", d, d).min()))
                         if near < 0.2:
@@ -1555,8 +2064,38 @@ class ClayPerson:
                             # side crosses it an odd number of times only from inside (the nearest vertex's
                             # facing is fooled by a fold of cloth or the edge of a raised knee)
                             inside = self._crossings(np.array(probe), 1.0 if sd == "L" else -1.0, W, tris) % 2 == 1
-                            worst("hand_in_body", hand_r + near if inside else hand_r - near, f,
+                            worst("hand_in_body", thick + near if inside else thick - near, f,
                                   hand="left" if sd == "L" else "right")
+            if fingered and len(W) == len(arm):
+                L, Rt = W[hands["L"]], W[hands["R"]]
+                gap = float(np.sqrt(((L[:, None, :] - Rt[None, :, :]) ** 2).sum(axis=2).min()))
+                trace.append((f, "hands_apart", round(gap, 4)))
+                if gap < out["hands_apart"]["m"]:
+                    out["hands_apart"] = {"m": gap, "frame": f}
+                pb, rw = self.rig.pose.bones, self.rig.matrix_world
+                for s, sd in ((1, "L"), (-1, "R")):
+                    bone = pb["hand." + sd]
+                    wrist = rw @ bone.head
+                    still = sd in was_at and (wrist - was_at[sd]).length < 0.002
+                    was_at[sd] = wrist.copy()
+                    if not still:  # (a hand on its way somewhere is still turning)
+                        continue
+                    H = W[hands[sd]]
+                    for ob, _give, lo, hi in boxes:
+                        mo = ob.matrix_world
+                        size = (hi - lo) * np.array(mo.to_scale())
+                        if mo.to_3x3().col[2].normalized().z < 0.9 or min(size[0], size[1]) < 0.15:
+                            continue  # (not something with a top to lay a hand on)
+                        inv = np.array(mo.inverted())
+                        Lh = H @ inv[:3, :3].T + inv[:3, 3]
+                        over = np.all((Lh[:, :2] > lo[:2]) & (Lh[:, :2] < hi[:2]), axis=1)
+                        if over.sum() < len(H) // 3 or (Lh[over, 2].min() - hi[2]) * mo.to_scale().z > 0.05:
+                            continue
+                        spin = (rw @ bone.matrix).to_3x3() @ self.rig.data.bones["hand." + sd].matrix_local.to_3x3().inverted()
+                        tilt = math.degrees((spin @ self.palm[s]).angle(Vector((0, 0, -1))))
+                        trace.append((f, "palm_tilt", round(tilt, 1), "left" if s > 0 else "right", ob.name))
+                        if tilt > out["palm_tilt"]["deg"]:
+                            out["palm_tilt"] = {"deg": tilt, "frame": f, "hand": "left" if s > 0 else "right", "what": ob.name}
             if self.foot_t:
                 pb, rw = self.rig.pose.bones, self.rig.matrix_world
                 for sd in "LR":
@@ -1569,6 +2108,15 @@ class ClayPerson:
                         run[sd][0] = 0.0
                     run[sd][1] = ankle.xy.copy() if flat else None
         self.floor_worst = out["under_floor"]["frame"]
+        run_of = deep.get(out["through"].get("what"), [])
+        if run_of:  # the stretch it lasted, round the worst frame
+            at = run_of.index(out["through"]["frame"])
+            a = b = at
+            while a > 0 and run_of[a - 1] == run_of[a] - 1:
+                a -= 1
+            while b < len(run_of) - 1 and run_of[b + 1] == run_of[b] + 1:
+                b += 1
+            out["through"].update(first=run_of[a], last=run_of[b])
         return out
 
     def how_it_moves(self, f0: int, f1: int) -> dict:

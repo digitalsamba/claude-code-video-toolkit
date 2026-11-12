@@ -29,6 +29,8 @@ import cameras  # noqa: E402
 import cast as casting  # noqa: E402
 import kit  # noqa: E402
 from character import FACES, LEANS, LOOKS, POSES, POSTURES, TYPING, ClayPerson  # noqa: E402
+
+HAND_SHAPES = tuple(ClayPerson.HAND_SHAPES)
 from sets import DeskRoom, confetti, title3d  # noqa: E402
 from studio import PROP_KINDS, Studio  # noqa: E402
 from timeline import SpecError, Timeline  # noqa: E402
@@ -37,9 +39,13 @@ SET_KINDS = ("desk_room", "desk", "studio")
 SCORE_MOODS = ("calm", "tension", "resolve")
 CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_head", "gulp", "blink", "sweat",
               "tremble", "tap", "celebrate", "hold_arms", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
-              "look_at", "reach"}
+              "look_at", "reach", "hand"}
 # how far (m) each kind of contact may be out before the check fails and says where (see ClayPerson.contacts)
 CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03}
+HANDS_APART = 0.005  # nearer than this the two hands are into each other (m)
+PALM_TILT = 35.0     # a hand resting over a table top is palm down to within this (degrees)
+GRIP_OPEN = 0.75  # a hand holding something has its fingertips within this share of a finger's length of it
+SKIN_LIMITS = {"leg_above_hips": 50, "stretch": 4.0}  # a fitted model's weights (character.skin_report)
 SET_VERBS = {"alert", "work", "done", "open_door", "close_door", "pull_in"}
 LOOK_AT = ("camera", "screen")  # things a look_at or a reach can name in place of a point
 FX_VERBS = {"confetti", "title"}
@@ -144,9 +150,14 @@ def validate(spec):
             _one_of(b, "target", LOOKS, numbers=True, default="screen")
         elif verb == "lean":
             _one_of(b, "amount", LEANS, numbers=True, default="none")
-        elif verb == "walk" and (not _point(b.get("to")) or not _number(b.get("facing", 0))):
-            raise SpecError(f'beat at {b["at"]!r}: walk needs "to", a spot on the floor as [x, y] in metres '
-                            f'(and takes "facing", degrees, for the way they end up looking)')
+        elif verb == "walk" and (not _point(b.get("to")) or not _number(b.get("facing", 0))
+                                 or not _number(b.get("heading", 0)) or not isinstance(b.get("curve", False), bool)):
+            raise SpecError(f'beat at {b["at"]!r}: walk needs "to", a spot on the floor as [x, y] in metres (and '
+                            f'takes "facing", degrees, for the way they end up looking; "curve": true for a bend '
+                            f'in place of a line, with "heading", degrees, for the way they are going as they arrive)')
+        elif verb == "hand" and (b.get("shape") not in HAND_SHAPES or b.get("hand", "left") not in ("left", "right")):
+            raise SpecError(f'beat at {b["at"]!r}: hand needs "shape", one of {", ".join(HAND_SHAPES)} (and takes '
+                            f'"hand": "left" or "right", the character\'s own; both without it)')
         elif verb == "wink" and b.get("side", "left") not in ("left", "right"):
             raise SpecError(f'beat at {b["at"]!r}: wink takes "side": "left" or "right" (the character\'s own)')
         elif verb == "reach" and b.get("hand", "right") not in ("left", "right"):
@@ -290,6 +301,8 @@ def build(spec, args):
                 p.hold_arms(f0)
             elif verb == "wink":
                 p.wink(f0, b.get("side", "left"))
+            elif verb == "hand":
+                p.hand_shape(f0, f1, b["shape"], b.get("hand"))
             elif verb == "glance":
                 p.glance(f0, f1, float(b.get("yaw", 0)), float(b.get("pitch", 0)))
             elif verb == "look_at" and b["target"] == "camera":
@@ -304,7 +317,7 @@ def build(spec, args):
                         else:
                             p.reach(f0, f1, point, b.get("hand", "right"))
                     elif verb == "walk":  # (untimed, a walk takes what its steps need)
-                        p.walk(f0, f1 if timed else None, b["to"], b.get("facing"))
+                        p.walk(f0, f1 if timed else None, b["to"], b.get("facing"), bool(b.get("curve")), b.get("heading"))
                     elif verb == "turn":
                         p.turn(f0, f1 if timed else f0 + kit.n(20), b["facing"])
                     elif verb == "stand_up":
@@ -335,7 +348,7 @@ def build(spec, args):
                             bpy.context.scene.frame_set(f0)
                             bpy.context.view_layer.update()
                             handle = room.handle_for(who._world((0, 0, 1)))  # the one on their side of the door
-                            who.push(f0, end, lambda f, h=handle: h.matrix_world.translation.copy(), b.get("hand"))
+                            who.push(f0, end, lambda f, h=handle: room.bar_of(h), b.get("hand"))
                 except ValueError as e:
                     raise SpecError(f'beat at {b["at"]!r}: {e}')
         elif verb == "confetti":
@@ -380,6 +393,11 @@ def build(spec, args):
     kit.moves = [{"do": verb, "t": round((a - 1) / fps, 2), **p.how_it_moves(a, b)} for verb, a, b in p.moves]
     events = [{"t": round((e["frame"] - 1) / fps, 3), "shot": tl.shot_at((e["frame"] - 1) / fps), **e}
               for e in sorted(p.events + room.events + fx_events, key=lambda e: e["frame"])]
+    kit.grips = p.grips
+    kit.walks = [{"t": round((a - 1) / fps, 2), **p.walk_report(a, b, curved)} for a, b, curved in p.walks]
+    kit.face = p.face_report()
+    kit.skin = p.skin_report(range(1, tl.frames, max(1, tl.frames // 14)))
+    kit.fighting = cameras.fighting(cams)  # faces in one plane that a camera sees: they would flicker
     return tl, cams, reports, ik, events
 
 
@@ -424,6 +442,7 @@ def main():
     floor = getattr(kit, "under_floor", None)
     sunk, sunk_at = floor or (0.0, None)
     contacts = {k: c for k, c in (getattr(kit, "contacts", None) or {}).items() if k != "under_floor"}
+    apart, tilt = contacts.pop("hands_apart", None), contacts.pop("palm_tilt", None)
     touching = all(c["m"] <= CONTACT_LIMITS[k] for k, c in contacts.items())
     checks = {"passed": all(r["passed"] for r in reports) and ik < 0.01 and sunk <= 0.015 and touching,
               "duration": tl.duration, "fps": tl.fps,
@@ -439,12 +458,68 @@ def main():
             "foot_slide": "{foot} foot slides {cm} cm along the floor while planted",
             "touch_miss": "{hand} hand {cm} cm off the {what}"}
     problems = [f"a foot {sunk * 100:.0f} cm under the floor at {(sunk_at - 1) / tl.fps:.2f} s"] if sunk > 0.015 else []
-    problems += [said[k].format(cm=round(c["m"] * 100), **c) + f' at {(c["frame"] - 1) / tl.fps:.2f} s'
+    lasted = lambda c: (f' (from {(c["first"] - 1) / tl.fps:.2f} s to {(c["last"] - 1) / tl.fps:.2f} s)'  # noqa: E731
+                        if c.get("last", 0) > c.get("first", 0) else "")
+    problems += [said[k].format(cm=round(c["m"] * 100), **c) + f' at {(c["frame"] - 1) / tl.fps:.2f} s' + lasted(c)
                  for k, c in contacts.items() if c["m"] > CONTACT_LIMITS[k]]
+    if apart and apart["frame"] is not None:  # hands with fingers: do they go into each other, do they lie palm down
+        checks["hands_apart_m"] = round(apart["m"], 3)
+        if apart["m"] < HANDS_APART:
+            checks["passed"] = False
+            problems.append(f'the hands go into each other at {(apart["frame"] - 1) / tl.fps:.2f} s')
+    if tilt and tilt["frame"] is not None:
+        checks["palm_tilt_deg"] = round(tilt["deg"], 1)
+        if tilt["deg"] > PALM_TILT:
+            checks["passed"] = False
+            problems.append(f'{tilt["hand"]} hand lies on the {tilt["what"]} tipped {tilt["deg"]:.0f} degrees from palm '
+                            f'down at {(tilt["frame"] - 1) / tl.fps:.2f} s')
     if getattr(kit, "moves", None):  # each posture verb: do its parts start and stop together, are the sides the same
         checks["moves"] = kit.moves
     if problems:  # in words, for the person or agent reading the check
         checks["body_problems"] = problems
+    face = getattr(kit, "face", None)
+    if face:  # a fitted model's face: is its mouth big enough to read, and on the face
+        checks["face"] = {k: v for k, v in face.items() if k != "problems"}
+        if face.get("problems"):
+            checks["passed"] = False
+            checks["body_problems"] = checks.get("body_problems", []) + face["problems"]
+    grips = getattr(kit, "grips", None)
+    if grips:  # a hand with fingers that took hold of something: did it close on it
+        worst = max(grips, key=lambda g: g["open"])
+        checks["grip_open"] = worst["open"]
+        if worst["open"] > GRIP_OPEN:
+            checks["passed"] = False
+            checks["body_problems"] = checks.get("body_problems", []) + [
+                f'{worst["hand"]} hand is open on the {worst["what"]} at {(worst["frame"] - 1) / tl.fps:.2f} s (fingertips '
+                f'{worst["open"]:.2f} of a finger\'s length from it): it should close on what it holds']
+    walks = getattr(kit, "walks", None)
+    if walks:  # each walk's path: how far it bows, how far it turns, how the body leans as it does
+        checks["walks"] = walks
+        for w in walks:
+            if w["curve"] and abs(w["turn_deg"]) > 20 and (w["into_bend"] < 0.5 or w["lean_deg"] < 1.0):
+                checks["passed"] = False
+                checks["body_problems"] = checks.get("body_problems", []) + [
+                    f'the walk at {w["t"]} s turns {abs(w["turn_deg"]):.0f} degrees and the body does not lean into '
+                    f'the bend (lean {w["lean_deg"]} degrees, {w["into_bend"]:+.2f} of it inward)']
+    skin = getattr(kit, "skin", None)
+    if skin:  # a fitted model's weights: does a leg pull on the top's hem, is anything stretched apart
+        checks["skin"] = skin
+        said_skin = []
+        if skin["leg_above_hips"] > SKIN_LIMITS["leg_above_hips"]:
+            said_skin.append(f'{skin["leg_above_hips"]} vertices above the hips move with a leg, so a hem or waistband '
+                             f'tears into spikes when the thighs bend: fit the model again (blender_render.py fit)')
+        if skin["stretch"] > SKIN_LIMITS["stretch"]:
+            said_skin.append(f'the skin stretches {skin["stretch"]:.1f}x at {(skin["frame"] - 1) / tl.fps:.2f} s: '
+                             f'the fit\'s weights pull vertices apart')
+        if said_skin:
+            checks["passed"] = False
+            checks["body_problems"] = checks.get("body_problems", []) + said_skin
+    fights = getattr(kit, "fighting", None) or []
+    if fights:  # two faces in one plane, seen by a camera: the strip flickers between them as things move
+        checks["passed"] = False
+        checks["surfaces_fight"] = fights
+        checks["set_problems"] = [f'{r["a"]} and {r["b"]} have faces in one plane and will flicker in {r["shot"]} '
+                                  f'(frame {r["frame"]}): move one, or end it inside the other' for r in fights]
     for kind, c in contacts.items():  # a hand inside the body or off what it holds, the body through furniture,
         checks[kind + "_m"] = round(c["m"], 3)  # a planted foot sliding: how far, and where if it is too far
         if c["m"] > CONTACT_LIMITS[kind]:
@@ -457,6 +532,9 @@ def main():
     if os.environ.get("BLENDER_CONTACT_TRACE"):  # every frame's contact numbers, to look into a failure
         (out / "contacts.json").write_text(json.dumps(getattr(kit, "contact_trace", [])))
     bpy.ops.wm.save_as_mainfile(filepath=str(out / "scene.blend"))
+    if args.mode == "render" and not args.bench:  # where still surfaces are in each frame: read against the render
+        wanted_cams = [c for c in cams if not args.shots or c[2].name in [x.strip() for x in args.shots.split(",")]]
+        (out / "still_points.json").write_text(json.dumps(cameras.still_points(wanted_cams)))
 
     if args.bench:
         import time

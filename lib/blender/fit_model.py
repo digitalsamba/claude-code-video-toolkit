@@ -21,7 +21,7 @@ fit.json (metres, in the model's own space; side joints once, for the character'
      "joints": {"pelvis": [x, y, z], "neckb", "necktop", "sh", "el", "wr", "tip", "hip", "kn", "an", "toe"},
      "clothes": {"below": 1.30, "above": 1.45, "sample": [x0, x1, z0, z1], "tolerance": 0.12, "dark": 0.05},
      "face": {"eyes": [[x, z], [x, z]], "eye_size": [w, h], "brows": [[x, z], [x, z]], "brow_size": [w, h],
-              "mouth": [x, z], "mouth_width": w, "half_width": w}}
+              "mouth": [x, z], "mouth_width": w, "half_width": w, "moustache": true, "chin": z}}
 Eyes and brows are the character's right, then left, as seen from the front.
 """
 from __future__ import annotations
@@ -38,6 +38,7 @@ import bpy  # noqa: E402
 import numpy as np  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
+import hands as hand_graft  # noqa: E402
 from character import skeleton  # noqa: E402
 
 D = bpy.data
@@ -125,6 +126,32 @@ def erase(ob, shapes):
         bmesh.ops.smooth_vert(bm, verts=verts, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
     bm.to_mesh(me)
     bm.free()
+
+
+def load_donor(path: Path, centre_x: float | None):
+    """A second model of the same character, as made (for its hands): one mesh, centred the same way."""
+    before = set(bpy.context.scene.objects)
+    bpy.ops.import_scene.gltf(filepath=str(path))
+    new = [o for o in bpy.context.scene.objects if o not in before]
+    meshes = [o for o in new if o.type == "MESH"]
+    if not meshes:
+        raise SystemExit(f"{path} has no mesh")
+    only(*meshes)
+    if len(meshes) > 1:
+        bpy.ops.object.join()
+    ob = bpy.context.view_layer.objects.active
+    bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    for o in new:
+        if o is not ob:
+            D.objects.remove(o)
+    xs = [v.co.x for v in ob.data.vertices]
+    ob.data.transform(Matrix.Translation((-(centre_x if centre_x is not None else (min(xs) + max(xs)) / 2), 0, 0)))
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.remove_doubles(threshold=1e-5)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return ob
 
 
 def face_shapes(face):
@@ -294,6 +321,15 @@ def copy_weights(proxy, body, src, reach=0.25, smooth=8):
         keep = np.clip((1.7 * r - d) / (0.5 * r), 0, 1)
         w[:, upper] *= keep
         w[:, fore] *= keep
+    # A leg ends at the hip. The copy gives a thigh whatever is nearest it, and under a bulky top that reaches
+    # the hem of a jumper and the waistband: when the thigh bends to sit, it pulls the hem into a fringe of
+    # spikes. So a thigh's pull fades out over a band just above the hip joint, on every vertex alike.
+    for sd in "LR":
+        hip, knee = src["hip" + sd], src["kn" + sd]
+        leg = (hip - knee).length
+        keep = np.clip((hip.z + 0.4 * leg - co[:, 2]) / (0.3 * leg), 0, 1)
+        for bone in ("thigh." + sd, "shin." + sd):
+            w[:, names.index(bone)] *= keep
     lost = w.sum(axis=1) < 1e-4
     w[lost, names.index("spine")] = 1
     w /= w.sum(axis=1)[:, None]
@@ -375,33 +411,51 @@ def main():
     src = source_joints(fit)
     if "arm_stretch" in fit:
         print("fit: arm_stretch is no longer used: the model keeps its own arms")
+    fingers, pieces = None, []
+    if fit.get("hands"):  # hands with fingers, from a second model of the character made with its hands open
+        donor_path = Path(fit["hands"]["model"])
+        donor = load_donor(donor_path if donor_path.is_absolute() else Path(args.fit).resolve().parent / donor_path,
+                           fit["hands"].get("centre_x"))
+        fingers, pieces = hand_graft.graft(body, donor, src, int(fit["hands"].get("faces", 9000)),
+                                           float(fit["hands"].get("scale", 1.0)))
+        D.objects.remove(donor)
     proxy, proxy_rig = clay_proxy(src)
     copy_weights(proxy, body, src)
     D.objects.remove(proxy)
     D.objects.remove(proxy_rig)
     unweighted = skin(body, head_mask(body, fit["clothes"]))
+    if pieces:
+        hand_graft.join(body, pieces)
     body.data.transform(Matrix.Scale(scale, 4))  # the whole model, evenly: nothing is stretched or re-posed
     lift = -min(v.co.z for v in body.data.vertices)  # soles on the floor
     body.data.transform(Matrix.Translation((0, 0, lift)))
     body.data.update()
     placed = lambda p: Vector(p) * scale + Vector((0, 0, lift))  # noqa: E731  a point on the model, as saved
     if fit.get("gamma"):  # generated textures come back darker than the picture they were made from
-        img = base_colour(body)
-        px = pixels_of(img)
-        px[:, :, :3] = np.clip(px[:, :, :3], 0, 1) ** float(fit["gamma"])
-        img.pixels.foreach_set(px.ravel())
-        img.update()
-        img.pack()
+        for img in {n.image for m in body.data.materials for n in m.node_tree.nodes if n.type == "TEX_IMAGE"
+                    and n.outputs[0].links and n.outputs[0].links[0].to_socket.name == "Base Color"}:
+            px = pixels_of(img)
+            px[:, :, :3] = np.clip(px[:, :, :3], 0, 1) ** float(fit["gamma"])
+            img.pixels.foreach_set(px.ravel())
+            img.update()
+            img.pack()
 
     on_head = lambda p: list(placed(p))  # noqa: E731
     face = fit["face"]
     body["rest"] = "a_pose"
     body["joints"] = json.dumps({k: list(placed(v)) for k, v in src.items()})
+    if fingers:  # each finger's root, middle and tip and the palm's facing, for the rig to build and curl them
+        body["fingers"] = json.dumps({sd: {"palm": h["palm"], "axis": h["axis"], "fingers": [
+            {"name": f["name"], "joints": [list(placed(j)) for j in f["joints"]]} for f in h["fingers"]]}
+            for sd, h in fingers.items()})
     body["face"] = json.dumps({
         "eyes": [on_head(p) for p in marks["eyes"]], "brows": [on_head(p) for p in marks["brows"]],
         "mouth": on_head(marks["mouth"]), "eye_size": [x * scale for x in face["eye_size"]],
         "brow_size": [x * scale for x in face["brow_size"]], "mouth_width": face["mouth_width"] * scale,
-        "half_width": face["half_width"] * scale})
+        "half_width": face["half_width"] * scale, "moustache": bool(face.get("moustache")),
+        # the chin's underside (the jaw key moves what is between it and the lips): given, or a mouth's width down
+        "chin": placed((0, 0, face["chin"])).z if "chin" in face
+        else on_head(marks["mouth"])[2] - 1.2 * face["mouth_width"] * scale})
     if args.preview:
         preview(body, Path(args.preview))
     bpy.ops.file.pack_all()
