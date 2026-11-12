@@ -529,6 +529,8 @@ def fit(args) -> int:
     if not any(ln.startswith("FIT ") for ln in lines):
         print((done.stdout + done.stderr)[-1500:])
         return 2
+    if any(" FAIL " in ln for ln in lines):
+        return 1
     print(f'fitted: name it in a character file with "model": "{out.name}"'
           + (f", and look at {args.preview}/fit-front.png" if args.preview else ""))
     return 0

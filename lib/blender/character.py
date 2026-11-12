@@ -123,6 +123,8 @@ class ClayPerson:
         self._build_head()
         self.under = {}     # each hand's underside below its wrist, by shape (_hand_under)
         self.hand_pts = {}  # each hand's surface in its own frame, by shape (_hand_points)
+        self.flat_pitch = {}  # how far each hand slopes laid flat (_pitch)
+        self.hand_skin = None  # which vertices are the hands' own skin (a fitted model's grafted hands)
         self.hang_at = {}   # where a hanging or swinging arm's wrist goes, by side, swing and elbow (_hang)
         self.keys = None    # the laptop's keys, if the set has them (compile sets it): hands are put on them
         self.typed = []     # each stretch of typing with fingers (first frame, last), for typing_report
@@ -371,6 +373,15 @@ class ClayPerson:
         the fingers), and rest the hands relaxed. A fitted model without fingers has none of this."""
         pb = self.rig.pose.bones
         self.hand_shape_now = {1: "relaxed", -1: "relaxed"}
+        me = self.body.data
+        at = self.body.get("hand_material", len(me.materials) - 1 if len(me.materials) > 1 else None)
+        if at is not None:  # (the grafted hands keep their own material: their skin, heel to fingertips)
+            idx = np.empty(len(me.polygons), dtype=np.int32)
+            me.polygons.foreach_get("material_index", idx)
+            skin = np.zeros(len(me.vertices), dtype=bool)
+            for poly in np.nonzero(idx == int(at))[0]:
+                skin[list(me.polygons[int(poly)].vertices)] = True
+            self.hand_skin = skin if skin.any() else None
         for s, sd in ((1, "L"), (-1, "R")):
             hand = pb.get("hand." + sd)
             if hand:
@@ -431,9 +442,10 @@ class ClayPerson:
             bone.keyframe_insert("rotation_quaternion", frame=f)
         self.hand_shape_now[s] = shape
 
-    # degrees a typing hand slopes down from the wrist (lay "keys"): a generated hand is a thick mitt whose thumb
-    # root sits well under the palm, and the fingertips only come lower than it at about this slope
-    TYPE_PITCH = 45.0
+    # degrees a typing hand slopes down from the wrist (lay "keys"), as a typist's does. It needs the thumb to lie
+    # in to the palm (hands.lay_thumb does that in the fit): a generated mitt's thumb stands 40% of the hand's length
+    # under the palm, and its fingertips only come lower than it at about 45 degrees, which reads as a paw
+    TYPE_PITCH = 20.0
 
     def _hand_under(self, s, shape="flat"):
         """How far the underside of hand `s` is below its wrist when it lies palm down in a shape, and how far
@@ -444,14 +456,40 @@ class ClayPerson:
         if got:
             return got
         pts, knuckle = self._hand_points(s, shape)
-        if shape == "type":
-            # (a typing hand slopes down from the wrist: the depth below the wrist is along the fingers as well as
-            # off the palm, and it is the fingertips that reach the keys, not the root of a thick hand's thumb)
-            down = np.array([math.sin(R(self.TYPE_PITCH)), math.cos(R(self.TYPE_PITCH)), 0.0])
+        pitch = self._pitch(s, shape)
+        if pitch:
+            # (a hand on a surface slopes down from the wrist: the depth below the wrist is along the fingers as
+            # well as off the palm: the fingertips reach the keys, and a flat hand rests on its heel and its
+            # fingers both, not on the heel alone)
+            down = np.array([math.sin(R(pitch)), math.cos(R(pitch)), 0.0])
             self.under[(s, shape)] = (float((pts @ down).max()), float(knuckle @ down))
         else:
             self.under[(s, shape)] = (float(pts[:, 1].max()), float(knuckle[1]))
         return self.under[(s, shape)]
+
+    # shapes a hand takes lying on something: measured whole, the heel of the hand too
+    ON_SURFACE = ("flat", "type")
+
+    def _pitch(self, s, shape):
+        """Degrees hand `s` slopes down from the wrist lying on a surface in a shape: a typist's slope on the
+        keys, and laid flat, whatever puts the heel of the hand and the fingers at the same depth (a generated
+        hand's heel is deep: held level, it rests on the heel and the fingers stand off)."""
+        if shape == "type":
+            return self.TYPE_PITCH
+        if shape != "flat" or not self.fingers.get(s):
+            return 0.0
+        got = self.flat_pitch.get(s)
+        if got is None:
+            pts = self._hand_points(s, shape)[0]
+            front, heel = pts[pts[:, 0] > 0.02], pts[pts[:, 0] <= 0.0]
+            lo, hi = -10.0, 30.0
+            if len(front) and len(heel):
+                for _ in range(30):  # (the fingers come down as the hand tips: deeper in front past the heel)
+                    mid = 0.5 * (lo + hi)
+                    d = np.array([math.sin(R(mid)), math.cos(R(mid)), 0.0])
+                    lo, hi = (mid, hi) if (front @ d).max() < (heel @ d).max() else (lo, mid)
+            got = self.flat_pitch[s] = 0.5 * (lo + hi) if len(front) and len(heel) else 0.0
+        return got
 
     def _hand_points(self, s, shape):
         """Hand `s`'s surface with its fingers in a shape, in the hand's own frame: along the fingers, off the
@@ -476,12 +514,16 @@ class ClayPerson:
         names = {"hand." + sd} | {b.name for b in mine}
         groups = {g.index for g in self.body.vertex_groups if g.name in names}
         mask = np.array([sum(g.weight for g in v.groups if g.group in groups) > 0.5 for v in self.body.data.vertices])
+        whole = shape in self.ON_SURFACE and self.hand_skin is not None  # (the heel too: it is what a hand rests on)
+        if whole:
+            mask &= self.hand_skin
         bone, rest = pb["hand." + sd], self.rig.data.bones["hand." + sd]
         spin = (self.rig.matrix_world @ bone.matrix).to_3x3() @ rest.matrix_local.to_3x3().inverted()
         palm, way = np.array(spin @ self.palm[s]), np.array(spin @ self.hand_way[s])
         wrist, knuckle = self.rig.matrix_world @ bone.head, self.rig.matrix_world @ bone.tail
         rel = W[mask] - np.array(wrist)
-        rel = rel[rel @ way > 0.0]  # (not the stub that sits inside the cuff)
+        if not whole:
+            rel = rel[rel @ way > 0.0]  # (not the stub that sits inside the cuff)
         for b, q in zip(mine, was):
             b.rotation_quaternion = q
         across = np.cross(way, palm)
@@ -544,22 +586,23 @@ class ClayPerson:
             elif how == "side":  # an arm swinging in a walk: the palm stays to the leg, or the hand flaps
                 palm, way = own @ Vector((-s, 0, 0)), None
             elif how in ("flat", "keys"):
-                palm, way = Vector((0, 0, -1)), "level"
+                palm, way = Vector((0, 0, -1)), how
             else:
                 palm, way = how(f)
             palm = to_rig @ Vector(palm)
             if way is None:
                 way = way0
             else:
-                if isinstance(way, str):  # level, and turned a little toward straight ahead
+                if isinstance(way, str):  # level (or sloping), and turned a little toward straight ahead
                     flat = Vector((way0.x, way0.y, 0.0))
                     flat = flat.normalized() if flat.length > 1e-3 else to_rig @ (own @ Vector((0, -1, 0)))
                     fwd = to_rig @ (own @ Vector((0, -1, 0)))
                     side = flat.angle(fwd, 0.0)
                     way = flat.slerp(fwd, min(1.0, R(self.WRIST_SIDE) / side)) if side > 1e-3 else flat
-                    if how == "keys":  # (sloping down from the wrist onto the keys, the palm square to it)
+                    pitch = self._pitch(s, "type" if how == "keys" else "flat")
+                    if pitch:  # (sloping down from the wrist onto the keys or the desk, the palm square to it)
                         down = to_rig @ Vector((0, 0, -1))
-                        way = (way * math.cos(R(self.TYPE_PITCH)) + down * math.sin(R(self.TYPE_PITCH))).normalized()
+                        way = (way * math.cos(R(pitch)) + down * math.sin(R(pitch))).normalized()
                         palm = (down - way * down.dot(way)).normalized()
                 else:
                     way = (to_rig @ Vector(way)).normalized()

@@ -426,6 +426,7 @@ def main():
     unweighted = skin(body, head_mask(body, fit["clothes"]))
     if pieces:
         hand_graft.join(body, pieces)
+        body["hand_material"] = len(body.data.materials) - 1  # (the rig measures a hand's whole skin by it)
     body.data.transform(Matrix.Scale(scale, 4))  # the whole model, evenly: nothing is stretched or re-posed
     lift = -min(v.co.z for v in body.data.vertices)  # soles on the floor
     body.data.transform(Matrix.Translation((0, 0, lift)))

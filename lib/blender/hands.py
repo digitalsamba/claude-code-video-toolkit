@@ -297,9 +297,59 @@ def find_fingers(hand, wrist: Vector, leaves: Vector) -> dict:
     a[tv], b_[tv] = lift * (1 - far), lift * far
     weights["thumb.a"], weights["thumb.b"] = a, b_
     weights["hand"][tv] = 1 - lift
+    laid = lay_thumb(hand, co, ed, wrist, axis, normal, thumb, rest, knuckle, length, a + b_)
     return {"palm": normal, "axis": axis, "knuckles": wrist + axis * knuckle + normal * (centre - wrist).dot(normal),
-            "side": side, "weights": weights,
+            "side": side, "weights": weights, "thumb": laid,
             "fingers": [{"name": f["name"], "joints": f["joints"]} for f in [thumb] + rest]}
+
+
+THUMB_DEPTH = 0.08  # how far the thumb's root lies out of the palm, as a share of the hand's length (wrist to tip)
+THUMB_DEPTH_LIMIT = 0.20  # the fit fails if the root still stands further off than this share
+
+
+def thumb_depth(thumb_root: Vector, rest: list, normal: Vector) -> float:
+    """How far the thumb's root stands out of the palm: off the plane through the other fingers' roots, along
+    the palm's facing (a hand's own thumb lies just in front of the palm, beside the first finger)."""
+    plane = sum(f["joints"][0].dot(normal) for f in rest) / len(rest)
+    return thumb_root.dot(normal) - plane
+
+
+def lay_thumb(hand, co, ed, wrist: Vector, axis: Vector, normal: Vector, thumb: dict, rest: list, knuckle: float,
+              length: float, held) -> dict:
+    """Bring a generated mitt's thumb in to the palm. A generator makes the thumb stand off the palm on a thick
+    wedge of flesh (its root about 40% of the hand's length out of the palm, the wrist as deep as it is wide),
+    and a hand like that rests on its thumb on a table and has to tip its fingers down 45 degrees to reach a
+    keyboard. So what stands in front of the palm is pressed in towards it: the thumb moves whole until its
+    root lies just in front of the first finger, the wedge under it is thinned evenly (nothing folds), and the
+    change fades out towards the cuff ring, so the hand still fills the sleeve, and stops at the knuckles, so
+    the fingers do not move. `held` is each vertex's weight on the thumb's bones. Changes the mesh and the
+    thumb's joints; returns the depth before and after and the most an edge was stretched and squashed."""
+    before = thumb_depth(thumb["joints"][0], rest, normal)
+    target = THUMB_DEPTH * length
+    out = {"depth_before": before, "depth": before, "length": length, "stretch": 1.0, "squash": 1.0}
+    if before <= target:
+        return out
+    w_, a_, n_ = np.array(wrist), np.array(axis), np.array(normal)
+    plane = sum(f["joints"][0].dot(normal) for f in rest) / len(rest) - wrist.dot(normal)
+    h = (co - w_) @ a_
+    off = (co - w_) @ n_ - plane  # out of the palm, from the knuckles' plane
+    smooth = lambda t: np.clip(t, 0, 1) ** 2 * (3 - 2 * np.clip(t, 0, 1))  # noqa: E731
+    # nothing moves that is no further out than the fingers' own fronts (so the fingers keep their thickness),
+    # and what is further out comes in by its share of the way to the root (an even squash, nothing folds)
+    front = float(np.percentile(off[(h > knuckle + 0.15 * (length - knuckle)) & (held < 0.05)], 98))
+    w = np.clip((off - front) / max(1e-4, before - front), 0, 1)
+    w *= smooth((h - 0.05 * knuckle) / (0.6 * knuckle))  # none at the cuff ring, all from part way up the palm
+    w = np.maximum(w, held)  # the thumb moves whole
+    new = co - np.outer(w * (before - target), n_)
+    made = np.linalg.norm(co[ed[:, 0]] - co[ed[:, 1]], axis=1)
+    ratio = np.linalg.norm(new[ed[:, 0]] - new[ed[:, 1]], axis=1) / np.maximum(made, 1e-6)
+    hand.data.vertices.foreach_set("co", new.astype(np.float32).ravel())
+    hand.data.update()
+    thumb["joints"] = [j - normal * (before - target) for j in thumb["joints"]]
+    thumb["tip_at"] = thumb["joints"][2]
+    out.update(depth=thumb_depth(thumb["joints"][0], rest, normal),
+               stretch=float(np.percentile(ratio, 99.9)), squash=float(1 / max(1e-6, np.percentile(ratio, 0.1))))
+    return out
 
 
 def tint(hand_img, was, want):
@@ -352,6 +402,13 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float = 1.0, tuck: f
     # the better formed of the two is used for both arms: as it is on the arm it belongs to (which hand it is
     # shows in the order of thumb, fingers and palm), and mirrored on the other. The two hands then match.
     best = max(cut, key=lambda c: c[2]["form"])
+    laid = best[2]["thumb"]  # (the hand's length is wrist to fingertip, so the depth reads the same at any size)
+    print(f"fit: hands, thumb root {100 * laid['depth'] / laid['length']:.0f}% of the hand's length out of the palm "
+          f"(made {100 * laid['depth_before'] / laid['length']:.0f}%), edges stretched {laid['stretch']:.2f}x and "
+          f"squashed {laid['squash']:.2f}x at most")
+    if laid["depth"] > THUMB_DEPTH_LIMIT * laid["length"]:
+        print(f"fit: FAIL hands, the thumb's root stands {100 * laid['depth'] / laid['length']:.0f}% of the hand's "
+              f"length off the palm (limit {100 * THUMB_DEPTH_LIMIT:.0f}%): the hand will rest on its thumb")
     for piece, _t, _f in cut:
         if piece is not best[0]:
             D.objects.remove(piece)
