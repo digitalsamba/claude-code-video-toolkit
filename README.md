@@ -93,6 +93,7 @@ Claude Code has deep knowledge in:
 | **acestep** | AI music generation — prompts, lyrics, scene presets, video integration |
 | **ltx2** | AI video generation — text-to-video, image-to-video clips, prompting guide |
 | **parody-short** | Comedy shorts about a group's own life or a shared topic, in a borrowed genre: in-jokes from the group's own chat and docs, costumed and animated photos or an invented cast, sound placed on the movement, vertical cuts |
+| **blender** *(experimental, optional)* | 3D from a JSON shot spec: a rigged cartoon cast acting on cue, a scene that turns out to be on a laptop, an app on a phone or a 3D model on a studio stage; every camera checked before the render; as a film or as clips in any video. Needs [Blender](docs/blender.md) |
 | **moviepy** | Python video composition — overlay text on LTX-2/SadTalker output, build.py-style projects |
 | **runpod** | Cloud GPU — setup, Docker images, endpoint management, costs |
 
@@ -291,6 +292,11 @@ uv run tools/flux2.py --list-presets
 uv run tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
 uv run tools/ltx2.py --prompt "Gentle camera drift" --input photo.jpg --cloud modal
 
+# 3D shots from a JSON spec (experimental; needs Blender 4.2+, see docs/blender.md)
+uv run tools/blender_render.py doctor                                    # is Blender here, and how fast is it?
+uv run tools/blender_render.py check examples/blender-disk-panic/spec.json    # cameras verified, contact sheet, ~5 s
+uv run tools/blender_render.py render spec.json --clips --alpha --to projects/my-video/public/blender
+
 # Publish a finished render to YouTube (OAuth 2.0 + Data API v3) — contributed by @dascope (#29)
 uv run tools/youtube_upload.py --auth                                   # one-time browser login
 uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privacy private --json-out
@@ -307,6 +313,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
 | **Checks** | qc, sync_check, contact_sheet | Before showing a render: freezes and motion that stops dead, loudness, layout, sound effects on their movement |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
+| **3D (optional)** | blender_render | Character acting, 3D reveals and product shots from a shot spec; does nothing unless Blender is installed |
 
 ### Cloud GPU (Modal + RunPod)
 
@@ -363,6 +370,7 @@ claude-code-video-toolkit/
 - [Creating Brands](docs/creating-brands.md)
 - [Project System](lib/project/README.md) — Multi-session lifecycle, schema, reconciliation
 - [Optional Components](docs/optional-components.md) — Local GPU tools setup
+- [Blender](docs/blender.md): 3D shot specs (experimental): setup, timings, what it has been run on
 - [Agent Video Jobs](docs/agent-video-jobs.md) — Brief in, MP4 out for any agent: `video_job.py` submit/status/result, the MCP server, and the `skills/video-toolkit/` skill for OpenClaw, Codex, Hermes and friends
 - [Toolkit Development](_internal/ROADMAP.md) — Roadmap, backlog, changelog
 

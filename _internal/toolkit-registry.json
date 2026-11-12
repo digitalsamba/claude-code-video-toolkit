@@ -128,6 +128,12 @@
       "status": "beta",
       "created": "2026-11-08",
       "updated": "2026-11-08"
+    },
+    "blender": {
+      "path": ".claude/skills/blender/",
+      "description": "3D scenes, character acting and product shots from a shot spec, as a film, as clips for any build, or as elements of a Remotion video: spec format, the cast schema (build, face, hair, clothes, accessories, seed, a character file per kit), sets (desk_room, desk, studio with phone, card and model props), shot types and camera moves, acting verbs, narration cues, the check/contact-sheet loop, BlenderClip compositing, brief-to-beats shot grammar, Blender Python vs MCP, Blender 5 gotchas",
+      "status": "experimental",
+      "created": "2026-11-11"
     }
   },
   "designSources": {
@@ -417,7 +423,7 @@
     },
     "verify_setup": {
       "path": "tools/verify_setup.py",
-      "description": "Verify toolkit setup - check prerequisites, cloud GPU, R2, and voice configuration",
+      "description": "Verify toolkit setup - check prerequisites, optional components (Blender), cloud GPU, R2, and voice configuration",
       "usage": "uv run tools/verify_setup.py [--test] [--json]",
       "status": "beta",
       "created": "2026-03-23",
@@ -1165,6 +1171,34 @@
       },
       "created": "2026-10-31",
       "updated": "2026-11-06"
+    },
+    "blender_render": {
+      "path": "tools/blender_render.py",
+      "description": "Shot spec in, Blender film or clips out: builds a 3D scene from a JSON spec (a rigged cartoon cast described as build, face, hair, clothes and a seed; a desk set, or a studio stage with a phone, a card or an imported model; shots by type; acting beats in seconds or on narration words), checks every camera by geometry (subject in frame, nothing blocking, a moving lens clear of the cast) with a solver that moves failing cameras, writes a labelled contact sheet, then renders the film with sound placed on the keyed motion, or one clip per shot (MP4, or transparent WebM if asked) with a clips.json manifest, for Remotion's BlenderClip, a moviepy build, a video job's file scene or an editor",
+      "usage": "uv run tools/blender_render.py check spec.json && uv run tools/blender_render.py render spec.json [--clips --alpha --to projects/NAME/public/blender]",
+      "status": "experimental",
+      "options": {
+        "doctor": "Find Blender, ffmpeg and Pillow, and time a test render on this machine (s/frame and minutes for the spec)",
+        "check": "Build, verify shots, measure exposure, write stills + contact_sheet.png (exit 1 on a failed check, 2 on a spec error)",
+        "render": "Check, then render the film with sound",
+        "open": "Open the built scene.blend in Blender to look round it",
+        "--clips": "One clip per shot in out/clips/ with clips.json and each shot's effects as a WAV, instead of one film",
+        "--alpha": "Transparent background: clips are WebM (VP9 with alpha)",
+        "--prores": "Also ProRes 4444 .mov per clip, for other editors",
+        "--shots": "Comma-separated shot ids to check or render",
+        "--to": "Copy the clips and manifest into a project's public/ folder",
+        "--res": "Override resolution (draft at 640x360)",
+        "--engine": "eevee (default) or cycles",
+        "--no-sound": "Picture only",
+        "--force": "Render even if a check failed",
+        "--json": "Machine-readable check report"
+      },
+      "env": {
+        "BLENDER": "Path to the Blender binary if not on PATH or in the usual install folder"
+      },
+      "documentation": "docs/blender.md",
+      "created": "2026-11-11",
+      "updated": "2026-11-11"
     }
   },
   "optionalComponents": {
@@ -1182,6 +1216,19 @@
       "installCommand": "uv run tools/dewatermark.py --install",
       "statusCommand": "uv run tools/dewatermark.py --status",
       "documentation": "docs/optional-components.md"
+    },
+    "blender": {
+      "name": "Blender",
+      "description": "3D renderer for tools/blender_render.py (shot specs, rigged characters, product shots). Run on 5.3 (macOS) and 4.2 LTS (Linux); Windows not yet run",
+      "repository": "https://www.blender.org/download/",
+      "diskSpace": "~1GB",
+      "hardware": {
+        "recommended": "Apple Silicon or any GPU; EEVEE ~1.6 s/frame at 1080p on an M4 (10 cores, 24 GB)",
+        "notes": "Cycles (physical light) is far slower. With no GPU, use --engine cycles; EEVEE also runs on Linux software GL, slowly"
+      },
+      "installCommand": "brew install --cask blender (macOS), winget install BlenderFoundation.Blender (Windows), snap install blender --classic (Linux)",
+      "statusCommand": "uv run tools/blender_render.py doctor",
+      "documentation": "docs/blender.md"
     }
   },
   "cloudProviders": {
@@ -1615,6 +1662,12 @@
       "created": "2026-11-09",
       "updated": "2026-11-09"
     },
+    "BlenderClip": {
+      "path": "lib/components/BlenderClip.tsx",
+      "description": "Plays a Blender render as an element of a Remotion scene: one clip per shot from tools/blender_render.py --clips (transparent with --alpha), played once then held, with the shot's own sound effects. blenderClip(manifest, id) reads clips.json and gives the clip's length and event('alert') frames, so captions and cuts land on the acting. Throws if the spec's fps isn't the composition's",
+      "status": "experimental",
+      "created": "2026-11-11"
+    },
     "LivingPhoto": {
       "path": "lib/components/LivingPhoto.tsx",
       "description": "An image-to-video clip of a person (ltx2.py --input) that plays forward once and holds its last good frame with a slow push-in; hold/trim cut around a late stranger or an early glitch, fit slows a slightly short clip to its shot (to 0.8x). Never plays backwards; lengthen with ltx_extend.py",
@@ -1735,6 +1788,24 @@
       "contributor": "Digital Samba",
       "demo": "https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4",
       "created": "2026-10-21"
+    },
+    "blender-disk-panic": {
+      "path": "examples/blender-disk-panic/",
+      "description": "22.5s rigged character short built from one shot spec: 8 shots, 37 beats, cameras checked by geometry, sound on the motion",
+      "complexity": "intermediate",
+      "created": "2026-11-11"
+    },
+    "blender-product-shot": {
+      "path": "examples/blender-product-shot/",
+      "description": "12s product stage from one shot spec, with no character: a picture on a floating card and on a phone, and an imported 3D model, filmed with reveal, orbit and product shots that take their distance from each prop's size",
+      "complexity": "beginner",
+      "created": "2026-11-11"
+    },
+    "blender-in-remotion": {
+      "path": "examples/blender-in-remotion/",
+      "description": "23.5s Remotion video with Blender elements: a Terminal scene hard-cuts to itself on a 3D laptop and the camera pulls back to the character typing it, then a transparent character acts beside the list of spec beats it is acting, and a title sits behind it with confetti in front",
+      "complexity": "advanced",
+      "created": "2026-11-11"
     }
   },
   "config": {

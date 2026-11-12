@@ -226,6 +226,21 @@ What content should this video cover? You can:
 
 ### Phase 3: Scene Planning
 
+**Before proposing scenes, see whether Blender is here** (optional; most installs won't have it):
+
+```bash
+uv run tools/blender_render.py doctor --no-bench   # exit 0: Blender 4.2+ and ffmpeg are ready
+```
+
+- **Exit 0:** where a scene fits one, propose a Blender shot beside the usual visuals, and say why: a character
+  reacting to the news (a gag, a before and after), the scene turning out to be on a laptop as the camera pulls
+  back, the app on a phone or a floating card, a 3D model of the product. One or two in a video is plenty. A video
+  that is 3D from start to finish needs no template: it is one shot spec in the project folder.
+- **Not found:** say nothing and plan as usual. If the user asks for 3D, tell them it needs Blender
+  (`docs/blender.md`, a free install) and offer the nearest thing without it (an LTX clip, `synthetic-ui-demo`).
+
+The spec format and shot grammar are in the `blender` skill.
+
 **Step 1: Propose scene breakdown**
 
 Based on content, propose scenes:
@@ -266,7 +281,7 @@ Help refine:
 | Aspect | Options |
 |--------|---------|
 | Type | title, overview, demo, split-demo, stats, credits, problem, solution, feature, cta |
-| Visual | slide, playwright, external, screenshot |
+| Visual | slide, playwright, external, screenshot, blender (when installed: a shot spec, rendered as a clip) |
 | Narration | Draft voiceover text |
 | Duration | Estimated seconds |
 
@@ -358,6 +373,10 @@ You have 2 assets to create:
 
   ⬜ Scene 4: Stats dashboard screenshot
      → Capture with Playwright or provide image
+
+  ⬜ Scene 5: The app on a phone, camera orbiting (Blender)
+     → Write blender/phone.json, `blender_render.py check`, read the contact sheet, then
+       `render --clips --alpha --to projects/<name>/public/blender`
 
 Which would you like to start with?
 ```

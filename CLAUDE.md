@@ -90,6 +90,46 @@ replace `src/scenes/` and the voice phrases. Method in the `synthetic-ui-demo` s
 ### concept-explainer-short
 9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts). **Python/moviepy, not Remotion** — the whole video derives from `scenes.json` (per-scene narration + visual asset). Pipeline: `gen_vo.py` (per-scene TTS via voiceover.py, clone or built-in, `--max-wpm` pacing clamp) → `gen_captions.py` (whisper word timing force-aligned to script text, needs `uv sync --extra whisper`) → `build.py` (audio-anchored composite: Ken Burns on stills, boomerang-looped clips, burned karaoke caption pills, ducked music). Renders at every stage — placeholder cards before assets, silent before audio. Visuals follow the FLUX/Ideogram/LTX split: Ideogram cards at `1440x2560` for anything text-bearing, LTX b-roll at `576x1024` for motion.
 
+## Blender shot specs (experimental, optional)
+
+A general 3D tool, not a template: 3D scenes, character acting and product shots from a JSON spec: `tools/blender_render.py check|render spec.json`,
+built by `lib/blender/` (a rigged cartoon cast, a set, shots by type, acting beats in seconds or on narration words
+with `cue:`). `check` (about 5 s) verifies every camera by geometry (subject in frame, nothing in the way, a moving
+lens clear of the cast; failing cameras are moved by a solver) and writes a labelled contact sheet to read before
+rendering; sound is placed on the frames the motion was keyed on. `doctor` finds Blender and times a frame on
+this machine (about 1.6 s at 1080p on an M4).
+
+One spec gives a whole film, clips for another build, or both; the uses below mix freely:
+- `render spec.json` is the whole film with sound (`examples/blender-disk-panic`).
+- `render --clips` is one MP4 per shot for any build: a moviepy timeline, a `file` scene in a video job, an editor
+  (`--prores`), or `cutdown.py` for a vertical cut.
+- `render --clips --alpha --to <project>/public/blender` is one clip per shot with a transparent background and a
+  `clips.json` manifest; `BlenderClip` and `blenderClip()` (`lib/components`) play them over a scene's own field,
+  with type behind the character. Set the spec's `fps` to 30.
+- `set.screen.video` puts a Remotion render on the laptop in the scene, and a `pull_out` shot starts with it
+  covering the frame, so a flat scene hard-cuts to itself in 3D and the camera pulls back (`push_in` returns).
+  Render that video at the spec's `fps`; another rate is a spec error.
+- Set kind `studio` is a product stage with no character: a `phone` or a floating `card` showing a picture or a
+  video, and an imported `model` (glTF, OBJ, FBX, STL), filmed with `product`, `orbit` and `reveal` shots that take
+  their distance from the prop's size (`examples/blender-product-shot`).
+
+**Cast:** a character is a JSON description (`body`, `face`, `hair`, `clothes`, `accessories`, each a named choice
+or a hex colour, and a `seed` that fills what is left out), so an agent writes one from a sentence or a photo. Keep
+a standing character in `kits/<name>/cast/<id>.json` and name it with `"from"`; fields beside `from` re-costume
+it. All characters share one rig, so every verb works on each. They are caricatures in one cartoon style, not
+likenesses. A mistake in a spec (an unknown face, pose, shot type or hair style) is a named error listing the
+choices, before anything renders.
+
+Use it when a video needs a consistent, directable character, a 3D reveal, a product or device shot, or acting
+timing that LTX clips can't hold. **Suggest it while planning a video when it is installed**
+(`uv run tools/blender_render.py doctor --no-bench` exits 0); without Blender nothing else changes, so don't
+propose it unless the user asks for 3D. Blender runs headless through its own Python; a Blender MCP server is for trying a look in an open window,
+and what it finds goes back into the spec. Needs Blender 4.2+ (optional): run on 5.3 on macOS and 4.2 LTS on Linux
+(Cycles on a server with no GPU; EEVEE works there on software GL, slowly); Windows is not yet run. Format, verbs
+and the shot grammar are in the `blender` skill, setup and timings in `docs/blender.md`, and there is an example
+of each use: `examples/blender-disk-panic` (a film), `blender-product-shot` (a studio stage) and
+`blender-in-remotion` (clips in a Remotion video).
+
 ## Brand Profiles
 
 Brands live in `brands/`. Each defines visual identity:
@@ -160,6 +200,7 @@ This is especially critical for background commands where the working directory 
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark, cutdown | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
 | **Publishing** | youtube_upload, youtube_stats | Upload a finished render to YouTube (use `/publish` for the guided workflow); see how it does |
+| **3D (optional)** | blender_render | Character acting, 3D reveals and product shots from a shot spec; needs Blender installed |
 
 Utility tools work on any video file without requiring a project structure.
 

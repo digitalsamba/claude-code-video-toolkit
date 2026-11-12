@@ -6,6 +6,7 @@ on:
   pull_request:
     paths:
       - 'tools/**'
+      - 'lib/blender/**'
       - 'scripts/**'
       - 'tests/python/**'
       - 'templates/concept-explainer-short/**'
@@ -20,6 +21,7 @@ on:
       - main
     paths:
       - 'tools/**'
+      - 'lib/blender/**'
       - 'scripts/**'
       - 'tests/python/**'
       - 'templates/concept-explainer-short/**'

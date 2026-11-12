@@ -1,0 +1,10 @@
+{
+  "id": "maya",
+  "kind": "clay_person",
+  "description": "Maya, the product lead: slim, brown skin, a black bob, round glasses, a green shirt",
+  "body": {"build": "slim", "skin": "brown"},
+  "face": {"shape": "oval", "eyes": "brown", "brows": "thin", "nose": "small", "beard": "none"},
+  "hair": {"style": "bob", "color": "black"},
+  "clothes": {"top": "shirt", "top_color": "#2E7D5B", "pants": "#252B45", "shoes": "#F0F0EC"},
+  "accessories": ["glasses", "earrings"]
+}

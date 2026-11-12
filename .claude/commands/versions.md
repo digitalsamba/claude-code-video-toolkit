@@ -38,6 +38,16 @@ missing there is skipped by the monthly grouped bump and drifts behind. When you
 Remotion template or example, add its directory to `dependabot.yml` in the same PR. CI runs
 `check_versions.py --offline --remotion-only --strict` and fails on a gap.
 
+#### Optional components (always, quiet when absent)
+
+```bash
+uv run tools/blender_render.py doctor --no-bench
+```
+
+Blender is the one optional component with a version floor (4.2). If it's installed, add a line to the Toolkit
+block: the version found and whether it meets the floor (the toolkit is made on 5.3). If it isn't installed, leave
+the line out: it is not a defect and nothing else needs it.
+
 #### Project Dependency Check (if in project)
 
 ```bash
@@ -79,6 +89,7 @@ Version Check
 
   Remotion pins: 4.0.425 across 9 projects (92 patches behind latest 4.0.518, pinned 188d ago)
   Python: uv.lock in sync, 2 direct deps outdated (elevenlabs, boto3)
+  Blender: 5.3.0 (optional; needs 4.2 or later)
   Current: v0.18.0
   Latest:  v0.18.0
 
@@ -279,6 +290,7 @@ These are suggestions for future enhancement.
 | Remotion | `node_modules/*/package.json` via `npx remotion versions` |
 | Latest toolkit | GitHub Releases API |
 | Latest Remotion | npm registry or `npx remotion upgrade --check` |
+| Blender (optional) | `uv run tools/blender_render.py doctor --no-bench` |
 
 ---
 
