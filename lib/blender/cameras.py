@@ -89,6 +89,9 @@ def character_subject(person):
     return sub
 
 
+CLAY_HEAD = 1.72  # how high the clay cast's head is, sitting: the shots' targets are set from it
+
+
 def _standing_at(person, f):
     """Where a character whose legs are under control is at a frame: the spot on the floor under them, lifted by
     as much as they are above their chair (cameras are placed for someone sitting), and the way they face."""
@@ -376,6 +379,10 @@ def solve(shot, sub, f0, f1, seed=0, fps=24, avoid=()):
         target = origin + left * tx - front * ty + Vector((0, 0, tz))
         if spec.get("floor"):
             target.z = tz
+        elif person.desc.get("model") and spec["check"] in ("face", "head"):
+            # (a fitted body has its own proportions: its head is not where the clay cast's would be on legs as
+            # long, so the shot aims as far from its own head as the clay cast's shots aim from the clay head)
+            target.z = person.head.matrix_world.translation.z + tz - CLAY_HEAD
         elif spec.get("body"):
             target.z = spec["body"] * (person.head.matrix_world.translation.z + person.head_r)
         if spec["check"] in ("body", "feet"):
