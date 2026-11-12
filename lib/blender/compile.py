@@ -39,7 +39,7 @@ SET_KINDS = ("desk_room", "desk", "studio")
 SCORE_MOODS = ("calm", "tension", "resolve")
 CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_head", "gulp", "blink", "sweat",
               "tremble", "tap", "celebrate", "hold_arms", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
-              "look_at", "reach", "hand"}
+              "look_at", "reach", "hand", "point"}
 # how far (m) each kind of contact may be out before the check fails and says where (see ClayPerson.contacts)
 CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03}
 HANDS_APART = 0.005  # nearer than this the two hands are into each other (m)
@@ -163,9 +163,11 @@ def validate(spec):
                             f'"hand": "left" or "right", the character\'s own; both without it)')
         elif verb == "wink" and b.get("side", "left") not in ("left", "right"):
             raise SpecError(f'beat at {b["at"]!r}: wink takes "side": "left" or "right" (the character\'s own)')
-        elif verb == "reach" and b.get("hand", "right") not in ("left", "right"):
-            raise SpecError(f'beat at {b["at"]!r}: reach takes "hand": "left" or "right" (the character\'s own)')
-        elif verb in ("look_at", "reach") and not (b.get("target") in LOOK_AT or (
+        elif verb in ("reach", "point") and b.get("hand", "right") not in ("left", "right"):
+            raise SpecError(f'beat at {b["at"]!r}: {verb} takes "hand": "left" or "right" (the character\'s own)')
+        elif verb == "point" and not isinstance(b.get("back", True), bool):
+            raise SpecError(f'beat at {b["at"]!r}: point takes "back": true or false (the arm goes back after)')
+        elif verb in ("look_at", "reach", "point") and not (b.get("target") in LOOK_AT or (
                 isinstance(b.get("target"), list) and len(b["target"]) == 3 and all(_number(x) for x in b["target"]))):
             raise SpecError(f'beat at {b["at"]!r}: {verb} needs "target": a point in the room as [x, y, z] in metres'
                             f', or one of {", ".join(LOOK_AT)}')
@@ -267,7 +269,7 @@ def build(spec, args):
         p.keys = bpy.data.objects.get("lap_keys")
     default_who = next(iter(cast))
 
-    fx_events, at_camera = [], []
+    fx_events, at_camera, point_camera = [], [], []
     F = tl.frame
     for b in sorted(spec.get("beats", []), key=lambda b: tl.time(b["at"])):
         verb = b.get("do")
@@ -312,10 +314,16 @@ def build(spec, args):
                 p.glance(f0, f1, float(b.get("yaw", 0)), float(b.get("pitch", 0)))
             elif verb == "look_at" and b["target"] == "camera":
                 at_camera.append((p, f0, f1))  # (the cameras are placed after the acting)
+            elif verb == "point" and b["target"] == "camera":
+                point_camera.append((p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(36), b.get("hand"),
+                                     b.get("back", True)))
             else:  # the verbs that move the whole body: a second or so unless the beat says
                 timed = "until" in b or "dur" in b
                 try:
-                    if verb in ("look_at", "reach"):
+                    if verb == "point":
+                        point = room.screen_center() if b["target"] == "screen" else b["target"]
+                        p.point(f0, f1 if timed else f0 + kit.n(36), point, b.get("hand"), b.get("back", True))
+                    elif verb in ("look_at", "reach"):
                         point = room.screen_center() if b["target"] == "screen" else b["target"]
                         if verb == "look_at":
                             p.look_at(f0, f1, point)
@@ -386,6 +394,11 @@ def build(spec, args):
         sc.frame_set(b)
         bpy.context.view_layer.update()
         person.look_at(a, b, cam.matrix_world.translation)
+    for person, a, b, hand, back in point_camera:  # (at the lens of the shot it happens in, the viewer)
+        cam = next((c for c0, c1, c in cams if c0 <= b <= c1), cams[-1][2])
+        sc.frame_set(a)
+        bpy.context.view_layer.update()
+        person.point(a, b, cam.matrix_world.translation.copy(), hand, back)
 
     p = cast[default_who]
     ik = p.ik_error(range(1, tl.frames, 6 if not p.foot_t else 2))

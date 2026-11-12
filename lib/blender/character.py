@@ -2253,6 +2253,70 @@ class ClayPerson:
         self._arm_key(s, f1, local, self._mirror((1, 0.6, -0.8), s))
         self.events.append({"frame": f1, "kind": "touch"})
 
+    POINT_REACH = 0.92  # how straight a pointing arm is: the wrist this share of the arm's length from the shoulder
+
+    def point(self, f0: int, f1: int, target, hand: str | None = None, back: bool = True):
+        """Point at something in the room: the arm lifts nearly straight towards it from the shoulder (a raised
+        arm reads from across a room; a pointing hand at the side does not), the index finger out along the
+        line, thumb up, held to f1 and then, unless `back` is False, back where it was. With no `hand`, the one
+        on the side the target is on (an arm pointing across the chest folds against it)."""
+        sc = bpy.context.scene
+        sc.frame_set(f0)
+        bpy.context.view_layer.update()
+        if hand is None:
+            hand = "left" if (self.spine.matrix_world.inverted() @ Vector(target)).x > 0 else "right"
+        s = 1 if hand == "left" else -1
+        sd = "L" if s > 0 else "R"
+        was_hand, was_pole = self.hand_t[s].location.copy(), self.pole_t[s].location.copy()
+        bone = self.rig.pose.bones.get("hand." + sd)
+        was_q = bone.rotation_quaternion.copy() if bone and self.fingers.get(s) else None
+        was_shape = self.hand_shape_now.get(s, "relaxed")
+        for side in (1, -1):
+            self.hand_t[side].keyframe_insert("location", frame=f0)
+            self.pole_t[side].keyframe_insert("location", frame=f0)
+        if was_q is not None:
+            bone.keyframe_insert("rotation_quaternion", frame=f0)
+        up = f0 + max(2, min(n(10), (f1 - f0) // 2))  # (an arm comes up in about 0.4 s)
+        sc.frame_set(up)
+        bpy.context.view_layer.update()
+        local = self.spine.matrix_world.inverted() @ Vector(target)
+        way = local - Vector(self.SH[s])
+        if way.length < 1e-3:
+            raise ValueError(f"{self.id} can't point at their own shoulder")
+        wrist = Vector(self.SH[s]) + way.normalized() * self.POINT_REACH * 0.7122 * self.arm
+        toward = Vector(target)
+
+        def aim(f):  # (the index along the line from the wrist to the target, the palm to the body's middle)
+            at = self.rig.matrix_world @ self.rig.pose.bones["hand." + sd].head
+            line = (toward - at).normalized()
+            inward = self.root.matrix_world.to_3x3() @ Vector((-s, 0, 0))
+            palm = inward - line * inward.dot(line)
+            return palm.normalized() if palm.length > 1e-3 else Vector((0, 0, -1)), line
+
+        self.hand_shape(f0, up, "point", hand)
+        self.arm_pose = "point"
+        for f in (up, f1):
+            self._arm_key(s, f, wrist, self._mirror((1, 0.4, -1), s), aim if self.fingers.get(s) else None)
+        sc.frame_set(up)  # (how true the aim is: the arm, shoulder to knuckles, against the line to the target)
+        bpy.context.view_layer.update()
+        mw = self.rig.matrix_world
+        shoulder = mw @ self.rig.pose.bones["upper." + sd].head
+        knuckles = mw @ self.rig.pose.bones["hand." + sd].tail
+        aim = math.degrees((knuckles - shoulder).angle(Vector(target) - shoulder, 0.0))
+        self.events.append({"frame": up, "kind": "point", "hand": hand, "aim_deg": round(aim, 1)})
+        if back:
+            home = f1 + n(10)
+            key(self.hand_t[s], "location", home, was_hand)
+            key(self.pole_t[s], "location", home, was_pole)
+            if was_q is not None:
+                q = was_q if bone.rotation_quaternion.dot(was_q) >= 0 else -was_q
+                bone.rotation_quaternion = q
+                bone.keyframe_insert("rotation_quaternion", frame=home)
+                self.wrist_q[s] = q
+            if self.fingers.get(s):
+                self._fingers_key(s, f1, "point")
+                self._fingers_key(s, home, was_shape)
+
     def hand_follows(self, f0: int, f1: int, ob, hand: str = "right"):
         """Keep a hand on something that moves (a door handle as the door swings), from f0 to f1."""
         s = 1 if hand == "left" else -1

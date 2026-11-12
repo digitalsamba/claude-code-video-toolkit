@@ -350,6 +350,24 @@ class BlenderCheckTests(unittest.TestCase):
                               'beats': [{'at': 'A+0.5', 'do': 'open_door', 'by': by}]})
             self.assertIn(said, str(ctx.exception))
 
+    def test_a_point_lifts_the_arm_at_the_target_with_the_hand_on_its_side(self):
+        """A point raises the arm along the line to the target (so it reads from across a room), with the hand
+        on the target's side unless the beat names one, and says how true the aim is."""
+        checks, events = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [1.6, 1.6]}], 'set': {'kind': 'desk_room', 'door': {}},
+            'shots': [{'id': 'A', 'dur': 4, 'type': 'full'}],
+            'beats': [{'at': 'A+0.3', 'do': 'point', 'target': [3.5, 0.0, 2.2], 'dur': 1.2},
+                      {'at': 'A+2.2', 'do': 'point', 'target': 'camera', 'hand': 'right'}]})
+        self.assertTrue(checks['passed'], checks)
+        points = [e for e in events['events'] if e['kind'] == 'point']
+        self.assertEqual([p['hand'] for p in points], ['left', 'right'])  # (the target at +x is on dev's left)
+        for p in points:
+            self.assertLessEqual(p['aim_deg'], 12)
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({'shots': [{'id': 'A', 'dur': 2, 'type': 'wide'}],
+                          'beats': [{'at': 'A+0.3', 'do': 'point', 'target': 'the door'}]})
+        self.assertIn('target', str(ctx.exception))
+
     def test_a_walk_can_bend_and_the_body_leans_into_it(self):
         """A curved walk: the path bows away from the straight line, the body banks into the bend, and the
         check reports each walk. A straight walk reports no bow."""
