@@ -382,7 +382,13 @@ def solve(shot, sub, f0, f1, seed=0, fps=24, avoid=()):
             pts = person.feet_points if spec["check"] == "feet" else lambda: person.feet_points() + person.face_points()
             sub = Subject(sub.kind, origin, front, pts, pts, sub.visible, sub.focus)
         if follow:  # the camera and its aim travel with the spot under them (not with the bob of the walk)
+            # ... and not with each step either: the spot's path is smoothed over about a second, so the camera
+            # glides and the walker moves a little in the frame, as one does in front of an operator
             spots = {f: _standing_at(person, f)[0] for f in range(f0, f1 + 1)}
+            for _ in range(2):
+                w = max(1, round(fps * 0.3))
+                spots = {f: sum((spots[min(f1, max(f0, g))] for g in range(f - w, f + w + 1)), Vector()) / (2 * w + 1)
+                         for f in spots}
             shift = lambda f: Vector((spots[f].x - origin.x, spots[f].y - origin.y, 0))  # noqa: E731
     else:
         target = sub.origin + Vector(spec["target"])

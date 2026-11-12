@@ -264,7 +264,8 @@ def check(args) -> int:
         shot["problems"] = problems
         note = describe_fix(shot) if shot["adjusted"] else ""
         sheet_rows.append((f"{shot['id']} ({shot['type']}) {note}".strip(), png, problems))
-    checks["passed"] = all(s["passed"] for s in checks["shots"]) and checks["ik_max_error_m"] < 0.01
+    checks["passed"] = (all(s["passed"] for s in checks["shots"]) and checks["ik_max_error_m"] < 0.01
+                        and not checks.get("body_problems"))
     checks["contact_sheet"] = str(out / "contact_sheet.png")
     contact_sheet(sheet_rows, out / "contact_sheet.png")
     write_json(out / "checks.json", checks)
@@ -284,6 +285,8 @@ def check(args) -> int:
             for p in s["problems"]:
                 print(f"        - {p}")
         print(f"  IK reach error: {checks['ik_max_error_m'] * 1000:.1f} mm (limit 10 mm)")
+        for p in checks.get("body_problems", []):  # contact: feet on the floor, hands on things, nothing passed through
+            print(f"  FAIL  {p}")
         print(f"  contact sheet: {checks['contact_sheet']}")
         print("PASSED" if checks["passed"] else "FAILED")
     return 0 if checks["passed"] else 1

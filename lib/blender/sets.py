@@ -90,7 +90,7 @@ class DeskRoom:
             box("poster2", (0.55, 0.02, 0.7), M["poster2"], loc=(1.25, 2.94, 2.0), bevel=0.01)
             cyl("rug", 1.4, 0.01, M["rug"], loc=(0, -0.3, 0.005), seg=48)
         Y, Z, C = self.desk_y, self.desk_z, self.chair_z
-        box("desk_top", (1.7, 0.8, 0.05), M["wood"], loc=(0, -0.75 + Y, 0.875 + Z), bevel=0.01)
+        self.desk_top = box("desk_top", (1.7, 0.8, 0.05), M["wood"], loc=(0, -0.75 + Y, 0.875 + Z), bevel=0.01)
         for x in (-0.8, 0.8):
             for y in (-0.4, -1.1):
                 cyl("desk_leg", 0.03, 0.85 + Z, M["metal"], loc=(x, y + Y, 0.425 + Z / 2))
@@ -100,8 +100,8 @@ class DeskRoom:
         cyl("mug", 0.045, 0.1, M["mug"], loc=(-0.5, -0.52 + Y, 0.95 + Z))
         cyl("coffee", 0.04, 0.002, M["coffee"], loc=(-0.5, -0.52 + Y, 0.997 + Z))
         ch = self.chair
-        box("seat", (0.52, 0.5, 0.07), M["chair"], ch, (0, 0.05, 0.5 + C), bevel=0.02)
-        box("chair_back", (0.5, 0.06, 0.6), M["chair"], ch, (0, 0.34, 0.86 + C), (R(-8), 0, 0), bevel=0.02)
+        self.seat = box("seat", (0.52, 0.5, 0.07), M["chair"], ch, (0, 0.05, 0.5 + C), bevel=0.02)
+        self.chair_back = box("chair_back", (0.5, 0.06, 0.6), M["chair"], ch, (0, 0.34, 0.86 + C), (R(-8), 0, 0), bevel=0.02)
         cyl("chair_post", 0.03, 0.45 + C, M["metal"], ch, (0, 0.05, 0.24 + C / 2))
         box("chair_base", (0.5, 0.05, 0.03), M["metal"], ch, (0, 0.05, 0.03))
         box("chair_base2", (0.05, 0.5, 0.03), M["metal"], ch, (0, 0.05, 0.03))
@@ -129,11 +129,19 @@ class DeskRoom:
         side = 1 if x > 0 else -1
         self.door = empty("door", None, (x + side * w / 2, 2.95, 0))
         leaf = mat("door_leaf", d.get("color", "#D8D2C4"), 0.55)
-        box("door_leaf", (w - 0.02, 0.05, h - 0.02), leaf, self.door, (-side * w / 2, 0, h / 2), bevel=0.008)
+        self.leaf = box("door_leaf", (w - 0.02, 0.05, h - 0.02), leaf, self.door, (-side * w / 2, 0, h / 2), bevel=0.008)
         self.handle = empty("handle", self.door, (-side * (w - 0.12), -0.07, hz))
         cyl("handle_stem", 0.012, 0.06, M["metal"], self.handle, (0, 0.03, 0), (R(90), 0, 0))
         box("handle_bar", (0.13, 0.022, 0.022), M["metal"], self.handle, (side * 0.05, 0, 0), bevel=0.006)
+        # the same handle on the hall side, for whoever comes in
+        self.handle_out = empty("handle_out", self.door, (-side * (w - 0.12), 0.07, hz))
+        cyl("handle_stem", 0.012, 0.06, M["metal"], self.handle_out, (0, -0.03, 0), (R(90), 0, 0))
+        box("handle_bar", (0.13, 0.022, 0.022), M["metal"], self.handle_out, (side * 0.05, 0, 0), bevel=0.006)
         self.door_side = side
+
+    def handle_for(self, point):
+        """The door handle on the side of the door a point in the room is on: the one a hand there would take."""
+        return min((self.handle, self.handle_out), key=lambda h: (h.matrix_world.translation - Vector(point)).length)
 
     def open_door(self, f0: int, f1: int, angle: float = 100.0):
         """The door swings into the room (0 shuts it again)."""
@@ -149,7 +157,7 @@ class DeskRoom:
     def _laptop(self):
         M = self.m
         Y, Z = self.desk_y, self.desk_z
-        box("lap_base", (0.5, 0.34, 0.022), M["silver"], loc=(0, -0.6 + Y, 0.911 + Z), bevel=0.005)
+        self.lap_base = box("lap_base", (0.5, 0.34, 0.022), M["silver"], loc=(0, -0.6 + Y, 0.911 + Z), bevel=0.005)
         box("lap_keys", (0.44, 0.15, 0.004), M["keys"], loc=(0, -0.665 + Y, 0.923 + Z))
         box("lap_pad", (0.14, 0.08, 0.002), M["keys"], loc=(0, -0.49 + Y, 0.923 + Z))
         self.hinge = h = empty("hinge", None, (0, -0.77 + Y, 0.922 + Z), (R(15), 0, 0))
@@ -205,6 +213,17 @@ class DeskRoom:
     # ------------------------------------------------------------ anchors / checks
     def anchors(self) -> dict:
         return {"screen": tuple(self.screen_center()), "desk": (0, -0.75 + self.desk_y, 0.9 + self.desk_z)}
+
+    def desk_edge(self, s) -> Vector:
+        """Where a hand takes hold of the desk to pull a chair in: on top, just in from the near edge, to the
+        left (s = 1) or right of whoever sits at it."""
+        return Vector((0.3 * s, -0.35 + self.desk_y - 0.06, 0.9 + self.desk_z))
+
+    def solids(self) -> list:
+        """What a body should not pass through, each with how far it may be pressed into (m): the seat is a
+        cushion, the rest is hard."""
+        out = [(self.seat, 0.03), (self.chair_back, 0.02), (self.desk_top, 0.0), (self.lap_base, 0.0), (self.lid, 0.0)]
+        return out + ([(self.leaf, 0.0)] if self.door else [])
 
     def screen_center(self) -> Vector:
         return self.hinge.matrix_world @ Vector((0, 0.008, 0.015 + self.sh / 2))

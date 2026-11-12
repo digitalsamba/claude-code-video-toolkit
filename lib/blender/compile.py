@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import os
 import sys
 from pathlib import Path
 
@@ -37,6 +38,8 @@ SCORE_MOODS = ("calm", "tension", "resolve")
 CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_head", "gulp", "blink", "sweat",
               "tremble", "tap", "celebrate", "hold_arms", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
               "look_at", "reach"}
+# how far (m) each kind of contact may be out before the check fails and says where (see ClayPerson.contacts)
+CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03}
 SET_VERBS = {"alert", "work", "done", "open_door", "close_door", "pull_in"}
 LOOK_AT = ("camera", "screen")  # things a look_at or a reach can name in place of a point
 FX_VERBS = {"confetti", "title"}
@@ -126,6 +129,9 @@ def validate(spec):
                             f"{', '.join(sorted(CHAR_VERBS | SET_VERBS | FX_VERBS))})")
         if studio:
             raise SpecError(f"beat at {b['at']!r}: a studio set has no verbs yet (the camera does the moving)")
+        if verb in ("open_door", "close_door") and b.get("by") is not None and b["by"] not in ids:
+            raise SpecError(f'beat at {b["at"]!r}: "by" is who opens the door, and nobody in the cast is called '
+                            f'{b["by"]!r} (have: {", ".join(ids)})')
         if verb in CHAR_VERBS and b.get("who", ids[0]) not in ids:
             raise SpecError(f'beat at {b["at"]!r}: nobody in the cast is called {b["who"]!r} (have: {", ".join(ids)})')
         if verb == "type":
@@ -302,9 +308,9 @@ def build(spec, args):
                     elif verb == "turn":
                         p.turn(f0, f1 if timed else f0 + kit.n(20), b["facing"])
                     elif verb == "stand_up":
-                        p.stand_up(f0, f1 if timed else f0 + kit.n(28))
+                        p.stand_up(f0, f1 if timed else f0 + kit.n(40))
                     elif verb == "sit_down":
-                        p.sit_down(f0, f1 if timed else f0 + kit.n(30))
+                        p.sit_down(f0, f1 if timed else f0 + kit.n(44))
                 except ValueError as e:
                     raise SpecError(f'beat at {b["at"]!r}: {e}')
         elif verb in SET_VERBS:
@@ -318,12 +324,18 @@ def build(spec, args):
                 timed = "until" in b or "dur" in b
                 try:
                     if verb == "pull_in":  # whoever sits on the chair comes in to the desk with it
-                        end = f1 if timed else f0 + kit.n(20)
-                        room.move_chair(f0, end, 0.0)
-                        cast[b.get("who", default_who)].scoot(f0, end, (0, 0))
+                        end = f1 if timed else f0 + kit.n(34)
+                        room.events.append({"frame": f0, "kind": "chair"})
+                        cast[b.get("who", default_who)].scoot(f0, end, (0, 0), rides=[room.chair], grip=room.desk_edge)
                     else:
-                        room.open_door(f0, f1 if timed else f0 + kit.n(18),
-                                       float(b.get("angle", 100)) if verb == "open_door" else 0.0)
+                        end = f1 if timed else f0 + kit.n(18)
+                        room.open_door(f0, end, float(b.get("angle", 100)) if verb == "open_door" else 0.0)
+                        if b.get("by"):  # someone's hand is on the handle as it goes
+                            who = cast[b["by"]]
+                            bpy.context.scene.frame_set(f0)
+                            bpy.context.view_layer.update()
+                            handle = room.handle_for(who._world((0, 0, 1)))  # the one on their side of the door
+                            who.push(f0, end, lambda f, h=handle: h.matrix_world.translation.copy(), b.get("hand"))
                 except ValueError as e:
                     raise SpecError(f'beat at {b["at"]!r}: {e}')
         elif verb == "confetti":
@@ -362,7 +374,10 @@ def build(spec, args):
     kit.ik_worst = p.ik_worst
     # someone on their feet is checked against the floor too (the clay cast at its desk has its feet where they
     # were made, and is left alone)
-    kit.under_floor = (round(p.under_floor(range(1, tl.frames)), 3), p.floor_worst) if p.foot_t else None
+    kit.contacts = p.contacts(range(1, tl.frames), room.solids()) if p.foot_t else None
+    kit.under_floor = (round(kit.contacts["under_floor"]["m"], 3), p.floor_worst) if p.foot_t else None
+    kit.contact_trace = getattr(p, "contact_trace", [])
+    kit.moves = [{"do": verb, "t": round((a - 1) / fps, 2), **p.how_it_moves(a, b)} for verb, a, b in p.moves]
     events = [{"t": round((e["frame"] - 1) / fps, 3), "shot": tl.shot_at((e["frame"] - 1) / fps), **e}
               for e in sorted(p.events + room.events + fx_events, key=lambda e: e["frame"])]
     return tl, cams, reports, ik, events
@@ -408,7 +423,10 @@ def main():
         r["start"], r["dur"] = round(tl.shots[r["id"]][0], 4), round(tl.shots[r["id"]][1] - tl.shots[r["id"]][0], 4)
     floor = getattr(kit, "under_floor", None)
     sunk, sunk_at = floor or (0.0, None)
-    checks = {"passed": all(r["passed"] for r in reports) and ik < 0.01 and sunk <= 0.015, "duration": tl.duration, "fps": tl.fps,
+    contacts = {k: c for k, c in (getattr(kit, "contacts", None) or {}).items() if k != "under_floor"}
+    touching = all(c["m"] <= CONTACT_LIMITS[k] for k, c in contacts.items())
+    checks = {"passed": all(r["passed"] for r in reports) and ik < 0.01 and sunk <= 0.015 and touching,
+              "duration": tl.duration, "fps": tl.fps,
               "resolution": [sc.render.resolution_x, sc.render.resolution_y], "alpha": alpha,
               "engine": sc.render.engine, "blender": bpy.app.version_string,
               "frames": tl.frames - 1, "ik_max_error_m": round(ik, 4), "shots": reports}
@@ -417,11 +435,27 @@ def main():
         checks["under_floor_m"] = sunk
         if sunk > 0.015:
             checks["under_floor_at"] = {"frame": sunk_at, "t": round((sunk_at - 1) / tl.fps, 2)}
+    said = {"hand_in_body": "{hand} hand {cm} cm inside the body", "through": "body {cm} cm into the {what}",
+            "foot_slide": "{foot} foot slides {cm} cm along the floor while planted",
+            "touch_miss": "{hand} hand {cm} cm off the {what}"}
+    problems = [f"a foot {sunk * 100:.0f} cm under the floor at {(sunk_at - 1) / tl.fps:.2f} s"] if sunk > 0.015 else []
+    problems += [said[k].format(cm=round(c["m"] * 100), **c) + f' at {(c["frame"] - 1) / tl.fps:.2f} s'
+                 for k, c in contacts.items() if c["m"] > CONTACT_LIMITS[k]]
+    if getattr(kit, "moves", None):  # each posture verb: do its parts start and stop together, are the sides the same
+        checks["moves"] = kit.moves
+    if problems:  # in words, for the person or agent reading the check
+        checks["body_problems"] = problems
+    for kind, c in contacts.items():  # a hand inside the body or off what it holds, the body through furniture,
+        checks[kind + "_m"] = round(c["m"], 3)  # a planted foot sliding: how far, and where if it is too far
+        if c["m"] > CONTACT_LIMITS[kind]:
+            checks[kind + "_at"] = {k: v for k, v in c.items() if k != "m"} | {"t": round((c["frame"] - 1) / tl.fps, 2)}
     if worst and ik >= 0.01:  # which limb could not reach, and when
         checks["ik_worst"] = {**worst, "t": round((worst["frame"] - 1) / tl.fps, 2)}
     (out / "checks.json").write_text(json.dumps(checks, indent=2))
     (out / "events.json").write_text(json.dumps({"fps": tl.fps, "duration": tl.duration, "events": events,
                                                  "score": score}, indent=2))
+    if os.environ.get("BLENDER_CONTACT_TRACE"):  # every frame's contact numbers, to look into a failure
+        (out / "contacts.json").write_text(json.dumps(getattr(kit, "contact_trace", [])))
     bpy.ops.wm.save_as_mainfile(filepath=str(out / "scene.blend"))
 
     if args.bench:
