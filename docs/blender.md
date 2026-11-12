@@ -230,15 +230,27 @@ stretched to fit furniture.
 
 What it does not do: without a `hands` model the hands are whatever the model has (usually fists), on one
 bone; generated hands are thick and cupped, with a short thumb standing off the palm, so they read as mitts with
-finger grooves, and a hand laid on a desk rests on its thumb and fingertips; the fingers do not move as it
-types; a likeness of a real person belongs in your own project folder, not in a repository.
+finger grooves, and a hand laid flat on a desk rests on its thumb and fingertips. The thumb's root sits well
+under the palm, so a typing hand slopes down from the wrist (45 degrees) for the fingertips to reach the keys
+before the thumb does. A likeness of a real person belongs in your own project folder, not in a repository.
 
 How the hands are held is measured, not set: the rig poses the fingers in each shape, reads how far the hand's
 underside is below its wrist, and holds the wrist that far over the desk, the keys or a thigh. The wrist is
 turned from the arm as it is posed on each frame, so a palm faces the leg when the arm hangs and faces down
 on a desk whatever the forearm is doing. `check` then measures what a still can't show: a fingertip inside the
-body, the two hands into each other, a hand tipped off palm down on a table top, a hand still open on what it
+body, the two hands into each other, a hand rolled off palm down on a table top, a hand still open on what it
 holds (`grip_open`).
+
+Typing hands are put on the keys where they are in the room, measured on each frame, not where the pose says (the
+body's lean and how it sits put a pose's wrist a couple of centimetres off). On each beat one finger of one hand
+lifts and comes down on the next one; the wrists hardly move. `typing` in `checks.json` says how far the
+fingertips are over the keys and how far the fingers move.
+
+A fitted model's arms hang from the shoulder: the elbow bent about 12 degrees, the arm tipped out only as far as
+the relaxed hand needs to clear the hip (about a centimetre, measured on the mesh). In a walk the arm swings like
+a pendulum, nearly straight behind and bending a little more in front, keyed along its arc so the elbow does not
+fold between keys. `walks` in `checks.json` gives each walk's `arms`: the most the elbow bends, how near level
+the forearm comes, how far a hand stands off the body.
 
 ## A product stage
 

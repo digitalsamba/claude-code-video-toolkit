@@ -416,6 +416,12 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertGreaterEqual(checks['hands_apart_m'], 0.005)         # the hands never go into each other
         self.assertLessEqual(checks['palm_tilt_deg'], 35)               # and lie palm down on the desk
         self.assertLessEqual(checks['palm_turn_deg'], 35)               # and stay palm to the leg in a walk
+        for walk in checks['walks']:                                     # arms hang and swing from the shoulder
+            self.assertLessEqual(walk['arms']['elbow_deg'], 35)
+            self.assertGreaterEqual(walk['arms']['forearm_deg'], 40)
+            self.assertLessEqual(walk['arms']['hand_off_m'], 0.04)
+        self.assertLessEqual(checks['typing']['rest_m'], 0.008)         # the fingers rest on the keys
+        self.assertGreaterEqual(checks['typing']['finger_travel_m'], 0.006)  # and press them
         for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
             self.assertLessEqual(checks[kind], 0.03, kind)
 

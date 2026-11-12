@@ -227,7 +227,7 @@ Character (`who` defaults to the first cast member):
 | `look_at` | `target`: `[x, y, z]`, `camera` or `screen`, `dur` | head and eyes to a point: the neck turns most of the way, the eyes the rest |
 | `glance` | `yaw`, `pitch`, `dur` | the eyes alone, in degrees (up to about 25) |
 | `reach` | `target`: `[x, y, z]`, `hand`, `dur` | a hand to a point in the room; an error says how far short it is |
-| `hand` | `shape`: `open`, `relaxed`, `grip`, `flat`, `point`, `fist`; `hand`: `left`/`right`; `dur` | the fingers take a shape (both hands without `hand`). Only a fitted model whose fit found fingers has them: the clay cast's mittens are left as they are. Poses and verbs set shapes themselves (flat on the desk, a grip on a door handle, relaxed at the sides), so this is for a point or a fist |
+| `hand` | `shape`: `open`, `relaxed`, `grip`, `flat`, `type`, `point`, `fist`; `hand`: `left`/`right`; `dur` | the fingers take a shape (both hands without `hand`). Only a fitted model whose fit found fingers has them: the clay cast's mittens are left as they are. Poses and verbs set shapes themselves (`type` on the keys, flat on the desk, a grip on a door handle, relaxed at the sides), so this is for a point or a fist |
 
 Poses also has `down` (arms at the sides), which a standing character starts in; arms swing on a walk only from
 `down`. A posture verb used in the wrong state is a named error ("dev is sitting: walk needs them standing
@@ -245,7 +245,7 @@ and the second when it is over a centimetre: usually a step or a reach that was 
 | `touch_miss_m` | 3 cm | a hand off the thing it was put on (the door handle, the desk's edge) |
 | `grip_open` | over 0.75 | hands with fingers: how open a hand still is round what it holds (fingertips' distance from it over a finger's length; a flat hand is about 1) |
 | `hands_apart_m` | under 0.5 cm | hands with fingers: the nearest the two hands come to each other |
-| `palm_tilt_deg` | 35 degrees | hands with fingers: a hand resting over a table top, tipped from palm down |
+| `palm_tilt_deg` | 35 degrees | hands with fingers: a hand resting over a table top, rolled from palm down onto its side (a typing hand slopes down from the wrist on purpose; the slope is not counted) |
 | `palm_turn_deg` | 35 degrees | hands with fingers: a hanging hand's palm turning away from the leg as the arm swings in a walk (it reads as a flapping hand) |
 
 A thin thing (a door leaf, a desk top) counts as gone through once anything is half way into it, and `through`
@@ -258,7 +258,13 @@ with `--keep-frames` and tile every second or third frame.
 
 **More that `check` reports**, each failing the check in words when it is wrong:
 
-- `walks`: each walk's bow off the straight line, its turn, and how far the body leans into a bend.
+- `walks`: each walk's bow off the straight line, its turn, and how far the body leans into a bend. For a fitted
+  model, `arms` too: `elbow_deg` (the most an elbow bends, fails over 35: arms swing from the shoulder),
+  `forearm_deg` (the forearm's least angle below level, fails under 40: it reads as marching) and `hand_off_m`
+  (the furthest a hand stands out from the body beside it, fails over 4 cm: arms held out like a gunslinger's).
+- `typing`, for hands with fingers: `rest_m` (the fingertips' usual height over the keys, fails over 8 mm),
+  `into_m` (fails under -4 mm) and `finger_travel_m` (how far a finger moves on its own, fails under 6 mm: hands
+  that type without moving their fingers).
 - `surfaces_fight` and `set_problems`: two objects of different materials with faces in one plane that a camera
   sees. The renderer draws one or the other from frame to frame, so the strip flickers. Move one, or end it
   inside the other. Graphics layered a little over a screen do not count.
