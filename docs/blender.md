@@ -162,6 +162,46 @@ named choice or a hex colour. An agent can write one from a sentence or a photo.
 
 The full table of choices is in the skill.
 
+### On their feet
+
+A character sits at the desk unless the cast entry says `"posture": "stand"`, with `"at": [x, y]` and `"facing"`.
+From there the verbs are `walk` (to a spot, turning into it and out of it), `turn`, `sit_down`, `stand_up`, and for
+the set `open_door` and `pull_in`. The feet are planted: a foot on the floor stays where it is while the body
+moves over it, and the report's `ik_max_error_m` says so (under a centimetre), naming the limb and the second if
+a step was too far. Three shot types film someone standing: `full`, `feet` and `tilt_up`; `"follow": true` makes
+any character shot travel with a walk. The clay cast gets its leg controls only when a spec uses one of these, so
+a desk-only spec renders exactly as it did before they existed.
+
+### A character from a generated 3D model (experimental)
+
+The clay cast is built from a description. A fitted model is a 3D character made elsewhere, put on the same
+rig, so the same verbs and shots work on it. The pattern, one step each:
+
+1. **A character sheet.** One front view of the character standing in an A-pose (arms away from the body, legs
+   apart), plain background. Draw it, or generate it: `flux2.py` for an invented character, `image_edit.py` then
+   `flux2.py --input` to stylise a photo.
+2. **A model.** Any image-to-3D service that returns one textured GLB. Through the Blender MCP server's
+   `generate_3d` it is one generation, a minute or three, and may cost a credit on that service: check before
+   you run it.
+3. **Fit it.** `uv run tools/blender_render.py fit --model lead.glb --fit fit.json --out lead.blend --preview fit/`
+   binds the model to the rig in its own A-pose: nothing is re-posed or stretched. `fit.json`
+   holds what the fit can't yet see by itself: the joints (shoulder, elbow, wrist, hip, knee, ankle...), where the
+   clothes end and the head starts, and the eyes, brows and mouth, all in metres read off a front view. The
+   painted eyes and brows are erased, because the rig's own are placed there and move.
+4. **Name it.** A character file with `"model": "lead.blend"` beside it, and `"accessories": ["glasses"]` if they
+   wear them. Keep the folder in a kit (`kits/<name>/cast/`).
+5. **Look at it** before writing beats: a `check` of any spec with the cast entry swapped, and read the contact
+   sheet. Arms up, hands on head and sitting show the skin weights at their worst.
+
+What the fit does for you: weights come from a clean stand-in body on the same joints, copied only between
+surfaces that face the same way (so a sleeve does not take the chest's weights), and kept inside the sleeve; bends
+keep their volume; the seat is as high as the character's knees and the desk comes to its hands, so nobody is
+stretched to fit furniture.
+
+What it does not do: hands are whatever the model has (usually fists), on one bone; the mouth shapes are the
+rig's, drawn small on a bearded face; a likeness of a real person belongs in your own project folder, not in a
+repository.
+
 ## A product stage
 
 Set kind `studio` is a backdrop that curves from floor to wall, with soft lights and no character. Its props are a
@@ -200,7 +240,8 @@ environment for no gain over the Blender most people already have, so the toolki
 `check` builds its stills in the film's own shape (the spec's `resolution`, or `--res`), because where the solver
 puts a camera depends on the shape of the frame.
 
-One character per set, seated at a desk; three sets (`desk_room`, `desk` with no room for transparent renders,
+One character per set; hands on one bone, with no open, grip or point shapes; a walk is a straight line that
+nothing stops going through furniture; three sets (`desk_room`, `desk` with no room for transparent renders,
 and `studio`, which has props and no character); a cartoon style; acting keyed from verbs, with no motion
 capture; studio props stand still while the camera moves. EEVEE cannot render a shadow onto a transparent
 background, so a transparent character or prop has no cast shadow on the Remotion scene. The room's light is dim
@@ -209,7 +250,8 @@ close to the character's hand on its way back, inside the limit the check enforc
 moment.
 
 The roadmap goes two ways. More from the spec: props that move, a tablet prop, cast shadows on transparent clips,
-two characters in a set, standing and walking, and a `blender` visual kind in `video_job.py`. And more of Blender
+two characters in a set, hand shapes and props in the hand, a fit that finds the joints and face by itself, and a
+`blender` visual kind in `video_job.py`. And more of Blender
 itself: your own `.blend` as a set, a `script` hook that runs your Python between the build and the checks, and
 imported rigs whose actions become verbs.
 

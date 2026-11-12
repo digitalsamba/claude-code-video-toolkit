@@ -287,6 +287,50 @@ class BlenderCheckTests(unittest.TestCase):
             self.assertIn(said, str(ctx.exception))
             self.assertNotIn('Traceback', str(ctx.exception))
 
+    def test_a_character_comes_in_walks_sits_down_and_winks(self):
+        """The clay cast on its feet: through a door, across the room, onto a pulled-out chair, in to the desk."""
+        checks, events = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 3.7]}],
+            'set': {'kind': 'desk_room', 'door': {}, 'chair_out': 0.8},
+            'shots': [{'id': 'feet', 'dur': 3, 'type': 'feet', 'reveal': True},
+                      {'id': 'up', 'dur': 2, 'type': 'tilt_up'},
+                      {'id': 'walk', 'dur': 5, 'type': 'full', 'follow': True},
+                      {'id': 'sit', 'dur': 4, 'type': 'wide'},
+                      {'id': 'face', 'dur': 2, 'type': 'closeup'}],
+            'beats': [{'at': 'feet+0.2', 'do': 'open_door', 'dur': 0.7},
+                      {'at': 'feet+0.9', 'do': 'walk', 'to': [2.6, 2.0], 'until': 'feet.end'},
+                      {'at': 'walk+0.1', 'do': 'walk', 'to': [1.1, 0.33], 'until': 'walk+2.5'},
+                      {'at': 'walk+2.6', 'do': 'walk', 'to': [0, 0.33], 'facing': 0, 'until': 'walk+4.8'},
+                      {'at': 'sit+0.1', 'do': 'sit_down', 'dur': 1.2},
+                      {'at': 'sit+1.5', 'do': 'pull_in', 'dur': 0.9},
+                      {'at': 'sit+2.6', 'do': 'pose', 'pose': 'type', 'dur': 0.5},
+                      {'at': 'face+0.2', 'do': 'look_at', 'target': 'camera', 'dur': 0.4},
+                      {'at': 'face+1', 'do': 'wink', 'side': 'right'}]})
+        self.assertTrue(checks['passed'], checks)
+        self.assertLess(checks['ik_max_error_m'], 0.01)  # every step was one the legs could make
+        self.assertLessEqual(checks['under_floor_m'], 0.015)  # and no foot went through the floor on the way
+        kinds = [e['kind'] for e in events['events']]
+        self.assertIn('door_open', kinds)
+        self.assertGreater(kinds.count('step'), 8)
+
+    def test_mistakes_with_postures_are_named(self):
+        shots = [{'id': 'A', 'dur': 3, 'type': 'wide'}]
+        for extra, said in (
+                ({'beats': [{'at': 'A', 'do': 'walk', 'to': [1, 1]}]}, 'stand_up first'),     # still on the chair
+                ({'beats': [{'at': 'A', 'do': 'walk'}]}, '[x, y]'),
+                ({'beats': [{'at': 'A', 'do': 'turn'}]}, 'degrees'),
+                ({'beats': [{'at': 'A', 'do': 'open_door'}]}, 'no door'),
+                ({'beats': [{'at': 'A', 'do': 'wink', 'side': 'both'}]}, 'left'),
+                ({'beats': [{'at': 'A', 'do': 'reach', 'target': [0, -9, 1]}]}, 'walk them closer'),
+                ({'beats': [{'at': 'A', 'do': 'look_at', 'target': 'moon'}]}, 'camera'),
+                ({'cast': [{'id': 'dev', 'posture': 'lying'}]}, 'stand'),
+                ({'shots': [{'id': 'A', 'dur': 3, 'type': 'feet'}]}, 'on their feet'),
+                ({'set': {'kind': 'desk', 'door': {}}}, 'desk_room')):
+            with self.assertRaises(RuntimeError) as ctx:
+                self.compile({'shots': shots, **extra})
+            self.assertIn(said, str(ctx.exception))
+            self.assertNotIn('Traceback', str(ctx.exception))
+
     def test_acting_takes_the_same_time_at_any_frame_rate(self):
         spec = {'shots': [{'id': 'A', 'dur': 4, 'type': 'wide'}],
                 'beats': [{'at': 0.5, 'do': 'type', 'until': 2.5}, {'at': 3, 'do': 'tap'},

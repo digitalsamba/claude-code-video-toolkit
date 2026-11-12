@@ -147,6 +147,16 @@ from a sentence ("a woman in her forties with a grey bob, glasses and a green sh
   result is a caricature in the toolkit's style, not a likeness.
 - Every character has the same rig, so every verb works on every character. Check a new one with a `closeup` and
   a `medium` shot before writing the beats.
+- **Where they start.** A cast member sits at the desk unless told otherwise: `"posture": "stand"`, `"at": [x, y]`
+  (a spot on the floor, metres) and `"facing"` (degrees: 0 faces -Y, toward the desk; positive turns to their own
+  left) put them on their feet anywhere in the room.
+
+**A fitted model (experimental).** `"model": "lead.blend"` in a character file swaps the clay body for a
+generated 3D character fitted to the rig by `lib/blender/fit_model.py` (an A-pose mesh from an image-to-3D
+service, plus a `fit.json` of its joints and face). The model keeps its own shape: it is bound in its A-pose and
+the rig poses it, so the same verbs drive it, and the chair, desk and laptop are placed for its legs and arms (seat
+at its knee height, keyboard under its hands). `glasses` is the one accessory a model takes. The steps and their
+costs are in `docs/blender.md`.
 
 ### Shots
 
@@ -162,6 +172,9 @@ from a sentence ("a woman in her forties with a grey bob, glasses and a green sh
 | `screen_fill` | `"subject": "screen"` | the screen covers the frame edge to edge, square on |
 | `pull_out` | `"subject": "screen"` | starts as `screen_fill`, holds, then travels back round the shoulder to a side view of the desk |
 | `push_in` | `"subject": "screen"` | `pull_out` reversed: ends on the screen, ready to cut to the flat scene |
+| `full` | character, on their feet | head to toe; `"follow": true` travels with a walk |
+| `feet` | character, on their feet | a low insert on the feet, travelling with them: an entrance before the face |
+| `tilt_up` | character, on their feet | starts on the feet, holds, tilts up to the face (`hold` seconds at each end) |
 | `product` | a studio prop | a three-quarter view of the prop, pushing in a little |
 | `orbit` | a studio prop | the camera travels round the prop from `az` to `az_to` |
 | `reveal` | a studio `phone` or `card` | starts on its screen edge to edge, holds, then pulls back to the `product` view |
@@ -172,6 +185,11 @@ Overrides per shot: `az` (degrees round the subject; 0 = straight in front, + = 
 
 The solver tries the nominal placement, then pulls back, swings ±12/24/36°, and rises, keeping the first that
 passes at the shot's start, middle and end. What it changed is in the report.
+
+A character who has left the chair is filmed where they are at the middle of the shot, facing the way they face
+then, and the solver also tries the far side of them when a wall is in the way. `"follow": true` on any character
+shot makes the camera travel with them. `"reveal": true` is for a shot the subject enters (through a door): it is
+judged on its last frame only. `tilt_up` is judged where it ends, on the face.
 
 The three moves take `az`, `elev` (degrees) and `dist` (m) for their far end, `hold` (seconds on the full screen
 before moving, default 0.4) and `lens`. They are checked at 13 points along the way, also for the lens passing
@@ -200,14 +218,32 @@ Character (`who` defaults to the first cast member):
 | `sweat`, `tremble` | `until` | a drop slides down / pupils jitter |
 | `celebrate` | `until` | arms up, wiggling |
 | `hold_arms` | | freeze the arms where they are |
+| `stand_up` / `sit_down` | `dur` | off the chair onto their feet (the feet plant, the weight goes forward, then up) / onto the chair behind them. Stand them a thigh's length in front of the seat first |
+| `walk` | `to`: `[x, y]`, `facing`, `until` | walk to a spot and stop, facing `facing` degrees. They turn on the spot first when the way to go is more than 30 degrees off, and again at the end. With no `until` or `dur` it takes what the steps need. A footstep in the sound per step |
+| `turn` | `facing`, `dur` | turn on the spot, stepping round |
+| `wink` | `side`: `left`/`right` | one eye, the brow dipping with it |
+| `look_at` | `target`: `[x, y, z]`, `camera` or `screen`, `dur` | head and eyes to a point: the neck turns most of the way, the eyes the rest |
+| `glance` | `yaw`, `pitch`, `dur` | the eyes alone, in degrees (up to about 25) |
+| `reach` | `target`: `[x, y, z]`, `hand`, `dur` | a hand to a point in the room; an error says how far short it is |
+
+Poses also has `down` (arms at the sides), which a standing character starts in; arms swing on a walk only from
+`down`. A posture verb used in the wrong state is a named error ("dev is sitting: walk needs them standing
+(stand_up first)"). `ik_max_error_m` in the report covers feet as well as hands, and `ik_worst` names the limb
+and the second when it is over a centimetre: usually a step or a reach that was too far.
 
 Set (`desk_room`): `alert` (popup + red screen light), `work` (`until`: bar drains bad → mid → good),
-`done` (the "after" line pops in). The screen's words and numbers come from `set.screen`
+`done` (the "after" line pops in), `open_door` / `close_door` (`dur`, `angle`), `pull_in` (the chair and whoever
+sits on it come in to the desk, feet shuffling). The screen's words and numbers come from `set.screen`
 (`title`, `subtitle`, `before`, `after`, `fill_before`, `fill_after`, `alert` [2 lines], `working`).
 
 Effects: `confetti` (`count`, `colors`: a list of hex colours, for the brand's), `title` (`text`, `color`): 3D text above the character, wobbles to the end.
 
 ### Sets
+
+`desk_room` takes `"door": {}` (a doorway in the wall behind the chair, at `x` 2.6 unless given, as tall as the
+character needs and with the handle where their hand falls, opening onto a dim hall) and `"chair_out"` (metres the
+chair starts pulled back from the desk). An entrance: the character starts in the hall at `[2.6, 3.7]`,
+`open_door`, `walk` in, `walk` to a thigh's length in front of the pulled-out chair, `sit_down`, `pull_in`.
 
 | `kind` | |
 |---|---|
@@ -365,8 +401,11 @@ The reasoning is in `docs/blender.md`.
 
 ## Limits (experimental)
 
-One character per set, seated, at the origin; a studio set has props and no character; cartoon "clay" style;
+One character per set; hands are one bone (a fist or a mitten: no open, grip or point shapes yet), so a `reach`
+puts the hand on a thing but does not close round it; a walk is a straight line, and nothing stops it going
+through furniture (walk round it in two beats); the clay cast's hoodie hem is ragged when it stands, because its
+body is made seated; a studio set has props and no character; cartoon "clay" style;
 hand-keyed acting (no motion capture); no cast shadow on a transparent background; studio props don't move (the
 camera does). Next on the roadmap: props that move and a tablet prop, cast shadows on transparent clips, two
-characters in a set, standing and walking, your own `.blend` as a set, a `script` hook in the spec, imported rigs,
+characters in a set, hand shapes and props in the hand, your own `.blend` as a set, a `script` hook in the spec, imported rigs,
 and a `blender` visual kind in `video_job.py`.
