@@ -414,6 +414,29 @@ def open_scene(args) -> int:
     return 0
 
 
+def fit(args) -> int:
+    """Bind a generated character model to the cast's rig (lib/blender/fit_model.py), and say what it made."""
+    model, fit_json, out = Path(args.model), Path(args.fit), Path(args.out)
+    for path in (model, fit_json):
+        if not path.exists():
+            print(f"not found: {path}")
+            return 2
+    cmd = [find_blender(), "-b", "-noaudio", "-P", str(ROOT / "lib" / "blender" / "fit_model.py"), "--",
+           "--model", str(model), "--fit", str(fit_json), "--out", str(out)]
+    if args.preview:
+        Path(args.preview).mkdir(parents=True, exist_ok=True)
+        cmd += ["--preview", args.preview]
+    done = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    lines = [ln for ln in done.stdout.splitlines() if ln.startswith(("fit:", "FIT "))]
+    print("\n".join(lines))
+    if not any(ln.startswith("FIT ") for ln in lines):
+        print((done.stdout + done.stderr)[-1500:])
+        return 2
+    print(f'fitted: name it in a character file with "model": "{out.name}"'
+          + (f", and look at {args.preview}/fit-front.png" if args.preview else ""))
+    return 0
+
+
 def doctor(args) -> int:
     """Is everything a render needs here, and how long will one take on this machine?"""
     ok = True
@@ -492,6 +515,11 @@ def main():
     o = sub.add_parser("open", help="open the built scene in Blender to look round it")
     o.add_argument("spec")
     o.add_argument("--out")
+    f = sub.add_parser("fit", help="experimental: bind a generated 3D character (GLB) to the cast's rig")
+    f.add_argument("--model", required=True, help="one textured mesh, standing in an A-pose, facing -Y")
+    f.add_argument("--fit", required=True, help="fit.json: its joints, clothes line and face (docs/blender.md)")
+    f.add_argument("--out", required=True, help="the fitted .blend, named by a character file's \"model\"")
+    f.add_argument("--preview", help="folder for three stills of the fitted model")
     d = sub.add_parser("doctor", help="check Blender, ffmpeg and Pillow, and time a test render")
     d.add_argument("spec", nargs="?", help="spec to time (default: examples/blender-disk-panic)")
     d.add_argument("--res")
@@ -501,7 +529,7 @@ def main():
     args = ap.parse_args()
     if args.cmd == "render" and not args.clips and (args.shots or args.to or args.prores or args.alpha):
         ap.error("--alpha, --shots, --to and --prores need --clips (a film is one opaque MP4)")
-    sys.exit({"check": check, "render": render, "open": open_scene, "doctor": doctor}[args.cmd](args))
+    sys.exit({"check": check, "render": render, "open": open_scene, "doctor": doctor, "fit": fit}[args.cmd](args))
 
 
 if __name__ == "__main__":

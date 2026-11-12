@@ -1,24 +1,23 @@
 """Fit a generated character model to the ClayPerson rig (runs inside Blender). Experimental.
 
-    blender -b -P lib/blender/fit_model.py -- --model puppet.glb --fit fit.json --out fitted.blend [--preview dir]
+    uv run tools/blender_render.py fit --model puppet.glb --fit fit.json --out fitted.blend --preview dir
 
 The input is one textured mesh of a standing character in an A-pose, facing -Y, feet on the ground (what an
-image-to-3D service returns from a front view). The output is a .blend holding `model_body`: the same mesh, sitting
-in the rig's rest pose, with a vertex group per rig bone, the head on the neck bone, and where its face is. A cast
-entry names that file with "model" and every verb of the rig then drives it.
+image-to-3D service returns from a front view). The output is a .blend holding `model_body`: the same mesh, still
+standing in its A-pose, with a vertex group per rig bone, the head on the neck bone, where its joints are and where
+its face is. A cast entry names that file with "model"; the rig is built on those joints and its bones pose the
+model (sitting included), so every verb of the rig drives it.
 
 How: a clean clay body is baked on the model's own joints and weighted by bone heat (which fails on generated
-meshes: they are triangle soup with open seams); its weights are copied to the model by nearest surface; then each
-bone's part of the model is moved, turned and stretched from the A-pose joint to the rig's joint.
+meshes: they are triangle soup with open seams); its weights are copied to the model by nearest surface.
 
-The model keeps its own proportions: it is scaled as a whole (`scale`), seated, and the rig is then built on its
-joints. Arms may be stretched a little (`arm_stretch`) so the hands reach the keyboard, which is a fixed place.
+The model keeps its own shape and proportions: it is only scaled as a whole (`scale`) and stood on the floor.
 The head is everything that is not clothing above `clothes.below`: clothing is told by colour, so a beard that
 hangs over a collar stays with the head. The model's painted eyes and brows are erased (texture filled with the
 skin round them, surface smoothed), because the rig's own eyes and brows are placed there and move.
 
 fit.json (metres, in the model's own space; side joints once, for the character's left, measured from centre_x):
-    {"centre_x": 0.015, "scale": 1.3, "arm_stretch": 1.15, "faces": 150000, "gamma": 0.8,
+    {"centre_x": 0.015, "scale": 1.3, "faces": 150000, "gamma": 0.8,
      "joints": {"pelvis": [x, y, z], "neckb", "necktop", "sh", "el", "wr", "tip", "hip", "kn", "an", "toe"},
      "clothes": {"below": 1.30, "above": 1.45, "sample": [x0, x1, z0, z1], "tolerance": 0.12, "dark": 0.05},
      "face": {"eyes": [[x, z], [x, z]], "eye_size": [w, h], "brows": [[x, z], [x, z]], "brow_size": [w, h],
@@ -212,23 +211,6 @@ def source_joints(fit: dict) -> dict:
     return out
 
 
-def target_joints(src: dict, scale: float, arm_stretch: float) -> dict:
-    """Where each joint goes: the model's own proportions, scaled, sitting in the rig's rest pose (the pelvis on
-    the seat, the arms and legs pointing where the clay cast's do)."""
-    SK, _ = skeleton()
-    std = {k: Vector(v[0]) for k, v in SK.items()}
-    dst = {"pelvis": std["pelvis"].copy()}
-    for k in ("waist", "chest", "upch", "neckb", "necktop", "shL", "shR", "hipL", "hipR"):
-        dst[k] = dst["pelvis"] + (src[k] - src["pelvis"]) * scale
-        dst[k].y = 0
-    for sd in "LR":
-        for a, b, k in (("sh", "el", arm_stretch), ("el", "wr", arm_stretch), ("wr", "tip", 1), ("wr", "th", 1),
-                        ("hip", "kn", 1.2), ("kn", "an", 1), ("an", "toe", 1)):  # (a longer thigh clears the belly)
-            along = (std[b + sd] - std[a + sd]).normalized()
-            dst[b + sd] = dst[a + sd] + along * (src[b + sd] - src[a + sd]).length * scale * k
-    return dst
-
-
 def clay_proxy(src: dict):
     """A clean body on the model's joints, weighted by bone heat: the source of the model's weights."""
     SK, edges = skeleton()
@@ -270,34 +252,80 @@ def clay_proxy(src: dict):
     return proxy, rig
 
 
-def copy_weights(proxy, body):
-    for g in proxy.vertex_groups:
-        body.vertex_groups.new(name=g.name)
-    dt = body.modifiers.new("Weights", "DATA_TRANSFER")
-    dt.object, dt.use_vert_data, dt.data_types_verts = proxy, True, {"VGROUP_WEIGHTS"}
-    dt.vert_mapping, dt.layers_vgroup_select_src, dt.layers_vgroup_select_dst = "POLYINTERP_NEAREST", "ALL", "NAME"
-    only(body)
-    bpy.ops.object.modifier_apply(modifier=dt.name)
+def copy_weights(proxy, body, src, reach=0.25, smooth=8):
+    """The proxy's weights, onto the model. Each model vertex takes them from the nearest proxy face that looks
+    the same way: the inside of a sleeve and the side of the chest are close together in an A-pose but face each
+    other, and plain nearest-surface copying swaps them (which tears the armpit when the arm lifts). The result
+    An arm then only keeps what lies inside its own sleeve (a tube round shoulder, elbow and wrist, as thick as
+    the model's arm measures): a bulky chest is nearer the proxy's arm than its thin chest, and would be pulled
+    about by it. The result is smoothed along the model's own edges, so a joint bends over a band of triangles
+    and not a line."""
+    from mathutils.bvhtree import BVHTree
+    pm, me = proxy.data, body.data
+    names = [g.name for g in proxy.vertex_groups]
+    pw = np.zeros((len(pm.vertices), len(names)), dtype=np.float32)
+    for v in pm.vertices:
+        for g in v.groups:
+            pw[v.index, g.group] = g.weight
+    polys = [list(poly.vertices) for poly in pm.polygons]
+    tree = BVHTree.FromPolygons([v.co for v in pm.vertices], polys)
+    w = np.zeros((len(me.vertices), len(names)), dtype=np.float32)
+    turned = 0
+    for v in me.vertices:
+        near = sorted(tree.find_nearest_range(v.co, reach), key=lambda hit: hit[3])
+        hit = next((h for h in near if h[1].dot(v.normal) > 0.2), None)
+        if hit is None:
+            hit = near[0] if near else tree.find_nearest(v.co)
+        elif hit is not near[0]:
+            turned += 1
+        w[v.index] = pw[polys[hit[2]]].mean(axis=0)
+    co = np.array([v.co for v in me.vertices], dtype=np.float32)
+
+    def to_segment(a, b):
+        a, b = np.array(a, dtype=np.float32), np.array(b, dtype=np.float32)
+        t = np.clip((co - a) @ (b - a) / ((b - a) @ (b - a)), 0, 1)
+        return np.linalg.norm(co - (a + t[:, None] * (b - a)), axis=1)
+
+    top = w.argmax(axis=1)
+    for sd in "LR":
+        upper, fore = names.index("upper." + sd), names.index("fore." + sd)
+        d = np.minimum(to_segment(src["sh" + sd], src["el" + sd]), to_segment(src["el" + sd], src["wr" + sd]))
+        r = float(np.percentile(d[top == fore], 90))  # the forearm is all arm: its thickness is the sleeve's
+        keep = np.clip((1.7 * r - d) / (0.5 * r), 0, 1)
+        w[:, upper] *= keep
+        w[:, fore] *= keep
+    lost = w.sum(axis=1) < 1e-4
+    w[lost, names.index("spine")] = 1
+    w /= w.sum(axis=1)[:, None]
+    edges = np.array([e.vertices for e in me.edges])
+    for _ in range(smooth):
+        total, count = w.copy(), np.ones(len(w), dtype=np.float32)
+        np.add.at(total, edges[:, 0], w[edges[:, 1]])
+        np.add.at(total, edges[:, 1], w[edges[:, 0]])
+        np.add.at(count, edges[:, 0], 1)
+        np.add.at(count, edges[:, 1], 1)
+        w = total / count[:, None]
+    for sd in "LR":  # a shoe is stiff: everything below the ankle goes with the foot, blending in just above it
+        foot, ankle = names.index("foot." + sd), src["an" + sd]
+        side = (co[:, 0] > 0) == (ankle.x > 0)
+        stiff = np.clip((ankle.z * 1.5 - co[:, 2]) / (ankle.z * 0.5), 0, 1) * side
+        w *= (1 - stiff)[:, None]
+        w[:, foot] += stiff
+    for i, name in enumerate(names):
+        g = body.vertex_groups.new(name=name)
+        for vi in np.nonzero(w[:, i] > 1e-3)[0]:
+            g.add([int(vi)], float(w[vi, i]), "REPLACE")
+    print(f"fit: weights copied, {turned} vertices took a facing surface over the nearest one")
 
 
-def bone_matrix(hs, ts, hd, td, radial, uniform=False):
-    """Moves a bone's part of the mesh from the A-pose bone (hs -> ts) onto the rig's bone (hd -> td)."""
-    d = (ts - hs).normalized()
-    along = radial if uniform else (td - hd).length / (ts - hs).length
-    stretch = Matrix.Identity(3) * radial + (along - radial) * Matrix([[d[i] * d[j] for j in range(3)] for i in range(3)])
-    turn = Matrix.Identity(3) if uniform else d.rotation_difference((td - hd).normalized()).to_matrix()
-    return Matrix.Translation(hd) @ (turn @ stretch).to_4x4() @ Matrix.Translation(-hs)
-
-
-def repose(body, src, dst, scale, head):
-    mats = {"hips": bone_matrix(src["pelvis"], src["pelvis"] + Vector((0, 0, -1)), dst["pelvis"], None, scale, True)}
-    for name, h, t in BONES:
-        mats[name] = bone_matrix(src[h], src[t], dst[h], dst[t], scale, uniform=name in ("spine", "neck"))
+def skin(body, head):
+    """Tidy the copied weights: every vertex's weights sum to 1, the head (`head` is 1 there) is rigid on the neck
+    bone and nothing else is on it. Returns how many body vertices had no weight (they go on the spine)."""
     groups = {g.index: g.name for g in body.vertex_groups}
     neck_i, spine_i = body.vertex_groups["neck"].index, body.vertex_groups["spine"].index
     unweighted = 0
     for v in body.data.vertices:
-        t = float(head[v.index])  # the head is rigid: all of it on the neck bone, and none of the body is
+        t = float(head[v.index])
         w = {g.group: g.weight for g in v.groups if g.weight > 1e-4 and g.group in groups and g.group != neck_i}
         total = sum(w.values())
         if not total:
@@ -306,17 +334,12 @@ def repose(body, src, dst, scale, head):
         w = {i: x / total * (1 - t) for i, x in w.items()}
         if t:
             w[neck_i] = t
-        co = Vector()
-        for i, x in w.items():
-            co += (mats[groups[i]] @ v.co) * x
         for g in list(v.groups):
             body.vertex_groups[g.group].remove([v.index])
         for i, x in w.items():
             if x > 1e-4:
                 body.vertex_groups[i].add([v.index], x, "REPLACE")
-        v.co = co
-    body.data.update()
-    return mats, unweighted
+    return unweighted
 
 
 def preview(body, folder: Path):
@@ -328,9 +351,10 @@ def preview(body, folder: Path):
     cam = D.objects.new("cam", D.cameras.new("cam"))
     sc.collection.objects.link(cam)
     sc.camera = cam
-    cam.data.type, cam.data.ortho_scale = "ORTHO", 2.0
-    for name, at, rot in (("front", (0, -4, 1.0), (1.5708, 0, 0)), ("side", (-4, -0.2, 1.0), (1.5708, 0, -1.5708)),
-                          ("three_quarter", (-2.8, -2.8, 1.6), (1.4, 0, -0.7854))):
+    top = max(v.co.z for v in body.data.vertices)
+    cam.data.type, cam.data.ortho_scale = "ORTHO", top * 1.15
+    for name, at, rot in (("front", (0, -6, top / 2), (1.5708, 0, 0)), ("side", (-6, 0, top / 2), (1.5708, 0, -1.5708)),
+                          ("three_quarter", (-4, -4, top / 2 + 1.5), (1.3, 0, -0.7854))):
         cam.location, cam.rotation_euler = at, rot
         sc.render.filepath = str(folder / f"fit-{name}.png")
         bpy.ops.render.render(write_still=True)
@@ -349,12 +373,18 @@ def main():
     cx, scale = fit.get("centre_x", 0.0), float(fit.get("scale", 1.0))
     body, marks = load_model(Path(args.model), cx, int(fit.get("faces", 150000)), fit["face"])
     src = source_joints(fit)
-    dst = target_joints(src, scale, float(fit.get("arm_stretch", 1.0)))
+    if "arm_stretch" in fit:
+        print("fit: arm_stretch is no longer used: the model keeps its own arms")
     proxy, proxy_rig = clay_proxy(src)
-    copy_weights(proxy, body)
+    copy_weights(proxy, body, src)
     D.objects.remove(proxy)
     D.objects.remove(proxy_rig)
-    mats, unweighted = repose(body, src, dst, scale, head_mask(body, fit["clothes"]))
+    unweighted = skin(body, head_mask(body, fit["clothes"]))
+    body.data.transform(Matrix.Scale(scale, 4))  # the whole model, evenly: nothing is stretched or re-posed
+    lift = -min(v.co.z for v in body.data.vertices)  # soles on the floor
+    body.data.transform(Matrix.Translation((0, 0, lift)))
+    body.data.update()
+    placed = lambda p: Vector(p) * scale + Vector((0, 0, lift))  # noqa: E731  a point on the model, as saved
     if fit.get("gamma"):  # generated textures come back darker than the picture they were made from
         img = base_colour(body)
         px = pixels_of(img)
@@ -363,9 +393,10 @@ def main():
         img.update()
         img.pack()
 
-    on_head = lambda p: list(mats["neck"] @ Vector(p))  # noqa: E731
+    on_head = lambda p: list(placed(p))  # noqa: E731
     face = fit["face"]
-    body["joints"] = json.dumps({k: list(v) for k, v in dst.items()})
+    body["rest"] = "a_pose"
+    body["joints"] = json.dumps({k: list(placed(v)) for k, v in src.items()})
     body["face"] = json.dumps({
         "eyes": [on_head(p) for p in marks["eyes"]], "brows": [on_head(p) for p in marks["brows"]],
         "mouth": on_head(marks["mouth"]), "eye_size": [x * scale for x in face["eye_size"]],
