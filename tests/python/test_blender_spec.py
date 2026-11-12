@@ -350,6 +350,103 @@ class BlenderCheckTests(unittest.TestCase):
                               'beats': [{'at': 'A+0.5', 'do': 'open_door', 'by': by}]})
             self.assertIn(said, str(ctx.exception))
 
+    def test_a_walk_can_bend_and_the_body_leans_into_it(self):
+        """A curved walk: the path bows away from the straight line, the body banks into the bend, and the
+        check reports each walk. A straight walk reports no bow."""
+        checks, _ = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 2.0]}],
+            'set': {'kind': 'desk_room', 'door': {}, 'chair_out': 0.8},
+            'shots': [{'id': 'A', 'dur': 6, 'type': 'full', 'follow': True}],
+            'beats': [{'at': 'A+0.2', 'do': 'walk', 'to': [0, 0.41], 'facing': 0, 'curve': True, 'heading': -90,
+                       'until': 'A+4.6'}]})
+        self.assertTrue(checks['passed'], checks)
+        bend = checks['walks'][0]
+        self.assertTrue(bend['curve'])
+        self.assertGreater(bend['bow_m'], 0.2)
+        self.assertGreaterEqual(bend['into_bend'], 0.5)
+        self.assertGreater(bend['lean_deg'], 1.0)
+        self.assertLessEqual(checks['foot_slide_m'], 0.03)  # feet land on the bend and stay where they land
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 2.0]}],
+                          'set': {'kind': 'desk_room', 'door': {}}, 'shots': [{'id': 'A', 'dur': 3, 'type': 'full'}],
+                          'beats': [{'at': 'A+0.2', 'do': 'walk', 'to': [0, 0.41], 'curve': 'yes'}]})
+        self.assertIn('curve', str(ctx.exception))
+
+    def test_a_door_and_a_screen_graphic_have_no_faces_in_one_plane(self):
+        """The set is checked for surfaces that would flicker: the door's frame against the wall does not, and
+        an alert laid 0.4 mm over the screen does not count."""
+        checks, _ = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 2.4]}],
+            'set': {'kind': 'desk_room', 'door': {}},
+            'shots': [{'id': 'A', 'dur': 2, 'type': 'full'}, {'id': 'B', 'dur': 2, 'type': 'over_shoulder', 'subject': 'screen'}],
+            'beats': [{'at': 'A+0.2', 'do': 'open_door', 'dur': 0.8}, {'at': 'B+0.3', 'do': 'alert'}]})
+        self.assertNotIn('surfaces_fight', checks)
+        self.assertNotIn('set_problems', checks)
+
+    def test_hand_shapes_are_named_and_a_mitten_keeps_its_shape(self):
+        """The clay cast's hands are mittens: a hand beat is accepted and changes nothing, and none of the
+        checks that need fingers is reported. A shape that does not exist is named with the ones that do."""
+        checks, _ = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [1.6, 1.6]}], 'set': {'kind': 'desk_room', 'door': {}},
+            'shots': [{'id': 'A', 'dur': 2, 'type': 'full'}],
+            'beats': [{'at': 'A+0.3', 'do': 'hand', 'shape': 'point', 'hand': 'right', 'dur': 0.3},
+                      {'at': 'A+1.0', 'do': 'hand', 'shape': 'fist'}]})
+        self.assertTrue(checks['passed'], checks)
+        for key in ('grip_open', 'hands_apart_m', 'palm_tilt_deg', 'face', 'skin'):
+            self.assertNotIn(key, checks)
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({'shots': [{'id': 'A', 'dur': 2, 'type': 'wide'}],
+                          'beats': [{'at': 'A+0.3', 'do': 'hand', 'shape': 'claw'}]})
+        for word in ('shape', 'grip', 'point', 'fist', 'flat'):
+            self.assertIn(word, str(ctx.exception))
+
+    FITTED = ROOT / 'projects' / 'character-conal' / 'test' / 'enter.json'
+
+    @unittest.skipUnless(FITTED.exists(), 'needs a fitted model with a face and fingers (none is in the repo)')
+    def test_a_fitted_character_with_fingers_passes_its_own_checks(self):
+        """A generated model fitted to the rig, where one is on this machine: its face, its skin and its hands
+        are measured, and the walk-in passes."""
+        with tempfile.TemporaryDirectory() as tmp:
+            checks = blender_render.run_compiler(self.FITTED, Path(tmp) / 'out', 'check', '480x270', None)
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        self.assertGreaterEqual(checks['face']['mouth_share'], 0.18)   # a mouth wide enough to read
+        self.assertEqual(checks['skin']['leg_above_hips'], 0)           # no hem that tears when the thighs bend
+        self.assertLessEqual(checks['skin']['stretch'], 4.0)
+        self.assertLessEqual(checks['grip_open'], 0.75)                 # the hand closes on the door handle
+        self.assertGreaterEqual(checks['hands_apart_m'], 0.005)         # the hands never go into each other
+        self.assertLessEqual(checks['palm_tilt_deg'], 35)               # and lie palm down on the desk
+        for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
+            self.assertLessEqual(checks[kind], 0.03, kind)
+
+    def test_flicker_is_a_still_point_that_jumps_for_a_frame_and_comes_back(self):
+        """The render check reads still points of the set out of the frames: one that jumps and comes back on
+        five frames of a shot fails, a single blip is only noted, and a smooth change is neither."""
+        import numpy as np
+        frames = [np.full((40, 40), 100.0, dtype=np.float32) for _ in range(30)]
+        for f in (4, 8, 12, 16, 20):
+            frames[f][8:13, 8:13] = 130.0       # the door frame: five one-frame jumps
+        for f in (6, 14):
+            frames[f][28:33, 8:13] = 130.0      # the wall: two
+        for f in range(30):
+            frames[f][18:23, 28:33] = 100 + 3 * f   # a lamp coming up smoothly
+        rows = [[f, k, x, y, x, y, x, y] for f in range(1, 31) for k, (x, y) in enumerate(((0.25, 0.25), (0.25, 0.75), (0.75, 0.5)))]
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            (out / 'still_points.json').write_text(json.dumps(
+                {'objects': ['door_frame', 'wall', 'lamp'], 'shots': {'A': {'frames': [1, 30], 'points': rows}}}))
+            (out / 'A.mp4').write_bytes(b'')
+            real = blender_render.gray_frames
+            blender_render.gray_frames = lambda video, size: iter(frames)
+            try:
+                found = blender_render.flicker(out, {'A': (out / 'A.mp4', 1)}, (40, 40))
+            finally:
+                blender_render.gray_frames = real
+        by = {r['object']: r for r in found}
+        self.assertTrue(by['door_frame']['fails'])
+        self.assertEqual(by['door_frame']['frames'], [5, 9, 13, 17, 21])
+        self.assertFalse(by['wall']['fails'])
+        self.assertNotIn('lamp', by)
+
     def test_mistakes_with_postures_are_named(self):
         shots = [{'id': 'A', 'dur': 3, 'type': 'wide'}]
         for extra, said in (

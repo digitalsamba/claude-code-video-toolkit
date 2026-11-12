@@ -170,6 +170,8 @@ the set `open_door` and `pull_in`. The feet are planted: a foot on the floor sta
 moves over it, and the report's `ik_max_error_m` says so (under a centimetre), naming the limb and the second if
 a step was too far. Three shot types film someone standing: `full`, `feet` and `tilt_up`; `"follow": true` makes
 any character shot travel with a walk (the camera glides: its path is the walker's, smoothed over about a second).
+A walk is a straight line with a turn at each end unless it has `"curve": true`, which walks one bend, the body
+leaning into it; `"heading"` is the way they are going as they arrive.
 The clay cast gets its leg controls only when a spec uses one of these, so a desk-only spec renders exactly as it
 did before they existed.
 
@@ -181,6 +183,11 @@ edge, a door handle with `"by"` on `open_door`) and stay on them while the body 
 Contact is measured on every frame and fails the check: a foot under the floor, a hand inside the body, the body
 through furniture, a planted foot sliding, a hand off what it holds. The report says which, how far and when
 (`body_problems`), and `moves` gives each posture verb's timing spread. The table is in the skill.
+
+Two checks look for flicker. `check` fails a set where two objects of different materials have faces in one
+plane that a camera sees (`set_problems`): the renderer draws one or the other from frame to frame. And `render`
+reads the finished frames at points of the set that stand still: one that jumps for a frame and comes back, five
+times on one object in a shot, fails the render (`render_checks.json`).
 
 ### A character from a generated 3D model (experimental)
 
@@ -197,7 +204,17 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    binds the model to the rig in its own A-pose: nothing is re-posed or stretched. `fit.json`
    holds what the fit can't yet see by itself: the joints (shoulder, elbow, wrist, hip, knee, ankle...), where the
    clothes end and the head starts, and the eyes, brows and mouth, all in metres read off a front view. The
-   painted eyes and brows are erased, because the rig's own are placed there and move.
+   painted eyes and brows are erased, because the rig's own are placed there and move. The face also takes
+   `mouth` (where the lips meet: under a moustache, its lower edge), `mouth_width` (corner to corner; under 18%
+   of the face's width fails the check as too small to read), `moustache` (true when the upper lip is under
+   hair) and `chin` (the height of the chin's underside). From these the fit builds a lower lip, teeth and the
+   dark of an open mouth on the model's own lip line, smile, frown and jaw shapes in the head's surface, and
+   skin-coloured lids that close for a blink or a wink.
+   **Hands with fingers** are optional: `"hands": {"model": "lead_open.glb"}` names a second model made from
+   the same sheet with the hands open and the fingers apart (one more generation). Only its hands are used.
+   The fit finds each by its skin colour up to the cuff, finds the fingers and thumb, uses the better formed
+   hand for both arms (mirrored for the other), seats it in the cuff with the palm toward the leg, and gives
+   every finger two bones.
 4. **Name it.** A character file with `"model": "lead.blend"` beside it, and `"accessories": ["glasses"]` if they
    wear them. Keep the folder in a kit (`kits/<name>/cast/`).
 5. **Look at it** before writing beats: a `check` of any spec with the cast entry swapped, and read the contact
@@ -208,9 +225,17 @@ surfaces that face the same way (so a sleeve does not take the chest's weights),
 keep their volume; the seat is as high as the character's knees and the desk comes to its hands, so nobody is
 stretched to fit furniture.
 
-What it does not do: hands are whatever the model has (usually fists), on one bone; the mouth shapes are the
-rig's, drawn small on a bearded face; a likeness of a real person belongs in your own project folder, not in a
-repository.
+What it does not do: without a `hands` model the hands are whatever the model has (usually fists), on one
+bone; generated hands are thick and cupped, with a short thumb standing off the palm, so they read as mitts with
+finger grooves, and a hand laid on a desk rests on its thumb and fingertips; the fingers do not move as it
+types; a likeness of a real person belongs in your own project folder, not in a repository.
+
+How the hands are held is measured, not set: the rig poses the fingers in each shape, reads how far the hand's
+underside is below its wrist, and holds the wrist that far over the desk, the keys or a thigh. The wrist is
+turned from the arm as it is posed on each frame, so a palm faces the leg when the arm hangs and faces down
+on a desk whatever the forearm is doing. `check` then measures what a still can't show: a fingertip inside the
+body, the two hands into each other, a hand tipped off palm down on a table top, a hand still open on what it
+holds (`grip_open`).
 
 ## A product stage
 
