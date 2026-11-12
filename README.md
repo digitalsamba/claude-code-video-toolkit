@@ -27,7 +27,7 @@ Every frame below was generated in this workspace — click to watch.
 | <a href="https://youtube.com/shorts/1hyDgC5Qg_o"><img src="assets/readme-thumbs/youre-on-mute-short.jpg" height="280" alt="You're On Mute: every video call ever, as a horror trailer"></a> | <a href="https://youtube.com/shorts/e4HW-tvi8-8"><img src="assets/readme-thumbs/the-great-return-short.jpg" height="280" alt="The Great Return: the return to the office, as a nature documentary"></a> |
 | **You're On Mute**<br>every video call ever, as a horror trailer;<br>invented cast, `parody-short` skill | **The Great Return**<br>the return to the office, as a wildlife film;<br>same cast, designed narrator voice |
 
-More in the [showcase table](#templates) below.
+More in the [showcase table](#templates) below. Made one yourself? Post it in [Show and tell](https://github.com/digitalsamba/claude-code-video-toolkit/discussions/categories/show-and-tell).
 
 ## Quick Start
 
@@ -148,6 +148,8 @@ See `examples/` for finished projects you can learn from (newest first — scrol
 | 2026-03-15 | [the-space-between](https://demos.digitalsamba.com/video/the-space-between.mp4) | AI-generated video essay — flux2 avatar, Qwen3-TTS voice, SadTalker animation |
 | 2026-02-23 | [cortina](https://demos.digitalsamba.com/video/sprint-review.mp4) | Mobile platforms sprint review |
 | 2026-01-25 | [schlumbergera](https://demos.digitalsamba.com/video/schlumbergera.mp4) | Android sprint review video |
+
+Videos other people have made with the toolkit are in [Show and tell](https://github.com/digitalsamba/claude-code-video-toolkit/discussions/categories/show-and-tell). Share yours there: a link, the template or tools you used, and what it cost.
 | 2026-01-22 | [ds-remote-mcp](https://demos.digitalsamba.com/video/ds-remote-mcp.mp4) | Remote MCP server demo *(the jazz background music is a joke)* |
 | 2025-12-10 | [digital-samba-skill-demo](https://demos.digitalsamba.com/video/digital-samba-skill-demo.mp4) | Product demo showcasing Claude Code skill |
 | 2025-12-05 | [sprint-review-cho-oyu](https://demos.digitalsamba.com/sprint-review-cho-oyu.mp4) | iOS sprint review with demos |
