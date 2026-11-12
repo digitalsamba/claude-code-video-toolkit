@@ -214,7 +214,11 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    the same sheet with the hands open and the fingers apart (one more generation). Only its hands are used.
    The fit finds each by its skin colour up to the cuff, finds the fingers and thumb, uses the better formed
    hand for both arms (mirrored for the other), seats it in the cuff with the palm toward the leg, and gives
-   every finger two bones.
+   every finger two bones. A generated thumb stands off the palm on a thick wedge (its root about 40% of the
+   hand's length out of the palm), so the fit presses what stands in front of the palm in towards it, until the
+   thumb's root is 8% of the hand's length out: the wedge thins evenly, the cuff ring and the fingers do not
+   move. The fit prints the depth before and after and how far any edge was stretched, and fails if the root
+   still stands over 20% out (a hand like that rests on its thumb).
    Generated hands come out large: `"scale": 0.7` in `hands` makes both smaller before they are seated (compare
    a hand with the face and the shoe in the fit's front still), and a spec that has them reach for something
    says so if the shorter reach now falls short.
@@ -229,13 +233,13 @@ keep their volume; the seat is as high as the character's knees and the desk com
 stretched to fit furniture.
 
 What it does not do: without a `hands` model the hands are whatever the model has (usually fists), on one
-bone; generated hands are thick and cupped, with a short thumb standing off the palm, so they read as mitts with
-finger grooves, and a hand laid flat on a desk rests on its thumb and fingertips. The thumb's root sits well
-under the palm, so a typing hand slopes down from the wrist (45 degrees) for the fingertips to reach the keys
-before the thumb does. A likeness of a real person belongs in your own project folder, not in a repository.
+bone; generated hands are thick and cupped, so they read as mitts with finger grooves. A typing hand slopes down
+from the wrist 20 degrees, as a typist's does, with the fingertips on the keys; a hand laid flat slopes just
+enough for the heel of the hand and the fingers to rest together (a generated hand's heel is deep). A likeness
+of a real person belongs in your own project folder, not in a repository.
 
 How the hands are held is measured, not set: the rig poses the fingers in each shape, reads how far the hand's
-underside is below its wrist, and holds the wrist that far over the desk, the keys or a thigh. The wrist is
+underside is below its wrist (on a desk or the keys, the whole hand, heel and all), and holds the wrist that far over the desk, the keys or a thigh. The wrist is
 turned from the arm as it is posed on each frame, so a palm faces the leg when the arm hangs and faces down
 on a desk whatever the forearm is doing. `check` then measures what a still can't show: a fingertip inside the
 body, the two hands into each other, a hand rolled off palm down on a table top, a hand still open on what it

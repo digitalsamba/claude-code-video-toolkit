@@ -158,7 +158,8 @@ the rig poses it, so the same verbs drive it, and the chair, desk and laptop are
 at its knee height, keyboard under its hands). `glasses` is the one accessory a model takes. Its face is made from its own marks (a lower
 lip, teeth and lids on the model's lip line and eyes, with the cheeks and chin moving for a smile or an open
 mouth), and with a second model of the same character with open hands the fit gives it fingers: hand shapes, a
-grip on a door handle, hands laid flat on the desk. The steps and their costs are in `docs/blender.md`.
+grip on a door handle, hands laid flat on the desk, fingertips on the keys. The fit lays a generated thumb in to
+the palm (it stands off it on a thick wedge), so the hands type at a typist's slope. The steps and their costs are in `docs/blender.md`.
 
 ### Shots
 
@@ -227,6 +228,7 @@ Character (`who` defaults to the first cast member):
 | `look_at` | `target`: `[x, y, z]`, `camera` or `screen`, `dur` | head and eyes to a point: the neck turns most of the way, the eyes the rest |
 | `glance` | `yaw`, `pitch`, `dur` | the eyes alone, in degrees (up to about 25) |
 | `reach` | `target`: `[x, y, z]`, `hand`, `dur` | a hand to a point in the room; an error says how far short it is |
+| `point` | `target`: `[x, y, z]`, `camera` or `screen`; `hand`; `back`; `dur` | the arm lifts nearly straight at the target (it reads from across a room), index out, thumb up; held for the beat (1.5 s without `dur`), then back unless `"back": false`. Without `hand`, the one on the target's side. Add a `look_at` to the same target for the eyes. The event gives `aim_deg` |
 | `hand` | `shape`: `open`, `relaxed`, `grip`, `flat`, `type`, `point`, `fist`; `hand`: `left`/`right`; `dur` | the fingers take a shape (both hands without `hand`). Only a fitted model whose fit found fingers has them: the clay cast's mittens are left as they are. Poses and verbs set shapes themselves (`type` on the keys, flat on the desk, a grip on a door handle, relaxed at the sides), so this is for a point or a fist |
 
 Poses also has `down` (arms at the sides), which a standing character starts in; arms swing on a walk only from
