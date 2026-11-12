@@ -113,35 +113,49 @@ class DeskRoom:
         d = self.door_cfg
         x, w, h, hz = d.get("x", 2.6), d["width"], d["height"], d["handle"]
         left, right = x - w / 2, x + w / 2
-        box("wall_back", (left + 5, 0.1, 4), M["wall"], loc=((left - 5) / 2, 3, 2))
-        box("wall_back_r", (5 - right, 0.1, 4), M["wall"], loc=((right + 5) / 2, 3, 2))
-        box("wall_back_top", (w, 0.1, 4 - h), M["wall"], loc=(x, 3, (4 + h) / 2))
-        hall = mat("hall", (0.05, 0.055, 0.065), 0.9)
-        box("hall_floor", (3, 2.2, 0.02), M["floor"], loc=(x, 4.1, -0.01))
+        # No face of the wall lies in a face of the frame, or of another piece of wall: two faces in one plane
+        # take turns being drawn as the camera moves, and the strip flickers. So the wall stops inside the frame
+        # (`e` past its inner face), and the hall's floor starts where the room's ends.
+        e = 0.02
+        box("wall_back", (left - e + 5, 0.1, 4), M["wall"], loc=((left - e - 5) / 2, 3, 2))
+        box("wall_back_r", (5 - right - e, 0.1, 4), M["wall"], loc=((right + e + 5) / 2, 3, 2))
+        box("wall_back_top", (w + 2 * e, 0.1, 4 - h - e), M["wall"], loc=(x, 3, (4 + h + e) / 2))
+        hall = mat("hall", (0.2, 0.19, 0.18), 0.9)
+        box("hall_floor", (3, 0.3, 0.02), M["floor"], loc=(x, 5.15, -0.01))
         for size, at in (((3, 0.1, 4), (x, 5.2, 2)), ((0.1, 2.2, 4), (x - 1.5, 4.1, 2)), ((0.1, 2.2, 4), (x + 1.5, 4.1, 2)),
                          ((3, 2.2, 0.1), (x, 4.1, 4))):
             box("hall_wall", size, hall, loc=at)
+        # a hall is dimmer than the room, not black: whoever stands in the doorway keeps their outline
+        area_light("hall_light", (x, 4.2, 3.6), 40, 1.2, (1, 0.86, 0.7), empty("hall_aim", None, (x, 4.0, 0)))
         trim = mat("door_trim", (0.93, 0.92, 0.88), 0.5)
         for size, at in (((0.07, 0.14, h), (left - 0.035, 3, h / 2)), ((0.07, 0.14, h), (right + 0.035, 3, h / 2)),
                          ((w + 0.14, 0.14, 0.07), (x, 3, h + 0.035))):
             box("door_frame", size, trim, loc=at)
-        # hinged on the side nearer the corner, so the leaf opens against the wall and not across the room
+        # hinged on the side nearer the corner, so the leaf opens against the wall and not across the room. The
+        # pivot is the leaf's own corner on the room side, as a hinge is: open, the leaf stands clear of the frame
         side = 1 if x > 0 else -1
-        self.door = empty("door", None, (x + side * w / 2, 2.95, 0))
+        self.door = empty("door", None, (x + side * (w / 2 - 0.01), 2.925, 0))
         leaf = mat("door_leaf", d.get("color", "#D8D2C4"), 0.55)
-        self.leaf = box("door_leaf", (w - 0.02, 0.05, h - 0.02), leaf, self.door, (-side * w / 2, 0, h / 2), bevel=0.008)
-        self.handle = empty("handle", self.door, (-side * (w - 0.12), -0.07, hz))
-        cyl("handle_stem", 0.012, 0.06, M["metal"], self.handle, (0, 0.03, 0), (R(90), 0, 0))
+        self.leaf = box("door_leaf", (w - 0.02, 0.05, h - 0.02), leaf, self.door, (-side * (w / 2 - 0.01), 0.025, h / 2),
+                        bevel=0.008)
+        # the handles stand far enough off the leaf for fingers to close round the bar
+        off = d.get("handle_off", 0.07)
+        self.handle = empty("handle", self.door, (-side * (w - 0.13), -off, hz))
+        cyl("handle_stem", 0.012, off, M["metal"], self.handle, (0, off / 2, 0), (R(90), 0, 0))
         box("handle_bar", (0.13, 0.022, 0.022), M["metal"], self.handle, (side * 0.05, 0, 0), bevel=0.006)
         # the same handle on the hall side, for whoever comes in
-        self.handle_out = empty("handle_out", self.door, (-side * (w - 0.12), 0.07, hz))
-        cyl("handle_stem", 0.012, 0.06, M["metal"], self.handle_out, (0, -0.03, 0), (R(90), 0, 0))
+        self.handle_out = empty("handle_out", self.door, (-side * (w - 0.13), 0.05 + off, hz))
+        cyl("handle_stem", 0.012, off, M["metal"], self.handle_out, (0, -off / 2, 0), (R(90), 0, 0))
         box("handle_bar", (0.13, 0.022, 0.022), M["metal"], self.handle_out, (side * 0.05, 0, 0), bevel=0.006)
         self.door_side = side
 
     def handle_for(self, point):
         """The door handle on the side of the door a point in the room is on: the one a hand there would take."""
         return min((self.handle, self.handle_out), key=lambda h: (h.matrix_world.translation - Vector(point)).length)
+
+    def bar_of(self, handle) -> Vector:
+        """The middle of a handle's bar, in the room, now: where a hand takes hold of it."""
+        return handle.matrix_world @ Vector((self.door_side * 0.05, 0, 0))
 
     def open_door(self, f0: int, f1: int, angle: float = 100.0):
         """The door swings into the room (0 shuts it again)."""
