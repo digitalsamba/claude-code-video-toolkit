@@ -12,6 +12,9 @@ generated model, give it a face and fingers and act with it on any machine with 
 - `fit.json`: her joints, clothes line and face, read off front and side stills with a grid. Her right brow is under
   her fringe, so it is in `brows_hidden` and nothing is erased there.
 - `spec.json`, `mara.json`: a short scene the test checks her with (hand shapes, a point, expressions, a wink).
+- `enter.json`: the walk-in (through the door, across the room, onto the chair, in to the desk, typing, a wink).
+  Her build is not the one the rig was worked out on (short arms, long legs, narrow shoulders, long hands), so
+  this is the spec that shows a number tuned on one character: the same film has to pass on any other.
 
 To fit her by hand: `uv run tools/blender_render.py fit --model tests/fixtures/blender-fitted/mara.glb
 --fit tests/fixtures/blender-fitted/fit.json --out mara-fitted.blend --preview fit/`, with `mara-fitted.blend` next

@@ -264,7 +264,8 @@ with `--keep-frames` and tile every second or third frame.
 - `walks`: each walk's bow off the straight line, its turn, and how far the body leans into a bend. For a fitted
   model, `arms` too: `elbow_deg` (the most an elbow bends, fails over 35: arms swing from the shoulder),
   `forearm_deg` (the forearm's least angle below level, fails under 40: it reads as marching) and `hand_off_m`
-  (the furthest a hand stands out from the body beside it, fails over 4 cm: arms held out like a gunslinger's).
+  (how far a hand stands out from the body beside it, the middle value through the walk, fails over 4 cm: arms
+  held out like a gunslinger's; `hand_off_max_m` is the most, which a thigh swinging away makes on long legs).
 - `typing`, for hands with fingers: `rest_m` (the fingertips' usual height over the keys, fails over 8 mm),
   `into_m` (fails under -4 mm) and `finger_travel_m` (how far a finger moves on its own, fails under 6 mm: hands
   that type without moving their fingers).

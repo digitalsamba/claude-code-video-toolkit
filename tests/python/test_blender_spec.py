@@ -315,6 +315,9 @@ class BlenderCheckTests(unittest.TestCase):
         # contact: no hand inside the body, nothing passed through the furniture, no planted foot slid
         for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
             self.assertLessEqual(checks[kind], 0.03, kind)
+        # nothing jumps in a single frame: the chest comes to rest after its last sway, a hand travels from one
+        # spot to the next (in a move this short the keys used to land out of order)
+        self.assertLessEqual(checks['snap_m'], 0.02)
         self.assertNotIn('body_problems', checks)
 
     def test_a_body_does_not_move_like_a_machine(self):
@@ -442,19 +445,22 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertGreaterEqual(checks['typing']['finger_travel_m'], 0.006)  # and press them
         for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
             self.assertLessEqual(checks[kind], 0.03, kind)
+        self.assertLessEqual(checks['snap_m'], 0.02)                    # nothing jumps in a single frame
 
     MARA = ROOT / 'tests' / 'fixtures' / 'blender-fitted'
 
     def test_an_invented_model_is_fitted_with_a_face_and_fingers_and_acts(self):
         """Mara (tests/fixtures/blender-fitted, made up, not a likeness) goes through the fit as anyone's model
-        would: five fingers found on each hand, the thumb laid in to the palm, legs that touched parted; then she
-        takes hand shapes, points, pulls faces and winks, and the checks pass."""
+        would: five fingers found on each hand, sized to her own, the wrist put at the cuff, the thumb laid in to
+        the palm, legs that touched parted; then she takes hand shapes, points, pulls faces and winks, and the
+        checks pass. Then the walk-in: through the door, across the room, onto the chair, in to the desk and
+        typing, on a body nothing in the rig was tuned on (short arms, long legs, narrow shoulders)."""
         import contextlib
         import io
         import re
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
-            for name in ('spec.json', 'mara.json'):
+            for name in ('spec.json', 'enter.json', 'mara.json'):
                 shutil.copy(self.MARA / name, tmp / name)
             said = io.StringIO()
             args = mock.Mock(model=str(self.MARA / 'mara.glb'), fit=str(self.MARA / 'fit.json'),
@@ -469,8 +475,13 @@ class BlenderCheckTests(unittest.TestCase):
             self.assertLessEqual(int(depth.group(1)), 10)                  # laid in from the generator's 20%
             self.assertGreater(int(depth.group(2)), int(depth.group(1)))
             self.assertIn('legs touched', said)                            # her shoes are one piece in the model
+            sized = re.search(r"scaled (\d\.\d+)x to match", said)             # the donor's hands are a fifth too long
+            self.assertIsNotNone(sized, said)
+            self.assertLess(float(sized.group(1)), 0.95)
+            self.assertIn('wrist joint moved', said)                       # read off a still, it was up the sleeve
             checks = blender_render.run_compiler(tmp / 'spec.json', tmp / 'out', 'check', '480x270', None)
             events = json.loads((tmp / 'out' / 'events.json').read_text())
+            enter = blender_render.run_compiler(tmp / 'enter.json', tmp / 'enter', 'check', '480x270', None)
         self.assertTrue(checks['passed'], checks.get('body_problems'))
         self.assertGreaterEqual(checks['face']['mouth_share'], 0.18)
         self.assertGreater(checks['face']['mouth_travel_m'], 0.005)        # the mouth moves for the faces
@@ -482,6 +493,19 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertLessEqual(points[0]['aim_deg'], 12)
         for shot in checks['shots']:                                       # the close-up finds her own head
             self.assertTrue(shot['passed'], shot)
+        self.assertTrue(enter['passed'], enter.get('body_problems'))
+        self.assertLessEqual(enter['ik_max_error_m'], 0.01)                # every reach is one her arms can make
+        self.assertLessEqual(enter['grip_open'], 0.75)                     # the hand closes on the door handle
+        self.assertGreaterEqual(enter['hands_apart_m'], 0.005)             # broad hands on narrow shoulders stay apart
+        self.assertLessEqual(enter['snap_m'], 0.02)                        # nothing jumps in a single frame
+        self.assertLessEqual(enter['skin']['stretch'], 4.0)
+        self.assertLessEqual(enter['typing']['rest_m'], 0.008)
+        self.assertGreaterEqual(enter['typing']['into_m'], -0.004)
+        for walk in enter['walks']:
+            self.assertLessEqual(walk['arms']['elbow_deg'], 35)
+            self.assertLessEqual(walk['arms']['hand_off_m'], 0.04)
+        for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
+            self.assertLessEqual(enter[kind], 0.03, kind)
 
     def test_flicker_is_a_still_point_that_jumps_for_a_frame_and_comes_back(self):
         """The render check reads still points of the set out of the frames: one that jumps and comes back on

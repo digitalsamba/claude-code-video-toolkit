@@ -41,7 +41,7 @@ CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_h
               "tremble", "tap", "celebrate", "hold_arms", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
               "look_at", "reach", "hand", "point"}
 # how far (m) each kind of contact may be out before the check fails and says where (see ClayPerson.contacts)
-CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03}
+CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03, "snap": 0.02}
 HANDS_APART = 0.005  # nearer than this the two hands are into each other (m)
 PALM_TILT = 35.0     # a hand resting over a table top is palm down to within this, about its fingers (degrees)
 PALM_TURN = 35.0     # a hanging hand keeps its palm to the leg through a walk to within this (degrees)
@@ -476,7 +476,8 @@ def main():
             checks["under_floor_at"] = {"frame": sunk_at, "t": round((sunk_at - 1) / tl.fps, 2)}
     said = {"hand_in_body": "{hand} hand {cm} cm inside the body", "through": "body {cm} cm into the {what}",
             "foot_slide": "{foot} foot slides {cm} cm along the floor while planted",
-            "touch_miss": "{hand} hand {cm} cm off the {what}"}
+            "touch_miss": "{hand} hand {cm} cm off the {what}",
+            "snap": "the {what} jumps {cm} cm in one frame (it hardly moves in the frames either side)"}
     problems = [f"a foot {sunk * 100:.0f} cm under the floor at {(sunk_at - 1) / tl.fps:.2f} s"] if sunk > 0.015 else []
     lasted = lambda c: (f' (from {(c["first"] - 1) / tl.fps:.2f} s to {(c["last"] - 1) / tl.fps:.2f} s)'  # noqa: E731
                         if c.get("last", 0) > c.get("first", 0) else "")
@@ -537,8 +538,8 @@ def main():
                     said_arms.append(f'a forearm comes up to {arms["forearm_deg"]:.0f} degrees below level in the walk at '
                                      f'{w["t"]} s (frame {arms["frames"]["fore"]}): it reads as marching')
                 if arms["hand_off_m"] > ARM_LIMITS["hand_off_m"]:
-                    said_arms.append(f'a hand stands {arms["hand_off_m"] * 100:.0f} cm off the body in the walk at {w["t"]} s '
-                                     f'(frame {arms["frames"]["off"]}): arms held out from the sides')
+                    said_arms.append(f'the hands stand {arms["hand_off_m"] * 100:.0f} cm off the body through the walk at {w["t"]} s '
+                                     f'(most at frame {arms["frames"]["off"]}): arms held out from the sides')
                 if said_arms:
                     checks["passed"] = False
                     checks["body_problems"] = checks.get("body_problems", []) + said_arms
