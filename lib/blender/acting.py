@@ -120,6 +120,28 @@ def talk(p, words, frame, fps, amount: float = 1.5, seed: int = 0):
     key(neck, "delta_rotation_euler", f1 + n(10), (0, 0, 0))
 
 
+def whistle(p, f0: int, f1: int, seed: int = 0):
+    """Lips pursed as for a whistle from f0 to f1: the mouth rounds and stays nearly shut, easing in and out,
+    and swells a little on each breath of the tune. Uses the talk shapes, so a `talk` later keys over it. Only a
+    fitted face has a mouth that moves."""
+    if not getattr(p, "mouth", None) or f1 - f0 < n(8):
+        return
+    rng = random.Random(3000 + seed)
+    opens, rounds, jaw = _talk_keys(p)
+    ease = n(5)
+    knots = [(f0 - 1, 0.0), (f0 + ease, 0.9)]
+    f = f0 + ease
+    while f < f1 - ease - n(6):
+        f += round(rng.uniform(8, 18))
+        knots.append((min(f, f1 - ease), rng.uniform(0.8, 1.05)))
+    knots.append((f1 - ease, 0.9))
+    knots.append((f1 + 1, 0.0))
+    for f, r in knots:
+        for kb, v in ((rounds, r), (opens, 0.12 * r), (jaw, 0.1 * r)):
+            kb.value = v
+            kb.keyframe_insert("value", frame=f)
+
+
 def blinks(p, f0: int, f1: int, fps, seed: int = 0):
     """Blink from f0 to f1 as people do: every two to five seconds, now and then twice."""
     rng = random.Random(2000 + seed)

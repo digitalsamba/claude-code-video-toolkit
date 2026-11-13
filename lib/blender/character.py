@@ -369,6 +369,7 @@ class ClayPerson:
     HAND_SHAPES = {
         "open":    ((0, 0), (0, 0), False, 0.5),
         "relaxed": ((24, 20), (6, 10), False, 0.5),
+        "loose":   ((6, 5), (3, 8), False, 0.5),      # hanging open at the side: a relaxed curl read as a fist on some fits
         "grip":    ((58, 64), (30, 36), False, 0.0),
         "flat":    ((5, 4), (0, 6), False, 0.6),    # laid on a table top
         "type":    ((20, 15), (10, 14), False, 0.6),  # on a keyboard (lay "keys"): the fingertips come down onto the keys
@@ -2089,7 +2090,7 @@ class ClayPerson:
                 lambda d: float(np.interp(d, mid, yaw)), lambda d: float(np.interp(d, mid, soft)))
 
     def walk(self, f0: int, f1: int | None, to, facing: float | None = None, curve: bool = False,
-             heading: float | None = None):
+             heading: float | None = None, stride: float = 0.5):
         """Walk to a point on the floor and stop there, facing `facing` degrees (or the way they came). A small
         change of direction happens on the first step; for a bigger one they turn on the spot first. They turn
         to `facing` on the last step. With no f1 they take the time the steps need at a stroll; returns the
@@ -2098,7 +2099,10 @@ class ClayPerson:
         With `curve` the way there is a bend and not a line: they set off the way they are facing and come round
         to the spot, arriving in the direction `heading` (degrees) if one is given. The feet land along the
         bend, the body turns with it and leans into it, as a body does to stay over its feet (more when the
-        bend is tighter or the walk faster), and the head looks along the path ahead."""
+        bend is tighter or the walk faster), and the head looks along the path ahead.
+
+        `stride` is each step's length as a share of the leg (0.5 a stroll; 0.75 to 0.8 a long, unhurried
+        step, so fewer steps for the same way)."""
         self._need("stand", "walk")
         p0, p1 = self.at.copy(), Vector(to[:2])
         dist = (p1 - p0).length
@@ -2127,7 +2131,7 @@ class ClayPerson:
             after = (pivots * n(8) if f1 is None else round((f1 - f0) * 0.3), math.degrees(yaw1))
             f1 = None if f1 is None else f1 - after[0]
             yaw1 = yaw_w
-        steps = max(2, math.ceil(dist / (0.5 * leg)) + 1)  # the last step brings the feet together
+        steps = max(2, math.ceil(dist / (stride * leg)) + 1)  # the last step brings the feet together
         half = dist / (steps - 1)                          # how far each landing is past the one before
         f1 = f0 + steps * n(8) if f1 is None else f1
         # no two steps quite alike: each takes a little more or less time and lands a little long or short

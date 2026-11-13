@@ -43,7 +43,7 @@ SCORE_MOODS = ("calm", "tension", "resolve")
 CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_head", "gulp", "blink", "sweat",
               "tremble", "tap", "celebrate", "hold_arms", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
               "look_at", "reach", "hand", "point", "talk", "blinks", "gesture", "dust_hands", "carry", "put_down",
-              "pick_up", "hold", "present"}
+              "pick_up", "hold", "present", "whistle"}
 # how far (m) each kind of contact may be out before the check fails and says where (see ClayPerson.contacts)
 CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03, "snap": 0.02}
 HANDS_APART = 0.005  # nearer than this the two hands are into each other (m)
@@ -167,10 +167,12 @@ def validate(spec):
         elif verb == "lean":
             _one_of(b, "amount", LEANS, numbers=True, default="none")
         elif verb == "walk" and (not _point(b.get("to")) or not _number(b.get("facing", 0))
-                                 or not _number(b.get("heading", 0)) or not isinstance(b.get("curve", False), bool)):
+                                 or not _number(b.get("heading", 0)) or not isinstance(b.get("curve", False), bool)
+                                 or not (_number(b.get("stride", 0.5)) and 0.3 <= b.get("stride", 0.5) <= 0.85)):
             raise SpecError(f'beat at {b["at"]!r}: walk needs "to", a spot on the floor as [x, y] in metres (and '
                             f'takes "facing", degrees, for the way they end up looking; "curve": true for a bend '
-                            f'in place of a line, with "heading", degrees, for the way they are going as they arrive)')
+                            f'in place of a line, with "heading", degrees, for the way they are going as they arrive; "stride", 0.3 to '
+                            f'0.85 of a leg, for the length of a step)')
         elif verb == "hand" and (b.get("shape") not in HAND_SHAPES or b.get("hand", "left") not in ("left", "right")):
             raise SpecError(f'beat at {b["at"]!r}: hand needs "shape", one of {", ".join(HAND_SHAPES)} (and takes '
                             f'"hand": "left" or "right", the character\'s own; both without it)')
@@ -339,6 +341,8 @@ def build(spec, args):
                 t1 = tl.time(b["until"]) if "until" in b else tl.duration
                 said = [w for w in tl.words if t0 - 0.01 <= w[1] < t1]
                 acting.talk(p, said, F, fps, float(b.get("amount", 1.5)), seed=f0)
+            elif verb == "whistle":
+                acting.whistle(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(60), seed=f0)
             elif verb == "blinks":
                 acting.blinks(p, f0, f1 if "until" in b or "dur" in b else tl.frames - 1, fps, seed=f0)
             elif verb == "present":
@@ -390,7 +394,8 @@ def build(spec, args):
                         else:
                             p.reach(f0, f1, point, b.get("hand", "right"))
                     elif verb == "walk":  # (untimed, a walk takes what its steps need)
-                        p.walk(f0, f1 if timed else None, b["to"], b.get("facing"), bool(b.get("curve")), b.get("heading"))
+                        p.walk(f0, f1 if timed else None, b["to"], b.get("facing"), bool(b.get("curve")), b.get("heading"),
+                               float(b.get("stride", 0.5)))
                     elif verb == "turn":
                         p.turn(f0, f1 if timed else f0 + kit.n(20), b["facing"])
                     elif verb == "stand_up":
