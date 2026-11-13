@@ -301,7 +301,8 @@ with `--keep-frames` and tile every second or third frame.
 **A render is checked too.** `render` writes `still_points.json` (points of the set that stand still, and where
 each is in every frame) and reads them back out of the picture: a still point that jumps for one frame and comes
 back is flicker. Five such frames on one object in a shot fail (`render_checks.json`, and the tool exits 1);
-fewer are listed as notes. It runs on the film and on `--clips`.
+fewer are listed as notes. It runs on the film and on `--clips`. Points are read between pixels, so a camera
+moving over a surface with a picture on it (a board with writing) is not reported.
 
 Set (`desk_room`): `alert` (popup + red screen light), `work` (`until`: bar drains bad → mid → good),
 `done` (the "after" line pops in), `open_door` / `close_door` (`dur`, `angle`, and `by`: a cast member whose hand
@@ -429,6 +430,31 @@ What makes it sit in the scene:
 - A transparent clip has no cast shadow (EEVEE can't render one onto nothing). Keep the character on a flat
   field, where none is expected.
 - A transparent render of a full room is a waste: use kind `desk`.
+
+**An inset of a clip** is the clip with a `crop` (the clip's own pixels), scaled to fill the box, with the
+clip's backdrop as `background` (a picture the size of the clip's frame, cropped with it) and a shadow that
+follows the character in `clipStyle`. Do not build one by scaling a layer round the clip: the clip keeps its
+full-size box and draws outside it.
+
+```tsx
+<BlenderClip clip={act} volume={0} crop={{ x: 518, y: 92, w: 475, h: 422 }} background="board/bg-presenter.png"
+  clipStyle={{ filter: 'drop-shadow(-6px 4px 6px rgba(0,0,0,0.38))' }} style={{ left: 1620, top: 810, width: 270 }} />
+```
+
+In a video of many clips (a presenter clip per segment, room shots, a Remotion board):
+
+- **Read every frame from its source**: clip starts from the timeline or `cue()`, lengths from `clips.json`,
+  sound frames from `clip.event(...)`, and the spec generator from the same timeline file. Never type a frame
+  seen in an earlier render: when the script grows, it is silently wrong.
+- **Play shots by id, not by `clips.json` order**: a shot rendered again goes to the end of the manifest.
+- **Sounds for small props** (a cup, a chalk tap) that the clip's WAV does not carry are laid on the clip's
+  event frames in the composition and checked with `tools/sync_check.py`: `impact` for a landing, `onset` for
+  something picked up.
+- **One Blender render at a time**: it is bound by the GPU (0.69 s a frame alone, 0.9 s with three side by
+  side), so queue the specs.
+- **After the full render, read the render itself**: `qc.py --render`, then one frame every 10 s tiled
+  (`uv run tools/contact_sheet.py out/video.mp4 --count <seconds / 10>`). Stills of each part can all look
+  right while a layer over them is empty in the render.
 
 The order to build in when the screen shows the video's own scene: render the Remotion scene
 (`npx remotion render ... Screen out/screen.mp4`), then the Blender clips, then the video.

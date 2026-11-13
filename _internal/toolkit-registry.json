@@ -1645,7 +1645,7 @@
     },
     "BlenderClip": {
       "path": "lib/components/BlenderClip.tsx",
-      "description": "Plays a Blender render as an element of a Remotion scene: one clip per shot from tools/blender_render.py --clips (transparent with --alpha), played once then held, with the shot's own sound effects. blenderClip(manifest, id) reads clips.json and gives the clip's length and event('alert') frames, so captions and cuts land on the acting. Throws if the spec's fps isn't the composition's",
+      "description": "Plays a Blender render as an element of a Remotion scene: one clip per shot from tools/blender_render.py --clips (transparent with --alpha), played once then held, with the shot's own sound effects. blenderClip(manifest, id) reads clips.json and gives the clip's length and event('alert') frames, so captions and cuts land on the acting. crop shows one part of a clip scaled to fill its box, with an optional background picture behind it, for an inset. Throws if the spec's fps isn't the composition's",
       "status": "experimental",
       "created": "2026-11-11"
     },
