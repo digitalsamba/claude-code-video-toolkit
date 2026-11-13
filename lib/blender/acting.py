@@ -322,7 +322,7 @@ def carry(p, ob, f: int, hand: str = "left", radius: float = 0.04):
     p.carry_spans.setdefault(s, []).append([f, 10 ** 9])
 
 
-def put_down(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "left", lean: float = 6.0):
+def put_down(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "left", lean: float = 9.0):
     """The hand that carries `ob_hand` takes it to `spot` (a point in the room: the middle of the thing as it
     stands there) by f1 and lets go: from then `ob_table` stands there and the hand goes back to the side. The
     chest leans to it a little. Raises if the arm is too short from where they stand."""
@@ -378,7 +378,9 @@ def put_down(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "left", l
     if p.carry_spans.get(s):
         p.carry_spans[s][-1][1] = f1
     down, elbow = p._down(s)
-    p._arm_key(s, f1 + n(16), down, p._mirror(elbow, s), "side")
+    # (out round the belly on the way back to the side, not through it)
+    p._arm_key(s, f1 + n(10), at.lerp(Vector(down), 0.5) + Vector((s * 0.09, -0.06, 0.03)), pole, None)
+    p._arm_key(s, f1 + n(18), down, p._mirror(elbow, s), "side")
     p._torso(f1 + n(4), pitch=lean * 0.5, yaw=0.2 * side, head=(6, 0.15 * side))
     p._torso(f1 + n(14))
     p.swung = {}
