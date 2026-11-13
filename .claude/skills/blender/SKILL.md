@@ -229,14 +229,14 @@ Character (`who` defaults to the first cast member):
 | `celebrate` | `until` | arms up, wiggling |
 | `hold_arms` | | freeze the arms where they are |
 | `stand_up` / `sit_down` | `dur` | off the chair onto their feet (the head lifts, hands to the knees, the chest comes forward over the feet, then up, the arms dropping last) / onto the chair behind them (a look down, the pelvis back before it goes down, hands to the knees, a small settle). Stand them a thigh's length in front of the seat first. About 1.7 s each reads well; under a second looks hurried |
-| `walk` | `to`: `[x, y]`, `facing`, `until`, `curve`, `heading` | walk to a spot and stop, facing `facing` degrees. They turn on the spot first when the way to go is more than 30 degrees off, and again at the end. With no `until` or `dur` it takes what the steps need. A footstep in the sound per step. `"curve": true` walks a bend in place of a line and two turns: the feet land on the bend, the body banks into it and the head looks along it; `heading` is the way they are going as they arrive (degrees, like `facing`) |
+| `walk` | `to`: `[x, y]`, `facing`, `until`, `curve`, `heading`, `stride` | walk to a spot and stop, facing `facing` degrees. They turn on the spot first when the way to go is more than 30 degrees off, and again at the end. With no `until` or `dur` it takes what the steps need. A footstep in the sound per step. `"curve": true` walks a bend in place of a line and two turns: the feet land on the bend, the body banks into it and the head looks along it; `heading` is the way they are going as they arrive (degrees, like `facing`). `stride` is a step's length as a share of the leg (0.5 by default, a stroll; 0.75 to 0.8 is an unhurried lecturer's walk in fewer steps, 0.3 to 0.85) |
 | `turn` | `facing`, `dur` | turn on the spot, stepping round: the eyes and head go first, the chest follows, and it swings a little past at the end |
 | `wink` | `side`: `left`/`right` | one eye, the brow dipping with it |
 | `look_at` | `target`: `[x, y, z]`, `camera` or `screen`, `dur` | head and eyes to a point: the neck turns most of the way, the eyes the rest |
 | `glance` | `yaw`, `pitch`, `dur` | the eyes alone, in degrees (up to about 25) |
 | `reach` | `target`: `[x, y, z]`, `hand`, `dur` | a hand to a point in the room; an error says how far short it is |
 | `point` | `target`: `[x, y, z]`, `camera` or `screen`; `hand`; `back`; `dur` | the arm lifts nearly straight at the target (it reads from across a room), index out, thumb up; held for the beat (1.5 s without `dur`), then back unless `"back": false`. Without `hand`, the one on the target's side. Add a `look_at` to the same target for the eyes. The event gives `aim_deg` |
-| `hand` | `shape`: `open`, `relaxed`, `grip`, `flat`, `type`, `point`, `fist`; `hand`: `left`/`right`; `dur` | the fingers take a shape (both hands without `hand`). Only a fitted model whose fit found fingers has them: the clay cast's mittens are left as they are. Poses and verbs set shapes themselves (`type` on the keys, flat on the desk, a grip on a door handle, relaxed at the sides), so this is for a point or a fist |
+| `hand` | `shape`: `open`, `relaxed`, `loose`, `grip`, `flat`, `type`, `point`, `fist`; `hand`: `left`/`right`; `dur` | the fingers take a shape (both hands without `hand`). Only a fitted model whose fit found fingers has them: the clay cast's mittens are left as they are. Poses and verbs set shapes themselves (`type` on the keys, flat on the desk, a grip on a door handle, relaxed at the sides), so this is for a point or a fist. `loose` hangs more open than `relaxed`: on a fit whose relaxed hand reads as a fist at the side, set the free hand `loose` at the clip's start (gestures come back to it) |
 
 A presenter on their feet (a `lecture_hall` set for the things that are carried; the rest work anywhere):
 
@@ -244,6 +244,7 @@ A presenter on their feet (a `lecture_hall` set for the things that are carried;
 |---|---|---|
 | `talk` | `until`, `amount` | the mouth opens and closes on the narration's words between the beat and `until` (the spec's `voice` captions): one opening a syllable, wider for an open vowel, rounder for an o or a u, shut on a pause and on b, m and p; the head dips a little on the longer words. A fitted face only |
 | `blinks` | `until` | blinks every two to five seconds, now and then twice |
+| `whistle` | `until`/`dur` | the lips purse as for a whistle and swell a little on each breath, eased in and out (the sound is yours to lay on: a recording, placed on the same seconds). A fitted face only |
 | `gesture` | `kind`: `open`, `both`, `shrug`, `count`; `hand`; `dur` | a talking gesture held for the beat, then the hands go back: one open hand lifting on a point, both hands opening out, a shrug with the head tipping, a raised index |
 | `present` | `target`: `[x, y, z]` or `screen`; `hand`; `dur` | show something beside or behind them (a board): the chest turns part of the way, the head and eyes go to it and stay for the first half, the arm on that side points; then all come back. Follow it with a `look_at` |
 | `dust_hands` | `dur` | the hands come up palms together and brush past each other |
@@ -395,7 +396,10 @@ uv run tools/blender_render.py render spec.json --clips --shots B1_act --to ... 
 ```
 
 One clip per shot lands in the project with a `clips.json` manifest: `.webm` (VP9 with alpha) with `--alpha`,
-`.mp4` without, and a `.wav` of the shot's own effects. `--prores` adds ProRes 4444 for other editors.
+`.mp4` without, and a `.wav` of the shot's own effects. `--prores` adds ProRes 4444 for other editors. To change
+one kind of effect against the rest (footsteps too loud under a door), write the WAV again from the render's
+`events.json` with `sound.render(events, wav, start=, end=, score=False, room=False, gains={"step": 0.35})`
+(0.35 is 9 dB down).
 
 Several specs can render `--to` one folder (a room and a transparent desk). Each clip in `clips.json` carries its
 own `fps`, `resolution` and the `spec` it came from, so they can differ; give the specs' shots different ids (a

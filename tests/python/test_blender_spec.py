@@ -429,6 +429,37 @@ class BlenderCheckTests(unittest.TestCase):
                           'beats': [{'at': 'A+0.2', 'do': 'walk', 'to': [0, 0.41], 'curve': 'yes'}]})
         self.assertIn('curve', str(ctx.exception))
 
+    def test_a_longer_stride_takes_fewer_steps_and_a_whistle_purses_the_lips(self):
+        """`stride` makes the same walk in fewer, longer steps; outside 0.3 to 0.85 of a leg it is a named error.
+        `whistle` compiles beside a walk, and the sound's `gains` turns the steps down and leaves the rest."""
+        def walk(stride):
+            checks, events = self.compile({
+                'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 2.0]}],
+                'set': {'kind': 'desk_room', 'door': {}},
+                'shots': [{'id': 'A', 'dur': 5, 'type': 'full', 'follow': True}],
+                'beats': [{'at': 'A+0.2', 'do': 'walk', 'to': [0, 0.41], 'until': 'A+4.4', 'stride': stride},
+                          {'at': 'A+0.3', 'do': 'whistle', 'until': 'A+4.0'}]})
+            return checks, [e for e in events['events'] if e['kind'] == 'step']
+        short, short_steps = walk(0.5)
+        long, long_steps = walk(0.8)
+        self.assertLess(len(long_steps), len(short_steps))
+        self.assertLessEqual(long['foot_slide_m'], 0.03)
+        with self.assertRaises(RuntimeError) as ctx:
+            walk(1.4)
+        self.assertIn('stride', str(ctx.exception))
+        events = {'fps': 30, 'duration': 1.0, 'events': [{'t': 0.1, 'frame': 3, 'kind': 'step'}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            (folder / 'steps.json').write_text(json.dumps(events))
+
+            def peak(**kw):
+                out = folder / 'steps.wav'
+                sound.render(folder / 'steps.json', out, score=False, room=False, **kw)
+                with wave.open(str(out)) as w:
+                    data = w.readframes(w.getnframes())
+                return max(abs(int.from_bytes(data[i:i + 2], 'little', signed=True)) for i in range(0, len(data), 2))
+            self.assertAlmostEqual(peak(gains={'step': 0.35}) / peak(), 0.35, delta=0.02)
+
     def test_a_door_and_a_screen_graphic_have_no_faces_in_one_plane(self):
         """The set is checked for surfaces that would flicker: the door's frame against the wall does not, and
         an alert laid 0.4 mm over the screen does not count."""
