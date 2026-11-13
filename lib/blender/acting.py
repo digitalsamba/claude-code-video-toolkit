@@ -337,17 +337,21 @@ def carry(p, ob, f: int, hand: str = "left", radius: float = 0.04):
     palm, way = _palm_now(p, s)
     _bone_parent(ob, p, "hand." + ("L" if s > 0 else "R"))
     yaw = p.root.matrix_world.to_euler().z
-    # (held by its upper half, so the hand is clear of whatever the cup is put down on)
-    ob.matrix_world = Matrix.Translation(at + palm * (radius - 0.012) + way * 0.005 - Vector((0, 0, 0.028))) \
+    # (held by its upper half, so the hand is clear of whatever the cup is put down on: `hold_drop` on the
+    # object is how far below the hand's hold its middle hangs)
+    ob.matrix_world = Matrix.Translation(at + palm * (radius - 0.012) + way * 0.005 - Vector((0, 0, ob.get("hold_drop", 0.028)))) \
         @ Matrix.Rotation(yaw, 4, "Z")
     key(ob, "scale", f, (1, 1, 1))
     p.carry_spans.setdefault(s, []).append([f, 10 ** 9])
 
 
-def put_down(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "left", lean: float = 9.0):
+def put_down(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "left", lean: float = 9.0, rest=None):
     """The hand that carries `ob_hand` takes it to `spot` (a point in the room: the middle of the thing as it
     stands there) by f1 and lets go: from then `ob_table` stands there and the hand goes back to the side. The
-    chest leans to it a little. Raises if the arm is too short from where they stand."""
+    chest leans to it a little. Raises if the arm is too short from where they stand. Someone sitting at a
+    table has no side to drop a hand to (the table is over it): with `rest(side)`, a point on the table top,
+    the hand lies flat there afterwards, and the other hand stays where it lies on the table while the chest
+    leans (it hangs from the chest, and went down through the table top with it)."""
     s = _side(hand)
     sc = bpy.context.scene
     sd = "L" if s > 0 else "R"
@@ -362,6 +366,19 @@ def put_down(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "left", l
         p.hand_t[side_].keyframe_insert("location", frame=f0)
         p.pole_t[side_].keyframe_insert("location", frame=f0)
     lag = n(p.LAG["chest"])
+    if p.posture == "sit" and p.table is not None and p.fingers.get(s):
+        # (someone at a table leans only as far as its edge lets the chest: tried, on the body as it is)
+        sc.frame_set(f1)
+        was = p.spine.rotation_euler.copy()
+        for part in (1.0, 0.75, 0.5, 0.25, 0.0):
+            p.spine.rotation_euler = (math.radians(p.spine_pitch + lean * part), 0, math.radians(0.35 * side))
+            bpy.context.view_layer.update()
+            if p._into_table() <= p.TABLE_GIVE:
+                break
+        lean *= part
+        p.spine.rotation_euler = was
+        sc.frame_set(f0)
+        bpy.context.view_layer.update()
     p._look_first(f0 + n(2), f1 + n(6), yaw=max(-20, min(20, side)), pitch=18)
     p._torso(f0 - lag)
     p._torso(f1 - lag, pitch=lean, yaw=0.35 * side, head=(14, 0.3 * side))
@@ -379,8 +396,14 @@ def put_down(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "left", l
         at = at + miss
         arm = at - Vector(p.SH[s])
         if arm.length > reach:
+            sh = p.spine.matrix_world @ Vector(p.SH[s])
+            # (within reach across the floor and still short: it is the drop to the table that the arm can't make)
+            low = p.posture == "stand" and (spot.xy - sh.xy).length < reach and sh.z - spot.z > 0.6 * reach
             raise ValueError(f"{p.id}'s {hand} hand is {arm.length - reach:.2f} m short of putting it down at "
-                             f"{tuple(round(v, 2) for v in spot)}: stand them closer, or move the spot")
+                             f"{tuple(round(v, 2) for v in spot)}: "
+                             + ("the table is lower than a standing arm reaches (only the chest bends): sit them "
+                                "down first, or put it on something higher" if low
+                                else "stand them closer, or move the spot"))
     # (lifted a little on the way, so it comes down onto the table and not along it)
     mid = (f0 + f1) // 2
     p._arm_key(s, mid, start.lerp(at, 0.5) + Vector((0, 0, 0.03)), pole, lay)
@@ -399,12 +422,24 @@ def put_down(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "left", l
     p.busy.discard(s)
     if p.carry_spans.get(s):
         p.carry_spans[s][-1][1] = f1
-    down, elbow = p._down(s)
-    # (out round the belly on the way back to the side, not through it)
-    p._arm_key(s, f1 + n(10), at.lerp(Vector(down), 0.5) + Vector((s * 0.09, -0.06, 0.03)), pole, None)
-    p._arm_key(s, f1 + n(18), down, p._mirror(elbow, s), "side")
+    seated = p.posture == "sit" and rest is not None and p.fingers.get(s) and p.table is not None
+    if not seated:
+        down, elbow = p._down(s)
+        # (out round the belly on the way back to the side, not through it)
+        p._arm_key(s, f1 + n(10), at.lerp(Vector(down), 0.5) + Vector((s * 0.09, -0.06, 0.03)), pole, None)
+        p._arm_key(s, f1 + n(18), down, p._mirror(elbow, s), "side")
     p._torso(f1 + n(4), pitch=lean * 0.5, yaw=0.2 * side, head=(6, 0.15 * side))
     p._torso(f1 + n(14))
+    if seated:
+        end = f1 + n(16) + lag + 1
+        if p._on_table(-s, f0 - lag):  # the other hand stays on the table under the leaning chest
+            stay, other = p._stays(-s, f0 - lag), p._hands_now(f0 - lag)[-s][1]
+            p._hands_path({-s: [(f0 - lag, stay, other, 0), (end, stay, other, 0)]})
+        lie = p._flat_on(s, rest(s))
+        now, was = p._hands_now(f1 + n(3))[s]
+        p._hands_path({s: [(f1 + n(3), now, was, 0), (f1 + n(14), lie, (1, 0.3, -0.8), 0.04), (end, lie, (1, 0.3, -0.8), 0)]})
+        p.hand_shape(f1 + n(5), f1 + n(12), "flat", hand)
+        p.arm_pose = "table"
     p.swung = {}
 
 
@@ -444,6 +479,19 @@ def pick_up(p, ob_hand, ob_table, f0: int, f1: int, hand: str = "right"):
     local = p.root.matrix_world.inverted() @ spot
     side = math.degrees(math.atan2(local.x, -local.y))
     lag = n(p.LAG["chest"])
+    if p.posture == "sit" and p.table is not None and p.fingers.get(s):
+        # (someone at a table leans only as far as its edge lets the chest: tried, on the body as it is)
+        sc.frame_set(f1)
+        was = p.spine.rotation_euler.copy()
+        for part in (1.0, 0.75, 0.5, 0.25, 0.0):
+            p.spine.rotation_euler = (math.radians(p.spine_pitch + lean * part), 0, math.radians(0.35 * side))
+            bpy.context.view_layer.update()
+            if p._into_table() <= p.TABLE_GIVE:
+                break
+        lean *= part
+        p.spine.rotation_euler = was
+        sc.frame_set(f0)
+        bpy.context.view_layer.update()
     p._look_first(f0 + n(2), f1 + n(6), yaw=max(-20, min(20, side)), pitch=18)
     p._torso(f0 - lag)
     p._torso(f1 - lag, pitch=12, yaw=0.5 * side, head=(14, 0.3 * side))
@@ -485,6 +533,19 @@ def leave_small(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "right
     local = p.root.matrix_world.inverted() @ spot
     side = math.degrees(math.atan2(local.x, -local.y))
     lag = n(p.LAG["chest"])
+    if p.posture == "sit" and p.table is not None and p.fingers.get(s):
+        # (someone at a table leans only as far as its edge lets the chest: tried, on the body as it is)
+        sc.frame_set(f1)
+        was = p.spine.rotation_euler.copy()
+        for part in (1.0, 0.75, 0.5, 0.25, 0.0):
+            p.spine.rotation_euler = (math.radians(p.spine_pitch + lean * part), 0, math.radians(0.35 * side))
+            bpy.context.view_layer.update()
+            if p._into_table() <= p.TABLE_GIVE:
+                break
+        lean *= part
+        p.spine.rotation_euler = was
+        sc.frame_set(f0)
+        bpy.context.view_layer.update()
     p._look_first(f0 + n(2), f1 + n(6), yaw=max(-20, min(20, side)), pitch=18)
     p._torso(f0 - lag)
     p._torso(f1 - lag, pitch=13, yaw=0.6 * side, head=(14, 0.3 * side))

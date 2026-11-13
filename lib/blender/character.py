@@ -25,7 +25,7 @@ import random
 import bmesh
 import bpy
 import numpy as np
-from mathutils import Matrix, Quaternion, Vector
+from mathutils import Euler, Matrix, Quaternion, Vector
 
 import face as fitted_face
 import kit
@@ -130,6 +130,7 @@ class ClayPerson:
         self.apart = 0.0    # how much wider than the pose the wrists go on a desk for the hands to clear each other
         self.hang_at = {}   # where a hanging or swinging arm's wrist goes, by side, swing and elbow (_hang)
         self.keys = None    # the laptop's keys, if the set has them (compile sets it): hands are put on them
+        self.table = None   # the table top they sit at, if the set has one (compile sets it): a lean stops at its edge
         self.typed = []     # each stretch of typing with fingers (first frame, last), for typing_report
         self.swung = {}     # each arm's last swing key (frame, swing, elbow, out), for the keys between (_swing)
         self.wrist_q = {}   # each hand's last turn on the forearm (so the next key goes the short way round)
@@ -647,6 +648,10 @@ class ClayPerson:
         """The point of hand `s` that goes on a thing, in the world, now: the knuckles, or for a hand with
         fingers that is taking hold of a bar, the crook of its fingers."""
         bone = self.rig.pose.bones["hand." + ("L" if s > 0 else "R")]
+        if self.holding[s] == "tips" and self.fingers.get(s):  # (the pads of the four fingers: a lid's edge)
+            sd = "L" if s > 0 else "R"
+            tips = [self.rig.pose.bones[f"{f['name']}.b.{sd}"].tail for f in self.fingers[s][1:]]
+            return self.rig.matrix_world @ (sum(tips, Vector()) / len(tips))
         if self.holding[s] and s in self.hold_at:
             return self.rig.matrix_world @ (bone.matrix @ self.hold_at[s])
         return self.rig.matrix_world @ bone.tail
@@ -1617,21 +1622,25 @@ class ClayPerson:
             self.grips.append({"frame": f, "open": round(self.grip_open(s, point(f)), 2),
                                "hand": "left" if s > 0 else "right", "what": what})
 
-    def push(self, f0: int, f1: int, where, hand: str | None = None, what: str = "handle"):
+    def push(self, f0: int, f1: int, where, hand: str | None = None, what: str = "handle", part: float = 0.92,
+             rest=None, clear: bool = False):
         """A hand takes hold of something that is about to move (a door's handle) and goes with it for as long
         as the arm reaches, then comes away to the side. `where(f)` is the thing's place on frame f; it starts
         to move at f0, so the hand sets out before that. They look at it first and lean in a little as they
-        push. Raises if the hand can't reach it from where they stand."""
+        push. Raises if the hand can't reach it from where they stand. Someone sitting, with fingers, does it
+        as take_seated does (`rest` and `clear` are for that)."""
         sc = bpy.context.scene
         sc.frame_set(f0)
         local = self.root.matrix_world.inverted() @ Vector(where(f0))
         s = (1 if local.x > 0 else -1) if hand is None else (1 if hand == "left" else -1)
-        if not self._reaches(s, where(f0), f0):
+        if self.posture == "sit" and self.fingers.get(s):
+            return self.take_seated(f0, f1, where, s, what, rest, clear)
+        if not self._reaches(s, where(f0), f0, part):
             gap = (self.spine.matrix_world.inverted() @ Vector(where(f0)) - self.SH[s]).length \
-                - 0.92 * (0.7122 * self.arm + self.hand_len)
+                - part * (0.7122 * self.arm + self.hand_len)
             raise ValueError(f"{self.id}'s hand is {gap:.2f} m short of the {what}: stand them closer to it")
         out = max(1, f0 - n(9))
-        let_go = max((f for f in range(f0, f1 + 1) if self._reaches(s, where(f), f)), default=f0)
+        let_go = max((f for f in range(f0, f1 + 1) if self._reaches(s, where(f), f, part)), default=f0)
         let_go = min(let_go, f0 + max(2, (f1 - f0) * 2 // 3))
         start, pole = self._hands_now(out)[s]
         side = math.degrees(math.atan2(local.x, -local.y))
@@ -1654,6 +1663,217 @@ class ClayPerson:
         self._touched(s, f0, where, what, held=True)
         self._touched(s, let_go, where, what, held=True)
         self.events.append({"frame": f0, "kind": "touch"})
+
+    TABLE_GIVE = 0.022  # how far a chest may press on a table's edge as it leans (m, as contacts() measures it)
+
+    def _into_table(self) -> float:
+        """How deep the body (not its arms) is in the table top, now, as contacts() measures it (m)."""
+        ob = self.table
+        ev = self.body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        me = ev.to_mesh()
+        co = np.empty(len(me.vertices) * 3, dtype=np.float32)
+        me.vertices.foreach_get("co", co)
+        ev.to_mesh_clear()
+        arm = self._arm_mask()
+        mw = np.array(ev.matrix_world)
+        W = co.reshape(-1, 3) @ mw[:3, :3].T + mw[:3, 3]
+        if len(W) == len(arm):
+            W = W[~arm]
+        corners = np.array([tuple(c) for c in ob.bound_box])
+        lo, hi = corners.min(0), corners.max(0)
+        inv = np.array(ob.matrix_world.inverted())
+        L = W @ inv[:3, :3].T + inv[:3, 3]
+        inside = np.all((L > lo) & (L < hi), axis=1)
+        if not inside.any():
+            return 0.0
+        scale = np.array(ob.matrix_world.to_scale())
+        depth = float((np.minimum(L[inside] - lo, hi - L[inside]) * scale).min(axis=1).max())
+        return depth * max(1.0, 0.065 / float(((hi - lo) * scale).min()))
+
+    def _on_table(self, s, f) -> bool:
+        """Whether hand `s` lies on the table top on frame f: over it, and within a hand's thickness of it."""
+        if self.table is None or not self.fingers.get(s):
+            return False
+        bpy.context.scene.frame_set(f)
+        bpy.context.view_layer.update()
+        ob = self.table
+        corners = np.array([tuple(c) for c in ob.bound_box])
+        lo, hi = corners.min(0), corners.max(0)
+        at = ob.matrix_world.inverted() @ self._hold_point(s)
+        over = (at.z - hi[2]) * ob.matrix_world.to_scale().z
+        return lo[0] < at.x < hi[0] and lo[1] < at.y < hi[1] and -0.02 < over < 0.12
+
+    def _stays(self, s, f, lay=None):
+        """A target for _hands_path that keeps hand `s` where it is in the room on frame f, lying as it lies
+        (flat, unless `lay` says): a hand on a table stays on it while the chest it hangs from leans and turns."""
+        bpy.context.scene.frame_set(f)
+        bpy.context.view_layer.update()
+        spot = self._hold_point(s).copy()
+        at = lambda f, p=spot: p  # noqa: E731
+        at.lay = lay or "flat"
+        return at
+
+    def _flat_on(self, s, point):
+        """A target for _hands_path that lays hand `s` flat with its knuckles over a point on a table top (the
+        knuckles' own height over the top with the hand laid on it, measured)."""
+        under, knuckles = self._hand_under(s)
+        spot = Vector(point) + Vector((0, 0, under - knuckles + 0.004))
+        at = lambda f, p=spot: p  # noqa: E731
+        at.lay = "flat"
+        at.spot = spot
+        return at
+
+    def _tips_reach(self, s) -> float:
+        """How far from the shoulder the fingertips of hand `s` come with the arm almost straight (m)."""
+        fingers = self.fingers[s][1:]
+        # (short of the bones' full length: a flat hand lies level, not along the arm's line, and a straight
+        # arm on a curve between two chest keys stops short of a lid that has moved on)
+        return 0.97 * (0.7122 * self.arm + self.hand_len + 0.9 * sum(f["length"] for f in fingers) / len(fingers))
+
+    def _turn_for(self, s, point, f, ok: dict):
+        """The smallest turn and lean of the chest (degrees: the reaching shoulder forward, the chest down) with
+        which hand `s`'s fingertips reach a point in the room on frame f, or None if no turn a seated body can
+        make gets there. A lean is the costly part: the chest is against the table's edge, so it turns first
+        and leans only as far as the table lets it (`ok` remembers which turns and leans cleared the table)."""
+        sc = bpy.context.scene
+        sc.frame_set(f)
+        bpy.context.view_layer.update()
+        now = self.spine.rotation_euler.copy()
+        base = self.spine.matrix_world @ now.to_matrix().to_4x4().inverted()
+        reach = self._tips_reach(s)
+
+        def short(yaw, pitch):
+            mw = base @ Euler((R(self.spine_pitch + pitch), 0, R(-s * yaw))).to_matrix().to_4x4()
+            return (Vector(point) - mw @ Vector(self.SH[s])).length - reach
+
+        def clear(yaw, pitch):
+            if self.table is None:
+                return pitch <= 12
+            if (yaw, pitch) not in ok:
+                self.spine.rotation_euler = (R(self.spine_pitch + pitch), 0, R(-s * yaw))
+                bpy.context.view_layer.update()
+                ok[(yaw, pitch)] = self._into_table() <= self.TABLE_GIVE
+                self.spine.rotation_euler = now
+                bpy.context.view_layer.update()
+            return ok[(yaw, pitch)]
+
+        best = None
+        for yaw in range(0, 34, 3):
+            pitch = next((p for p in range(0, 21, 2) if short(yaw, p) <= 0), None)
+            if pitch is None or not clear(yaw, pitch):
+                continue
+            if pitch <= max(2, 0.4 * yaw):  # (a turn with a little lean in it, not a bow)
+                return yaw, pitch
+            best = best or (yaw, pitch)
+        return best
+
+    def take_seated(self, f0: int, f1: int, where, s: int, what: str = "lid", rest=None, clear: bool = False):
+        """Sitting at a table, a hand goes out to something that is about to swing (a laptop's lid, which starts
+        to move at f0), lays its fingertips on it and goes with it for as long as the arm reaches. `where(f)`
+        is where the fingertips go on frame f. The arm is short of a lid at the far side of a laptop, so the
+        chest turns that shoulder toward it and leans as far as the table's edge allows: worked out from the
+        reach, frame by frame, not given as a lean. The other hand stays where it lies on the table while the
+        chest moves over it. `rest(side)` gives each hand a place on the table to lie afterwards (a point on
+        the table top, beside the laptop) when the thing shuts on where they were (`clear`): the hand that shut
+        it goes there afterwards, and a hand in the way (on the keys) goes there first. Otherwise the hand goes
+        back where it was. Raises if no turn gets the fingertips there, or if a hand has to get out of the way
+        and cannot lie flat on its place."""
+        sc = bpy.context.scene
+        side = "left" if s > 0 else "right"
+        out = max(1, f0 - n(10))
+        ok = {}
+        turns, let_go = {}, None
+        for f in sorted(set(list(range(f0, f1 + 1, 3)) + [f1])):
+            sc.frame_set(f)  # (where it is on that frame: the thing is read as it stands)
+            got = self._turn_for(s, where(f), f, ok)
+            if got is None:
+                break
+            turns[f], let_go = got, f
+        if let_go is None:
+            sc.frame_set(f0)
+            bpy.context.view_layer.update()
+            gap = (Vector(where(f0)) - self.spine.matrix_world @ Vector(self.SH[s])).length - self._tips_reach(s)
+            raise ValueError(f"{self.id}'s {side} hand is {gap:.2f} m short of the {what}, and turning the chest toward "
+                             f"it at the table does not make it up: move it nearer, or leave out \"by\"")
+        on_table = {k: self._on_table(k, out) for k in (1, -1)}
+        starts = self._hands_now(out)
+        lies = self._lay() or "flat"
+        home = {k: self._stays(k, out, lies) for k in (1, -1) if on_table[k]}
+        ends = {}
+        for k in (1, -1):  # where each hand lies afterwards: beside the laptop, if it can be laid flat there
+            if rest is not None and clear and (k == s or on_table[k]):
+                spot = self._flat_on(k, rest(k))
+                if not self._reaches_flat(k, spot.spot, out):
+                    raise ValueError(f"{self.id}'s {'left' if k > 0 else 'right'} hand cannot lie flat beside the "
+                                     f"{what} from where they sit (short arms, or narrow shoulders at a wide "
+                                     f"laptop), so it has nowhere to go when the {what} shuts: leave out \"by\"")
+                ends[k] = spot
+        # the chest: it turns the shoulder to the thing as the hand goes out, follows what the reach needs as
+        # the thing swings, and comes back as the hand leaves it
+        lag = n(self.LAG["chest"])
+        sc.frame_set(f0)
+        local = self.root.matrix_world.inverted() @ Vector(where(f0))
+        aside = max(-20, min(20, math.degrees(math.atan2(local.x, -local.y))))
+        self._look_first(out + n(2), let_go + n(4), yaw=aside, pitch=16)
+        self._torso(out - lag)
+        for f in sorted(turns):
+            yaw, pitch = turns[f]
+            # (a little more turn than the reach needs: between these keys the chest is on a curve, and an arm
+            # at its full length stops short of a lid that has moved on)
+            self._torso(f - lag - (1 if f == f0 else 0), pitch=pitch, yaw=-s * (yaw + 3), head=(8, 0.4 * aside))
+        sc.frame_set(let_go)
+        last = Vector(where(let_go))
+        beat = let_go + (n(5) if let_go == f1 else 0)  # the hand rests a moment on a thing that has stopped, then leaves
+        gone = beat + n(11)
+        self._torso(beat + n(4), pitch=0.3 * turns[let_go][1], yaw=-0.3 * s * turns[let_go][0], head=(3, 0.1 * aside))
+        self._torso(gone)
+        # the hand: flat, fingertips first, out to the thing; with it while it swings; a beat on it; then away
+        tips = lambda f: where(f) if f < let_go else last  # noqa: E731
+        tips.lay = "flat"
+        POLE = (1, 0.5, -0.6)
+        first = home.get(s) or starts[s][0]
+        # (the fingers are laid flat before the path is worked out: it puts the fingertips where they are then)
+        self.hand_shape(out, f0 - n(2), "flat", side)
+        # (it comes to the thing from above and from their side of it: fingers that lead the hand along a
+        # straight line from the keys go through the top of an open lid)
+        sc.frame_set(f0)
+        above = Vector(where(f0)) + self.root.matrix_world.to_3x3() @ Vector((0, 0.07, 0.07))
+        over = lambda f, p=above: p  # noqa: E731
+        over.lay = "flat"
+        self.holding[s] = "tips"
+        self._hands_path({s: [(out, starts[s][0], starts[s][1], 0), (f0 - n(3), over, POLE, 0.06), (f0, tips, POLE, 0), (let_go, tips, POLE, 0)]
+                          + ([(beat, tips, POLE, 0)] if beat > let_go else [])})
+        self.holding[s] = False
+        self._touched_tips(s, f0, where, what)
+        self._touched_tips(s, let_go, where, what)
+        after = ends.get(s) or home.get(s)
+        now, pole = self._hands_now(beat)[s]
+        if after is not None:
+            self._hands_path({s: [(beat, now, pole, 0), (gone, after, (1, 0.3, -0.8), 0.05), (gone + lag + 1, after, (1, 0.3, -0.8), 0)]})
+        else:
+            self._hands_path({s: [(beat, now, pole, 0), (gone, first, starts[s][1], 0.05)]})
+            self.hand_shape(beat, gone, "relaxed", side)
+        # the other hand: out of the way first if it has to be, and where it lies on the table all the while
+        k = -s
+        if k in ends and (ends[k].spot - home[k](out)).length > 0.05:
+            self.hand_shape(out, f0 - n(2), "flat", "left" if k > 0 else "right")
+            self._hands_path({k: [(out, starts[k][0], starts[k][1], 0), (max(out + 2, f0 - n(2)), ends[k], (1, 0.3, -0.8), 0.05),
+                                  (gone + lag + 1, ends[k], (1, 0.3, -0.8), 0)]})
+        elif k in home:
+            self._hands_path({k: [(out, home[k], starts[k][1], 0), (gone + lag + 1, home[k], starts[k][1], 0)]})
+        if ends or all(on_table.values()):
+            self.arm_pose = "table"
+        self.events.append({"frame": f0, "kind": "touch"})
+
+    def _touched_tips(self, s, f, point, what):
+        """As _touched, for a hand laid on something by its fingertips."""
+        bpy.context.scene.frame_set(f)
+        bpy.context.view_layer.update()
+        self.holding[s] = "tips"
+        tip = self._hold_point(s)
+        self.holding[s] = False
+        self.touches.append({"frame": f, "m": (tip - Vector(point(f))).length, "hand": "left" if s > 0 else "right",
+                             "what": what})
 
     def _hands_now(self, f):
         """Each hand's wrist target and elbow direction as they are on frame f: where a path starts from."""
@@ -2741,6 +2961,8 @@ class ClayPerson:
                     was_at[sd] = wrist.copy()
                     if not still:  # (a hand on its way somewhere is still turning)
                         continue
+                    if any(a <= f <= b + n(6) for a, b in self.carry_spans.get(s, [])):
+                        continue  # (a hand round a mug's handle is on its side on purpose, until it lets go)
                     H = W[hands[sd]]
                     for ob, give, lo, hi in boxes:
                         if give:  # (a seat gives: a hand over it is on the leg that is on it, lying as the leg does)
