@@ -369,15 +369,42 @@ either a person or an MCP session to look at.
 Installing `bpy` from PyPI is a third route. It pins a Python version and a 300 MB wheel into the toolkit's
 environment for no gain over the Blender most people already have, so the toolkit calls the installed Blender.
 
+### A kitchen
+
+Set kind `kitchen` is a home kitchen at night round the desk room's table, chair and laptop: units with a sink
+under a window, a fridge, a pendant lamp over the table. It adds a mug of tea to carry in and put down, a lid
+that starts shut and is opened and shut by hand (`open_lid`, `close_lid` with `"by"`), and Claude: a beige CRT
+on the worktop with a face on its screen, a tinfoil hat and two arms at a keyboard (`claude_type` gives a
+`key_click` event per key, `claude_turn` turns him). The fields and a worked entrance are in the skill.
+
+What building it taught, each now in the code or a check:
+
+- **A lid is further off than a seated arm.** The far edge of an open laptop was 0.85 m from the shoulder of a
+  character whose arm and hand reach 0.62 m. The first spec made up the difference with a 28 degree lean, and
+  the check reported "3 cm into the table". That number was the measure's ceiling for a thin solid: both
+  forearms and hands were through the table top, because hands hang from the chest and a lean takes them with
+  it. Now the chest turns the reaching shoulder to the lid and leans only as far as the table's edge allows,
+  solved from the reach on each frame; the fingertips take the lid's edge; and a hand lying on the table is
+  held where it lies while the chest moves.
+- **A set that replaces a piece of furniture keeps its edges.** The kitchen table was 10 cm deeper than the desk
+  on the same centre, so its near edge was 5 cm nearer the chair than the fit's belly room allows for, and the
+  chest was in the table at any lean. The table is deeper away from the chair now.
+- **When a check says the same depth for many frames, find what is in the solid.** List the body's vertices
+  inside its box by bone before changing anything: "the chest" was two forearms, then a hand still finishing the
+  move before, then one little finger under a mug.
+- **A beat that starts inside another's move** takes the hand from wherever it is on that frame, and the result
+  is a one-frame jump or a hand left in the air. A hand's move runs about half a second past its beat.
+
 ## Limits today
 
 9:16 works: set `"resolution": "1080x1920"` and read the contact sheet, since a `wide` shot crops the desk.
 `check` builds its stills in the film's own shape (the spec's `resolution`, or `--res`), because where the solver
 puts a camera depends on the shape of the frame.
 
-One character per set; hands on one bone, with no open, grip or point shapes; a walk is a straight line that
-nothing stops going through furniture; three sets (`desk_room`, `desk` with no room for transparent renders,
-and `studio`, which has props and no character); a cartoon style; acting keyed from verbs, with no motion
+One character per set; the clay cast's hands are one bone; a walk goes through furniture unless it is bent
+round it; the sets are `desk_room`, `desk` (no room, for transparent renders), `lecture_hall`, `kitchen` and
+`studio` (props and no character); a `lean` carries hands resting on a table down through it; a standing arm
+does not reach a low table (sit first); a cartoon style; acting keyed from verbs, with no motion
 capture; studio props stand still while the camera moves. EEVEE cannot render a shadow onto a transparent
 background, so a transparent character or prop has no cast shadow on the Remotion scene. The room's light is dim
 on the darkest skin tones in a `wide` shot: raise `look.exposure` a little or use a `medium`. A `pull_out` passes
