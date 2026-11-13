@@ -25,6 +25,7 @@ import math
 import random
 
 import bpy
+import numpy as np
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
@@ -535,6 +536,9 @@ def fighting(cams, every: int = 4, gap: float = 0.0002) -> list:
     return sorted(found.values(), key=lambda r: -r["points"])
 
 
+LIMB_NEAR = 0.3  # a moving part of a character this near a still point puts its shadow on it (m)
+
+
 def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pixels: float = 0.002) -> dict:
     """Points on flat surfaces, and where each is in the picture on every frame it is seen and standing still
     (the frame before and after too). A render's pixels at such a point change smoothly or not at all: a jump
@@ -542,7 +546,9 @@ def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pi
 
     A point counts only where the surface is flat for `flat` metres round it, and on frames where that patch is
     in clear view and at least `pixels` of the picture's width across: the reader averages a few pixels, and an
-    edge, a thin leg or something passing in front would look like a jump."""
+    edge, a thin leg or something passing in front would look like a jump. A point is also left out on frames
+    when part of a character is moving within `LIMB_NEAR` of it: fingers passing over a desk put a shadow on a
+    point for one frame and take it off the next, which is the picture changing and not flicker."""
     sc = bpy.context.scene
     pts = []
     for o in sc.objects:
@@ -572,12 +578,23 @@ def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pi
                         if all((o.closest_point_on_mesh(q)[1] - q).length < 5e-4 for q in [p] + round_it):
                             pts.append((o, p, round_it))
     out = {"objects": [o.name for o, _p, _r in pts], "shots": {}}
+    rigs = [o for o in sc.objects if o.type == "ARMATURE"]
+
+    def limbs():  # where every bone of every character is, in the room, on this frame
+        return np.array([tuple(r.matrix_world @ b.head) for r in rigs for b in r.pose.bones]
+                        + [tuple(r.matrix_world @ b.tail) for r in rigs for b in r.pose.bones]).reshape(-1, 3)
+
     for f0, f1, cam in cams:
         seen, where = {}, {}
+        sc.frame_set(max(1, f0 - 1))
+        before = limbs()
         for f in range(f0, f1 + 1):
             sc.frame_set(f)
             dg = bpy.context.evaluated_depsgraph_get()
             origin = cam.matrix_world.translation
+            now = limbs()
+            moving = now[np.linalg.norm(now - before, axis=1) > 0.002] if len(now) == len(before) else now
+            before = now
 
             def clear(w):
                 d = w - origin
@@ -588,6 +605,8 @@ def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pi
                 w = o.matrix_world @ p
                 x, y, z = world_to_camera_view(sc, cam, w)
                 if z <= 0 or not (0.02 < x < 0.98 and 0.02 < y < 0.98):
+                    continue
+                if len(moving) and float(np.linalg.norm(moving - np.array(w), axis=1).min()) < LIMB_NEAR:
                     continue
                 edge = [o.matrix_world @ q for q in round_it]
                 views = [world_to_camera_view(sc, cam, q) for q in edge]
