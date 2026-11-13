@@ -85,7 +85,9 @@ in 9:16. Never hand-edit `scene.blend` as the source of truth; it is rebuilt fro
 }
 ```
 
-Also at the top level: `"transparent": true` (the same as `--alpha`) and `"voice"` (below).
+Also at the top level: `"transparent": true` (the same as `--alpha`) and `"voice"` (below), and `"clock"` (seconds): where
+this spec starts on a longer film's timeline, so clips made from several specs breathe in step and join without a
+jump. Start and end each such clip in the same pose, looking at the same thing.
 
 **Acting takes the same time at any `fps`.** A blink, a typing rhythm and a head shake are written in seconds
 inside the rig, so a 24 fps film and a 30 fps clip for Remotion act alike.
@@ -182,6 +184,7 @@ proportions. A worked example with an invented character is `tests/fixtures/blen
 | `full` | character, on their feet | head to toe; `"follow": true` travels with a walk |
 | `feet` | character, on their feet | a low insert on the feet, travelling with them: an entrance before the face |
 | `tilt_up` | character, on their feet | starts on the feet, holds, tilts up to the face (`hold` seconds at each end) |
+| `fixed` | none: the camera is put where the spec says | `"cam"` and `"aim"` are points in the room, `"lens"` is for the whole frame, `"push"` moves it that share of the way to the aim over the shot. `"window": [x0, y0, x1, y1]` (from the left and the bottom) renders only that share of the frame, by lens shift, so a clip of the window lies exactly where it would in the whole frame: set the spec's `resolution` to the window's shape |
 | `product` | a studio prop | a three-quarter view of the prop, pushing in a little |
 | `orbit` | a studio prop | the camera travels round the prop from `az` to `az_to` |
 | `reveal` | a studio `phone` or `card` | starts on its screen edge to edge, holds, then pulls back to the `product` view |
@@ -234,6 +237,20 @@ Character (`who` defaults to the first cast member):
 | `reach` | `target`: `[x, y, z]`, `hand`, `dur` | a hand to a point in the room; an error says how far short it is |
 | `point` | `target`: `[x, y, z]`, `camera` or `screen`; `hand`; `back`; `dur` | the arm lifts nearly straight at the target (it reads from across a room), index out, thumb up; held for the beat (1.5 s without `dur`), then back unless `"back": false`. Without `hand`, the one on the target's side. Add a `look_at` to the same target for the eyes. The event gives `aim_deg` |
 | `hand` | `shape`: `open`, `relaxed`, `grip`, `flat`, `type`, `point`, `fist`; `hand`: `left`/`right`; `dur` | the fingers take a shape (both hands without `hand`). Only a fitted model whose fit found fingers has them: the clay cast's mittens are left as they are. Poses and verbs set shapes themselves (`type` on the keys, flat on the desk, a grip on a door handle, relaxed at the sides), so this is for a point or a fist |
+
+A presenter on their feet (a `lecture_hall` set for the things that are carried; the rest work anywhere):
+
+| verb | fields | |
+|---|---|---|
+| `talk` | `until`, `amount` | the mouth opens and closes on the narration's words between the beat and `until` (the spec's `voice` captions): one opening a syllable, wider for an open vowel, rounder for an o or a u, shut on a pause and on b, m and p; the head dips a little on the longer words. A fitted face only |
+| `blinks` | `until` | blinks every two to five seconds, now and then twice |
+| `gesture` | `kind`: `open`, `both`, `shrug`, `count`; `hand`; `dur` | a talking gesture held for the beat, then the hands go back: one open hand lifting on a point, both hands opening out, a shrug with the head tipping, a raised index |
+| `present` | `target`: `[x, y, z]` or `screen`; `hand`; `dur` | show something beside or behind them (a board): the chest turns part of the way, the head and eyes go to it and stay for the first half, the arm on that side points; then all come back. Follow it with a `look_at` |
+| `dust_hands` | `dur` | the hands come up palms together and brush past each other |
+| `carry` | `prop`: `cup`; `hand` | from this beat the cup is in a hand held in front of the chest, and that arm stays out of a walk's swing |
+| `put_down` | `prop`: `cup` or `chalk`; `hand`; `to`: `[x, y, z]`; `dur` | the hand takes what it holds to its spot on the table and lets go; an error says how far short the arm is |
+| `pick_up` | `prop`: `chalk`; `hand`; `dur` | a hand takes the chalk off the table; it lies along the index finger and the hand keeps hold of it through every later shape |
+| `hold` | `prop`: `chalk`; `hand` | the chalk is in the hand from this beat (a clip that starts after it was picked up) |
 
 Poses also has `down` (arms at the sides), which a standing character starts in; arms swing on a walk only from
 `down`. A posture verb used in the wrong state is a named error ("dev is sitting: walk needs them standing
@@ -305,6 +322,7 @@ of the handle), `open_door` with `"by"`, `walk` in, `walk` to a thigh's length i
 |---|---|
 | `desk_room` (default) | a room: walls, window, posters, rug, desk, chair, laptop, mug, plant. `palette` recolours it (`wall`, `wall2`, `floor`, `desk`, `accent1`, `accent2`, `rug`) |
 | `desk` | the desk, chair and laptop with no room, for `--alpha`: the character sits on whatever the Remotion scene puts behind it |
+| `lecture_hall` | a wall with a board that shows a picture (`"board": {"image": ..., "x0", "x1", "z0", "z1"}`: the rectangle of the wall it covers, the same one a `fixed` camera can frame square on), a `"door"`, and a small table (`"table": {"at", "size", "height", "cup", "chalk"}`) with a takeaway cup and a stick of chalk. `"walls": false` leaves the room out for `--alpha`; `"table": {"hidden": true}` keeps the table to reach for and does not draw it; `"cup_on": true` starts with the cup already on it. The cast stands |
 | `studio` | a product stage: a backdrop curving from floor to wall, soft lights sized to the props, no character and no beats. `palette.backdrop` colours it; with `--alpha` the backdrop is left out |
 
 **Studio props** (`set.props`, each with an `id` that shots name as their `subject`):

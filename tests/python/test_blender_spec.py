@@ -371,6 +371,42 @@ class BlenderCheckTests(unittest.TestCase):
                           'beats': [{'at': 'A+0.3', 'do': 'point', 'target': 'the door'}]})
         self.assertIn('target', str(ctx.exception))
 
+    def test_a_presenter_carries_a_cup_in_puts_it_down_and_talks_at_a_board(self):
+        """A lecture hall: someone comes to the table carrying a cup, puts it down, takes the chalk, shows the
+        board, makes a gesture, dusts their hands and talks, filmed by a camera put where the spec says. The cup
+        and the chalk are each in the hand until they are put down, and what is wrong in a beat is named."""
+        spec = {
+            'set': {'kind': 'lecture_hall', 'table': {'at': [1.6, 1.3], 'cup': [1.45, 1.5], 'chalk': [1.4, 1.52]}},
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 1.9], 'facing': -90}],
+            'shots': [{'id': 'A', 'dur': 9, 'type': 'fixed', 'cam': [-0.5, -3.0, 1.6], 'aim': [1.2, 2.0, 1.3],
+                       'lens': 30, 'push': 0.1}],
+            'beats': [{'at': 0, 'do': 'carry', 'prop': 'cup', 'hand': 'left'},
+                      {'at': 'A+0.2', 'do': 'walk', 'to': [1.25, 1.82], 'facing': 20, 'until': 'A+2.0'},
+                      {'at': 'A+2.2', 'do': 'put_down', 'prop': 'cup', 'dur': 0.7},
+                      {'at': 'A+3.5', 'do': 'pick_up', 'prop': 'chalk', 'hand': 'left', 'dur': 0.6},
+                      {'at': 'A+4.8', 'do': 'present', 'target': [-1.0, 2.9, 2.2], 'dur': 1.2},
+                      {'at': 'A+6.6', 'do': 'gesture', 'kind': 'open', 'hand': 'right', 'dur': 0.8},
+                      {'at': 'A+7.6', 'do': 'dust_hands', 'dur': 0.8},
+                      {'at': 'A+0.1', 'do': 'blinks'}, {'at': 'A+4.0', 'do': 'talk'}]}
+        checks, events = self.compile(spec)
+        self.assertTrue(checks['shots'][0]['passed'], checks)
+        kinds = [e['kind'] for e in events['events']]
+        for kind in ('put_down', 'pick_up', 'point', 'dust'):
+            self.assertIn(kind, kinds)
+        self.assertLess(kinds.index('put_down'), kinds.index('pick_up'))
+        self.assertLessEqual(checks['through_m'], 0.03)                    # nothing goes through the table
+        far = {**spec, 'cast': [{'id': 'dev', 'posture': 'stand', 'at': [0.0, 0.0]}], 'beats': [
+            {'at': 0, 'do': 'carry', 'prop': 'cup'}, {'at': 'A+1', 'do': 'put_down', 'prop': 'cup'}]}
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile(far)
+        self.assertIn('short of putting it down', str(ctx.exception))
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({**spec, 'beats': [{'at': 0, 'do': 'carry', 'prop': 'umbrella'}]})
+        self.assertIn('cup, chalk', str(ctx.exception))
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({**spec, 'shots': [{'id': 'A', 'dur': 2, 'type': 'fixed', 'cam': [0, -3, 1.5]}], 'beats': []})
+        self.assertIn('"cam" and "aim"', str(ctx.exception))
+
     def test_a_walk_can_bend_and_the_body_leans_into_it(self):
         """A curved walk: the path bows away from the straight line, the body banks into the bend, and the
         check reports each walk. A straight walk reports no bow."""
