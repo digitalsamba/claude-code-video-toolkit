@@ -1348,14 +1348,20 @@ class ClayPerson:
                 P = pts @ frame + np.array(wr)
                 return self._beside(body, P, s)
 
+            # (a swinging arm is in a stride: the chest rolls 2 degrees against the hips in one (_carry), which
+            # carries a hanging hand toward the hip by the arm's length times that. Half of it is allowed for:
+            # measured against the body standing, long fingers grazed the thigh on one frame of a stride)
+            room = self.HAND_GAP
+            if swing or elbow != self.ARM_HANG:
+                room += (upper + fore) * math.sin(R(1.0))
             lo, hi = R(-8), R(40)  # (a little in, for shoulders wider than the hips)
-            if gap(lo) >= self.HAND_GAP:
+            if gap(lo) >= room:
                 hi = lo
             for _ in range(14):
                 if hi - lo < R(0.1):
                     break
                 mid = (lo + hi) / 2
-                lo, hi = (lo, mid) if gap(mid) >= self.HAND_GAP else (mid, hi)
+                lo, hi = (lo, mid) if gap(mid) >= room else (mid, hi)
             tip = hi
         else:  # (a fitted model without fingers: as far out as the hips allow, as _side_clear measures it)
             drop = -arm(0.0)[1].z + sh.z
@@ -1457,6 +1463,8 @@ class ClayPerson:
         near = (along > -0.03) & (along < reach) & (d > 1e-4) & (d < 0.3) & (off @ way > 0.7 * d)  # within 45 degrees
         return float(np.percentile(d[near], 95)) if near.any() else self._girth()["thigh"]
 
+    ON_LEG = 0.006  # how far the fingertips of a hand resting on a leg are held off its skin (m): cloth gives
+
     def _on_thigh(self, s, u=0.55, round_=0.0):
         """The spot on thigh `s` for its hand to rest on, `u` of the way from hip to knee and `round_` degrees
         round from the top toward the outside (where a belly leaning over the leg is not): a function of the
@@ -1466,7 +1474,7 @@ class ClayPerson:
         off = None
         if self.fingers.get(s):  # (a hand with fingers, measured as it lies relaxed: knuckles that far off the leg)
             under, knuckles = self._hand_under(s, "relaxed")
-            off = under - knuckles
+            off = under - knuckles + self.ON_LEG
 
         def at(f):
             bone, mw = self.rig.pose.bones["thigh." + sd], self.rig.matrix_world
@@ -1870,7 +1878,9 @@ class ClayPerson:
                     over = self._on_keys(s, f1, self._mirror(hand, s), "type")
                     over += Vector((0, 0, self.OVER_KEYS + abs(over.y) * math.sin(R(self.STOP_LEAN))))
                     waits = True
-                    stages[s] = [(f0 + d, begin, pole, 0), (go + d, begin, pole, 0), (edge[1] + d, over, over_pole, 0.03),
+                    # (up off the leg before forward: curled fingers hang below the knuckles by this much)
+                    up = self._hand_under(s, "relaxed")[0] - self._hand_under(s, "relaxed")[1] + 0.02
+                    stages[s] = [(f0 + d, begin, pole, 0), (go + d, begin, pole, 0), (edge[1] + d, over, over_pole, up),
                                  (f1, over, over_pole, 0)]
                 elif took is None:
                     stages[s] += [(f1 - (late - d), self._on_thigh(s, lap, 20), self.LAP, 0.01), (f1, self._on_thigh(s, lap, 20), self.LAP, 0)]
