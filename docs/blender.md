@@ -220,9 +220,13 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    thumb's root is 8% of the hand's length out: the wedge thins evenly, the cuff ring and the fingers do not
    move. The fit prints the depth before and after and how far any edge was stretched, and fails if the root
    still stands over 20% out (a hand like that rests on its thumb).
-   Generated hands come out large: `"scale": 0.7` in `hands` makes both smaller before they are seated (compare
-   a hand with the face and the shoe in the fit's front still), and a spec that has them reach for something
-   says so if the shorter reach now falls short.
+   A second generation of the same character comes with hands a fifth to a third too long, so the fit makes the
+   donor's hand as long as the body's own, cuff to fingertip, and prints both lengths. `"scale": 0.7` in `hands`
+   sets the donor's scale by hand instead (the fit then prints what would have matched). The wrist joint is put
+   where the hand meets the cuff, whatever `fit.json` says: read off a still it lands some centimetres up the
+   sleeve or inside the hand, and then the sleeve folds where there is no joint. A nub the generator left on a
+   hand is smoothed flat with `"smooth": [[along, out_of_palm, across, radius]]`, in cm on the fitted hand from
+   the middle of the knuckle row (the back of the hand is negative out of the palm).
 4. **Name it.** A character file with `"model": "lead.blend"` beside it, and `"accessories": ["glasses"]` if they
    wear them. Keep the folder in a kit (`kits/<name>/cast/`).
 5. **Look at it** before writing beats: a `check` of any spec with the cast entry swapped, and read the contact
@@ -231,9 +235,23 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
 What the fit does for you: legs that touch in the model (shoes generated as one piece) are parted, since a face
 joining one leg to the other tears across the gap on the first step; weights come from a clean stand-in body on
 the same joints, copied only between
-surfaces that face the same way (so a sleeve does not take the chest's weights), and kept inside the sleeve; bends
+surfaces that face the same way (so a sleeve does not take the chest's weights), and kept inside the sleeve, whose
+thickness is measured round the upper arm and round the forearm on the side away from the body; bends
 keep their volume; the seat is as high as the character's knees and the desk comes to its hands, so nobody is
 stretched to fit furniture.
+
+The furniture and the reaches come from the body's own measures, so a build the rig was not worked out on still
+sits at its desk: the desk's underside stays over the thighs and a hand resting on them (long hands on short arms
+hang deep under the wrist, and a desk set by the hands alone came down into the legs); the keys' near edge comes to
+the fingertips, a hand's reach from where the wrist is comfortable; two hands on the keys lie 30% of a hand's
+breadth apart, measured on the mesh (broad hands on narrow shoulders met in the middle); a hand on a thigh stands
+off the leg's skin as it is posed on that frame. Pulling in to the desk, a hand takes the desk's edge only if it
+can lie flat there in front of the shoulder; otherwise the hands lift off the lap while the desk is still far off
+and wait over the keys.
+
+To keep a model in a repository, weld its UV seams before reducing it (the importer splits the vertices along
+every seam, and a split mesh decimated opens into cracks along all of them, which show as torn cloth and shards
+round the eyes). In Blender: merge by distance at 0.00001, then Decimate.
 
 What it does not do: without a `hands` model the hands are whatever the model has (usually fists), on one
 bone; generated hands are thick and cupped, so they read as mitts with finger grooves. A typing hand slopes down
@@ -259,7 +277,37 @@ A fitted model's arms hang from the shoulder: the elbow bent about 12 degrees, t
 the relaxed hand needs to clear the hip (about a centimetre, measured on the mesh). In a walk the arm swings like
 a pendulum, nearly straight behind and bending a little more in front, keyed along its arc so the elbow does not
 fold between keys. `walks` in `checks.json` gives each walk's `arms`: the most the elbow bends, how near level
-the forearm comes, how far a hand stands off the body.
+the forearm comes, how far a hand stands off the body (the middle value through the walk: a thigh swings out
+from under the hand on every stride, and that is the leg moving, not the arm held out). `snap_m` is the furthest
+the chest or a hand moves in one frame when it hardly moves in the frames either side (over 2 cm fails): a key
+that landed beside another, or a hand held on one spot and then put on the next.
+
+### Refining a rig: one spec, two bodies
+
+How the fitted rig was worked up, and how to carry on with it or with your own. It has been run with Claude Fable
+5.2 in Claude Code; other models are untested.
+
+1. **Two characters, one spec.** Keep a second fitted character of a different build beside the first (the repo
+   has Mara) and run every spec on both. A number tuned on one body passes on that body: nearly everything found
+   in the session that made Mara pass came from her failing a film the first character passed.
+2. **Look, then measure.** Render or `check`, tile every second or third frame of a shot, and look. When
+   something is wrong, find the number behind it before changing anything: print it per frame, and compare it on
+   both characters.
+3. **Turn what was seen into a check.** Each fault becomes a number in `checks.json` with a limit and a test, so
+   it cannot come back unseen. Prove a new check on the code as it was (it should fail there). The checks are
+   the memory of the work; a note that says "watch the hands" is not.
+4. **Fix the cause where it is measured.** A constant that made one character pass is replaced by a measure of
+   the body (a length, a thickness, a reach), and the fix is right when both characters pass without a number
+   of their own.
+5. **Prove nothing else moved.** The clay cast's check stills are compared with a baseline, the tests run, and
+   the film is rendered at full size with the flicker check before anyone is shown it.
+6. **Carry it across sessions in one status file.** Each session ends by updating one file (what was done, what
+   is open and in what order, what was spent) and writing the next session's prompt from it. A fresh session
+   reads the file and the checks, not the old conversation.
+
+What could be better: the proof scripts (tiled stills, close cameras on a hand or a face, per-frame traces) live
+in a project folder and are not yet tools in the toolkit; the fit still wants its joints read off a still by hand;
+and two characters is the least that shows a tuned number, where three of different builds would show more.
 
 ## A product stage
 

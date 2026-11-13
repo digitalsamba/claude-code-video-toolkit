@@ -159,7 +159,10 @@ at its knee height, keyboard under its hands). `glasses` is the one accessory a 
 lip, teeth and lids on the model's lip line and eyes, with the cheeks and chin moving for a smile or an open
 mouth), and with a second model of the same character with open hands the fit gives it fingers: hand shapes, a
 grip on a door handle, hands laid flat on the desk, fingertips on the keys. The fit lays a generated thumb in to
-the palm (it stands off it on a thick wedge), so the hands type at a typist's slope. Head shots aim at a fitted character's own head, whatever its
+the palm (it stands off it on a thick wedge), so the hands type at a typist's slope. The donor's hands are sized to the body's own, the wrist joint
+is put at the cuff, and the desk, the keys and how far apart the hands lie come from the body's measures, so one spec
+runs on characters of different builds (run a spec on two to find a number tuned on one; `docs/blender.md` has the
+method). Head shots aim at a fitted character's own head, whatever its
 proportions. A worked example with an invented character is `tests/fixtures/blender-fitted`. The steps and their costs are in `docs/blender.md`.
 
 ### Shots
@@ -250,6 +253,7 @@ and the second when it is over a centimetre: usually a step or a reach that was 
 | `hands_apart_m` | under 0.5 cm | hands with fingers: the nearest the two hands come to each other |
 | `palm_tilt_deg` | 35 degrees | hands with fingers: a hand resting over a table top, rolled from palm down onto its side (a typing hand slopes down from the wrist on purpose; the slope is not counted) |
 | `palm_turn_deg` | 35 degrees | hands with fingers: a hanging hand's palm turning away from the leg as the arm swings in a walk (it reads as a flapping hand) |
+| `snap_m` | 2 cm | the chest or a hand moving much further in one frame than in the frames either side (a key beside another, a hand put from one spot to the next in a frame) |
 
 A thin thing (a door leaf, a desk top) counts as gone through once anything is half way into it, and `through`
 says how long it lasted ("from 14.50 s to 20.67 s"). A hand is checked at its palm and at every fingertip.
