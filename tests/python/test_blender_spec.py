@@ -603,6 +603,40 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertFalse(by['wall']['fails'])
         self.assertNotIn('lamp', by)
 
+    def test_flicker_is_not_a_picture_sliding_under_a_slow_camera(self):
+        """A push-in moves a still point a fraction of a pixel a frame. Over a board with writing on it, a
+        patch that snaps to whole pixels reads each snap as a jump (the lecture hall's board: 104 frames
+        reported, none to see). Read at the point's own place, the level changes smoothly; two faces
+        in one plane on the same surface, under the same move, are still caught."""
+        import numpy as np
+        yy, xx = np.mgrid[0:60, 0:200].astype(np.float32)
+        writing = 60.0 + 120.0 * ((xx.astype(int) // 3) % 2)     # chalk strokes: 3 px light, 3 px dark
+        frames = [writing.copy() for _ in range(60)]
+        for f in (10, 20, 30, 40, 50):
+            frames[f][:, 120:] += 25.0                            # the right half fights with another face
+        drift = lambda f: 0.3 * f                                 # pixels: the camera pushing in
+        at = lambda f, x: (x + drift(f)) / 200
+        rows = [[f, k, at(f, x), 0.5, at(f - 1, x), 0.5, at(f + 1, x), 0.5]
+                for f in range(1, 61) for k, x in enumerate((40.0, 150.0))]
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            (out / 'still_points.json').write_text(json.dumps(
+                {'objects': ['board_face', 'board_patch'], 'shots': {'A': {'frames': [1, 60], 'points': rows}}}))
+            (out / 'A.mp4').write_bytes(b'')
+            real = blender_render.gray_frames
+            # the picture slides with the camera: frame f shows the writing moved by drift(f)
+            moved = [np.stack([np.interp(np.arange(200) - drift(i + 1), np.arange(200), fr[r]) for r in range(60)])
+                     for i, fr in enumerate(frames)]
+            blender_render.gray_frames = lambda video, size: iter(moved)
+            try:
+                found = blender_render.flicker(out, {'A': (out / 'A.mp4', 1)}, (200, 60))
+            finally:
+                blender_render.gray_frames = real
+        by = {r['object']: r for r in found}
+        self.assertNotIn('board_face', by)
+        self.assertTrue(by['board_patch']['fails'])
+        self.assertEqual(by['board_patch']['frames'], [11, 21, 31, 41, 51])
+
     def test_mistakes_with_postures_are_named(self):
         shots = [{'id': 'A', 'dur': 3, 'type': 'wide'}]
         for extra, said in (

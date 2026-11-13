@@ -366,6 +366,8 @@ def flicker(out: Path, videos: dict, size: tuple[int, int]) -> list[dict]:
     """Flicker in rendered video: `check` knows which points of the set stand still and where each is in every
     frame (still_points.json, written at render); a still surface's brightness changes smoothly or not at all,
     so a point that jumps for one frame and comes back is flicker (two faces in one plane, light noise).
+    The level is read at the point's exact place, not the nearest pixel's, so a surface with a picture on it
+    (a board with writing) under a moving camera is not misread.
     `videos` maps a shot id to (file, the frame number of its first frame). Returns one finding per object and
     shot: {"object", "shot", "frames", "worst", "at"}."""
     points = json.loads((out / "still_points.json").read_text())
@@ -381,8 +383,14 @@ def flicker(out: Path, videos: dict, size: tuple[int, int]) -> list[dict]:
             by_frame.setdefault(row[0], []).append(row)
 
         def level(im, x, y):
-            px, py = min(w - 3, max(2, int(x * w))), min(h - 3, max(2, int(y * h)))
-            return float(im[py - 2:py + 3, px - 2:px + 3].mean())
+            # a 5x5 patch centred on the point itself, between pixels: on a whole-pixel patch a camera move
+            # steps the patch a pixel at a time, and over lettering or a picture each step reads as a jump
+            fx, fy = x * w - 0.5, y * h - 0.5
+            px, py = min(w - 4, max(2, int(fx // 1))), min(h - 4, max(2, int(fy // 1)))
+            ax, ay = min(1.0, max(0.0, fx - px)), min(1.0, max(0.0, fy - py))
+            a = im[py - 2:py + 4, px - 2:px + 4]
+            a = (1 - ay) * a[:-1] + ay * a[1:]
+            return float(((1 - ax) * a[:, :-1] + ax * a[:, 1:]).mean())
 
         spikes, window = {}, {}
         for i, im in enumerate(gray_frames(Path(video), size)):
