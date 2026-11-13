@@ -308,12 +308,12 @@ def clay_proxy(src: dict):
     return proxy, rig
 
 
-def copy_weights(proxy, body, src, reach=0.25, smooth=8):
+def copy_weights(proxy, body, src, reach=0.25, smooth=14):
     """The proxy's weights, onto the model. Each model vertex takes them from the nearest proxy face that looks
     the same way: the inside of a sleeve and the side of the chest are close together in an A-pose but face each
-    other, and plain nearest-surface copying swaps them (which tears the armpit when the arm lifts). The result
+    other, and plain nearest-surface copying swaps them (which tears the armpit when the arm lifts).
     An arm then only keeps what lies inside its own sleeve (a tube round shoulder, elbow and wrist, as thick as
-    the model's arm measures): a bulky chest is nearer the proxy's arm than its thin chest, and would be pulled
+    the model's upper arm and forearm each measure): a bulky chest is nearer the proxy's arm than its thin chest, and would be pulled
     about by it. The result is smoothed along the model's own edges, so a joint bends over a band of triangles
     and not a line."""
     from mathutils.bvhtree import BVHTree
@@ -342,12 +342,30 @@ def copy_weights(proxy, body, src, reach=0.25, smooth=8):
         t = np.clip((co - a) @ (b - a) / ((b - a) @ (b - a)), 0, 1)
         return np.linalg.norm(co - (a + t[:, None] * (b - a)), axis=1)
 
-    top = w.argmax(axis=1)
+    def sleeve(a, b, side):
+        """How thick the model's arm is round the bone from a to b (m): its vertices on the side away from the
+        body, where there is only arm (the inner side of an arm in an A-pose runs into the chest)."""
+        a, b = np.array(a, dtype=np.float32), np.array(b, dtype=np.float32)
+        axis = (b - a) / np.linalg.norm(b - a)
+        t = (co - a) @ axis / np.linalg.norm(b - a)
+        off = co - a - np.outer((co - a) @ axis, axis)
+        out = np.array([side, 0, 0], dtype=np.float32)
+        out -= axis * (out @ axis)
+        d = np.linalg.norm(off, axis=1)
+        mine = (t > 0.2) & (t < 0.9) & (off @ out > 0) & (d < 0.3)
+        return float(np.percentile(d[mine], 95)) if mine.any() else 0.08
+
+    # (each part of the arm by its own thickness, and the two arms alike: a puppet's upper sleeve is twice as
+    # thick as its forearm, and a tube sized by the forearm lets the back of the upper arm go to the chest)
+    thick = {part: 0.5 * sum(sleeve(src[a + sd], src[b + sd], 1.0 if sd == "L" else -1.0) for sd in "LR")
+             for part, a, b in (("upper", "sh", "el"), ("fore", "el", "wr"))}
+    print(f"fit: sleeves {100 * thick['upper']:.1f} cm thick round the upper arm and {100 * thick['fore']:.1f} cm "
+          "round the forearm")
     for sd in "LR":
         upper, fore = names.index("upper." + sd), names.index("fore." + sd)
-        d = np.minimum(to_segment(src["sh" + sd], src["el" + sd]), to_segment(src["el" + sd], src["wr" + sd]))
-        r = float(np.percentile(d[top == fore], 90))  # the forearm is all arm: its thickness is the sleeve's
-        keep = np.clip((1.7 * r - d) / (0.5 * r), 0, 1)
+        keep = np.maximum(
+            np.clip((1.7 * thick["upper"] - to_segment(src["sh" + sd], src["el" + sd])) / (0.5 * thick["upper"]), 0, 1),
+            np.clip((1.7 * thick["fore"] - to_segment(src["el" + sd], src["wr" + sd])) / (0.5 * thick["fore"]), 0, 1))
         w[:, upper] *= keep
         w[:, fore] *= keep
     # A leg ends at the hip. The copy gives a thigh whatever is nearest it, and under a bulky top that reaches
@@ -474,7 +492,7 @@ def main():
         donor = load_donor(donor_path if donor_path.is_absolute() else Path(args.fit).resolve().parent / donor_path,
                            fit["hands"].get("centre_x"))
         fingers, pieces = hand_graft.graft(body, donor, src, int(fit["hands"].get("faces", 9000)),
-                                           float(fit["hands"].get("scale", 1.0)))
+                                           float(fit["hands"]["scale"]) if "scale" in fit["hands"] else None)
         D.objects.remove(donor)
     proxy, proxy_rig = clay_proxy(src)
     copy_weights(proxy, body, src)

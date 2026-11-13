@@ -109,8 +109,9 @@ def find_hand(ob, side: int, col=None) -> dict:
     cloth = np.median(hue[sleeve], axis=0)
     hand = ((co - centre) @ normal > -0.15 * radius) & (np.linalg.norm(co - centre, axis=1) < reach) & region
     hand &= np.linalg.norm(hue - cloth, axis=1) > 0.5 * np.linalg.norm(skin / skin.sum() - cloth)
+    length = float(((co[hand] - centre) @ normal).max())  # from the cuff to the furthest fingertip
     return {"verts": hand, "centre": Vector(centre.tolist()), "normal": Vector(normal.tolist()), "radius": radius,
-            "skin": skin}
+            "skin": skin, "length": length}
 
 
 def cut_hand(ob, found: dict, name: str, faces: int):
@@ -381,12 +382,15 @@ def _mirrored(piece, theirs: dict, found: dict):
              "fingers": [{"name": f["name"], "joints": [m @ j for j in f["joints"]]} for f in found["fingers"]]})
 
 
-def graft(body, donor, src: dict, faces: int = 9000, scale: float = 1.0, tuck: float = 0.012):
+def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None, tuck: float = 0.012):
     """Replace the body's hands with the donor's. `src` is the body's joints (source_joints). Returns the fingers
     of each side ({"L": {...}, "R": {...}}, in the body's space) and the hand objects, to join to the body once
     it is weighted. Each `tip` joint moves to the knuckles: the hand bone is the palm, and the fingers go on
-    from it. Both models are the same character at the same height, so a hand keeps its size unless `scale`
-    says otherwise (a ragged cuff is too rough a measure to size a hand by, and two hands must match)."""
+    from it. The donor's hand is made as long as the body's own (cuff to fingertip, the mean of its two
+    hands, so the pair match): a second generation of the same character at the same height still comes with
+    hands half as long again, and everything the rig measures off a hand (the desk, the keys, how far apart
+    two hands type) follows its size. `scale` sets the donor's scale by hand instead (a ragged cuff is too
+    rough a measure to size a hand by, so the cuff's width is only printed)."""
     body_col, _ = _colours(body)
     donor_col, donor_img = _colours(donor)
     cut = []
@@ -416,8 +420,23 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float = 1.0, tuck: f
     print(f"fit: hands, both from the model's {'left' if best[1]['centre'].x > 0 else 'right'}-arm hand, which is a "
           f"{'left' if best[2]['side'] > 0 else 'right'} hand (form {best[2]['form']:.2f})")
     out, pieces, skins, old = {}, [], [], np.zeros(len(body.data.vertices), dtype=bool)
+    own = {side: find_hand(body, side, body_col) for side in (1, -1)}
+    measured = 0.5 * (own[1]["length"] + own[-1]["length"]) / best[1]["length"]
+    print(f"fit: hands, the body's own are {50 * (own[1]['length'] + own[-1]['length']):.1f} cm from cuff to "
+          f"fingertip and the donor's {100 * best[1]['length']:.1f} cm: "
+          + (f"scaled {measured:.2f}x to match" if scale is None else
+             f"scaled {scale:.2f}x as the fit says ({measured:.2f}x would match)"))
+    scale = measured if scale is None else scale
+    # the wrist joint goes where the hand meets the cuff, the same on both sides (the mean of the two rings,
+    # one mirrored): read off a still by hand it lands some centimetres up the sleeve or inside the hand, and
+    # then the sleeve folds where there is no joint, or the hand turns about its knuckles
+    ring = (own[1]["centre"] + Vector((-own[-1]["centre"].x, own[-1]["centre"].y, own[-1]["centre"].z))) / 2
+    moved = (ring - src["wrL"]).length
+    for side, sd in ((1, "L"), (-1, "R")):
+        src["wr" + sd] = Vector((ring.x * side, ring.y, ring.z))
+    print(f"fit: hands, the wrist joint moved {100 * moved:.1f} cm from where the fit put it to the middle of the cuff")
     for (piece, theirs, found), (side, sd) in zip(cut, ((1, "L"), (-1, "R"))):
-        mine = find_hand(body, side, body_col)
+        mine = own[side]
         forearm = (src["wr" + sd] - src["el" + sd]).normalized()
         turn = theirs["normal"].rotation_difference(forearm).to_matrix().to_4x4()
         # and turned about its own length so the palm faces the leg, as a hand hangs: generators leave the
