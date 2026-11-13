@@ -23,6 +23,10 @@ fit.json (metres, in the model's own space; side joints once, for the character'
      "face": {"eyes": [[x, z], [x, z]], "eye_size": [w, h], "brows": [[x, z], [x, z]], "brow_size": [w, h],
               "mouth": [x, z], "mouth_width": w, "half_width": w, "moustache": true, "chin": z}}
 Eyes and brows are the character's right, then left, as seen from the front.
+Optional: "hands": {"model": "open_hands.glb", "scale": 0.7, "smooth": [[along, out_of_palm, across, radius]]}
+(hands.py: the donor's hands are sized to the body's own unless `scale` says, the wrist joint moves to the cuff
+whatever `wr` says, and `smooth` flattens a lump on both hands, in cm from the middle of the knuckle row), and in
+"face", "brows_hidden": [0] for a brow under a fringe.
 """
 from __future__ import annotations
 
@@ -107,6 +111,14 @@ def erase(ob, shapes):
     me = ob.data
     uv = me.uv_layers.active.data
     imgs = [(img, pixels_of(img)) for img in images_of(ob)]
+    base = pixels_of(base_colour(ob))
+    bh, bw = base.shape[:2]
+
+    def colour(poly):  # a face's own colour: the base colour under its corners and its middle
+        at = np.array([uv[li].uv for li in poly.loop_indices])
+        at = np.vstack([at, at.mean(axis=0)])
+        return base[np.clip((at[:, 1] * bh).astype(int), 0, bh - 1), np.clip((at[:, 0] * bw).astype(int), 0, bw - 1), :3].mean(axis=0)
+
     bm_verts = set()
     for x, z, rx, rz in shapes:
         y0 = front_y(ob, x, z)
@@ -120,6 +132,15 @@ def erase(ob, shapes):
                 inside.append(poly)
             elif d <= 2.2:
                 ring.append(poly)
+        # painted lines that run on past the shape (lashes at the corner of an eye) go with it: faces of the ring
+        # that are dark beside its skin, and dark in every channel (hair at a temple is dark too, but it is a
+        # colour: its strongest channel is as bright as skin's)
+        shade = np.array([colour(poly) for poly in ring]) if ring else np.zeros((0, 3))
+        if len(shade):
+            skin = np.median(shade[shade.sum(axis=1) >= np.median(shade.sum(axis=1))], axis=0)
+            lines = (shade.sum(axis=1) < 0.55 * skin.sum()) & (shade.max(axis=1) < 0.55 * skin.max())
+            inside += [poly for poly, dark in zip(ring, lines) if dark]
+            ring = [poly for poly, dark in zip(ring, lines) if not dark]
         for img, px in imgs:
             h, w = px.shape[:2]
             at = np.array([[uv[li].uv[0] * w, uv[li].uv[1] * h] for poly in ring for li in poly.loop_indices])
@@ -492,7 +513,8 @@ def main():
         donor = load_donor(donor_path if donor_path.is_absolute() else Path(args.fit).resolve().parent / donor_path,
                            fit["hands"].get("centre_x"))
         fingers, pieces = hand_graft.graft(body, donor, src, int(fit["hands"].get("faces", 9000)),
-                                           float(fit["hands"]["scale"]) if "scale" in fit["hands"] else None)
+                                           float(fit["hands"]["scale"]) if "scale" in fit["hands"] else None,
+                                           lumps=fit["hands"].get("smooth", ()))
         D.objects.remove(donor)
     proxy, proxy_rig = clay_proxy(src)
     copy_weights(proxy, body, src)

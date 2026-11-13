@@ -13,8 +13,9 @@ the hands open gives fingers. This module takes only the hands from it and puts 
   * a hand goes on the arm it belongs to. Generators often draw the thumbs on the wrong side, which makes the
     hand at the end of the left arm a right hand: which it is shows in the order of thumb, fingers and palm,
     and it is seated on the arm of that side;
-  * the hand is moved so its wrist ring sits in the body's cuff, turned so it leaves the cuff the way the
-    forearm points, and its texture is tinted to the body's own skin.
+  * the hand is made as long as the body's own, moved so its wrist ring sits in the body's cuff, turned so it
+    leaves the cuff the way the forearm points, and its texture is tinted to the body's own skin. The body's
+    wrist joint goes to the middle of that ring, and the stub of arm inside the sleeve stays with the forearm.
 
 What comes back is the joints of every finger and the palm's facing, for the rig (character.py) to build finger
 bones on and to curl them: `open`, `relaxed`, `grip`, `point`, `fist`.
@@ -109,6 +110,23 @@ def find_hand(ob, side: int, col=None) -> dict:
     cloth = np.median(hue[sleeve], axis=0)
     hand = ((co - centre) @ normal > -0.15 * radius) & (np.linalg.norm(co - centre, axis=1) < reach) & region
     hand &= np.linalg.norm(hue - cloth, axis=1) > 0.5 * np.linalg.norm(skin / skin.sum() - cloth)
+    # and joined to the fingertips: a fleck of the sleeve that is nearer skin's colour than cloth's is not hand,
+    # and taken with it leaves a hole in the cuff with the wrist showing through
+    joined = {}
+    for a, b in ed[hand[ed[:, 0]] & hand[ed[:, 1]]]:
+        joined.setdefault(int(a), []).append(int(b))
+        joined.setdefault(int(b), []).append(int(a))
+    reached = set(int(i) for i in far if hand[i])
+    stack = list(reached)
+    while stack:
+        v = stack.pop()
+        for u in joined.get(v, ()):
+            if u not in reached:
+                reached.add(u)
+                stack.append(u)
+    whole = np.zeros(len(co), dtype=bool)
+    whole[list(reached)] = True
+    hand = whole
     length = float(((co[hand] - centre) @ normal).max())  # from the cuff to the furthest fingertip
     return {"verts": hand, "centre": Vector(centre.tolist()), "normal": Vector(normal.tolist()), "radius": radius,
             "skin": skin, "length": length}
@@ -298,6 +316,12 @@ def find_fingers(hand, wrist: Vector, leaves: Vector) -> dict:
     a[tv], b_[tv] = lift * (1 - far), lift * far
     weights["thumb.a"], weights["thumb.b"] = a, b_
     weights["hand"][tv] = 1 - lift
+    # the wrist bends over a band past the cuff, and the stub of arm that sits inside the sleeve stays with the
+    # forearm: turned with the hand, it comes out through the cloth when the wrist bends
+    arm = (1 - smooth(along / 0.02)).astype(np.float32)
+    for name in weights:
+        weights[name] = weights[name] * (1 - arm)
+    weights["fore"] = arm
     laid = lay_thumb(hand, co, ed, wrist, axis, normal, thumb, rest, knuckle, length, a + b_)
     return {"palm": normal, "axis": axis, "knuckles": wrist + axis * knuckle + normal * (centre - wrist).dot(normal),
             "side": side, "weights": weights, "thumb": laid,
@@ -382,7 +406,29 @@ def _mirrored(piece, theirs: dict, found: dict):
              "fingers": [{"name": f["name"], "joints": [m @ j for j in f["joints"]]} for f in found["fingers"]]})
 
 
-def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None, tuck: float = 0.012):
+def flatten(piece, centre: Vector, radius: float) -> int:
+    """Smooth a lump off a hand: the vertices within `radius` of a point are drawn to the mean of their
+    neighbours until the skin lies as a membrane across where the lump stood (what is further away holds still).
+    Returns how many vertices moved."""
+    co, ed = _arrays(piece)
+    loose = np.linalg.norm(co - np.array(centre), axis=1) < radius
+    if not loose.any():
+        return 0
+    for _ in range(400):
+        total, count = np.zeros_like(co), np.zeros(len(co))
+        np.add.at(total, ed[:, 0], co[ed[:, 1]])
+        np.add.at(total, ed[:, 1], co[ed[:, 0]])
+        np.add.at(count, ed[:, 0], 1)
+        np.add.at(count, ed[:, 1], 1)
+        mean = total / np.maximum(count, 1)[:, None]
+        co[loose] = mean[loose]
+    piece.data.vertices.foreach_set("co", co.astype(np.float32).ravel())
+    piece.data.update()
+    return int(loose.sum())
+
+
+def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None, tuck: float = 0.012,
+          lumps=()):
     """Replace the body's hands with the donor's. `src` is the body's joints (source_joints). Returns the fingers
     of each side ({"L": {...}, "R": {...}}, in the body's space) and the hand objects, to join to the body once
     it is weighted. Each `tip` joint moves to the knuckles: the hand bone is the palm, and the fingers go on
@@ -390,7 +436,10 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
     hands, so the pair match): a second generation of the same character at the same height still comes with
     hands half as long again, and everything the rig measures off a hand (the desk, the keys, how far apart
     two hands type) follows its size. `scale` sets the donor's scale by hand instead (a ragged cuff is too
-    rough a measure to size a hand by, so the cuff's width is only printed)."""
+    rough a measure to size a hand by, so the cuff's width is only printed). `lumps` are places to smooth flat on
+    both hands, for a nub the generator left: (along the fingers, out of the palm, across, radius) in cm on the
+    fitted hand, from the middle of the knuckle row, with the back of the hand negative out of the palm. Across
+    is read on the hand that was kept as it was made (the fit prints which), and mirrored for the other."""
     body_col, _ = _colours(body)
     donor_col, donor_img = _colours(donor)
     cut = []
@@ -455,6 +504,14 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
             for i in np.nonzero(w > 1e-3)[0]:
                 group.add([int(i)], float(w[i]), "REPLACE")
         spin = turn.to_3x3()
+        if lumps:
+            way, palm = (spin @ found["axis"]).normalized(), (spin @ found["palm"]).normalized()
+            across = way.cross(palm) * (1 if found["side"] == best[2]["side"] else -1)  # (a mirrored hand's is mirrored)
+            roots = [m @ f["joints"][0] for f in found["fingers"][1:]]
+            row = sum(roots, Vector()) / len(roots)
+            for a_, o_, x_, r_ in lumps:
+                moved = flatten(piece, row + (way * a_ + palm * o_ + across * x_) * 0.01, r_ * 0.01)
+                print(f"fit: hands, {sd} a lump smoothed flat ({moved} vertices within {r_} cm)")
         src["tip" + sd] = m @ found["knuckles"]
         out[sd] = {"palm": list(spin @ found["palm"]), "axis": list(spin @ found["axis"]),
                    "fingers": [{"name": f["name"], "joints": [m @ j for j in f["joints"]]} for f in found["fingers"]]}
