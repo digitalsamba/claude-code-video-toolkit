@@ -467,23 +467,31 @@ films so far, is a run of separate sessions with a person's notes between them, 
 prompt the session before it wrote. It has been run with Claude Fable 5.2 in Claude Code; other models are
 untested.
 
-1. **A brief starts the first session.** It settles what the agent may not decide alone: the scope, the voice and
-   whether new audio may be bought, whether anything is uploaded, and what stays off screen. The agent then works
-   without supervision for a few hours and writes every choice the brief left open, with its reason, in a
-   decisions file in the project.
-2. **The session ends with three things.** The rendered film with its checks run and anything that failed said
+1. **A brief starts the first session.** The person brings it: the idea, the script or the lines, the tone, the
+   length. It can be written anywhere (the trailer's was worked out with another assistant, outside the
+   toolkit, and pasted in). It also settles what the agent may not decide alone: the scope, the voice and
+   whether new audio may be bought, whether anything is uploaded, and what stays off screen.
+2. **A storyboard comes before any render.** The first session turns the brief into a board with one row per
+   beat: the time, a frame, what happens, what is heard. The 3D frames are the stills `check` writes, so each
+   costs seconds and already shows the real set, camera and character; flat scenes are a frame or a sketch of
+   the scene. Under it go the questions the brief left open. The person reads the board, answers, and moves
+   beats about while a change is still a line in a spec. This is the cheapest place to be wrong: the same
+   change after the render is an hour.
+3. **Then the build runs without supervision** for a few hours, and the agent writes every choice the brief and
+   the board left open, with its reason, in a decisions file in the project.
+4. **The session ends with three things.** The rendered film with its checks run and anything that failed said
    plainly; the decisions file; and a prompt for the next session, saved in the project and copied to the
    clipboard.
-3. **The prompt is the bridge.** A new session has none of the old conversation, and should not need it. The
+5. **The prompt is the bridge.** A new session has none of the old conversation, and should not need it. The
    prompt names the files to read and in what order, the render to keep, and the rules that still hold, and
    leaves a gap for the person's notes. It is short because the state lives in the files it points to.
-4. **The person watches, then pastes.** They watch and listen to the film, write what they saw in their own
+6. **The person watches, then pastes.** They watch and listen to the film, write what they saw in their own
    words ("I seem to be carrying a candle", "the pacing in the middle worries me"), paste that into the gap and
    start a fresh session with it. A note can be loose: finding what "the alignment is out" means, by tiling the
    frames and looking, is the agent's job.
-5. **Each revision keeps the last.** Before anything changes, the renders, clips, specs and source of the cut
+7. **Each revision keeps the last.** Before anything changes, the renders, clips, specs and source of the cut
    being revised are copied aside, so two cuts can be compared and a revision that went wrong costs nothing.
-6. **What a revision teaches goes into the rig.** A fault seen in a film (a mug held like a candle, a hand through
+8. **What a revision teaches goes into the rig.** A fault seen in a film (a mug held like a candle, a hand through
    a table) is fixed in `lib/blender`, proven on two bodies, given a check, and written into this page and the
    `blender` skill before the film is rendered again, as in
    [Refining a rig](#refining-a-rig-one-spec-two-bodies). The next film starts with it.
