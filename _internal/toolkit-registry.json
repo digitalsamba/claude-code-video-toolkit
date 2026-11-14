@@ -132,7 +132,7 @@
     "blender": {
       "path": ".claude/skills/blender/",
       "description": "3D scenes, character acting and product shots from a shot spec, as a film, as clips for any build, or as elements of a Remotion video: spec format, the cast schema (build, face, hair, clothes, accessories, seed, a character file per kit), sets (desk_room, desk, lecture_hall, kitchen with a mug carried by its handle, picked up and drunk from, a lid opened by hand and Claude the CRT, studio with phone, card and model props), shot types and camera moves, acting verbs, narration cues, the check/contact-sheet loop, BlenderClip compositing, brief-to-beats shot grammar, Blender Python vs MCP, Blender 5 gotchas",
-      "status": "experimental",
+      "status": "beta",
       "created": "2026-11-11"
     }
   },
@@ -1176,7 +1176,7 @@
       "path": "tools/blender_render.py",
       "description": "Shot spec in, Blender film or clips out: builds a 3D scene from a JSON spec (a rigged cartoon cast described as build, face, hair, clothes and a seed; a desk set, or a studio stage with a phone, a card or an imported model; shots by type; acting beats in seconds or on narration words), checks every camera by geometry (subject in frame, nothing blocking, a moving lens clear of the cast) with a solver that moves failing cameras, writes a labelled contact sheet, then renders the film with sound placed on the keyed motion, or one clip per shot (MP4, or transparent WebM if asked) with a clips.json manifest, for Remotion's BlenderClip, a moviepy build, a video job's file scene or an editor",
       "usage": "uv run tools/blender_render.py check spec.json && uv run tools/blender_render.py render spec.json [--clips --alpha --to projects/NAME/public/blender]",
-      "status": "experimental",
+      "status": "beta",
       "options": {
         "doctor": "Find Blender, ffmpeg and Pillow, and time a test render on this machine (s/frame and minutes for the spec)",
         "check": "Build, verify shots, measure exposure, write stills + contact_sheet.png (exit 1 on a failed check, 2 on a spec error)",
@@ -1665,7 +1665,7 @@
     "BlenderClip": {
       "path": "lib/components/BlenderClip.tsx",
       "description": "Plays a Blender render as an element of a Remotion scene: one clip per shot from tools/blender_render.py --clips (transparent with --alpha), played once then held, with the shot's own sound effects. blenderClip(manifest, id) reads clips.json and gives the clip's length and event('alert') frames, so captions and cuts land on the acting. crop shows one part of a clip scaled to fill its box, with an optional background picture behind it, for an inset. Throws if the spec's fps isn't the composition's",
-      "status": "experimental",
+      "status": "beta",
       "created": "2026-11-11"
     },
     "LivingPhoto": {

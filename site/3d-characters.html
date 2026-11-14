@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D characters that act on cue, from a JSON spec, with Claude Code</title>
+<meta name="description" content="A rigged cartoon character acts in a 3D set from a JSON shot spec: shots by type, acting as verbs, every camera and the body checked before Blender renders a frame. Optional, free, and best with a GPU.">
+<meta property="og:title" content="3D characters that act on cue, from a JSON spec, with Claude Code">
+<meta property="og:description" content="A rigged cartoon character acts in a 3D set from a JSON shot spec: shots by type, acting as verbs, every camera and the body checked before Blender renders a frame. Optional, free, and best with a GPU.">
+<meta property="og:image" content="https://digitalsamba.github.io/claude-code-video-toolkit/img/just-a-quick-one.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233771e0'/%3E%3Cpath d='M12 9v14l11-7z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script src="site.js" defer></script>
+</head>
+<body>
+<header class="frame">
+  <nav class="nav" aria-label="Main">
+    <a class="mark" href="./">claude-code-video-toolkit</a>
+    <ul>
+      <li class="hide-sm"><a class="link" href="./#made">Videos</a></li>
+      <li class="hide-sm"><a class="link" href="./#how">How it works</a></li>
+      <li class="hide-sm"><a class="link" href="./#routes">What to make</a></li>
+      <li><a class="button" href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a></li>
+    </ul>
+  </nav>
+</header>
+<main>
+  <div class="article-head frame grid">
+    <div class="words">
+      <h1>A 3D character that acts on cue</h1>
+      <p class="lede" data-rise>Write what happens as a JSON spec: the shots by type, the acting as verbs. Blender builds the set, checks every camera and the body, and renders. No keyframes and no coordinates.</p>
+    </div>
+    <figure class="clip shutter">
+      <video data-loop autoplay muted loop playsinline preload="metadata" poster="media/kitchen.jpg" width="768" height="432" aria-label="A cartoon character sits at a kitchen table, puts down a mug, opens a laptop and drinks"><source src="media/kitchen.mp4" type="video/mp4"></video>
+      <figcaption>Mara, from the kitchen example: eight shots and twelve beats of JSON</figcaption>
+    </figure>
+  </div>
+
+  <section class="frame" aria-labelledby="why">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="why" data-rise>Why not generate the clip?</h2>
+        <div><p data-rise>An image-to-video model gives you a few seconds of a person who looks about right and does roughly what you asked. It cannot hold a face across twenty shots, put a mug down on a word, or do the same thing again tomorrow. A rigged character can: the same person in every shot, and every move on the frame the spec names.</p></div>
+      </div>
+      <div class="show"><figure data-rise><a href="https://demos.digitalsamba.com/video/just-a-quick-one-v2-7add8b74.mp4"><img src="img/just-a-quick-one.jpg" alt="A cartoon man at a kitchen table drinking tea, turned to a small computer with a face on the counter" loading="lazy"></a><figcaption>Just a Quick One, the toolkit's trailer: 45 seconds of kitchen from two specs</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="frame field" aria-labelledby="parts">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="parts" data-rise>Model, rig, render</h2>
+        <div><ol><li data-rise><b>A model</b> is a shape and its colours. It cannot move. The built-in cast is described in JSON; a fitted character starts as a model from an image-to-3D service.</li><li data-rise><b>The rig</b> makes it a character: joints, a face, fingers, and verbs such as <code>walk</code>, <code>sit_down</code>, <code>carry</code> and <code>sip</code>. Every character shares it, so a verb written once works on all of them.</li><li data-rise><b>A render</b> is one film: the character in a set, acting on cue, drawn frame by frame.</li></ol></div>
+      </div>
+      <div class="show"><figure data-rise><img src="media/model-rig-render.jpg" alt="A generated model of a woman, the same model with the rig's joints drawn on it, and a rendered frame of her holding a mug in a kitchen" loading="lazy"><figcaption>The model, the joints fitted to it, and a frame of the film</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="frame" aria-labelledby="how">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="how" data-rise>How it works</h2>
+        <div><ol><li data-rise><b>Write the spec,</b> or have Claude Code write it from a brief: a set, a cast, shots (<code>wide</code>, <code>closeup</code>, <code>side</code>) and beats in seconds or on narration words.</li><li data-rise><b>Run <code>check</code>.</b> In seconds it verifies every camera by geometry and measures the body: a hand inside the body, a limb through a table, a sliding foot, a mug that tips. A camera that fails is moved by a solver. You read a contact sheet before anything renders.</li><li data-rise><b>Render</b> a whole film with its sound on the motion, or one clip per shot for a Remotion video, transparent if you ask.</li><li data-rise><b>Revise from notes.</b> A film like the trailer takes a few sessions, each started from a prompt the last one wrote, with your notes pasted in.</li></ol></div>
+      </div>
+      <div class="show"><pre data-rise><code>{"at": 0, "do": "carry", "prop": "cup"},
+{"at": "T2_walk+0.1", "do": "walk",
+ "to": [0, 0.41], "curve": true},
+{"at": "T4_sit+0.1", "do": "sit_down"},
+{"at": "T4_sit+3.5", "do": "put_down",
+ "prop": "cup"},
+{"at": "T6_sip+1.5", "do": "sip"}</code></pre><figure data-rise><img src="media/kitchen-sheet.jpg" alt="A contact sheet of eight labelled stills, one per shot, each marked ok" loading="lazy"><figcaption>The contact sheet <code>check</code> writes: one still per shot, and what the solver moved</figcaption></figure></div>
+    </div>
+  </section>
+
+  <section class="frame field" aria-labelledby="needs">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="needs" data-rise>What it needs</h2>
+        <div><p data-rise>Blender 4.2 or later, which is free, and nothing else in the toolkit depends on it. The limit is your machine. On an Apple M4 a frame at 1080p takes 1.6 seconds for the built-in cast and about 2.2 for a fitted character in a lit room, so the 27-second kitchen example is 25 minutes and a trailer with revisions is an evening. Without a GPU it still renders, far more slowly. Run <code>doctor</code> first: it finds Blender and times a frame on your machine.</p><p data-rise>It has been run in full on macOS, and the first examples on Linux. Windows is untested. Fitted characters, the kitchen and the lecture hall are experimental: the fit still wants its joints read off a picture by hand.</p></div>
+      </div>
+      <div class="show"><pre data-rise><code>uv run tools/blender_render.py doctor
+ok    Blender 5.3.0 at /opt/homebrew/bin/blender
+ok    ffmpeg
+ok    test render: 1.60 s/frame at 1920x1080</code></pre></div>
+    </div>
+  </section>
+
+  <section class="frame" aria-labelledby="start">
+    <div class="grid split" data-stagger>
+      <div class="say">
+        <h2 id="start" data-rise>Start</h2>
+        <div><p data-rise>Four examples run from the repository: a character film, a product stage, clips inside a Remotion video, and the kitchen with a fitted character. The format and every verb are in the <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/.claude/skills/blender">blender skill</a>; setup, timings and how a film is made over several sessions are in <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/blob/main/docs/blender.md">docs/blender.md</a>.</p></div>
+      </div>
+      <div class="show"><pre data-rise><code>uv run tools/blender_render.py check \
+  examples/blender-disk-panic/spec.json
+# then, in Claude Code:
+Make a 20 second 3D short: a developer
+finds the disk is full and panics.</code></pre><figure data-rise><img src="media/kitchen-two.jpg" alt="A wide shot of a kitchen at night: a woman at the table with a laptop and a mug, and a small computer with a face typing on the counter" loading="lazy"><figcaption>The last shot of the kitchen example, a camera put where the spec says</figcaption></figure></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot frame">
+  <div class="top">
+    <div class="notes"><span>Open source, MIT licensed</span><span>Made by Conal Mullan and <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/graphs/contributors">contributors</a></span><span>For <a class="link" href="https://claude.ai/code">Claude Code</a>, not made by Anthropic</span></div>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <a class="big" href="https://github.com/digitalsamba/claude-code-video-toolkit"><span>github.com/digitalsamba/</span><span>claude-code-video-toolkit</span></a>
+  <div class="meta">
+    <div><a class="link" href="./">Home</a><a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/releases">Releases</a><a class="link" href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">Playlist</a></div>
+    <div class="c">Every video and picture here was made with the toolkit</div>
+    <div class="r">2026</div>
+  </div>
+</footer>
+</body>
+</html>

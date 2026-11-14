@@ -1,7 +1,13 @@
 # Blender in the toolkit
 
-Blender is an optional component. Nothing else in the toolkit needs it. With it installed, a JSON **shot spec**
-becomes a 3D scene: a rigged cartoon character acting at a desk, or a product stage with a phone, a floating card
+Blender is an optional component. Nothing else in the toolkit needs it, and the real limit on using it is your
+machine, not the tool: it renders in minutes with a GPU and slowly without one (`doctor` times a frame, and
+[How long a render takes](#how-long-a-render-takes) has the numbers). The clay cast, the desk sets, the studio
+stage and clips in a Remotion video are the settled part. Characters fitted from a generated 3D model, the
+kitchen and the lecture hall are experimental: they have made two finished films on one machine, the fit still
+wants its joints read off a picture by hand, and Windows is untested.
+
+With it installed, a JSON **shot spec** becomes a 3D scene: a rigged cartoon character acting at a desk, or a product stage with a phone, a floating card
 or an imported model. The render is a finished film, a set of clips for another build (a Remotion video, a
 moviepy timeline, a video job, an editor), or both from the same spec.
 
