@@ -10,6 +10,42 @@ All notable changes to claude-code-video-toolkit.
 
 ---
 
+## 2026-11-14 (v0.29.0)
+
+Characters get up from the desk. A character can now be fitted from a generated 3D model, stand, walk, sit, carry
+a mug and present at a board, in two new sets, with the body checked before a frame is rendered. Blender is
+labelled optional, not experimental; only fitted characters keep that label. The toolkit's trailer, Just a Quick
+One, was made with all of it.
+
+### Added
+
+- **Fitted characters** (experimental, #222): `blender_render.py fit` seats an image-to-3D model on the shared rig. It keeps its own shape and gets a face made from its own marks and hands with fingers. Two are in `tests/fixtures/blender-fitted`: Mara, who is invented, and the toolkit's author (#227).
+- **Characters on their feet** (#222): standing, walking straight or round furniture, turning, sitting down and standing up, a door opened by hand, a chair that pulls out and in; `follow`, `full`, `feet` and `tilt_up` shots; `wink`, `look_at`, `glance`, `reach` and `point`.
+- **`check` measures the body** (#222): a hand inside the body, a limb through furniture, a sliding foot, a missed touch, a turned palm, a stretched sleeve, a jump in one frame, and a set whose surfaces share a plane. `render` reads the finished frames and fails on flicker.
+- **A lecture hall and presenter verbs** (experimental, #223): the mouth moves on the narration's words, with gestures, showing a board, chalk in the hand, and a `fixed` camera put where the spec says. `BlenderClip` takes a crop and a background.
+- **A kitchen, and a mug that is a mug** (experimental, #224): `carry` holds it by the handle, `put_down`, `pick_up` and `sip` do what they say, and two checks measure how far a carried thing tips and whether it passes through furniture. A laptop lid opens and shuts by hand.
+- **`examples/blender-kitchen`** (#225, #227): two films in the same kitchen, one for each fitted character, that run from the repo in three commands.
+- **A site page on 3D characters** (#226) and the trailer on the README.
+
+### Changed
+
+- **Blender is optional, not experimental** (#226). The limit is the machine: it renders in minutes with a GPU. The README, `CLAUDE.md` and `docs/blender.md` say so early and point at `doctor`. Characters fitted from a generated model, the kitchen and the lecture hall stay experimental.
+- **`docs/blender.md`** tells a model from the rig and a render, says a character film takes hours, and describes making one over several sessions: a brief, a storyboard from `check` stills, an unattended build, and a prompt each session writes for the next (#224).
+- Fitted characters and four example films pass their checks on Linux with Blender 4.2.3 (#229).
+- The README has a YouTube subscribe badge and the site links the channel (#230).
+
+### Fixed
+
+- Two wrist faults on every fitted hand, found by the new tilt check: quaternion keys written out of frame order, and a rotation that was never normalised (#224).
+- The flicker check no longer reports fingers' shadows on a desk or writing on a board under a moving camera (#223).
+
+### Known limits
+
+- A full `sip` stretches a fitted sleeve past the check's limit on both characters; the examples drink at part height.
+- The fit wants its joints and face read off a picture by hand. One character per set. Windows is untested.
+
+---
+
 ## 2026-11-12 (v0.28.0)
 
 3D arrives as an experimental, optional tool: a JSON shot spec becomes a Blender film, clips for any build, or
