@@ -10,6 +10,33 @@ moviepy timeline, a video job, an editor), or both from the same spec.
 - **Blender clips inside a Remotion video:** `examples/blender-in-remotion`
 - **A product stage with no character:** `examples/blender-product-shot`
 
+## Model, rig and render
+
+Three things that are easy to run together, and most of the work is in the middle one.
+
+![A generated model, the rig's joints fitted to it, and a rendered frame of the same character in a kitchen](images/blender-model-rig-render.jpg)
+
+1. **A model** is a shape and its colours: a mesh. It cannot move. The clay cast is built from a JSON description;
+   a fitted character starts as a model from an image-to-3D service (this one is Mara, the invented character in
+   `tests/fixtures/blender-fitted`).
+2. **The rig** is what makes a model a character: the joints inside it, how much of the mesh each joint carries,
+   a face and fingers, and the verbs that move them (`walk`, `sit_down`, `carry`, `sip`). It lives in
+   `lib/blender` and is shared by every character, so a verb written once works on all of them, and a fault
+   fixed in it is fixed for every film after. Fitting (`blender_render.py fit`) is the step that seats a model
+   on the rig and saves the result as a `.blend` beside the character's JSON.
+3. **A render** is one film: a spec puts the rigged character in a set, the verbs act on cue, cameras are placed
+   and checked, and Blender draws every frame. Renders are slow (see the times below) and are thrown away and
+   made again whenever the spec or the rig changes.
+
+So a note on a film is one of two kinds. "Hold that look a second longer" is the spec: change a number, render
+the shot again. "The mug goes through the table" is the rig: fix it in `lib/blender`, prove it on two bodies,
+add a check, and then render. Rig work is slower the first time and free ever after.
+
+**What is saved.** Every `check` and `render` writes `scene.blend` in the spec's `out/` folder: the built scene
+with its keyed acting, to open and scrub in Blender when a number does not explain what a frame shows. It is
+written again on each run, so copy one aside to keep it. A fitted character's `.blend` holds only its body
+(`model_body`) and is made again by `fit`. Both kinds are build output and stay out of git.
+
 ## Setup
 
 1. Install Blender 4.2 or later. The toolkit is made on 5.3 (see *What it has been run on*, below).
@@ -67,6 +94,18 @@ Measured on a MacBook with an Apple M4 (10 cores, 24 GB), Blender 5.3, EEVEE, 32
 | `render --engine cycles` at 1920x1080 | 17 s a frame |
 | The 22.5 s example film (`blender-disk-panic`, 540 frames) | 15 min |
 | All four clips of `blender-in-remotion` (555 frames) | 10 min |
+| A fitted character in a lit room at 1920x1080 (a kitchen, 13 clips, 45 s, 1,365 frames) | 2.1 to 2.4 s a frame, 55 min |
+| The same clips at 640x360, a draft to judge motion | 0.8 s a frame |
+
+**A character film takes hours, not minutes.** The table is one pass of rendering. A film with a fitted character
+acting in a room is rendered more than once (a draft to judge the motion, the full pass, then the shots that
+changed after the frames were read), and around the rendering sit the checks, the sound, the Remotion side and
+the reading of the result. Measured on a 103 s trailer with 45 s of kitchen: the first build took about three
+hours from the brief to the delivered file and the revision about two and a half, each as one unattended session,
+with about an hour of each spent in Blender. Plan a film of this kind as an evening or an overnight run, start
+the render queue in the background as soon as the specs pass `check`, and render one clip at a time: two renders
+at once share the GPU and each frame takes longer. How the work is carried from one session to the next is in
+[A film over several sessions](#a-film-over-several-sessions).
 
 So iterate in `check`, which is seconds, and render when the contact sheet reads right. A render prints its
 progress and time left every 30 seconds. The first Cycles frame also compiles GPU kernels, which takes minutes
@@ -331,7 +370,8 @@ How the fitted rig was worked up, and how to carry on with it or with your own. 
    the film is rendered at full size with the flicker check before anyone is shown it.
 6. **Carry it across sessions in one status file.** Each session ends by updating one file (what was done, what
    is open and in what order, what was spent) and writing the next session's prompt from it. A fresh session
-   reads the file and the checks, not the old conversation.
+   reads the file and the checks, not the old conversation. The same bridge carries a film between
+   revisions: see [A film over several sessions](#a-film-over-several-sessions).
 
 What could be better: the proof scripts (tiled stills, close cameras on a hand or a face, per-frame traces) live
 in a project folder and are not yet tools in the toolkit; the fit still wants its joints read off a still by hand;
@@ -369,15 +409,141 @@ either a person or an MCP session to look at.
 Installing `bpy` from PyPI is a third route. It pins a Python version and a 300 MB wheel into the toolkit's
 environment for no gain over the Blender most people already have, so the toolkit calls the installed Blender.
 
+### A kitchen
+
+Set kind `kitchen` is a home kitchen at night round the desk room's table, chair and laptop: units with a sink
+under a window, a fridge, a pendant lamp over the table. It adds a mug of tea to carry in and put down, a lid
+that starts shut and is opened and shut by hand (`open_lid`, `close_lid` with `"by"`), and Claude: a beige CRT
+on the worktop with a face on its screen, a tinfoil hat and two arms at a keyboard (`claude_type` gives a
+`key_click` event per key, `claude_turn` turns him). The fields and a worked entrance are in the skill.
+
+What building it taught, each now in the code or a check:
+
+- **A lid is further off than a seated arm.** The far edge of an open laptop was 0.85 m from the shoulder of a
+  character whose arm and hand reach 0.62 m. The first spec made up the difference with a 28 degree lean, and
+  the check reported "3 cm into the table". That number was the measure's ceiling for a thin solid: both
+  forearms and hands were through the table top, because hands hang from the chest and a lean takes them with
+  it. Now the chest turns the reaching shoulder to the lid and leans only as far as the table's edge allows,
+  solved from the reach on each frame; the fingertips take the lid's edge; and a hand lying on the table is
+  held where it lies while the chest moves.
+- **A set that replaces a piece of furniture keeps its edges.** The kitchen table was 10 cm deeper than the desk
+  on the same centre, so its near edge was 5 cm nearer the chair than the fit's belly room allows for, and the
+  chest was in the table at any lean. The table is deeper away from the chair now.
+- **When a check says the same depth for many frames, find what is in the solid.** List the body's vertices
+  inside its box by bone before changing anything: "the chest" was two forearms, then a hand still finishing the
+  move before, then one little finger under a mug.
+- **A beat that starts inside another's move** takes the hand from wherever it is on that frame, and the result
+  is a one-frame jump or a hand left in the air. A hand's move runs about half a second past its beat.
+
+What the first viewing taught ("I seem to be carrying a candle", and "some of the alignment is out"):
+
+- **A prop is told by its outline, its colour and its size against the hand.** The first mug was a cream cylinder
+  8 cm across, held from above with its handle inside the fist: a candle. Now it is 12 cm tall in the room's
+  accent colour, with tea in it and a handle a hand fits, and it is held by that handle, out past the knuckles
+  where a camera sees it.
+- **What a hand carries needs its own checks.** The body's checks passed while the mug went through the table's
+  edge: a carrying hand went to the thigh with the other one when he sat, and took the table's edge with it when
+  he pulled the chair in. A carrying hand now keeps carrying through posture verbs and lifts clear of the table,
+  and the check reports `carried_tilt_deg` (a full mug stays level) and `carried_through_m`.
+- **A hand held one way in the room runs into the wrist's limit as the forearm swings**, and the mug tips with it.
+  A hand that carries follows its own forearm and only stays level. An upright forearm has no level direction, so
+  the elbow rises out to the side for a sip, as a drinker's does.
+- **The straight line from the mouth to the table passes the shoulder.** The arm folded shut on the way and the
+  hand swung right round. A hand with something in it comes down to where it carries first, and no point of its
+  way is nearer the shoulder than a bent arm holds a mug.
+- **Rotation keys are written in the order the verbs run, not the order of their frames.** Two neighbours can
+  hold opposite signs of the same rotation, and the curve between them passes through zero: the hand spun 139
+  degrees in six frames. Each carrying verb now ends by putting the hand's keys in order. On a frame between two
+  keys the four numbers are not a unit rotation either; read without normalising, they keyed the hand a long way
+  off for one frame. That was an old fault in every fitted hand, found by the new check.
+- **A fitted face's brows are shaped, not slabs.** On a sculpted face a box read as a shelf over each eye, in the
+  hair's colour, half hidden by the glasses. They taper, arch, follow the head, are a shade darker than the hair
+  and clear the frames at rest. The clay cast keeps its slabs, which suit it.
+
+## A film over several sessions
+
+A film with a character in it is not finished in one sitting, and no session should try. What has worked, on two
+films so far, is a run of separate sessions with a person's notes between them, each session started from a
+prompt the session before it wrote. It has been run with Claude Fable 5.2 in Claude Code; other models are
+untested.
+
+1. **A brief starts the first session.** The person brings it: the idea, the script or the lines, the tone, the
+   length. It can be written anywhere (the trailer's was worked out with another assistant, outside the
+   toolkit, and pasted in). It also settles what the agent may not decide alone: the scope, the voice and
+   whether new audio may be bought, whether anything is uploaded, and what stays off screen.
+2. **A storyboard comes before any render.** The first session turns the brief into a board with one row per
+   beat: the time, a frame, what happens, what is heard. The 3D frames are the stills `check` writes, so each
+   costs seconds and already shows the real set, camera and character; flat scenes are a frame or a sketch of
+   the scene. Under it go the questions the brief left open. The person reads the board, answers, and moves
+   beats about while a change is still a line in a spec. This is the cheapest place to be wrong: the same
+   change after the render is an hour.
+3. **Then the build runs without supervision** for a few hours, and the agent writes every choice the brief and
+   the board left open, with its reason, in a decisions file in the project.
+4. **The session ends with three things.** The rendered film with its checks run and anything that failed said
+   plainly; the decisions file; and a prompt for the next session, saved in the project and copied to the
+   clipboard.
+5. **The prompt is the bridge.** A new session has none of the old conversation, and should not need it. The
+   prompt names the files to read and in what order, the render to keep, and the rules that still hold, and
+   leaves a gap for the person's notes. It is short because the state lives in the files it points to.
+6. **The person watches, then pastes.** They watch and listen to the film, write what they saw in their own
+   words ("I seem to be carrying a candle", "the pacing in the middle worries me"), paste that into the gap and
+   start a fresh session with it. A note can be loose: finding what "the alignment is out" means, by tiling the
+   frames and looking, is the agent's job.
+7. **Each revision keeps the last.** Before anything changes, the renders, clips, specs and source of the cut
+   being revised are copied aside, so two cuts can be compared and a revision that went wrong costs nothing.
+8. **What a revision teaches goes into the rig.** A fault seen in a film (a mug held like a candle, a hand through
+   a table) is fixed in `lib/blender`, proven on two bodies, given a check, and written into this page and the
+   `blender` skill before the film is rendered again, as in
+   [Refining a rig](#refining-a-rig-one-spec-two-bodies). The next film starts with it.
+
+**What a session checks before it hands over.** The agent does not judge the film by eye alone, and it cannot
+hear it at all, so each kind of fault has a measure:
+
+| Where | What is measured |
+|---|---|
+| `blender_render.py check`, before a frame is rendered | every camera (subject in frame, nothing in the way), and the body: a hand inside the body, a limb through furniture, a sliding foot, a missed touch, a jump in one frame, a stretched cuff, a carried thing tipped or through a table |
+| `blender_render.py render` | flicker, read from still points in the finished frames |
+| `qc.py --render` | loudness, a missing or silent track, black gaps, stretches where nothing moves, motion that stops dead |
+| `qc.py --layout` | text off the canvas, low contrast, type too small for a phone |
+| `sync_check.py --cues` | each sound against the movement it belongs to, within 0.1 s |
+| Reading the frames | the render tiled every few seconds and looked at, and a shot tiled frame by frame where a check or a note points |
+
+A check that fails and cannot be fixed in the session is not hidden: it is named in the report and the decisions
+file with its number, and the agent can carry it into the next prompt as a suggested note, beside the gap for the
+person's own. What no check covers is taste and sound: whether the music suits it, whether a line lands, whether
+it is too long. Those are what the person's notes are for.
+
+A prompt of this kind, as one session left it for the next:
+
+```text
+Revise "<film>" (projects/<film>) from my notes on revision 2.
+
+Read in order: the status file, the playbook, then in the project DECISIONS.md ("Revision 2" at the end).
+Revision 2 is out/<film>.mp4; keep it (copy renders, clips, specs and source to audition/v2 before changing
+anything).
+
+My notes on revision 2 (what I heard and saw):
+<PASTE NOTES HERE>
+
+Rules as before: local commits only; every choice I have not settled goes in DECISIONS.md under "Revision 3";
+any change to lib/blender is run on two characters, gets a check or a test, and goes into the docs; run every
+check and say plainly what did not meet it. I may not be available during the run.
+```
+
+Fresh sessions are deliberate. A revision fills a long conversation with frames and logs, and a session that
+starts from the files reads what is true now, not what was tried three hours ago. Two to four sessions took each
+film from a brief to a cut its author would publish.
+
 ## Limits today
 
 9:16 works: set `"resolution": "1080x1920"` and read the contact sheet, since a `wide` shot crops the desk.
 `check` builds its stills in the film's own shape (the spec's `resolution`, or `--res`), because where the solver
 puts a camera depends on the shape of the frame.
 
-One character per set; hands on one bone, with no open, grip or point shapes; a walk is a straight line that
-nothing stops going through furniture; three sets (`desk_room`, `desk` with no room for transparent renders,
-and `studio`, which has props and no character); a cartoon style; acting keyed from verbs, with no motion
+One character per set; the clay cast's hands are one bone; a walk goes through furniture unless it is bent
+round it; the sets are `desk_room`, `desk` (no room, for transparent renders), `lecture_hall`, `kitchen` and
+`studio` (props and no character); a `lean` carries hands resting on a table down through it; a standing arm
+does not reach a low table (sit first); a cartoon style; acting keyed from verbs, with no motion
 capture; studio props stand still while the camera moves. EEVEE cannot render a shadow onto a transparent
 background, so a transparent character or prop has no cast shadow on the Remotion scene. The room's light is dim
 on the darkest skin tones in a `wide` shot: raise `look.exposure` a little or use a `medium`. A `pull_out` passes

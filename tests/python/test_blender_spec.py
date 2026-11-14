@@ -407,6 +407,38 @@ class BlenderCheckTests(unittest.TestCase):
             self.compile({**spec, 'shots': [{'id': 'A', 'dur': 2, 'type': 'fixed', 'cam': [0, -3, 1.5]}], 'beats': []})
         self.assertIn('"cam" and "aim"', str(ctx.exception))
 
+    def test_a_kitchen_has_a_lid_a_mug_and_claude_at_his_keys(self):
+        """A kitchen: the laptop's lid starts shut and opens, Claude the CRT types on the worktop with a click
+        for each key and turns, and a verb or a prop that belongs to another set is named."""
+        spec = {
+            'set': {'kind': 'kitchen', 'lid': 'closed', 'claude': {}},
+            'shots': [{'id': 'A', 'dur': 2, 'type': 'medium'},
+                      {'id': 'B', 'dur': 2, 'type': 'fixed', 'cam': [-0.6, 0.6, 1.25], 'aim': [-2.2, 0.0, 1.1], 'lens': 40}],
+            'beats': [{'at': 0, 'do': 'pose', 'pose': 'hands_on_head', 'dur': 0.1},
+                      {'at': 'A+0.3', 'do': 'open_lid', 'dur': 0.6},
+                      {'at': 'B+0.2', 'do': 'claude_type', 'until': 'B+1.2'},
+                      {'at': 'B+1.3', 'do': 'claude_turn', 'facing': 70, 'dur': 0.4}]}
+        checks, events = self.compile(spec)
+        for shot in checks['shots']:
+            self.assertTrue(shot['passed'], shot)
+        self.assertNotIn('set_problems', checks)                           # no cupboard faces in one plane
+        kinds = [e['kind'] for e in events['events']]
+        self.assertIn('lid_open', kinds)
+        clicks = [e for e in events['events'] if e['kind'] == 'key_click']
+        self.assertGreaterEqual(len(clicks), 8)                            # ten keys a second, for a second
+        self.assertTrue(all(e['shot'] == 'B' for e in clicks))
+        desk = {'shots': spec['shots'][:1]}
+        for bad, said in (({**desk, 'beats': [{'at': 'A', 'do': 'close_lid'}]}, 'kitchen verb'),
+                          ({**spec, 'set': {'kind': 'kitchen'}, 'beats': [{'at': 'A', 'do': 'claude_type'}]}, 'needs Claude'),
+                          ({**spec, 'beats': [{'at': 'A', 'do': 'claude_turn'}]}, 'facing'),
+                          ({**spec, 'beats': [{'at': 'A', 'do': 'open_lid', 'by': 'sam'}]}, 'sam'),
+                          ({**spec, 'beats': [{'at': 'A', 'do': 'sip'}]}, 'no mug'),
+                          ({**spec, 'beats': [{'at': 0, 'do': 'carry', 'prop': 'chalk'}]}, 'one of cup')):
+            with self.assertRaises(RuntimeError) as ctx:
+                self.compile(bad)
+            self.assertIn(said, str(ctx.exception))
+            self.assertNotIn('Traceback', str(ctx.exception))
+
     def test_a_walk_can_bend_and_the_body_leans_into_it(self):
         """A curved walk: the path bows away from the straight line, the body banks into the bend, and the
         check reports each walk. A straight walk reports no bow."""
@@ -514,6 +546,54 @@ class BlenderCheckTests(unittest.TestCase):
             self.assertLessEqual(checks[kind], 0.03, kind)
         self.assertLessEqual(checks['snap_m'], 0.02)                    # nothing jumps in a single frame
 
+    @unittest.skipUnless(FITTED.exists(), 'needs the private fitted model of the toolkit\'s author (Mara, in tests/fixtures, is the one in the repo)')
+    def test_someone_at_a_table_shuts_a_lid_without_going_through_it(self):
+        """A laptop's lid is further off than a seated arm: the chest turns the shoulder to it and leans only
+        as far as the table's edge lets it, the fingertips take the lid's top edge and come down with it, the
+        other hand gets off the keys first, and both end flat on the table. Nothing passes through the table,
+        the lid, the laptop or the body on the way (a lean given in the spec took both hands through the table)."""
+        cast = self.FITTED.parent.parent / 'cast' / 'conal.json'
+        spec = {'fps': 30, 'set': {'kind': 'kitchen', 'mug': {'on_table': True}}, 'cast': [{'id': 'conal', 'from': str(cast)}],
+                'shots': [{'id': 'A', 'dur': 3.0, 'type': 'medium'}],
+                'beats': [{'at': 0, 'do': 'pose', 'pose': 'rest', 'dur': 0.1},
+                          {'at': 'A+0.8', 'do': 'close_lid', 'dur': 0.6, 'by': 'conal'}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'spec.json').write_text(json.dumps(spec))
+            checks = blender_render.run_compiler(Path(tmp) / 'spec.json', Path(tmp) / 'out', 'check', '480x270', None)
+            events = json.loads((Path(tmp) / 'out' / 'events.json').read_text())
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        self.assertIn('lid_close', [e['kind'] for e in events['events']])
+        for kind in ('hand_in_body_m', 'through_m', 'touch_miss_m'):
+            self.assertLessEqual(checks[kind], 0.03, kind)
+        self.assertLessEqual(checks['snap_m'], 0.02)
+
+    @unittest.skipUnless(FITTED.exists(), 'needs the private fitted model of the toolkit\'s author (Mara, in tests/fixtures, is the one in the repo)')
+    def test_a_mug_is_taken_by_its_handle_drunk_from_and_put_down_level(self):
+        """Someone at the kitchen table takes the mug by its handle, lifts it, starts a sip that stops short,
+        drinks, and puts it down. The mug is level in the hand throughout (the tip of a sip is the mug's own),
+        clear of the table and the shut laptop, and the hand's turn has no frame that spins (rotation keys
+        written out of frame order held opposite signs, and the mug turned 139 degrees between two of them)."""
+        cast = self.FITTED.parent.parent / 'cast' / 'conal.json'
+        spec = {'fps': 30, 'set': {'kind': 'kitchen', 'lid': 'closed', 'mug': {'at': [0.5, -0.465], 'on_table': True}},
+                'cast': [{'id': 'conal', 'from': str(cast)}],
+                'shots': [{'id': 'A', 'dur': 4.5, 'type': 'medium'}, {'id': 'B', 'dur': 5.5, 'type': 'closeup'}],
+                'beats': [{'at': 0, 'do': 'pose', 'pose': 'rest', 'dur': 0.1},
+                          {'at': 'A+0.8', 'do': 'pick_up', 'prop': 'cup', 'hand': 'left', 'dur': 0.8},
+                          {'at': 'A+2.6', 'do': 'sip', 'hand': 'left', 'part': 0.6, 'stay': True, 'dur': 0.8},
+                          {'at': 'B+0.3', 'do': 'sip', 'hand': 'left', 'dur': 2.0},
+                          {'at': 'B+2.9', 'do': 'put_down', 'prop': 'cup', 'hand': 'left', 'dur': 0.8}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'spec.json').write_text(json.dumps(spec))
+            checks = blender_render.run_compiler(Path(tmp) / 'spec.json', Path(tmp) / 'out', 'check', '480x270', None)
+            events = json.loads((Path(tmp) / 'out' / 'events.json').read_text())
+        self.assertEqual([e['kind'] for e in events['events'] if e['kind'] in ('pick_up', 'sip', 'put_down')],
+                         ['pick_up', 'sip', 'sip', 'put_down'])
+        self.assertLessEqual(checks['carried_tilt_deg'], 12.0)
+        self.assertLessEqual(checks['carried_through_m'], 0.006)
+        self.assertGreaterEqual(checks['hands_apart_m'], 0.005)
+        self.assertLessEqual(checks['hand_in_body_m'], 0.03)
+        self.assertLessEqual(checks['snap_m'], 0.02)
+
     MARA = ROOT / 'tests' / 'fixtures' / 'blender-fitted'
 
     def test_an_invented_model_is_fitted_with_a_face_and_fingers_and_acts(self):
@@ -527,7 +607,7 @@ class BlenderCheckTests(unittest.TestCase):
         import re
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
-            for name in ('spec.json', 'enter.json', 'mara.json'):
+            for name in ('spec.json', 'enter.json', 'kitchen.json', 'mara.json'):
                 shutil.copy(self.MARA / name, tmp / name)
             said = io.StringIO()
             args = mock.Mock(model=str(self.MARA / 'mara.glb'), fit=str(self.MARA / 'fit.json'),
@@ -549,6 +629,19 @@ class BlenderCheckTests(unittest.TestCase):
             checks = blender_render.run_compiler(tmp / 'spec.json', tmp / 'out', 'check', '480x270', None)
             events = json.loads((tmp / 'out' / 'events.json').read_text())
             enter = blender_render.run_compiler(tmp / 'enter.json', tmp / 'enter', 'check', '480x270', None)
+            kitchen = blender_render.run_compiler(tmp / 'kitchen.json', tmp / 'kitchen', 'check', '480x270', None)
+            kitchen_events = json.loads((tmp / 'kitchen' / 'events.json').read_text())
+            at_table = json.loads((tmp / 'kitchen.json').read_text())
+            shut = {**at_table, 'beats': at_table['beats'] + [{'at': 'T9_claude+0.5', 'do': 'close_lid', 'by': 'mara'}]}
+            (tmp / 'shut.json').write_text(json.dumps(shut))
+            with self.assertRaises(RuntimeError) as cannot_shut:
+                blender_render.run_compiler(tmp / 'shut.json', tmp / 'shut', 'check', '480x270', None)
+            stood = {**at_table, 'shots': at_table['shots'][:1], 'cast': [{**at_table['cast'][0], 'at': [0.75, -0.35],
+                                                                            'facing': 90}],
+                     'beats': [{'at': 0, 'do': 'carry', 'prop': 'cup'}, {'at': 0.5, 'do': 'put_down', 'prop': 'cup'}]}
+            (tmp / 'stood.json').write_text(json.dumps(stood))
+            with self.assertRaises(RuntimeError) as too_low:
+                blender_render.run_compiler(tmp / 'stood.json', tmp / 'stood', 'check', '480x270', None)
         self.assertTrue(checks['passed'], checks.get('body_problems'))
         self.assertGreaterEqual(checks['face']['mouth_share'], 0.18)
         self.assertGreater(checks['face']['mouth_travel_m'], 0.005)        # the mouth moves for the faces
@@ -573,6 +666,24 @@ class BlenderCheckTests(unittest.TestCase):
             self.assertLessEqual(walk['arms']['hand_off_m'], 0.04)
         for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
             self.assertLessEqual(enter[kind], 0.03, kind)
+        # the kitchen: in with a mug, sat down, the mug put down from the chair with the other hand left on
+        # the table, the lid opened by its edge with her fingertips, the chest turned as far as her reach needs
+        for shot in kitchen['shots']:
+            self.assertTrue(shot['passed'], shot)
+        kinds = [e['kind'] for e in kitchen_events['events']]
+        for kind in ('put_down', 'lid_open', 'key_click', 'pick_up', 'sip'):
+            self.assertIn(kind, kinds)
+        for kind in ('hand_in_body_m', 'through_m', 'touch_miss_m'):     # no hand in the table, the lid or her
+            self.assertLessEqual(kitchen[kind], 0.03, kind)
+        # the mug: carried by its handle through the door, the sitting down and the chair pulled in, put down,
+        # taken up again and drunk from, level all the way and never in the door, the table or the laptop
+        self.assertLessEqual(kitchen['carried_tilt_deg'], 12.0)
+        self.assertLessEqual(kitchen['carried_through_m'], 0.006)
+        self.assertGreaterEqual(kitchen['hands_apart_m'], 0.005)          # the carrying hand keeps to its side
+        self.assertLessEqual(kitchen['snap_m'], 0.02)                      # the chest's turn is not a jump
+        self.assertIn('short of the lid', str(cannot_shut.exception))     # her arm is too short to shut it
+        self.assertIn('leave out "by"', str(cannot_shut.exception))
+        self.assertIn('sit them down first', str(too_low.exception))      # a standing arm can't reach a table
 
     def test_flicker_is_a_still_point_that_jumps_for_a_frame_and_comes_back(self):
         """The render check reads still points of the set out of the frames: one that jumps and comes back on

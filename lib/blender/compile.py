@@ -33,17 +33,18 @@ from character import FACES, LEANS, LOOKS, POSES, POSTURES, TYPING, ClayPerson  
 
 HAND_SHAPES = tuple(ClayPerson.HAND_SHAPES)
 from hall import LectureHall  # noqa: E402
+from kitchen import Kitchen  # noqa: E402
 from sets import DeskRoom, confetti, title3d  # noqa: E402
 from studio import PROP_KINDS, Studio  # noqa: E402
 from timeline import SpecError, Timeline  # noqa: E402
 
-SET_KINDS = ("desk_room", "desk", "studio", "lecture_hall")
+SET_KINDS = ("desk_room", "desk", "studio", "lecture_hall", "kitchen")
 PROPS = ("cup", "chalk")  # what a lecture hall has to carry and put down
 SCORE_MOODS = ("calm", "tension", "resolve")
 CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_head", "gulp", "blink", "sweat",
               "tremble", "tap", "celebrate", "hold_arms", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
               "look_at", "reach", "hand", "point", "talk", "blinks", "gesture", "dust_hands", "carry", "put_down",
-              "pick_up", "hold", "present", "whistle"}
+              "pick_up", "hold", "present", "whistle", "sip"}
 # how far (m) each kind of contact may be out before the check fails and says where (see ClayPerson.contacts)
 CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03, "snap": 0.02}
 HANDS_APART = 0.005  # nearer than this the two hands are into each other (m)
@@ -51,9 +52,13 @@ PALM_TILT = 35.0     # a hand resting over a table top is palm down to within th
 PALM_TURN = 35.0     # a hanging hand keeps its palm to the leg through a walk to within this (degrees)
 ARM_LIMITS = {"elbow_deg": 35.0, "forearm_deg": 40.0, "hand_off_m": 0.04}  # a fitted model's arms in a walk (arms_report)
 TYPING_LIMITS = {"rest_m": 0.008, "into_m": -0.004, "finger_travel_m": 0.006}  # hands with fingers on the keys
+CARRIED_TILT = 12.0     # a mug in the hand is level to within this (degrees; the tip of a sip is its own part)
+CARRIED_THROUGH = 0.006  # and no deeper than this in a table or a door (m)
 GRIP_OPEN = 0.75  # a hand holding something has its fingertips within this share of a finger's length of it
 SKIN_LIMITS = {"leg_above_hips": 50, "stretch": 4.0}  # a fitted model's weights (character.skin_report)
-SET_VERBS = {"alert", "work", "done", "open_door", "close_door", "pull_in"}
+SET_VERBS = {"alert", "work", "done", "open_door", "close_door", "pull_in", "open_lid", "close_lid", "claude_type",
+             "claude_turn"}
+KITCHEN_VERBS = ("open_lid", "close_lid", "claude_type", "claude_turn")  # verbs only a kitchen has
 LOOK_AT = ("camera", "screen")  # things a look_at or a reach can name in place of a point
 FX_VERBS = {"confetti", "title"}
 
@@ -87,7 +92,7 @@ def validate(spec):
     if kind not in SET_KINDS:
         raise SpecError(f"unknown set kind {kind!r} (have: {', '.join(SET_KINDS)})")
     studio = kind == "studio"
-    if st.get("door") is not None and (not isinstance(st["door"], dict) or kind not in ("desk_room", "lecture_hall")):
+    if st.get("door") is not None and (not isinstance(st["door"], dict) or kind not in ("desk_room", "lecture_hall", "kitchen")):
         raise SpecError('"door" is an object (it may be empty: {}), and only a desk_room has a wall to put it in')
     if not _number(st.get("chair_out", 0)):
         raise SpecError('"chair_out" is how far the chair starts pulled back from the desk, in metres')
@@ -142,16 +147,26 @@ def validate(spec):
                             f"{', '.join(sorted(CHAR_VERBS | SET_VERBS | FX_VERBS))})")
         if studio:
             raise SpecError(f"beat at {b['at']!r}: a studio set has no verbs yet (the camera does the moving)")
-        if verb in ("open_door", "close_door") and b.get("by") is not None and b["by"] not in ids:
+        if verb in KITCHEN_VERBS and kind != "kitchen":
+            raise SpecError(f'beat at {b["at"]!r}: {verb} is a kitchen verb (set kind kitchen)')
+        if verb == "claude_type" and b.get("speed", "frantic") not in TYPING:
+            raise SpecError(f'beat at {b["at"]!r}: claude_type takes "speed", one of {", ".join(TYPING)}')
+        if verb == "claude_turn" and not _number(b.get("facing")):
+            raise SpecError(f'beat at {b["at"]!r}: claude_turn needs "facing", a number of degrees (0 faces -Y)')
+        if verb in ("claude_type", "claude_turn") and st.get("claude") is None:
+            raise SpecError(f'beat at {b["at"]!r}: {verb} needs Claude in the kitchen: give the set "claude": {{}}')
+        if verb in ("open_door", "close_door", "open_lid", "close_lid") and b.get("by") is not None and b["by"] not in ids:
             raise SpecError(f'beat at {b["at"]!r}: "by" is who opens the door, and nobody in the cast is called '
                             f'{b["by"]!r} (have: {", ".join(ids)})')
         if verb in CHAR_VERBS and b.get("who", ids[0]) not in ids:
             raise SpecError(f'beat at {b["at"]!r}: nobody in the cast is called {b["who"]!r} (have: {", ".join(ids)})')
         if verb in ("carry", "put_down", "pick_up", "hold", "dust_hands", "talk", "blinks", "gesture"):
-            if kind != "lecture_hall" and verb in ("carry", "put_down", "pick_up", "hold"):
-                raise SpecError(f'beat at {b["at"]!r}: {verb} needs a set with things to hold (set kind lecture_hall)')
-            if verb in ("carry", "put_down", "pick_up", "hold") and b.get("prop") not in PROPS:
-                raise SpecError(f'beat at {b["at"]!r}: {verb} needs "prop", one of {", ".join(PROPS)}')
+            if kind not in ("lecture_hall", "kitchen") and verb in ("carry", "put_down", "pick_up", "hold"):
+                raise SpecError(f'beat at {b["at"]!r}: {verb} needs a set with things to hold (set kind lecture_hall '
+                                f'or kitchen)')
+            have = ("cup",) if kind == "kitchen" else PROPS
+            if verb in ("carry", "put_down", "pick_up", "hold") and b.get("prop") not in have:
+                raise SpecError(f'beat at {b["at"]!r}: {verb} needs "prop", one of {", ".join(have)}')
             if b.get("hand", "left") not in ("left", "right"):
                 raise SpecError(f'beat at {b["at"]!r}: {verb} takes "hand": "left" or "right" (the character\'s own)')
             if verb == "gesture":
@@ -283,6 +298,32 @@ def build(spec, args):
         room = LectureHall(st.get("palette"), walls=bool(st.get("walls", True)), door=door, board=st.get("board"),
                            image=picture, strength=float((st.get("board") or {}).get("brightness", 1.0)) * 2 ** -exposure,
                            table=st.get("table"))
+    elif kind == "kitchen":
+        cl = st.get("claude")
+        cl_media = cl_start = None
+        if cl is not None:
+            if not isinstance(cl, dict):
+                raise SpecError('"claude" is an object (it may be empty: {})')
+            cs = cl.get("screen") or {}
+            cl_media = cs.get("video") or cs.get("image")
+            if cl_media:
+                cl_media = Path(cl_media) if Path(cl_media).is_absolute() else base / cl_media
+                if not cl_media.exists():
+                    raise SpecError(f"claude screen media not found: {cl_media}")
+                if cs.get("video"):
+                    clip = bpy.data.movieclips.load(str(cl_media))
+                    rate = clip.fps
+                    bpy.data.movieclips.remove(clip)
+                    if rate and abs(rate - fps) > 0.01:
+                        raise SpecError(f"claude's screen video {cl_media.name} is {rate:g} fps and the spec is {fps}")
+            cl_start = tl.frame(tl.time(cs.get("at", 0)))
+        room = Kitchen(st.get("palette"), scr, media_path=media_path,
+                       media_start=tl.frame(tl.time(scr.get("at", 0))), media_offset=int(scr.get("skip_frames", 0)),
+                       media_strength=float(scr.get("brightness", 1.0)) * 2 ** -exposure,
+                       fit=next(iter(cast.values())).furniture(), door=door,
+                       chair_out=float(st.get("chair_out", 0.0)), lid=st.get("lid", "open"), mug=st.get("mug"),
+                       claude=cl, claude_media=cl_media, claude_start=cl_start or 1,
+                       claude_strength=float(((cl or {}).get("screen") or {}).get("brightness", 1.0)) * 2 ** -exposure)
     else:
         room = DeskRoom(st.get("palette"), scr, walls=kind == "desk_room", media_path=media_path,
                         media_start=tl.frame(tl.time(scr.get("at", 0))), media_offset=int(scr.get("skip_frames", 0)),
@@ -292,6 +333,7 @@ def build(spec, args):
     bpy.context.view_layer.update()  # the cameras read where the screen is: it has to have been worked out
     for p in cast.values():  # (hands with fingers are put on the keys where they are in the room)
         p.keys = bpy.data.objects.get("lap_keys")
+        p.table = getattr(room, "desk_top", None)  # (a lean stops at its edge; a hand on it stays on it)
     default_who = next(iter(cast))
 
     fx_events, at_camera, point_camera = [], [], []
@@ -351,10 +393,13 @@ def build(spec, args):
                     acting.present(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(36), point, b.get("hand"))
                 except ValueError as e:
                     raise SpecError(f'beat at {b["at"]!r}: {e}')
-            elif verb in ("gesture", "dust_hands", "carry", "put_down", "pick_up", "hold"):
+            elif verb in ("gesture", "dust_hands", "carry", "put_down", "pick_up", "hold", "sip"):
                 try:
                     hand = b.get("hand")
-                    if verb == "gesture":
+                    if verb == "sip":
+                        acting.sip(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(40), hand or "left",
+                                   part=float(b.get("part", 1.0)), stay=bool(b.get("stay", False)))
+                    elif verb == "gesture":
                         acting.gesture(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(30),
                                        b.get("kind", "open"), hand)
                     elif verb == "dust_hands":
@@ -369,11 +414,12 @@ def build(spec, args):
                             on_table.scale = (0, 0, 0)
                             acting.hold_small(p, in_hand, f0, hand or "right")
                         elif verb == "pick_up":
-                            acting.pick_up(p, in_hand, on_table, f0, end, hand or "right")
+                            acting.pick_up(p, in_hand, on_table, f0, end, hand or ("right" if small else "left"))
                         elif small:
                             acting.leave_small(p, in_hand, on_table, b.get("to", list(spot)), f0, end, hand or "right")
                         else:
-                            acting.put_down(p, in_hand, on_table, b.get("to", list(spot)), f0, end, hand or "left")
+                            acting.put_down(p, in_hand, on_table, b.get("to", list(spot)), f0, end, hand or "left",
+                                            lean=float(b.get("lean", 9.0)), rest=getattr(room, "beside_laptop", None))
                 except ValueError as e:
                     raise SpecError(f'beat at {b["at"]!r}: {e}')
             elif verb == "look_at" and b["target"] == "camera":
@@ -414,7 +460,20 @@ def build(spec, args):
             else:
                 timed = "until" in b or "dur" in b
                 try:
-                    if verb == "pull_in":  # whoever sits on the chair comes in to the desk with it
+                    if verb in ("open_lid", "close_lid"):
+                        end = f1 if timed else f0 + kit.n(14)
+                        shut = verb == "close_lid"
+                        room.move_lid(f0, end, shut)
+                        if b.get("by"):  # fingertips on the lid's top edge: they set out before, and go with the lid
+                            who = cast[b["by"]]
+                            x = 0.16 * (1 if b.get("hand", "right") == "left" else -1)  # (on that hand's side of it)
+                            who.push(f0, end, lambda f, x=x: room.lid_edge(x), b.get("hand", "right"), what="lid",
+                                     rest=room.beside_laptop, clear=shut)
+                    elif verb == "claude_type":
+                        room.claude_type(f0, f1 if timed else f0 + kit.n(48), b.get("speed", "frantic"))
+                    elif verb == "claude_turn":
+                        room.claude_turn(f0, f1 if timed else f0 + kit.n(14), float(b["facing"]))
+                    elif verb == "pull_in":  # whoever sits on the chair comes in to the desk with it
                         end = f1 if timed else f0 + kit.n(34)
                         room.events.append({"frame": f0, "kind": "chair"})
                         cast[b.get("who", default_who)].scoot(f0, end, (0, 0), rides=[room.chair], grip=room.desk_edge)
@@ -531,6 +590,7 @@ def main():
     contacts = {k: c for k, c in (getattr(kit, "contacts", None) or {}).items() if k != "under_floor"}
     apart, tilt = contacts.pop("hands_apart", None), contacts.pop("palm_tilt", None)
     turned = contacts.pop("palm_turn", None)
+    tipped, sunk_in = contacts.pop("carried_tilt", None), contacts.pop("carried_through", None)
     touching = all(c["m"] <= CONTACT_LIMITS[k] for k, c in contacts.items())
     checks = {"passed": all(r["passed"] for r in reports) and ik < 0.01 and sunk <= 0.015 and touching,
               "duration": tl.duration, "fps": tl.fps,
@@ -568,6 +628,18 @@ def main():
             checks["passed"] = False
             problems.append(f'{turned["hand"]} palm turns {turned["deg"]:.0f} degrees away from the leg as the arm swings '
                             f'in a walk at {(turned["frame"] - 1) / tl.fps:.2f} s')
+    if tipped and tipped["frame"] is not None:  # something carried: is it level, is it clear of the furniture
+        checks["carried_tilt_deg"] = round(tipped["deg"], 1)
+        if tipped["deg"] > CARRIED_TILT:
+            checks["passed"] = False
+            problems.append(f'the {tipped["what"]} is tipped {tipped["deg"]:.0f} degrees in the hand at '
+                            f'{(tipped["frame"] - 1) / tl.fps:.2f} s: a full mug is carried level')
+    if sunk_in and sunk_in["frame"] is not None:
+        checks["carried_through_m"] = round(sunk_in["m"], 3)
+        if sunk_in["m"] > CARRIED_THROUGH:
+            checks["passed"] = False
+            problems.append(f'the {sunk_in["what"]} in the hand is {sunk_in["m"] * 100:.1f} cm into the {sunk_in["into"]} at '
+                            f'{(sunk_in["frame"] - 1) / tl.fps:.2f} s')
     if getattr(kit, "moves", None):  # each posture verb: do its parts start and stop together, are the sides the same
         checks["moves"] = kit.moves
     if problems:  # in words, for the person or agent reading the check

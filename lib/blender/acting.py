@@ -14,6 +14,7 @@ import bpy
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
+import kit
 from kit import R, key, n, ticks
 
 GESTURES = ("open", "both", "shrug", "count")
@@ -295,14 +296,95 @@ def dust_hands(p, f0: int, f1: int):
 
 # ---------------------------------------------------------------- things in the hand
 def _carry_lay(p, s):
-    own = _own(p)
-    return lambda f: (own @ Vector((-s, 0, 0)), own @ Vector((0, -1, 0.12)))
+    """How a hand lies that carries a cup: on its side, the palm to the body's middle, the fingers ahead. Asked
+    on the frame it is keyed on, so it turns with the body (a walk round a bend, a chair pulled in)."""
+    return lambda f: (_own(p) @ Vector((-s, 0, 0)), _own(p) @ Vector((0, -1, 0.12)))
 
 
-def _carry_wrist(p, s):
+def _reach_lay(p, s, way):
+    """A hand on its side with the fingers along `way` (level, in the room): how it comes at a handle."""
+    way = Vector((way.x, way.y, 0.0)).normalized()
+    palm = s * way.cross(Vector((0, 0, 1)))
+    # (the fingers a little up, as in every lay a mug is held in: the mug is made upright in the hand as it
+    # is first held, so a lay with the fingers level would tip it by the difference, 7 degrees)
+    return lambda f: (palm, (way + Vector((0, 0, 0.12))).normalized())
+
+
+def _level_lay(p, s):
+    """A hand on its side with the fingers level along the forearm as it is on that frame: the hand asks nothing
+    of the wrist but to stay level, so a mug in it stays upright wherever the arm goes (a lay fixed in the room
+    runs into the wrist's limit as the forearm swings, and the mug tips with the hand)."""
+    def lay(f):
+        fore = (p.rig.matrix_world.to_3x3() @ p.rig.pose.bones["fore." + ("L" if s > 0 else "R")].matrix.to_3x3().col[1])
+        flat = Vector((fore.x, fore.y, 0.0))
+        # (a forearm near upright has no level direction of its own: there the fingers go across and ahead,
+        # eased in, so the hand does not swing round as the forearm passes through upright)
+        w = max(0.0, 1.0 - flat.length / 0.6)
+        across = (_own(p) @ Vector((-s * 0.7, -0.7, 0))).normalized()
+        flat = (flat.normalized() * (1 - w) + across * w).normalized() if flat.length > 1e-3 else across
+        return s * flat.cross(Vector((0, 0, 1))), (flat + Vector((0, 0, 0.12))).normalized()
+    return lay
+
+
+def _mix_lay(a, b, u):
+    """Part of the way from one lay to another (each a function of the frame giving palm and fingers)."""
+    def lay(f):
+        (pa, wa), (pb, wb) = a(f), b(f)
+        return Vector(pa).lerp(Vector(pb), u).normalized(), Vector(wa).lerp(Vector(wb), u).normalized()
+    return lay
+
+
+def _ease(u):
+    u = max(0.0, min(1.0, u))
+    return u * u * (3 - 2 * u)
+
+
+def _way(p, s, start, to, u, ob=None, lift=0.03):
+    """Where the wrist is (the chest's space) part `u` of the way from `start` to `to` with something in the
+    hand. Not the straight line: from up by the mouth to a table out to the side, the line passes a hand's
+    breadth from the shoulder, the arm folds shut and the hand swings right round on the way through (seen:
+    the mug turned 180 degrees and tipped 29). A hand that starts well above where it carries comes down to the
+    carrying place first; and no point of the way is nearer the shoulder than a bent arm holds a mug."""
+    start, to = Vector(start), Vector(to)
+    carry, _ = _carry_wrist(p, s, ob)
+    if start.z - carry.z > 0.08 and to.z < carry.z:
+        at = start.lerp(carry, _ease(u / 0.45)) if u < 0.45 else carry.lerp(to, _ease((u - 0.45) / 0.55))
+    else:
+        at = start.lerp(to, u)
+    at = at + Vector((0, 0, lift * math.sin(math.pi * u)))
+    sh, near = Vector(p.SH[s]), 0.42 * 0.7122 * p.arm
+    d = at - sh
+    if d.length < near:
+        d = d + Vector((0, -0.6 * (near - d.length), 0))  # (forward, out of the fold)
+        at = sh + d.normalized() * near
+    return at
+
+
+def _in_hand(p, ob, s, at, palm, way, radius=0.04):
+    """Put `ob` in hand `s`, whose hold point is `at` now. A thing with a `handle` (how far its handle's bar is
+    from its middle) is held by it: the bar in the crook of the fingers, the thing out past the knuckles the way
+    the fingers point, upright, its handle back into the hand. Anything else is held round its upper half."""
+    _bone_parent(ob, p, "hand." + ("L" if s > 0 else "R"))
+    handle = ob.get("handle")
+    if handle:
+        flat = Vector((way.x, way.y, 0.0)).normalized()
+        ob.matrix_world = Matrix.Translation(at + flat * handle - Vector((0, 0, ob.get("hold_drop", 0.0)))) \
+            @ Matrix.Rotation(math.atan2(-flat.y, -flat.x), 4, "Z")
+    else:
+        # (held by its upper half, so the hand is clear of whatever the cup is put down on: `hold_drop` on the
+        # object is how far below the hand's hold its middle hangs)
+        yaw = p.root.matrix_world.to_euler().z
+        ob.matrix_world = Matrix.Translation(at + palm * (radius - 0.012) + way * 0.005 - Vector((0, 0, ob.get("hold_drop", 0.028)))) \
+            @ Matrix.Rotation(yaw, 4, "Z")
+
+
+def _carry_wrist(p, s, ob=None):
     L = 0.7122 * p.arm
-    # (in front of the body, between the shoulder and the middle, a little under the chest)
-    return Vector((p.SH[s].x * 0.5, -0.62 * L, p.SH[s].z - 0.36 * L)), p._mirror((0.6, 1, -0.5), s)
+    # (in front of the body, between the shoulder and the middle, a little under the chest; a mug held by its
+    # handle stands out past the knuckles, so the wrist is that much nearer the body: the mug is where a cup
+    # in the hand would be, and not in a door they stand at to open)
+    out = 0.62 * L - (1.15 * ob["handle"] if ob is not None and ob.get("handle") else 0.0)
+    return Vector((p.SH[s].x * 0.5, -out, p.SH[s].z - 0.36 * L)), p._mirror((0.6, 1, -0.5), s)
 
 
 def _bone_parent(ob, p, bone):
@@ -322,11 +404,13 @@ def _palm_now(p, s):
 
 def carry(p, ob, f: int, hand: str = "left", radius: float = 0.04):
     """From frame f the character carries `ob` (a cup, upright) in a hand held in front of them, and that arm
-    stays out of a walk's swing. The cup rides the hand bone."""
+    stays out of a walk's swing. The cup rides the hand bone: a mug by its handle, the fist closed on it and the
+    mug out in front of the knuckles; a cup with no handle in a hand round it. It stays there through sitting
+    down and pulling a chair in (`ClayPerson._carry_keys`)."""
     s = _side(hand)
     sc = bpy.context.scene
-    wrist, pole = _carry_wrist(p, s)
-    p.hand_shape(f, f, "hold", hand)
+    wrist, pole = _carry_wrist(p, s, ob)
+    p.hand_shape(f, f, "grip" if ob.get("handle") else "hold", hand)
     p.busy.add(s)
     p._arm_key(s, f, wrist, pole, _carry_lay(p, s))
     sc.frame_set(f)
@@ -335,61 +419,105 @@ def carry(p, ob, f: int, hand: str = "left", radius: float = 0.04):
     at = p._hold_point(s)
     p.holding[s] = False
     palm, way = _palm_now(p, s)
-    _bone_parent(ob, p, "hand." + ("L" if s > 0 else "R"))
-    yaw = p.root.matrix_world.to_euler().z
-    # (held by its upper half, so the hand is clear of whatever the cup is put down on)
-    ob.matrix_world = Matrix.Translation(at + palm * (radius - 0.012) + way * 0.005 - Vector((0, 0, 0.028))) \
-        @ Matrix.Rotation(yaw, 4, "Z")
+    _in_hand(p, ob, s, at, palm, way, radius)
     key(ob, "scale", f, (1, 1, 1))
     p.carry_spans.setdefault(s, []).append([f, 10 ** 9])
+    p.carrying[s] = {"ob": ob, "wrist": Vector(wrist), "pole": pole, "lay": _carry_lay(p, s)}
+    p.carried_all.append(p.carrying[s])
 
 
-def put_down(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "left", lean: float = 9.0):
+def put_down(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "left", lean: float = 9.0, rest=None):
     """The hand that carries `ob_hand` takes it to `spot` (a point in the room: the middle of the thing as it
     stands there) by f1 and lets go: from then `ob_table` stands there and the hand goes back to the side. The
-    chest leans to it a little. Raises if the arm is too short from where they stand."""
+    chest leans to it a little. Raises if the arm is too short from where they stand. Someone sitting at a
+    table has no side to drop a hand to (the table is over it): with `rest(side)`, a point on the table top,
+    the hand lies flat there afterwards, and the other hand stays where it lies on the table while the chest
+    leans (it hangs from the chest, and went down through the table top with it)."""
     s = _side(hand)
     sc = bpy.context.scene
     sd = "L" if s > 0 else "R"
-    lay = _carry_lay(p, s)
+    held = p.carrying.get(s, {}).get("lay") or _carry_lay(p, s)
+    lay = _level_lay(p, s) if ob_hand.get("handle") else held
     spot = Vector(spot)
     sc.frame_set(f0)
     bpy.context.view_layer.update()
     local = p.root.matrix_world.inverted() @ spot
     side = math.degrees(math.atan2(local.x, -local.y))
     start, pole = p.hand_t[s].location.copy(), p._mirror((0.6, 1, -0.5), s)
+    pole_was = Vector(p.carrying.get(s, {}).get("pole") or pole)
     for side_ in (1, -1):
         p.hand_t[side_].keyframe_insert("location", frame=f0)
         p.pole_t[side_].keyframe_insert("location", frame=f0)
+    # (and the hand as it is turned now: with no key here it would start turning toward the put-down from
+    # its last key, however long ago that was, and tip the mug while the arm is still)
+    p.rig.pose.bones["hand." + sd].keyframe_insert("rotation_quaternion", frame=f0)
     lag = n(p.LAG["chest"])
+    if p.posture == "sit" and p.table is not None and p.fingers.get(s):
+        # (someone at a table leans only as far as its edge lets the chest: tried, on the body as it is)
+        sc.frame_set(f1)
+        was = p.spine.rotation_euler.copy()
+        for part in (1.0, 0.75, 0.5, 0.25, 0.0):
+            p.spine.rotation_euler = (math.radians(p.spine_pitch + lean * part), 0, math.radians(0.35 * side))
+            bpy.context.view_layer.update()
+            if p._into_table() <= p.TABLE_GIVE:
+                break
+        lean *= part
+        p.spine.rotation_euler = was
+        sc.frame_set(f0)
+        bpy.context.view_layer.update()
     p._look_first(f0 + n(2), f1 + n(6), yaw=max(-20, min(20, side)), pitch=18)
     p._torso(f0 - lag)
-    p._torso(f1 - lag, pitch=lean, yaw=0.35 * side, head=(14, 0.3 * side))
-    sc.frame_set(f1)
-    bpy.context.view_layer.update()
-    inv = p.spine.matrix_world.inverted().to_3x3()
-    at = start.copy()
     reach = 0.985 * 0.7122 * p.arm
-    for _ in range(12):
-        p._arm_key(s, f1, at, pole, lay)
+    at_table = p.posture == "sit" and p.table is not None and p.fingers.get(s)
+    # (someone at a table leans no further than the reach needs: every degree of lean lowers the other forearm
+    # over whatever is on the table, and a mug held by its handle reaches a hand's length further than a cup)
+    for share in ((0.0, 0.34, 0.67, 1.0) if at_table and lean > 0 else (1.0,)):
+        p._torso(f1 - lag, pitch=lean * share, yaw=0.35 * side, head=(14, 0.3 * side))
+        sc.frame_set(f1)
         bpy.context.view_layer.update()
-        miss = inv @ (spot - ob_hand.matrix_world.translation)
-        if miss.length < 0.0015:
+        inv = p.spine.matrix_world.inverted().to_3x3()
+        at = start.copy()
+        miss = Vector((1, 0, 0))
+        for _ in range(24):
+            p._arm_key(s, f1, at, pole, lay)
+            bpy.context.view_layer.update()
+            miss = inv @ (spot - ob_hand.matrix_world.translation)
+            if miss.length < 0.0015:
+                break
+            # (a step at a time, and never past the arm's length: one full step can overshoot a reach that is
+            # there, and a hand that follows its forearm moves the thing as the forearm turns)
+            at = at + miss * 0.7
+            arm = at - Vector(p.SH[s])
+            if arm.length > reach:
+                at = Vector(p.SH[s]) + arm.normalized() * reach
+        if miss.length <= 0.004:
             break
-        at = at + miss
-        arm = at - Vector(p.SH[s])
-        if arm.length > reach:
-            raise ValueError(f"{p.id}'s {hand} hand is {arm.length - reach:.2f} m short of putting it down at "
-                             f"{tuple(round(v, 2) for v in spot)}: stand them closer, or move the spot")
-    # (lifted a little on the way, so it comes down onto the table and not along it)
-    mid = (f0 + f1) // 2
-    p._arm_key(s, mid, start.lerp(at, 0.5) + Vector((0, 0, 0.03)), pole, lay)
+    lean *= share
+    if miss.length > 0.004:
+        sh = p.spine.matrix_world @ Vector(p.SH[s])
+        # (within reach across the floor and still short: it is the drop to the table that the arm can't make)
+        low = p.posture == "stand" and (spot.xy - sh.xy).length < reach and sh.z - spot.z > 0.6 * reach
+        raise ValueError(f"{p.id}'s {hand} hand is {miss.length:.2f} m short of putting it down at "
+                         f"{tuple(round(v, 2) for v in spot)}: "
+                         + ("the table is lower than a standing arm reaches (only the chest bends): sit them "
+                            "down first, or put it on something higher" if low
+                            else "stand them closer, or move the spot"))
+    # (lifted a little on the way, so it comes down onto the table and not along it; keyed on every frame, the
+    # hand held as it carries: between two keys a wrist turns the short way round, and the cup tips with it)
+    for f in range(f0 + 1, f1):
+        u = _ease((f - f0) / (f1 - f0))
+        p._arm_key(s, f, _way(p, s, start, at, u, ob_hand), pole_was.lerp(Vector(pole), min(1.0, 2.0 * u)),
+                   _mix_lay(held, lay, min(1.0, 2.5 * u)))
     p._arm_key(s, f1, at, pole, lay)
-    # the swap: the one in the hand goes, the one on the table is there
+    # the swap: the one in the hand goes, the one on the table is there, turned as the hand left it
     key(ob_hand, "scale", f1, (1, 1, 1))
     key(ob_hand, "scale", f1 + 1, (0, 0, 0))
+    sc.frame_set(f1)
+    bpy.context.view_layer.update()
     ob_table.location = spot
-    ob_table.rotation_euler = (ob_table.rotation_euler.x, ob_table.rotation_euler.y, p.root.matrix_world.to_euler().z)
+    ob_table.rotation_euler = (ob_table.rotation_euler.x, ob_table.rotation_euler.y,
+                               ob_hand.matrix_world.to_euler().z if ob_hand.get("handle") else p.root.matrix_world.to_euler().z)
+    p.carrying.pop(s, None)
     key(ob_table, "scale", f1, (0, 0, 0))
     key(ob_table, "scale", f1 + 1, (1, 1, 1))
     p.events.append({"frame": f1, "kind": "put_down"})
@@ -399,12 +527,25 @@ def put_down(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "left", l
     p.busy.discard(s)
     if p.carry_spans.get(s):
         p.carry_spans[s][-1][1] = f1
-    down, elbow = p._down(s)
-    # (out round the belly on the way back to the side, not through it)
-    p._arm_key(s, f1 + n(10), at.lerp(Vector(down), 0.5) + Vector((s * 0.09, -0.06, 0.03)), pole, None)
-    p._arm_key(s, f1 + n(18), down, p._mirror(elbow, s), "side")
+    seated = p.posture == "sit" and rest is not None and p.fingers.get(s) and p.table is not None
+    if not seated:
+        down, elbow = p._down(s)
+        # (out round the belly on the way back to the side, not through it)
+        p._arm_key(s, f1 + n(10), at.lerp(Vector(down), 0.5) + Vector((s * 0.09, -0.06, 0.03)), pole, None)
+        p._arm_key(s, f1 + n(18), down, p._mirror(elbow, s), "side")
     p._torso(f1 + n(4), pitch=lean * 0.5, yaw=0.2 * side, head=(6, 0.15 * side))
     p._torso(f1 + n(14))
+    p._wrist_continuous(s)
+    if seated:
+        end = f1 + n(16) + lag + 1
+        if p._on_table(-s, f0 - lag):  # the other hand stays on the table under the leaning chest
+            stay, other = p._stays(-s, f0 - lag), p._hands_now(f0 - lag)[-s][1]
+            p._hands_path({-s: [(f0 - lag, stay, other, 0), (end, stay, other, 0)]})
+        lie = p._flat_on(s, rest(s))
+        now, was = p._hands_now(f1 + n(3))[s]
+        p._hands_path({s: [(f1 + n(3), now, was, 0), (f1 + n(14), lie, (1, 0.3, -0.8), 0.04), (end, lie, (1, 0.3, -0.8), 0)]})
+        p.hand_shape(f1 + n(5), f1 + n(12), "flat", hand)
+        p.arm_pose = "table"
     p.swung = {}
 
 
@@ -438,15 +579,31 @@ def pick_up(p, ob_hand, ob_table, f0: int, f1: int, hand: str = "right"):
     sc = bpy.context.scene
     sc.frame_set(f0)
     bpy.context.view_layer.update()
+    if ob_hand.get("handle"):  # (a mug: by its handle, and then carried)
+        return take_up(p, ob_hand, ob_table, f0, f1, hand)
     spot = ob_table.matrix_world.translation.copy()
     state = _hand_state(p, s, f0)
     _hand_state(p, -s, f0)
     local = p.root.matrix_world.inverted() @ spot
     side = math.degrees(math.atan2(local.x, -local.y))
     lag = n(p.LAG["chest"])
+    lean = 12.0
+    if p.posture == "sit" and p.table is not None and p.fingers.get(s):
+        # (someone at a table leans only as far as its edge lets the chest: tried, on the body as it is)
+        sc.frame_set(f1)
+        was = p.spine.rotation_euler.copy()
+        for part in (1.0, 0.75, 0.5, 0.25, 0.0):
+            p.spine.rotation_euler = (math.radians(p.spine_pitch + lean * part), 0, math.radians(0.35 * side))
+            bpy.context.view_layer.update()
+            if p._into_table() <= p.TABLE_GIVE:
+                break
+        lean *= part
+        p.spine.rotation_euler = was
+        sc.frame_set(f0)
+        bpy.context.view_layer.update()
     p._look_first(f0 + n(2), f1 + n(6), yaw=max(-20, min(20, side)), pitch=18)
     p._torso(f0 - lag)
-    p._torso(f1 - lag, pitch=12, yaw=0.5 * side, head=(14, 0.3 * side))
+    p._torso(f1 - lag, pitch=lean, yaw=0.5 * side, head=(14, 0.3 * side))
     sc.frame_set(f1)
     bpy.context.view_layer.update()
     wrist = p._wrist_for(s, spot + Vector((0, 0, 0.05)))
@@ -485,9 +642,23 @@ def leave_small(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "right
     local = p.root.matrix_world.inverted() @ spot
     side = math.degrees(math.atan2(local.x, -local.y))
     lag = n(p.LAG["chest"])
+    lean = 13.0
+    if p.posture == "sit" and p.table is not None and p.fingers.get(s):
+        # (someone at a table leans only as far as its edge lets the chest: tried, on the body as it is)
+        sc.frame_set(f1)
+        was = p.spine.rotation_euler.copy()
+        for part in (1.0, 0.75, 0.5, 0.25, 0.0):
+            p.spine.rotation_euler = (math.radians(p.spine_pitch + lean * part), 0, math.radians(0.35 * side))
+            bpy.context.view_layer.update()
+            if p._into_table() <= p.TABLE_GIVE:
+                break
+        lean *= part
+        p.spine.rotation_euler = was
+        sc.frame_set(f0)
+        bpy.context.view_layer.update()
     p._look_first(f0 + n(2), f1 + n(6), yaw=max(-20, min(20, side)), pitch=18)
     p._torso(f0 - lag)
-    p._torso(f1 - lag, pitch=13, yaw=0.6 * side, head=(14, 0.3 * side))
+    p._torso(f1 - lag, pitch=lean, yaw=0.6 * side, head=(14, 0.3 * side))
     sc.frame_set(f1)
     bpy.context.view_layer.update()
     gap = (p.spine.matrix_world.inverted() @ spot - Vector(p.SH[s])).length - 0.98 * (0.7122 * p.arm + p.hand_len)
@@ -512,3 +683,190 @@ def leave_small(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "right
     p._torso(f1 + n(4), pitch=4, yaw=0.3 * side, head=(6, 0.15 * side))
     p._torso(f1 + n(14))
     p.swung = {}
+
+
+def take_up(p, ob_hand, ob_table, f0: int, f1: int, hand: str = "left"):
+    """A hand goes to the mug that stands on the table (`ob_table`), closes on its handle by f1 and lifts it to
+    where a cup is carried, in front of the chest: from f1 `ob_hand` is in the hand and the arm is carrying
+    (so `put_down` and `sip` follow). The hand comes at the handle along the line from the shoulder, so a mug
+    that has stood there since the film began is turned to offer its handle to that hand; one that was put down
+    earlier keeps the turn it was left with. Someone sitting at a table leans only as far as its edge allows,
+    and the other hand stays where it lies. Raises if the arm is too short."""
+    s = _side(hand)
+    sc = bpy.context.scene
+    handle = ob_hand.get("handle")
+    if not handle:
+        raise ValueError("only something with a handle is taken up this way (a mug)")
+    sc.frame_set(f0)
+    bpy.context.view_layer.update()
+    spot = ob_table.matrix_world.translation.copy()
+    sh = p.spine.matrix_world @ Vector(p.SH[s])
+    if ob_table.animation_data is None or not any(fc.data_path == "scale" for fc in kit.fcurves(ob_table)):
+        to = spot - sh
+        ob_table.rotation_euler = (0, 0, math.atan2(-to.y, -to.x) - math.radians(18 * s))  # (a little off the line: a wrist is not a rod)
+        bpy.context.view_layer.update()
+    way = -(ob_table.matrix_world.to_3x3() @ Vector((1, 0, 0)))
+    way = Vector((way.x, way.y, 0.0)).normalized()
+    bar = spot - way * handle + Vector((0, 0, ob_hand.get("hold_drop", 0.0)))
+    local = p.root.matrix_world.inverted() @ spot
+    side = math.degrees(math.atan2(local.x, -local.y))
+    start, pole = p.hand_t[s].location.copy(), p._mirror((0.6, 1, -0.5), s)
+    was_lay = p.rig.pose.bones["hand." + ("L" if s > 0 else "R")].rotation_quaternion.copy()
+    for side_ in (1, -1):
+        p.hand_t[side_].keyframe_insert("location", frame=f0)
+        p.pole_t[side_].keyframe_insert("location", frame=f0)
+    p.rig.pose.bones["hand." + ("L" if s > 0 else "R")].keyframe_insert("rotation_quaternion", frame=f0)
+    lag, lean = n(p.LAG["chest"]), 8.0
+    seated = p.posture == "sit" and p.table is not None and p.fingers.get(s)
+    if seated:
+        sc.frame_set(f1)
+        was = p.spine.rotation_euler.copy()
+        for part in (1.0, 0.75, 0.5, 0.25, 0.0):
+            p.spine.rotation_euler = (math.radians(p.spine_pitch + lean * part), 0, math.radians(0.3 * side))
+            bpy.context.view_layer.update()
+            if p._into_table() <= p.TABLE_GIVE:
+                break
+        lean *= part
+        p.spine.rotation_euler = was
+        sc.frame_set(f0)
+        bpy.context.view_layer.update()
+    up = f1 + n(16)                      # the mug is where it is carried
+    p._look_first(f0 + n(2), f1 + n(4), yaw=max(-20, min(20, side)), pitch=16)
+    p._torso(f0 - lag)
+    p._torso(f1 - lag, pitch=lean, yaw=0.3 * side, head=(12, 0.3 * side))
+    p._torso(up - lag)
+    reach_lay = _reach_lay(p, s, way)
+    # where the wrist is with the crook of the fingers on the handle's bar: tried on the arm as it is
+    sc.frame_set(f1)
+    bpy.context.view_layer.update()
+    inv = p.spine.matrix_world.inverted().to_3x3()
+    at, reach = start.copy(), 0.985 * 0.7122 * p.arm
+    p.holding[s] = True
+    for _ in range(14):
+        p._arm_key(s, f1, at, pole, reach_lay)
+        bpy.context.view_layer.update()
+        miss = inv @ (bar - p._hold_point(s))
+        if miss.length < 0.0015:
+            break
+        at = at + miss
+        if (at - Vector(p.SH[s])).length > reach:
+            p.holding[s] = False
+            raise ValueError(f"{p.id}'s {hand} hand is {(at - Vector(p.SH[s])).length - reach:.2f} m short of the mug's "
+                             f"handle: move the mug nearer (the set's `mug.at`), or sit them closer")
+    p.holding[s] = False
+    # to the handle: up off the table and round to it from the handle's side, the hand opening, then closing on it
+    back = inv @ (-way * 0.07 + Vector((0, 0, 0.035)))
+    for f in range(f0 + 1, f1):
+        u = _ease((f - f0) / (f1 - f0))
+        off = back * math.sin(math.pi * u) * (1 - u) * 2.0   # (most of it early: up, then round to the handle)
+        p._arm_key(s, f, start.lerp(at, u) + off, pole, reach_lay)
+    p._arm_key(s, f1, at, pole, reach_lay)
+    bone = p.rig.pose.bones["hand." + ("L" if s > 0 else "R")]
+    # (the first frames blend from how the hand lay: keyed straight to its side it flips in one frame)
+    for f in range(f0 + 1, min(f1, f0 + n(8))):
+        sc.frame_set(f)
+        u = _ease((f - f0) / n(8))
+        q = was_lay.slerp(bone.rotation_quaternion, u)
+        bone.rotation_quaternion = q
+        bone.keyframe_insert("rotation_quaternion", frame=f)
+    p.hand_shape(f0, f0 + max(1, (f1 - f0) // 2), "open", hand)
+    p.hand_shape(f1 - n(3), f1 + n(1), "grip", hand)
+    # the swap
+    sc.frame_set(f1)
+    bpy.context.view_layer.update()
+    world = ob_table.matrix_world.copy()
+    _bone_parent(ob_hand, p, "hand." + ("L" if s > 0 else "R"))
+    ob_hand.matrix_world = world
+    key(ob_hand, "scale", f1 - 1, (0, 0, 0))
+    key(ob_hand, "scale", f1, (1, 1, 1))
+    key(ob_table, "scale", f1 - 1, tuple(ob_table.scale))
+    key(ob_table, "scale", f1, (0, 0, 0))
+    p.events.append({"frame": f1, "kind": "pick_up"})
+    p.busy.add(s)
+    p.carry_spans.setdefault(s, []).append([f1, 10 ** 9])
+    wrist, pole_c = _carry_wrist(p, s, ob_hand)
+    carry_lay = _carry_lay(p, s)
+    # (where a cup is carried is a height off the shoulder, and someone short at a table has that under the
+    # table top: found on the second body, whose mug came back down into the table. Tried at the end of the
+    # lift, and the wrist raised by what the mug is short of clearing it)
+    if seated:  # (on its own side of the table: half way to the middle is where the other hand lies, and a
+        wrist.x = p.SH[s].x * 0.85  # small body's two hands met there)
+    p._arm_key(s, up, wrist, pole, carry_lay)
+    wrist = wrist + Vector((0, 0, p._carry_short(ob_hand, up)))
+    # lifted: a beat with the weight, then up and in to the chest, level all the way
+    for f in range(f1 + 1, up + 1):
+        u = _ease((f - f1 - n(2)) / (up - f1 - n(2)))
+        p._arm_key(s, f, _way(p, s, at, wrist, u, ob_hand, 0.02), pole, _mix_lay(reach_lay, carry_lay, u))
+    p.carrying[s] = {"ob": ob_hand, "wrist": Vector(wrist), "pole": pole_c, "lay": carry_lay}
+    p.carried_all.append(p.carrying[s])
+    if seated and p._on_table(-s, f0 - lag):  # the other hand stays on the table under the leaning chest
+        stay, other = p._stays(-s, f0 - lag), p._hands_now(f0 - lag)[-s][1]
+        p._hands_path({-s: [(f0 - lag, stay, other, 0), (up, stay, other, 0)]})
+    p._wrist_continuous(s)
+    p.arm_pose = "carry"
+    p.swung = {}
+
+
+def sip(p, f0: int, f1: int, hand: str = "left", part: float = 1.0, stay: bool = False):
+    """The mug that hand carries goes up to the mouth and tips, and comes back down by f1. `part` under 1 stops
+    it that share of the way up (a sip that is interrupted); with `stay` it is still up there at f1."""
+    s = _side(hand)
+    c = p.carrying.get(s)
+    if not c or not c["ob"].get("handle"):
+        raise ValueError(f"{p.id} has no mug in their {hand} hand to drink from: `carry` or `pick_up` it first")
+    sc = bpy.context.scene
+    ob, pole = c["ob"], c["pole"]
+    rim, tall = ob.get("rim", 0.05), ob.get("tall", 0.1)
+    top = f0 + round((f1 - f0) * (1.0 if stay else 0.42))
+    hold = top if stay else f0 + round((f1 - f0) * 0.68)
+    level = _level_lay(p, s)
+    # where the wrist is with the mug's near rim at the lips: tried on the arm as it is at the top. The hand comes
+    # in from the side, the fingers toward the mouth, so the handle is out to that side
+    sc.frame_set(top)
+    bpy.context.view_layer.update()
+    lips = p.head.matrix_world @ Vector((0, -0.3, -0.105))
+    fwd = _own(p) @ Vector((0, -1, 0))
+    want = lips + fwd * (rim + 0.012) - Vector((0, 0, tall / 2 - 0.012))
+    inv = p.spine.matrix_world.inverted().to_3x3()
+    at = Vector(c["wrist"])
+    for _ in range(16):
+        p._arm_key(s, top, at, Vector(pole).lerp(Vector(p._mirror((1.0, 0.15, 0.05), s)), _ease((part - 0.45) / 0.4)), level)
+        bpy.context.view_layer.update()
+        miss = inv @ (want - ob.matrix_world.translation)
+        if miss.length < 0.002:
+            break
+        at = at + miss * 0.8
+    high = Vector(c["wrist"]).lerp(at, part)
+    p._look_first(f0, top, pitch=6)
+    shape = lambda f: (_ease((f - f0) / max(1, top - f0)) if f <= top else 1.0 if f <= hold  # noqa: E731
+                       else 1.0 - _ease((f - hold) / max(1, f1 - hold)))
+    # (the elbow comes up and out to the side over the top half of the way, as a drinker's does: left low, the
+    # forearm stands upright under the mug, and no wrist holds a mug level on an upright forearm. Not before:
+    # on the way up to the chest an elbow out to the side is a wing)
+    out = Vector(p._mirror((1.0, 0.15, 0.05), s))
+    for f in range(f0, f1 + 1):
+        u = shape(f)
+        p._arm_key(s, f, _way(p, s, c["wrist"], high, u, ob, 0.0) + Vector((0, -0.03 * math.sin(math.pi * u), 0)),
+                   Vector(pole).lerp(out, _ease((u * part - 0.45) / 0.4)), _mix_lay(c["lay"], level, min(1.0, 3.0 * u)))
+    # the mug tips to the mouth over the last of the way up (the part of it that pours: the hand stays level)
+    pour = next((ch for ch in ob.children if ch.name.endswith("_pour")), None)
+    if pour is not None:
+        sc.frame_set(top)
+        bpy.context.view_layer.update()
+        to_face = lips - ob.matrix_world.translation
+        tip = math.radians(26.0 * part) * (1.0 if (ob.matrix_world.to_3x3() @ Vector((0, 1, 0))).dot(to_face) < 0 else -1.0)
+        for f in range(f0, f1 + 1):
+            u = shape(f)
+            key(pour, "rotation_euler", f, (tip * max(0.0, (u - 0.55) / 0.45), 0, 0))
+    if part >= 1.0:  # the head goes back a little to drink
+        p._torso(f0)
+        p._torso(top, head=(-7, 0))
+        p._torso(hold, head=(-9, 0))
+        if not stay:
+            p._torso(f1)
+    if stay:
+        c["wrist"], c["lay"] = high.copy(), level
+        c["pole"] = tuple(Vector(pole).lerp(Vector(p._mirror((1.0, 0.15, 0.05), s)), _ease((part - 0.45) / 0.4)))
+    p._wrist_continuous(s)
+    p.events.append({"frame": top, "kind": "sip"})
+

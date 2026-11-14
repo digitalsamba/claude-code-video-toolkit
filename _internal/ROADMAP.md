@@ -38,6 +38,11 @@ Ordered roughly by priority. Each is sized to one session or one PR.
       Windows is reviewed but still unrun.
 - [x] **Narration-linked cues for `Stage`.** Done: `voice()` / `cue('save')` in `lib/components/cues.ts`, with
       `FreeCustomLink` in ds-release-notes as the worked example (render unchanged frame for frame).
+- [ ] **A brief and a storyboard as tools.** Today the brief and script for a film are written outside the toolkit
+      and pasted in, and the storyboard is made by hand in the first session (`docs/blender.md`, "A film over
+      several sessions"). Bring both in: a guided brief (idea, lines, tone, length, what the agent may not
+      decide), and a `storyboard` step that builds the board from the specs' `check` stills and the timeline,
+      one row per beat, with the open questions under it.
 - [ ] **Blender shot specs, the next round.** Shipped experimental and optional (`tools/blender_render.py`,
       `lib/blender/`, the `blender` skill, three examples). In order:
       1. *Finish the product stage:* props that move (turn, slide in), a `text` prop, a tablet and a

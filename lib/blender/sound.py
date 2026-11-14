@@ -120,6 +120,12 @@ def render(events_path, out_path, seed=3, start=0.0, end=None, score=True, room=
             mix.add(t, 0.05, lambda t: math.exp(-80 * t) * math.sin(2 * math.pi * 900 * t), g * 0.25)
             mix.add(t + 0.08, 0.6, lambda t: math.sin(math.pi * t / 0.6) * 0.5
                     * math.sin(2 * math.pi * (240 + 90 * math.sin(11 * t)) * t), g * 0.05)
+        elif k in ("lid_open", "lid_close"):  # a laptop lid: a soft knock when it shuts, a faint creak opening
+            if k == "lid_close":
+                mix.add(t, 0.12, lambda t: math.exp(-38 * t) * (math.sin(2 * math.pi * (140 - 300 * t) * t)
+                                                                + 0.4 * rng.uniform(-1, 1)), g * 0.45)
+            else:
+                mix.add(t, 0.3, lambda t: math.sin(math.pi * t / 0.3) * rng.uniform(-1, 1), g * 0.03)
         elif k in ("chair", "rustle"):  # cloth and chair legs: filtered noise that swells and goes
             mix.add(t, 0.5, lambda t: math.sin(math.pi * t / 0.5) * rng.uniform(-1, 1), g * (0.05 if k == "rustle" else 0.09))
         elif k == "title":
