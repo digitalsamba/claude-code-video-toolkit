@@ -4,7 +4,7 @@
   <img src="assets/banner/toolkit-banner.gif" alt="claude-code-video-toolkit — NARRATE ▸ SCORE ▸ GENERATE ▸ COMPOSE ▸ RENDER" width="960" />
 </p>
 
-[![GitHub release](https://img.shields.io/github/v/release/digitalsamba/claude-code-video-toolkit)](https://github.com/digitalsamba/claude-code-video-toolkit/releases) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/digitalsamba/claude-code-video-toolkit?style=social)](https://github.com/digitalsamba/claude-code-video-toolkit/stargazers)
+[![GitHub release](https://img.shields.io/github/v/release/digitalsamba/claude-code-video-toolkit)](https://github.com/digitalsamba/claude-code-video-toolkit/releases) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/digitalsamba/claude-code-video-toolkit?style=social)](https://github.com/digitalsamba/claude-code-video-toolkit/stargazers) [![YouTube: subscribe](https://img.shields.io/badge/YouTube-Subscribe-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/@claudecodevideotoolkit?sub_confirmation=1)
 
 Tell [Claude Code](https://claude.ai/code) what video you want — it writes the script, generates the voiceover, music, and visuals, and renders the MP4. An AI-native video production workspace: the skills, commands, templates, and tools your AI agent needs to take a video from concept to final render, on open-source models that cost cents (voiceover ~$0.01, AI video clips ~$0.23).
 
@@ -31,7 +31,7 @@ with his tea, sits down and opens the laptop; every move is a verb in the spec, 
 | <a href="https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4"><img src="assets/readme-thumbs/ds-free-schedule-demo.jpg" height="280" alt="Product demo with an AI narrator tile"></a> | <a href="https://demos.digitalsamba.com/video/hallucinations_short.mp4"><img src="assets/readme-thumbs/hallucinations-short.jpg" height="280" alt="AI hallucinations explainer short"></a> | <a href="https://youtube.com/shorts/1hyDgC5Qg_o"><img src="assets/readme-thumbs/youre-on-mute-short.jpg" height="280" alt="You're On Mute: every video call ever, as a horror trailer"></a> |
 | **Product demo**<br>scripted cursor and camera,<br>AI narrator tile | **AI hallucinations explainer**<br>9:16 Short: Ideogram 4 cards,<br>cloned voice, burned captions | **You're On Mute**<br>every video call ever, as a horror trailer;<br>invented cast, `parody-short` skill |
 
-More in the [showcase table](#templates) below. Made one yourself? Post it in [Show and tell](https://github.com/digitalsamba/claude-code-video-toolkit/discussions/categories/show-and-tell).
+More in the [showcase table](#templates) below, and new ones land on the [YouTube channel](https://www.youtube.com/@claudecodevideotoolkit) first ([subscribe](https://www.youtube.com/@claudecodevideotoolkit?sub_confirmation=1)). Made one yourself? Post it in [Show and tell](https://github.com/digitalsamba/claude-code-video-toolkit/discussions/categories/show-and-tell).
 
 ## Quick Start
 
