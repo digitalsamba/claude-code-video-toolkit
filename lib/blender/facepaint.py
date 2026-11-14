@@ -730,12 +730,23 @@ def brow_keys(body, marks: dict, seen: dict, brow_length: float, controls: dict,
     if not me.shape_keys:
         body.shape_key_add(name="Basis")
     tall = float(np.mean([e["open"][1] for e in seen["eyes"] if e]))
+    middle = 0.5 * (marks["eyes"][0][0] + marks["eyes"][1][0])
+    ed = np.empty(len(me.edges) * 2, dtype=np.int32)
+    me.edges.foreach_get("vertices", ed)
+    ed = ed.reshape(-1, 2)
+    made = np.linalg.norm(co[ed[:, 0]] - co[ed[:, 1]], axis=1)
+    tilted = {1: np.zeros(len(co), dtype=np.float32), -1: np.zeros(len(co), dtype=np.float32)}
     for s, brow, eye in zip((-1, 1), marks["brows"], marks["eyes"]):
         x, y, z = co[:, 0] - brow[0], co[:, 1] - brow[1], co[:, 2]
         lid = eye[2] + 0.5 * tall
         f = np.exp(-(x ** 2) / (2 * (0.6 * brow_length) ** 2)) * ease((z - lid) / max(0.002, brow[2] - 0.002 - lid)) \
             * (1 - ease((z - brow[2] - 0.006) / 0.016)) * ease((0.05 - np.abs(y)) / 0.03) * rigid
+        # each brow's skin is its own half of the forehead: where the two reached across the middle they added
+        # up, and the skin between the brows went further than either brow (a crease down to the nose)
+        f = f * ease((s * (co[:, 0] - middle) - 0.003) / 0.012)
         side = "L" if s > 0 else "R"
+        for way in (1, -1):
+            tilted[way] += way * R_BROW * -0.6 * x * f
         for name, dz in ((f"brow_up.{side}", unit * f), (f"brow_tilt.{side}", -0.6 * x * f)):
             kb = body.shape_key_add(name=name)
             moved = co.copy()
@@ -753,3 +764,18 @@ def brow_keys(body, marks: dict, seen: dict, brow_length: float, controls: dict,
             else:
                 t.transform_type = "ROT_Y"
                 d.type = "SUM"
+    # how hard the brows' furthest tilt, either way, squeezes the skin: the shortest an edge of the forehead gets
+    # against its length at rest (1 is untouched; near 0 the skin has folded into a crease)
+    squeeze = 1.0
+    for dz in tilted.values():
+        moved = co.copy()
+        moved[:, 2] += dz
+        on = (np.abs(dz[ed[:, 0]]) + np.abs(dz[ed[:, 1]]) > 1e-5) & (made > 1e-5)
+        if on.any():
+            ratio = np.linalg.norm(moved[ed[on, 0]] - moved[ed[on, 1]], axis=1) / made[on]
+            squeeze = min(squeeze, float(np.percentile(ratio, 0.5)))
+    return squeeze
+
+
+BROW_SQUEEZE_LIMIT = 0.5  # painted brows that squeeze the forehead's skin shorter than this share crease it
+R_BROW = 0.42  # the furthest a brow control turns in any expression (radians: 24 degrees, `worry`)

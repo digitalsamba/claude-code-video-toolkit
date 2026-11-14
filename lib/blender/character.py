@@ -835,8 +835,8 @@ class ClayPerson:
                 self.lids = {s: empty(f"{cid}_eye{s}_lid", self.eyes[s], rot=(lo, 0, 0)) for s in (1, -1)}
                 facepaint.eyes(cid, self.body, paint, self.desc["model"], head, to_head,
                                {s: (self.eyes[s], self.pupils[s], self.lids[s]) for s in (1, -1)}, lo, hi)
-                facepaint.brow_keys(self.body, marks, marks["seen"], marks["brow_size"][0], self.brows,
-                                    0.16 + self.brow_at[2], head.scale[0])
+                self.brow_squeeze = facepaint.brow_keys(self.body, marks, marks["seen"], marks["brow_size"][0],
+                                                        self.brows, 0.16 + self.brow_at[2], head.scale[0])
             else:
                 self.lids = {s: fitted_face.eyelid(f"{cid}_eye{s}", self.eyes[s], FM["lid"], FM["lash"]) for s in (1, -1)}
             self._mouth_now = (0.0, 0.0, 0.0, 0.0)
@@ -2850,6 +2850,12 @@ class ClayPerson:
             if eyes.get("problems"):
                 out["problems"] = out.get("problems", []) + eyes.pop("problems")
             out.update(eyes)
+        if self.paint:  # (painted brows ride the skin: how hard their furthest tilt squeezes it)
+            out["brow_squeeze"] = round(self.brow_squeeze, 2)
+            if self.brow_squeeze < facepaint.BROW_SQUEEZE_LIMIT:
+                out["problems"] = out.get("problems", []) + [
+                    f"the brows squeeze the skin of the forehead to {self.brow_squeeze:.2f} of its length at "
+                    f"their furthest tilt (limit {facepaint.BROW_SQUEEZE_LIMIT}): a crease between the brows"]
         return out
 
     def skin_report(self, frames) -> dict | None:
