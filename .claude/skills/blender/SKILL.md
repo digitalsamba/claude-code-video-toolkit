@@ -178,8 +178,8 @@ proportions. A worked example with an invented character is `tests/fixtures/blen
 For a character of a real person, the reference photos come from `uv run tools/reference_capture.py --out <folder>`:
 a local page that talks the sitter through eight poses at a webcam. It needs the person at a browser, so ask
 them to run it; never commit their photos. Two things to settle on the character sheet, before any 3D spend: the
-feet under the hips (a wide stance spreads wide trousers, and the walking arms then stand out from the sides), and
-sleeves if the character needs fingers (on a bare arm the fit finds no cuff, so a vest top fits without `hands`).
+feet under the hips (a wide stance spreads wide trousers or a skirt), and sleeves if close shots show the hands (on
+a bare arm the fit cuts the hand at the wrist, and the join can show).
 
 ### Shots
 

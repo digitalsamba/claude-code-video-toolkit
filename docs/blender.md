@@ -283,8 +283,9 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    puppet, a game hero, toon shading), all at one seed. Lay them side by side and let the person pick. Then make
    the side, back and open-hands views from the one they picked with `flux2.py --input picked.png`:
    Qwen-Image-Edit restyles well but cannot turn a figure round. Ask for the feet under the hips, not wide apart:
-   a wide stance spreads wide trousers or a skirt with the legs, and the fit tips the hanging arms out to clear
-   that, so in a walk, with the legs back under the body, the hands stand out from the sides.
+   a wide stance spreads wide trousers or a skirt with the legs. The rig measures how far a hanging arm has to
+   clear the hip with each leg swung in under its hip, as the character stands, but cloth that was generated
+   spread out stays wider than it would hang.
 2. **A model.** Any image-to-3D service that returns one textured GLB. Through the Blender MCP server's
    `generate_3d` it is one generation, a minute or three, and may cost a credit on that service: check before
    you run it. With MCP for Blender Premium, Premium being on is not enough: tick **Meshy** in its sidebar (N in
@@ -360,10 +361,11 @@ round the eyes). In Blender: merge by distance at 0.00001, then Decimate.
 What it does not do: without a `hands` model the hands are whatever the model has (usually fists), on one
 bone; generated hands are thick and cupped, so they read as mitts with finger grooves. A typing hand slopes down
 from the wrist 20 degrees, as a typist's does, with the fingertips on the keys; a hand laid flat slopes just
-enough for the heel of the hand and the fingers to rest together (a generated hand's heel is deep). Hands with
-fingers need a sleeve: a hand is found by its skin colour up to the cuff, and on a bare arm (a vest top, a
-sleeveless dress) the skin runs on to the shoulder, so the fit stops with "found 0 finger(s)". Fit a bare-armed
-character without `hands` for now. A likeness
+enough for the heel of the hand and the fingers to rest together (a generated hand's heel is deep). A hand is
+found by its skin colour up to the cuff. On a bare arm (a vest top, a sleeveless dress) the skin runs on to the
+shoulder, so the hand is cut at the wrist instead: the narrowest slice of the arm between a hand's length and a
+forearm's from the fingertips (the fit prints "a bare arm" and where it cut). With no cuff to hide it, the join at
+the wrist can show as a ragged ring in a close shot. A likeness
 of a real person belongs in your own project folder, not in a repository. `tests/fixtures/blender-fitted` is a worked
 example with an invented character: both models, the `fit.json` read off gridded stills, and a README saying how
 each was made (her generated hands had the fingers joined, so the hands came from a second model).
