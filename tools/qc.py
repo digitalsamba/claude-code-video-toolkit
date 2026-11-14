@@ -21,6 +21,10 @@ It checks, without changing anything:
                 where nothing on screen changes (dead air for the eye), black
                 gaps mid-video, and an empty first frame (the cover image on
                 Shorts and Reels). Thresholds from motion-craft.md.
+  * opening   — with --render, on a vertical or square video of 3 minutes or
+                less: whether anything moves in the first 2s, how long the
+                first shot runs, when the first sound comes, and how quiet
+                the opening is against the rest. Warnings to weigh.
   * layout    — with --layout, the project is bundled and opened in a browser
                 (tools/qc_layout.mjs) once a second: text off the canvas or
                 clipped by its box, text that never reaches 2.6% of the short
@@ -103,6 +107,15 @@ MOTION_MOVING_SECONDS = 3.0 # a region counts as moving after this much sustaine
 MOTION_STOP_SECONDS = 2.0   # ...and as stopped dead after this much none: a clip that ended and froze
 BLACK_MIN_SECONDS = 0.5     # a dip to black at a cut is a few frames; this is a gap
 EMPTY_EDGE_FRACTION = 0.005 # under 0.5% edge pixels: background only, maybe a disclaimer line
+# The opening of a short vertical video: a viewer in a feed decides in the first seconds.
+SHORT_MAX_SECONDS = 180     # YouTube makes a vertical or square upload up to 3 minutes a Short
+OPENING_SECONDS = 2.0       # something should move and something should sound inside this
+OPENING_FPS = 10
+OPENING_WINDOW = 12.0       # how far in to look for the first change of shot
+OPENING_FIRST_SHOT = 5.0    # a first shot longer than this is a long time before the picture changes
+OPENING_CUT_SHARE = 0.4     # a cut changes at least this share of the frame's tiles at once
+OPENING_SILENCE_DB = -45    # below this the track is as good as silent
+OPENING_QUIET_DB = 10       # an opening this far under the rest of the video is easy to miss on a phone
 
 # --layout: text measured in the page itself (tools/qc_layout.mjs)
 LAYOUT_EVERY = 1.0          # seconds between samples
@@ -600,6 +613,120 @@ def check_frames(render: Path, info: dict, report: Report, max_still: float):
                    kind="first_frame_empty")
 
 
+def _mean_volume(render: Path, start: float | None = None, length: float | None = None) -> float | None:
+    """Mean level in dB of the whole track, or of `length` seconds from `start`."""
+    cmd = ["ffmpeg", "-hide_banner", "-nostats"]
+    if start is not None:
+        cmd += ["-ss", f"{start}", "-t", f"{length}"]
+    cmd += ["-i", str(render), "-map", "0:a:0", "-af", "volumedetect", "-f", "null", "-"]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    m = re.search(r"mean_volume:\s*(-?[\d.]+|-inf) dB", r.stderr)
+    return None if not m or m.group(1) == "-inf" else float(m.group(1))
+
+
+def check_opening(render: Path, info: dict, report: Report):
+    """The first seconds of a short vertical or square video, measured: when the picture first moves, how long
+    the first shot runs, when the first sound comes and how loud the opening is against the rest. A viewer in a
+    feed stays or swipes on these seconds. Each finding is a warning to weigh: a slow, quiet opening can be the
+    point, but it should be chosen."""
+    import numpy as np
+
+    duration = info["duration"] or 0
+    if info["height"] < info["width"] or not 0 < duration <= SHORT_MAX_SECONDS:
+        return
+    w = 120
+    h = max(STILL_TILE, round(w * info["height"] / info["width"] / STILL_TILE) * STILL_TILE)
+    tile = 10
+    window = min(OPENING_WINDOW, duration)
+    try:
+        r = subprocess.run(
+            ["ffmpeg", "-v", "error", "-t", f"{window}", "-i", str(render), "-map", "0:v:0",
+             "-vf", f"fps={OPENING_FPS},scale={w}:{h}:flags=area,format=gray", "-f", "rawvideo", "-"],
+            capture_output=True, timeout=300,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return
+    n = len(r.stdout) // (w * h)
+    if n < 2:
+        return
+    frames = np.frombuffer(r.stdout[: n * w * h], np.uint8).reshape(n, h, w).astype(np.int16)
+    tiles = np.abs(np.diff(frames, axis=0)).reshape(n - 1, h // tile, tile, w // tile, tile).mean(axis=(2, 4))
+    busiest = tiles.reshape(n - 1, -1).max(axis=1)              # the most any part of the frame changed
+    share = (tiles >= 8).reshape(n - 1, -1).mean(axis=1)        # how much of the frame changed a lot
+    opening = {}
+
+    # 1. Does anything move? Pair i is the change from sample i to i+1, seen at (i+1)/fps.
+    moving = [i for i, c in enumerate(busiest) if c >= STILL_TILE_DIFF]
+    moves_at = (moving[0] + 1) / OPENING_FPS if moving else None
+    opening["moves_at"] = moves_at
+    if moves_at is None or moves_at > OPENING_SECONDS:
+        report.add("warn", "opening",
+                   f"nothing on screen moves in the first {OPENING_SECONDS:.0f}s"
+                   + ("" if moves_at is None else f" (the first movement is at {moves_at:.1f}s)")
+                   + ". Start on the action: trim the lead-in, or open on a later shot",
+                   kind="opening_still")
+
+    # 2. How long before the picture changes? A cut changes much of the frame at once, and only for one sample.
+    cuts = [i for i, c in enumerate(share)
+            if c >= OPENING_CUT_SHARE and c >= 3 * max(share[i - 1] if i else 0.0, share[i + 1] if i + 1 < len(share) else 0.0, 0.02)]
+    first_cut = (cuts[0] + 1) / OPENING_FPS if cuts else None
+    opening["first_cut"] = first_cut
+    held = first_cut if first_cut is not None else window
+    if held > OPENING_FIRST_SHOT:
+        report.add("warn", "opening",
+                   f"the first shot runs {'over ' if first_cut is None else ''}{held:.1f}s before the picture changes. "
+                   f"In a feed, give the eye something new every few seconds: cut sooner, push in, or change "
+                   f"the text on screen (a move inside the shot or new text is not counted here)",
+                   kind="opening_long_shot", seconds=round(held, 1))
+
+    # 3. When does it sound, and how loud is the opening against the rest?
+    if info["has_audio"]:
+        first_sound = None
+        try:
+            s = subprocess.run(
+                ["ffmpeg", "-hide_banner", "-nostats", "-t", f"{window}", "-i", str(render), "-map", "0:a:0",
+                 "-af", f"silencedetect=noise={OPENING_SILENCE_DB}dB:d=0.2", "-f", "null", "-"],
+                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+            starts = [float(x) for x in re.findall(r"silence_start: (-?[\d.]+)", s.stderr)]
+            ends = [float(x) for x in re.findall(r"silence_end: (-?[\d.]+)", s.stderr)]
+            if starts and starts[0] <= 0.05:
+                first_sound = ends[0] if ends else None   # None: silent for the whole window
+                silent_open = True
+            else:
+                first_sound, silent_open = 0.0, False
+        except (OSError, subprocess.TimeoutExpired):
+            silent_open = False
+        opening["first_sound"] = first_sound
+        if silent_open and (first_sound is None or first_sound > OPENING_SECONDS / 2):
+            report.add("warn", "opening",
+                       ("no sound in the first " + f"{window:.0f}s" if first_sound is None
+                        else f"the first sound is at {first_sound:.1f}s") +
+                       ". Most of a feed plays with sound on: open on a voice, a hit or the music",
+                       kind="opening_silent")
+        else:
+            head, whole = _mean_volume(render, 0, OPENING_SECONDS), _mean_volume(render)
+            if head is not None and whole is not None:
+                opening["level_vs_rest_db"] = round(head - whole, 1)
+                if whole - head >= OPENING_QUIET_DB:
+                    report.add("warn", "opening",
+                               f"the first {OPENING_SECONDS:.0f}s are {whole - head:.0f} dB quieter than the video "
+                               "as a whole. Fine if the quiet is the point; otherwise bring a line or the music forward",
+                               kind="opening_quiet", db=round(whole - head, 1))
+    report.data["opening"] = opening
+    parts = ["nothing moves" if moves_at is None else f"movement from {moves_at:.1f}s",
+             f"no cut in the first {window:.0f}s" if first_cut is None else f"first cut at {first_cut:.1f}s"]
+    if info["has_audio"]:
+        heard = opening.get("first_sound")
+        parts.append("no sound" if heard is None else f"first sound at {heard:.1f}s")
+        if "level_vs_rest_db" in opening:
+            d = opening["level_vs_rest_db"]
+            parts.append(f"first {OPENING_SECONDS:.0f}s {abs(d):.0f} dB {'under' if d < 0 else 'over'} the whole")
+    report.add("info", "opening", ", ".join(parts))
+
+
 def composition_id(project: Path) -> str | None:
     """The composition `npm run render` renders, from package.json."""
     try:
@@ -710,6 +837,13 @@ def check_layout(data: dict, report: Report):
     by_text: dict[tuple[str, bool], list[dict]] = {}
     for t in data["texts"]:
         by_text.setdefault((t["text"], t["product"]), []).append(t)
+
+    # A vertical video is watched in a feed, often with the sound off: text in the opening says what it is.
+    if comp["height"] >= comp["width"] and samples and \
+            not any(t["frame"] < OPENING_SECONDS * fps and not t["product"] for t in data["texts"]):
+        report.add("warn", "layout", f"no text on screen in the first {OPENING_SECONDS:.0f}s of a vertical video. "
+                   "A line that says what the viewer will get, up from the first frame, also makes the cover",
+                   kind="opening_no_text")
 
     for product in (False, True):
         level = "info" if product else "warn"
@@ -824,7 +958,7 @@ def print_report(report: Report, project: Path):
         tp = f"{r['true_peak']:+.1f} dBTP" if r["true_peak"] is not None else "n/a"
         print(f"  render: {r['lufs']:.1f} LUFS, {tp}", file=sys.stderr)
     print(file=sys.stderr)
-    for check in ("assets", "timing", "pacing", "loudness", "render", "frames", "layout", "fix"):
+    for check in ("assets", "timing", "pacing", "loudness", "render", "frames", "opening", "layout", "fix"):
         items = [f for f in report.findings if f["check"] == check]
         if not items:
             continue
@@ -911,6 +1045,7 @@ Examples:
         render_m = check_render(render, report, args.target_lufs, info, allow_silent=args.allow_silent)
         if info and not args.skip_frames:
             check_frames(render, info, report, args.max_still)
+            check_opening(render, info, report)
 
     if args.layout:
         layout = run_layout_audit(project, args.composition, args.layout_every, report)

@@ -335,7 +335,7 @@ for JSON-lines progress on stderr, and `--json` for a machine-readable result on
 | Talking head anyone will watch | `soulx.py` (SoulX-FlashHead Pro, Modal only) | `sadtalker.py` is drafts, or when Modal is down |
 | Music | `music_gen.py --variations 3`, then `pick_music.py` to rule takes out and `audition.py` to choose by watching | picking a take by ear alone |
 | Sound effects | `sfx.py` (ElevenLabs, generated) or `sfx_search.py` (real recordings from Freesound via Openverse, free, no key) | |
-| Before delivering any render | `qc.py --render out.mp4 --fix` | shipping unchecked |
+| Before delivering any render | `qc.py --render out.mp4 --fix` (on a vertical short it also measures the opening: first movement, first cut, first sound) | shipping unchecked |
 | Captions for a Remotion template | `captions.py public/audio/scenes` (`--srt`/`--vtt` for subtitle files too) | burning the recogniser's own transcript |
 | Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` (`--mode track` keeps a talking head in frame; `--segment 4-11@0.6,0.4` moves a crop across the frame by hand) | |
 | A highlight reel from a long recording | `highlights.py` (picks final takes from a word-timed transcript), then `cutdown.py --segment` | cutting by eye |

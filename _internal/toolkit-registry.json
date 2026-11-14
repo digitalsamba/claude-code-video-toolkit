@@ -730,7 +730,7 @@
     },
     "qc": {
       "path": "tools/qc.py",
-      "description": "Pre-render QC — missing assets, narration vs scene length, wpm pacing, per-scene and render loudness (integrated LUFS / true peak against YouTube's -14 LUFS, -1 dBTP), the render's frames (still stretches over --max-still seconds, black gaps, empty first frame), and with --layout the text in the page (off canvas, clipped, under 2.6% of the short side, WCAG AA contrast; product UI under data-qc=\"product\" listed apart). --fix normalises loudness; scene originals kept in .qc-backup/",
+      "description": "Pre-render QC — missing assets, narration vs scene length, wpm pacing, per-scene and render loudness (integrated LUFS / true peak against YouTube's -14 LUFS, -1 dBTP), the render's frames (still stretches over --max-still seconds, black gaps, empty first frame), the opening of a short vertical or square render (first movement, length of the first shot, first sound, level of the first 2 s against the whole), and with --layout the text in the page (off canvas, clipped, under 2.6% of the short side, WCAG AA contrast; product UI under data-qc=\"product\" listed apart). --fix normalises loudness; scene originals kept in .qc-backup/",
       "usage": "uv run tools/qc.py --project projects/my-video --render projects/my-video/out/video.mp4",
       "status": "beta",
       "category": "project",

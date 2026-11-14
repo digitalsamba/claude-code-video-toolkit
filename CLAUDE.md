@@ -329,6 +329,16 @@ skip):
 - **Audio:** a missing or silent audio track is an error. `--allow-silent` makes it info, for a deliverable that is
   silent on purpose; the picture checks still run.
 
+**On a short vertical or square render it also measures the opening** (3 minutes or less, the length YouTube
+treats as a Short), because a viewer in a feed stays or swipes on the first seconds. One line of numbers, and a
+warning when:
+- nothing on screen moves in the first 2 s;
+- the first shot runs over 5 s before the picture changes (a move inside the shot or new text is not counted);
+- the first sound comes later than 1 s, or the first 2 s are 10 dB or more under the video as a whole.
+
+`--layout` adds a warning when a vertical composition has no text on screen in its first 2 s. A slow, quiet
+opening can be the point; the check makes it a choice. Speech is not detected: it hears sound, not words.
+
 Still stretches are warnings, not defects: a hold the narration needs is fine, but give it a next action
 (see `.claude/skills/remotion/motion-craft.md`).
 
