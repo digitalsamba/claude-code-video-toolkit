@@ -10,6 +10,22 @@ All notable changes to claude-code-video-toolkit.
 
 ---
 
+## 2026-11-14 (v0.29.1)
+
+The release that says it: the toolkit makes films with a 3D character in them. That arrived across v0.28.0 and
+v0.29.0 without being announced, so the site, the README and this release's notes now open with it.
+
+### Added
+
+- **`tools/reference_capture.py`** (#234): the reference photos of a person for a fitted character, from a webcam. A local page talks the sitter through eight poses, counts down aloud and keeps the sharpest frame of a burst. Photos stay on the machine. Tests cover its local server.
+
+### Changed
+
+- **The site's home page and the README open with the trailer** (#232): a band for Just a Quick One under the hero, the Made with itself band moved below the pipeline section, and one sentence on 3D in the README's first paragraph.
+- **v0.29.0's notes** open with a line linking the announcement, Discussion #233.
+
+---
+
 ## 2026-11-14 (v0.29.0)
 
 Characters get up from the desk. A character can now be fitted from a generated 3D model, stand, walk, sit, carry
