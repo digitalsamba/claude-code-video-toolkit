@@ -533,11 +533,43 @@ hear it at all, so each kind of fault has a measure:
 | `qc.py --layout` | text off the canvas, low contrast, type too small for a phone |
 | `sync_check.py --cues` | each sound against the movement it belongs to, within 0.1 s |
 | Reading the frames | the render tiled every few seconds and looked at, and a shot tiled frame by frame where a check or a note points |
+| A blind retelling | what a reader who has not seen the brief says is on the contact sheet, set against the storyboard row by row (below) |
 
 A check that fails and cannot be fixed in the session is not hidden: it is named in the report and the decisions
 file with its number, and the agent can carry it into the next prompt as a suggested note, beside the gap for the
 person's own. What no check covers is taste and sound: whether the music suits it, whether a line lands, whether
 it is too long. Those are what the person's notes are for.
+
+**A second reader who has not seen the brief.** `check` measures what is physically wrong. It does not know
+what a shot was for: that the mug should be in view when the line mentions it, that a shot was meant to look up
+at the character, that the laptop opens before the sip. The agent that wrote the spec is a poor judge of that,
+because it reads the board into the picture. A benchmark of coding agents building multi-shot scenes in Blender
+found the same: agents that inspected their own renders and said they matched made camera-angle errors as often
+as those that made no such claim ([VibePrevisBench](https://arxiv.org/abs/2611.15789), 2026). Its judge retells
+the clip before it is shown the brief, and this borrows that step:
+
+1. Give a fresh reader frames and nothing else: no brief, no board, no spec, no shot names. In Claude Code
+   that is a subagent started with only an image path. Before the render, use the stills in `out/stills/`
+   copied to numbered names, not `contact_sheet.png`: the sheet prints each shot's name ("K4_sit (wide)"), the
+   file names carry it too, and the name gives the intent away. After the render, tile the film evenly,
+   `uv run tools/contact_sheet.py out/film.mp4 --count 18`, so each shot has several frames: one still shows
+   a pose, and a row such as "sit, pull in, set the mug down" is three actions.
+2. Ask it to retell what it sees in time order: who is where, what each person does, what they hold, where the
+   camera is (near or far, above, level or below), and anything it can't make out, said as "unclear".
+3. Set the retelling against the storyboard one row at a time, and mark each row seen, partly seen or not seen.
+   A row is seen only if the retelling named it unprompted.
+4. A row that is not seen is a fault to fix in the spec, or a question for the person if the board asks for
+   something the shot can't show. Write the rows that failed into the decisions file.
+
+Do it after `check` passes and before the render, when a fix is still a line in the spec, and again on the
+finished film. It costs one short model call and no Blender time.
+
+Tried once, on the finished kitchen opening of the toolkit's trailer (27 s, seven storyboard rows, 18 frames
+at one every 1.5 s): the reader named four rows in full and three in part, and none was missing. The parts it
+missed were smaller than the sampling: a chair pulled in, a blink, and a push in to the screen that read as two
+shots. It also said, unasked, that the character's hair looked lighter in the closeup than in the wide shots.
+That film had already been revised twice with its author's notes, so this shows the retelling agrees with a
+film that is right, not yet that it catches one that is wrong. What it catches on the next film goes here.
 
 A prompt of this kind, as one session left it for the next:
 

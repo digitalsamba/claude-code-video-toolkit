@@ -60,6 +60,23 @@ Ordered roughly by priority. Each is sized to one session or one PR.
          examples.
       9. *Checks:* face brightness on dark skin; an idle big enough that a held pose doesn't read as a stopped
          clip to `qc.py`.
+      10. *Borrowed from other Blender and AI projects* (surveyed 2026-11-14 by reading their code and papers;
+          ideas only, nothing copied, none built yet):
+          - *What a shot is for, as a check:* storyboard rows as assertions `check` tests (low angle, a prop in
+            view on a word, one action before another), after VibePrevisBench's rule checks. The blind
+            retelling in `docs/blender.md` is the by-hand version; `check` could write the sheet it needs,
+            with no shot names and a few frames a shot.
+          - *Seeing motion in `check`:* a strip of frames for each acting beat and a view with the bones drawn
+            in front, beside the contact sheet (`ahujasid/blender-mcp`'s `look`, MIT).
+          - *Studio looks by what the prop is made of:* light ratios for glass, metal and matte, and an HDRI
+            world so a glossy import has something to reflect (`RobLe3/cc-blender-skill`, MIT).
+          - *Generated models:* drop noisy normal and roughness maps on import, and a named weights check in
+            the fit (vertices no bone moves, bones with no group).
+          - *Library props:* a prop named by its Poly Haven id, cached, sized, with its credit written beside
+            it as `sfx_search.py` does.
+          - *Two people in a shot:* shot templates tagged with when each applies, for item 3.
+          - *Not yet:* motion capture clips as verbs. Every retargeting read was a copy between same-named
+            bones with no rest-pose correction, so it is new work, with item 6.
       10. *First real uses:* a video timed with `cue:`, 9:16 framing of the desk, a device reveal in
           `ds-release-notes` (design note in its README), and a second "Made with itself".
 - [ ] **Chaptered long-form template.** 10–30 min YouTube videos: render chapter by chapter with a cache,
