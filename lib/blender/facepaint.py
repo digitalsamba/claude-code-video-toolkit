@@ -151,15 +151,23 @@ def measure_eye(P, step=STEP):
     r_in = best[0]
 
     def rim(line, at, way):
-        """Where the iris ends along a line of brightness, going `way` from `at`: the sharpest step up between
-        most of the dark shape's own radius and three times it."""
+        """Where the iris ends along a line of brightness, going `way` from `at`: the first strong step up
+        between most of the dark shape's own radius and three times it (the first peak that is over 0.6 of the
+        sharpest: a black liner's outer edge against skin is a sharper step than a brown iris against the
+        white, and lies further out)."""
         steps = []
         for k in range(int(0.6 * r_in), int(3 * r_in)):
             i = at + way * k
             if i - 2 < 0 or i + 2 >= len(line):
                 break
             steps.append((float(line[i + 2 * way] + line[i + way] - line[i - way] - line[i - 2 * way]), k))
-        return max(steps)[1] if steps else r_in
+        if not steps:
+            return r_in
+        top = max(steps)[0]
+        for j, (v, k) in enumerate(steps):
+            if v >= 0.6 * top and (j + 1 == len(steps) or steps[j + 1][0] <= v):
+                return k
+        return max(steps)[1]
 
     soft = _blur(L, 2)
     rows = [soft[z] for z in range(max(0, cz0 - 3), min(h, cz0 + 4))]
