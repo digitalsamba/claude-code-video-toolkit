@@ -122,7 +122,9 @@ One spec gives a whole film, clips for another build, or both; the uses below mi
 or a hex colour, and a `seed` that fills what is left out), so an agent writes one from a sentence or a photo. Keep
 a standing character in `kits/<name>/cast/<id>.json` and name it with `"from"`; fields beside `from` re-costume
 it. All characters share one rig, so every verb works on each. They are caricatures in one cartoon style, not
-likenesses. A mistake in a spec (an unknown face, pose, shot type or hair style) is a named error listing the
+likenesses. For a fitted character of a real person, `uv run tools/reference_capture.py --out <folder>` opens a
+local page that talks them through eight poses at a webcam and keeps the sharpest frame of each; the photos stay
+on the machine and out of the repo. A mistake in a spec (an unknown face, pose, shot type or hair style) is a named error listing the
 choices, before anything renders.
 
 Use it when a video needs a consistent, directable character, a 3D reveal, a product or device shot, or acting
@@ -206,7 +208,7 @@ This is especially critical for background commands where the working directory 
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark, cutdown | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
 | **Publishing** | youtube_upload, youtube_stats | Upload a finished render to YouTube (use `/publish` for the guided workflow); see how it does |
-| **3D (optional)** | blender_render | Character acting, 3D reveals and product shots from a shot spec; needs Blender installed |
+| **3D (optional)** | blender_render, reference_capture | Character acting, 3D reveals and product shots from a shot spec; needs Blender installed. reference_capture takes the reference photos of a person for a fitted character, from a webcam |
 
 Utility tools work on any video file without requiring a project structure.
 

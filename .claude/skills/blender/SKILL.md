@@ -175,6 +175,9 @@ is put at the cuff, and the desk, the keys and how far apart the hands lie come 
 runs on characters of different builds (run a spec on two to find a number tuned on one; `docs/blender.md` has the
 method). Head shots aim at a fitted character's own head, whatever its
 proportions. A worked example with an invented character is `tests/fixtures/blender-fitted`. The steps and their costs are in `docs/blender.md`.
+For a character of a real person, the reference photos come from `uv run tools/reference_capture.py --out <folder>`:
+a local page that talks the sitter through eight poses at a webcam. It needs the person at a browser, so ask
+them to run it; never commit their photos.
 
 ### Shots
 

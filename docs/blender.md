@@ -271,7 +271,12 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
 
 1. **A character sheet.** One front view of the character standing in an A-pose (arms away from the body, legs
    apart), plain background. Draw it, or generate it: `flux2.py` for an invented character, `image_edit.py` then
-   `flux2.py --input` to stylise a photo.
+   `flux2.py --input` to stylise a photo. For a character of a real person, take the photos with
+   `uv run tools/reference_capture.py --out projects/my-character/reference`: a local page talks the sitter
+   through eight poses (front, both three-quarters, both profiles, a smile, glasses off, full body), counts down
+   aloud so they can look away from the screen, and keeps the sharpest frame of a short burst. It needs a browser
+   and a camera, the photos stay on the machine, and the person in them decides where they go next: keep them
+   out of a public repository.
 2. **A model.** Any image-to-3D service that returns one textured GLB. Through the Blender MCP server's
    `generate_3d` it is one generation, a minute or three, and may cost a credit on that service: check before
    you run it.
