@@ -323,7 +323,10 @@ off the leg's skin as it is posed on that frame. Pulling in to the desk, a hand 
 can lie flat there in front of the shoulder; otherwise the hands lift off the lap while the desk is still far off
 and wait over the keys.
 
-To keep a model in a repository, weld its UV seams before reducing it (the importer splits the vertices along
+To keep a model in a repository, reduce it no further than the fit's own size (`"faces"` in the fit file, 150,000
+by default for a body): a body that passed every check at that size failed the sleeve check at 60,000 faces,
+because the measure reads the mesh's edges and coarser cloth has longer ones. A character fitted at 60,000 from
+the start (Mara) is measured at that size and is fine. Weld its UV seams before reducing it (the importer splits the vertices along
 every seam, and a split mesh decimated opens into cracks along all of them, which show as torn cloth and shards
 round the eyes). In Blender: merge by distance at 0.00001, then Decimate.
 

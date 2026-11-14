@@ -1,0 +1,11 @@
+{
+ "id": "conal",
+ "kind": "clay_person",
+ "model": "out/conal-fitted.blend",
+ "accessories": [
+  "glasses"
+ ],
+ "hair": {
+  "color": "#7A5A3C"
+ }
+}

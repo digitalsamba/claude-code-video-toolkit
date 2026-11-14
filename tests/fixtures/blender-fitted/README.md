@@ -1,4 +1,6 @@
-# Mara: an invented fitted character for the tests
+# Two fitted characters for the tests and the kitchen example
+
+## Mara, who is invented
 
 Mara is made up. She is not anyone's likeness, so she can live in the repository and the tests can fit a
 generated model, give it a face and fingers and act with it on any machine with Blender.
@@ -20,3 +22,21 @@ generated model, give it a face and fingers and act with it on any machine with 
 To fit her by hand: `uv run tools/blender_render.py fit --model tests/fixtures/blender-fitted/mara.glb
 --fit tests/fixtures/blender-fitted/fit.json --out mara-fitted.blend --preview fit/`, with `mara-fitted.blend` next
 to `mara.json`.
+
+## Conal, the toolkit's author
+
+A caricature of the person who wrote the toolkit, shared by him. It is the body the rig was worked out on, so
+its numbers are the ones the verbs were first measured against; Mara is the body that shows which of them were
+tuned. The photos it was made from are not in the repository.
+
+- `conal.glb`: the body, from an image-to-3D service, with its seams welded and reduced to 150,000 faces with
+  its base colour at 1024 px (4.8 MB). That is the size the fit works at (`"faces"` in `conal-fit.json`):
+  reduced to 60,000 it still fits, but the sleeve check fails on the walk-in (4.5x against 4), because the
+  measure reads edges and coarser cloth has longer ones.
+- `conal_hands.glb`: the same character generated again with open hands, at 60,000 faces (1.7 MB). The fit
+  finds five fingers on each hand in it.
+- `conal-fit.json`, `conal.json`: his joints, clothes line and face, and the character file (glasses, hair).
+- `enter-conal.json`: the walk-in, the same film as `enter.json`.
+
+To fit him by hand: `uv run tools/blender_render.py fit --model tests/fixtures/blender-fitted/conal.glb
+--fit tests/fixtures/blender-fitted/conal-fit.json --out conal-fitted.blend`.

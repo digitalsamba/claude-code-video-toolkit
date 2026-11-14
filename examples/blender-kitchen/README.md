@@ -43,5 +43,24 @@ Two things this spec works round, both worth knowing before you write your own:
 - **The sip is a `closeup` turned 30 degrees (`"az": -30`).** From the front (`medium`) the laptop's lid hides
   the mug and both hands, and `over_shoulder` is a desk shot that lands under this table (`check` fails it).
 
+## The same kitchen, another body
+
+`spec-conal.json` is a second film in the same set: "An ordinary evening", 27.5 s, with the toolkit's author as
+the character (a caricature he shares, in `tests/fixtures/blender-fitted` beside Mara). He walks in whistling
+with his tea, sits, puts the mug down, opens the laptop and starts to type. It is the opening of the toolkit's
+own trailer, without its voice.
+
+```bash
+uv run tools/blender_render.py fit --model tests/fixtures/blender-fitted/conal.glb \
+    --fit tests/fixtures/blender-fitted/conal-fit.json --out examples/blender-kitchen/out/conal-fitted.blend
+uv run tools/blender_render.py check  examples/blender-kitchen/spec-conal.json
+uv run tools/blender_render.py render examples/blender-kitchen/spec-conal.json   # writes out/spec-conal/
+```
+
+The two specs are not one spec with the name changed, and that is the point of having both. Mara's film fails
+on his body by a hair (the sleeve at 4.1x while he sits with the mug) and his passes; each film was timed on
+the body that plays it. A rig is proven by running one spec on two bodies (`docs/blender.md`, "Refining a
+rig"); a film is finished on one.
+
 Method and format: `.claude/skills/blender/SKILL.md`. How a model is fitted, and how a film like this is made
 over several sessions: `docs/blender.md`.
