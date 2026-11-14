@@ -34,6 +34,9 @@ refused them in the past. When it refuses, the report says so; Studio still show
 - **A Short lives or dies in the feed.** Traffic source `SHORTS` is the feed; `YT_SEARCH`, `EXT_URL` (links from
   the README, chat) and `SUBSCRIBER` are the rest. A Short with views only from `EXT_URL` was never pushed by the
   feed: change the cover frame and first second, not the title.
+- **A Short's views stay on the Short unless it points somewhere.** Compare its views with the long video's and
+  with `youtube.com` in the repo referrers. Give it a way on: the long video as its related video (set by hand in
+  Studio; `youtube_upload.py` says when), and the link in its description and a pinned comment.
 - **Average view percentage is the Short's real score.** Over 100% means people loop it. Under ~50% on a 60-90 s
   Short means the hook or the middle lost them; check where with Studio's retention graph.
 - **Long videos: impressions × CTR × view duration.** A low CTR is the title or thumbnail; a short duration is the
