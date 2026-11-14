@@ -652,13 +652,13 @@ def main():
             checks["body_problems"] = checks.get("body_problems", []) + face["problems"]
     grips = getattr(kit, "grips", None)
     if grips:  # a hand with fingers that took hold of something: did it close on it
-        worst = max(grips, key=lambda g: g["open"])
-        checks["grip_open"] = worst["open"]
-        if worst["open"] > GRIP_OPEN:
+        loosest = max(grips, key=lambda g: g["open"])
+        checks["grip_open"] = loosest["open"]
+        if loosest["open"] > GRIP_OPEN:
             checks["passed"] = False
             checks["body_problems"] = checks.get("body_problems", []) + [
-                f'{worst["hand"]} hand is open on the {worst["what"]} at {(worst["frame"] - 1) / tl.fps:.2f} s (fingertips '
-                f'{worst["open"]:.2f} of a finger\'s length from it): it should close on what it holds']
+                f'{loosest["hand"]} hand is open on the {loosest["what"]} at {(loosest["frame"] - 1) / tl.fps:.2f} s (fingertips '
+                f'{loosest["open"]:.2f} of a finger\'s length from it): it should close on what it holds']
     walks = getattr(kit, "walks", None)
     if walks:  # each walk's path: how far it bows, how far it turns, how the body leans as it does
         checks["walks"] = walks
