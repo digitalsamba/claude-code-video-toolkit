@@ -62,6 +62,48 @@ def _arrays(ob):
     return co.reshape(-1, 3), ed.reshape(-1, 2)
 
 
+BARE_REACH = 0.30  # skin running further than this from the fingertips (m) is a bare arm, not a hand in a cuff
+
+
+def _bare_wrist(co, far, flood, skin):
+    """A hand on a bare arm (a vest top, a sleeveless dress): the skin runs on from the fingertips up to the
+    shoulder, so there is no cuff to cut at. The cut is the wrist instead: the narrowest slice of the arm between
+    a hand's length and a forearm's from the fingertips, across the line the hand and forearm make. Returns what
+    find_hand returns, or None when the skin stops within a hand's reach (a cuff)."""
+    tip = co[far].mean(axis=0)
+    dist = np.linalg.norm(co - tip, axis=1)
+    if dist[flood].max() < BARE_REACH:
+        return None
+    arm = flood & (dist < 0.40)  # the hand and the forearm
+    P = co[arm]
+    centre_all = P.mean(axis=0)
+    axis = np.linalg.svd(P - centre_all, full_matrices=False)[2][0]
+    if (centre_all - tip) @ axis < 0:
+        axis = -axis  # from the fingertips toward the elbow
+    t = (co - tip) @ axis
+    best, d_best = None, None
+    for d in np.arange(0.09, 0.30, 0.005):
+        slab = arm & (np.abs(t - d) < 0.006)
+        if slab.sum() < 12:
+            continue
+        c = co[slab].mean(axis=0)
+        rel = co[slab] - c
+        radial = np.linalg.norm(rel - np.outer(rel @ axis, axis), axis=1)
+        r = float(np.median(radial))
+        if best is None or r < best[0]:
+            best, d_best = (r, c, slab), d
+    if best is None:
+        return None
+    radius, centre, _ = best
+    normal = -axis  # the way the hand leaves the wrist
+    hand = flood & (t < d_best + 0.15 * radius)
+    length = float(((co[hand] - centre) @ normal).max())
+    print(f"hands: a bare arm (skin runs {100 * dist[flood].max():.0f} cm from the fingertips), cut at the wrist "
+          f"{100 * d_best:.1f} cm up from them, {100 * radius:.1f} cm across")
+    return {"verts": hand, "centre": Vector(centre.tolist()), "normal": Vector(normal.tolist()), "radius": radius,
+            "skin": skin, "length": length, "bare": True}
+
+
 def find_hand(ob, side: int, col=None) -> dict:
     """The hand on one side of a model standing in an A-pose (side 1 is +x, the character's left): which
     vertices it is, the middle of the ring where it meets the cuff, the ring's size, and the way the hand
@@ -92,6 +134,9 @@ def find_hand(ob, side: int, col=None) -> dict:
                 stack.append(u)
     flood = np.zeros(len(co), dtype=bool)
     flood[list(seen)] = True
+    bare = _bare_wrist(co, far, flood, skin)
+    if bare is not None:
+        return bare
     ring = np.array([int(v) for v in seen if any(not flood[u] for u in nb.get(v, ()))])
     if len(ring) < 8:
         raise SystemExit(f"hands: no cuff found on the {'left' if side > 0 else 'right'} arm (the hand's colour "
