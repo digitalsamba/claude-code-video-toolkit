@@ -205,6 +205,56 @@ def load_donor(path: Path, centre_x: float | None):
     return ob
 
 
+def mend(ob) -> dict:
+    """Take the slivers off a welded model. A generator leaves a few stray triangles standing on the surface
+    like fins (an edge shared by three faces, the third with an open edge) and pinholes a millimetre across.
+    Under cloth nobody sees them; on a face they render as a dark triangle at a temple or a shard by an eye,
+    whichever way the light falls on the fin. The fins are deleted and the pinholes closed. Returns the counts,
+    and how many open edges are left (a real opening, such as a sleeve's end, is left alone)."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    fins = 0
+    for _ in range(4):
+        loose = {f for e in bm.edges if len(e.link_faces) > 2 for f in e.link_faces
+                 if any(x.is_boundary for x in f.edges)}
+        if not loose:
+            break
+        fins += len(loose)
+        bmesh.ops.delete(bm, geom=list(loose), context="FACES")
+    seen, holes = set(), []
+    for e in [e for e in bm.edges if e.is_boundary]:
+        if e in seen:
+            continue
+        ring, stack = [], [e]
+        seen.add(e)
+        while stack:
+            x = stack.pop()
+            ring.append(x)
+            for v in x.verts:
+                for y in v.link_edges:
+                    if y.is_boundary and y not in seen:
+                        seen.add(y)
+                        stack.append(y)
+        holes.append(ring)
+    small = [r for r in holes if len(r) <= MEND_EDGES and
+             max((a.verts[0].co - b.verts[0].co).length for a in r for b in r) < MEND_SIZE]
+    if small:
+        bmesh.ops.holes_fill(bm, edges=[e for r in small for e in r], sides=MEND_EDGES)
+    stray = [v for v in bm.verts if not v.link_faces]
+    if stray:
+        bmesh.ops.delete(bm, geom=stray, context="VERTS")
+    left = sum(1 for e in bm.edges if e.is_boundary)
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+    return {"fins": fins, "pinholes": len(small), "open_edges": left}
+
+
+PAINT_LOST_LIMIT = 0.002  # the share of faces that may be painted from the wrong part of the texture after the reduction
+MEND_EDGES = 8      # a hole with no more edges than this round it, and
+MEND_SIZE = 0.006   # no wider than this (m), is a pinhole the generator left, and is closed
+
+
 def face_shapes(face):
     m = 1.35  # a margin: the painted edge is soft
     out = [(x, z, face["eye_size"][0] / 2 * m, face["eye_size"][1] / 2 * m) for x, z in face["eyes"]]
@@ -233,6 +283,9 @@ def load_model(path: Path, centre_x: float, faces: int, face: dict):
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.mesh.remove_doubles(threshold=1e-5)  # the importer splits vertices at UV seams
     bpy.ops.object.mode_set(mode="OBJECT")
+    mended = mend(ob)
+    print(f"fit: mesh, {mended['fins']} stray faces standing on the surface removed, {mended['pinholes']} pinholes "
+          f"closed, {mended['open_edges']} open edges left")
     marks = {"eyes": [(x - centre_x, front_y(ob, x - centre_x, z), z) for x, z in face["eyes"]],
              "brows": [(x - centre_x, front_y(ob, x - centre_x, z), z) for x, z in face["brows"]],
              "mouth": (face["mouth"][0] - centre_x, front_y(ob, face["mouth"][0] - centre_x, face["mouth"][1]),
@@ -250,9 +303,15 @@ def load_model(path: Path, centre_x: float, faces: int, face: dict):
     if not keep:
         erase(ob, [(x - centre_x, z, rx, rz) for x, z, rx, rz in face_shapes(face)])
     if len(ob.data.polygons) > faces:
-        dec = ob.modifiers.new("Decimate", "DECIMATE")
-        dec.ratio = faces / len(ob.data.polygons)
-        bpy.ops.object.modifier_apply(modifier=dec.name)
+        # (thinned inside the islands of its texture, never across their seams: hands.reduce says why)
+        was, made = hand_graft.surface(ob), len(ob.data.polygons)
+        held = hand_graft.reduce(ob, faces)
+        lost = hand_graft.paint_lost(ob, was)
+        print(f"fit: mesh, reduced from {made} to {len(ob.data.polygons)} faces with {held} vertices on the "
+              f"texture's seams left alone; {100 * lost:.2f}% of the faces are painted from the wrong place")
+        if lost > PAINT_LOST_LIMIT:
+            print(f"fit: FAIL mesh, {100 * lost:.1f}% of the faces lost their paint in the reduction (limit "
+                  f"{100 * PAINT_LOST_LIMIT:.1f}%): shards of the wrong colour will show, worst on the face")
     for poly in ob.data.polygons:
         poly.use_smooth = True
     ob.name = "model_body"

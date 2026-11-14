@@ -181,6 +181,97 @@ def find_hand(ob, side: int, col=None) -> dict:
             "skin": skin, "length": length}
 
 
+def seam_verts(ob) -> np.ndarray:
+    """The vertices of a welded mesh that sit on a seam of its texture: those whose face corners do not all
+    carry the same UV."""
+    me = ob.data
+    vi = np.empty(len(me.loops), dtype=np.int64)
+    me.loops.foreach_get("vertex_index", vi)
+    uv = np.empty(len(me.loops) * 2, dtype=np.float64)
+    me.uv_layers.active.data.foreach_get("uv", uv)
+    rows = np.unique(np.column_stack([vi, np.round(uv.reshape(-1, 2) * 65536)]).astype(np.int64), axis=0)
+    return np.nonzero(np.bincount(rows[:, 0], minlength=len(me.vertices)) > 1)[0]
+
+
+def reduce(ob, faces: int) -> int:
+    """Thin a welded mesh to about `faces` faces without touching the seams of its texture. A generated model's
+    texture is an atlas of hundreds of small islands, and an edge collapsed across the border of two leaves a
+    face with corners in both: it is painted with whatever lies between them in the atlas, a shard of the wrong
+    colour (by an eye, down the side of a finger). So the vertices on a seam are held out of the reduction and
+    the faces come off the insides of the islands. Returns how many vertices were held."""
+    if len(ob.data.polygons) <= faces:
+        return 0
+    held = seam_verts(ob)
+    group = ob.vertex_groups.new(name="reduce")
+    group.add(list(range(len(ob.data.vertices))), 1.0, "REPLACE")
+    group.add([int(i) for i in held], 0.0, "REPLACE")
+    mod = ob.modifiers.new("Decimate", "DECIMATE")
+    mod.ratio = faces / len(ob.data.polygons)
+    mod.vertex_group = group.name
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+    ob.vertex_groups.remove(ob.vertex_groups["reduce"])
+    return len(held)
+
+
+def paint_lost(ob, was: dict) -> float:
+    """The share of a reduced mesh's faces that are painted from the wrong part of the texture: the middle of
+    each face is looked up in the texture where its own corners put it, and where the nearest point of the mesh
+    as it was (`was`, from `surface`) had it. A face inside one island of the atlas agrees with the model to
+    within its own size; a face left with corners in two islands reads from between them."""
+    from mathutils.bvhtree import BVHTree
+    me = ob.data
+    n = len(me.polygons)
+    if not n or any(p.loop_total != 3 for p in me.polygons):
+        return 0.0
+    co = np.empty(len(me.vertices) * 3, dtype=np.float32)
+    me.vertices.foreach_get("co", co)
+    vi = np.empty(n * 3, dtype=np.int32)
+    me.loops.foreach_get("vertex_index", vi)
+    uv = np.empty(n * 6, dtype=np.float32)
+    me.uv_layers.active.data.foreach_get("uv", uv)
+    P = co.reshape(-1, 3)[vi].reshape(n, 3, 3)
+    mid, now = P.mean(axis=1), uv.reshape(n, 3, 2).mean(axis=1)
+    size = np.linalg.norm(P - np.roll(P, 1, axis=1), axis=2).max(axis=1)  # each face's longest edge (m)
+    tree = BVHTree.FromPolygons([tuple(v) for v in was["co"]], [tuple(t) for t in was["tris"]])
+    hit = [tree.find_nearest(tuple(m)) for m in mid]
+    at = np.array([h[0] for h in hit], dtype=np.float64)
+    tri = np.array([h[2] for h in hit])
+    a, b, c = (was["co"][was["tris"][tri, k]].astype(np.float64) for k in range(3))
+    e1, e2, p = b - a, c - a, at - a
+    d11, d12, d22 = (e1 * e1).sum(1), (e1 * e2).sum(1), (e2 * e2).sum(1)
+    p1, p2 = (p * e1).sum(1), (p * e2).sum(1)
+    det = np.where(np.abs(d11 * d22 - d12 * d12) < 1e-20, 1e-20, d11 * d22 - d12 * d12)
+    v, w = (d22 * p1 - d12 * p2) / det, (d11 * p2 - d12 * p1) / det
+    then = was["uv"][tri, 0] * (1 - v - w)[:, None] + was["uv"][tri, 1] * v[:, None] + was["uv"][tri, 2] * w[:, None]
+    # how much texture a metre of the model's surface covers (the middle value over its faces)
+    A, U = was["co"][was["tris"]], was["uv"]
+    per_m = float(np.median(np.linalg.norm(U[:, 1] - U[:, 0], axis=1)
+                            / np.maximum(np.linalg.norm(A[:, 1] - A[:, 0], axis=1), 1e-7)))
+    return float((np.linalg.norm(now - then, axis=1) > 2 * per_m * size + 2e-3).mean())
+
+
+def surface(ob) -> dict:
+    """A mesh's surface and paint as they are now (triangles, their UVs, the texture), to hold a reduced copy
+    against with `paint_lost`."""
+    me = ob.data
+    n = len(me.polygons)
+    co = np.empty(len(me.vertices) * 3, dtype=np.float32)
+    me.vertices.foreach_get("co", co)
+    vi = np.empty(len(me.loops), dtype=np.int32)
+    me.loops.foreach_get("vertex_index", vi)
+    uv = np.empty(len(me.loops) * 2, dtype=np.float32)
+    me.uv_layers.active.data.foreach_get("uv", uv)
+    start = np.empty(n, dtype=np.int32)
+    me.polygons.foreach_get("loop_start", start)
+    corners = start[:, None] + np.arange(3)[None, :]  # (a face with more corners is read by its first three)
+    img = _colours(ob)[1]
+    w, h = img.size
+    px = np.empty(w * h * 4, dtype=np.float32)
+    img.pixels.foreach_get(px)
+    return {"co": co.reshape(-1, 3), "tris": vi[corners], "uv": uv.reshape(-1, 2)[corners], "px": px.reshape(h, w, 4)}
+
+
 def cut_hand(ob, found: dict, name: str, faces: int):
     """A copy of one hand as its own object, the wrist closed with a cap, thinned to about `faces` faces."""
     new = ob.copy()
@@ -209,11 +300,7 @@ def cut_hand(ob, found: dict, name: str, faces: int):
     bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
     bm.to_mesh(new.data)
     bm.free()
-    if len(new.data.polygons) > faces:
-        mod = new.modifiers.new("Decimate", "DECIMATE")
-        mod.ratio = faces / len(new.data.polygons)
-        bpy.context.view_layer.objects.active = new
-        bpy.ops.object.modifier_apply(modifier=mod.name)
+    reduce(new, faces)
     for poly in new.data.polygons:
         poly.use_smooth = True
     return new
