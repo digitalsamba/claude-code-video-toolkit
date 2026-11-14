@@ -352,7 +352,9 @@ uv run tools/sync_check.py --video out/video.mp4 --cues sync-cues.json
 
 `--kind peak` (default) puts the sound on the biggest movement: a sneeze, a laugh. `--kind impact` puts it where a
 movement stops: a landing, a stamp. `--kind onset` puts it where a sustained movement starts (a badge lifted
-slowly), which has no single spike for `peak` to find. Give a `--window` around the action: an extended clip's seam
+slowly), which has no single spike for `peak` to find. Something picked up (chalk off a table, a cup raised) is
+`onset` too: measured as `impact`, a chalk tap read 0.37 s early, because the check found the hand settling
+after the lift. Give a `--window` around the action: an extended clip's seam
 or a later gesture can be bigger than the one the sound is for. Keep the cues in the project's `sync-cues.json`
 (`{name, sfx, at, region, kind, window}`, times in the render, regions as `w:h:x:y`; sound paths relative to the
 cue file or the toolkit root) so the check re-runs on every render. Keep the window clear of the shot's dissolve and

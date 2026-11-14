@@ -21,10 +21,21 @@
  * </Sequence>
  * const SHOCK = 200 + act.event('alert');   // the frame the alert lands, in the composition
  * ```
+ *
+ * `crop` shows one part of the clip, in the clip's own pixels, scaled to fill the box: a presenter's head and
+ * chest as a small inset while the camera is somewhere else. `background` is a picture of the scene the clip
+ * was placed on, the size of the clip's frame; it is drawn behind the clip and cropped with it, so a
+ * transparent character keeps its own backdrop. Nothing is drawn outside the box.
+ *
+ * @example
+ * ```tsx
+ * <BlenderClip clip={act} volume={0} crop={{ x: 420, y: 60, w: 380, h: 338 }} background="board/behind-him.png"
+ *   style={{ left: 1620, top: 810, width: 270 }} />
+ * ```
  */
 
 import React from 'react';
-import { Audio, Freeze, OffthreadVideo, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
+import { Audio, Freeze, Img, OffthreadVideo, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 
 /** One shot in clips.json. */
 export type BlenderClipEntry = {
@@ -95,35 +106,63 @@ export type BlenderClipProps = {
   volume?: number;
   /** Start this many frames into the clip */
   trim?: number;
-  /** Style for the box. With no size given it fills the frame; give `width` and it keeps the clip's aspect. */
+  /** Style for the box. With no size given it fills the frame; give `width` and it keeps the clip's aspect
+   * (the crop's, when there is one). */
   style?: React.CSSProperties;
+  /** Show only this part of the clip, in the clip's own pixels, scaled to fill the box. */
+  crop?: BlenderCrop;
+  /** A picture under public/ the size of the clip's frame, drawn behind the clip (and cropped with it). */
+  background?: string;
+  /** Style for the clip's picture inside the box: a `filter: drop-shadow(...)` here follows the character,
+   * where one on `style` would follow the box. */
+  clipStyle?: React.CSSProperties;
+};
+
+export type BlenderCrop = { x: number; y: number; w: number; h: number };
+
+/** Where the whole clip sits inside a box that shows only `crop` of it, as CSS percentages of the box. */
+export const cropPlacement = (clip: { id: string; width: number; height: number }, crop: BlenderCrop): React.CSSProperties => {
+  const { x, y, w, h } = crop;
+  if (!(w > 0 && h > 0) || x < 0 || y < 0 || x + w > clip.width || y + h > clip.height) {
+    throw new Error(`BlenderClip "${clip.id}": crop ${JSON.stringify(crop)} is not inside the clip (${clip.width}x${clip.height} pixels)`);
+  }
+  return {
+    position: 'absolute',
+    left: `${(-x / w) * 100}%`,
+    top: `${(-y / h) * 100}%`,
+    width: `${(clip.width / w) * 100}%`,
+    height: `${(clip.height / h) * 100}%`,
+  };
 };
 
 /**
  * Plays a Blender clip once and holds its last frame. Wrap it in a <Sequence> that starts where the shot does.
  * Opaque clips fill the frame; transparent ones are usually given a `left`, `top` and `width`.
  */
-export const BlenderClip: React.FC<BlenderClipProps> = ({ clip, volume = 0.5, trim = 0, style }) => {
+export const BlenderClip: React.FC<BlenderClipProps> = ({ clip, volume = 0.5, trim = 0, style, crop, background, clipStyle }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   if (clip.fps !== fps) {
     throw new Error(`BlenderClip "${clip.id}" was rendered at ${clip.fps} fps and the composition is ${fps} fps: set "fps": ${fps} in the shot spec and render the clips again`);
   }
   const sized = style && (style.width !== undefined || style.height !== undefined);
+  const shown = crop ?? { w: clip.width, h: clip.height };
   const box: React.CSSProperties = sized
-    ? { position: 'absolute', aspectRatio: `${clip.width} / ${clip.height}`, ...style }
+    ? { position: 'absolute', aspectRatio: `${shown.w} / ${shown.h}`, ...style }
     : { position: 'absolute', inset: 0, ...style };
+  if (crop || background) box.overflow = 'hidden';
+  // the whole clip, placed so that the crop fills the box
+  const whole: React.CSSProperties = crop ? cropPlacement(clip, crop) : { position: 'absolute', inset: 0 };
+  const fill: React.CSSProperties = { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' };
   const at = Math.max(0, Math.min(frame + trim, clip.frames - 1));
   return (
     <div style={box}>
-      <Freeze frame={at} active>
-        <OffthreadVideo
-          src={staticFile(clip.src)}
-          muted
-          transparent={clip.transparent}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        />
-      </Freeze>
+      <div style={whole}>
+        {background ? <Img src={/^(https?:|data:)/.test(background) ? background : staticFile(background)} style={fill} /> : null}
+        <Freeze frame={at} active>
+          <OffthreadVideo src={staticFile(clip.src)} muted transparent={clip.transparent} style={{ ...fill, ...clipStyle }} />
+        </Freeze>
+      </div>
       {clip.sound && volume > 0 && frame + trim < clip.frames ? (
         <Audio src={staticFile(clip.sound)} volume={volume} trimBefore={trim} />
       ) : null}

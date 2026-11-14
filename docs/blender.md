@@ -115,6 +115,30 @@ const act = blenderClip(manifest, 'B1_act');
 The clip plays once, holds its last frame, and brings its own effects. `act.event('alert')` is the clip frame the
 alert lands on, for a caption or a cut that should hit the same moment.
 
+`crop={{ x, y, w, h }}` (the clip's own pixels) shows one part of a clip, scaled to fill the box, and
+`background` draws a picture of the clip's backdrop behind it at the same crop: a presenter's head and chest in
+a small inset while the camera is on a chart. Nothing draws outside the box. A hand-built inset that scaled a
+layer round the clip left the clip at full size outside it, and the frame showed bare board.
+
+What a longer video taught (a nine-minute lecture: six room shots, fourteen presenter clips, a Remotion board):
+
+- **Every frame comes from its source, never from an earlier render.** A clip's start is the timeline's or the
+  captions' (`cue()`), its length is `clips.json`'s, a sound's frame is `clip.event(...)`, and the spec generator
+  reads the same timeline file the composition does. A room's end frame typed into a generator from the first
+  cut put a clip 401 frames out when the script grew. `examples/blender-in-remotion` reads its cut frame from
+  the spec's `skip_frames` and its lengths from `clips.json`.
+- **Play shots by id, not by `clips.json` order.** A shot rendered again goes to the end of the manifest.
+- **Clips that join start and end in the same pose,** head and eyes included, and share a `clock`.
+- **Sounds for small props go in the video build.** A cup or a chalk tap that the clip's own WAV does not carry is
+  laid on the clip's event frame in the composition and checked with `tools/sync_check.py` (a landing is
+  `impact`; something picked up is `onset`).
+- **One Blender render at a time.** Rendering is bound by the GPU: 0.69 s a frame alone, 0.9 s with three
+  running side by side, so a queue finishes sooner than a fan-out.
+- **Check the render, not the parts.** After the full render, on top of `qc.py --render`, tile one frame every
+  10 s of the real file and read it: `uv run tools/contact_sheet.py out/video.mp4 --count 57 -o out/every-10s.png`
+  (`--count` is the length in seconds over ten). An inset was empty in a render while every still of the board looked right, because the
+  stills were of the board and the fault was in the layer over it.
+
 It works in the other direction too. A spec's `set.screen.video` puts a Remotion render on the laptop in the
 scene, and a `pull_out` shot starts with that picture covering the frame, so a flat scene can cut to itself in 3D.
 `examples/blender-in-remotion` does both.
@@ -187,7 +211,11 @@ through furniture, a planted foot sliding, a hand off what it holds. The report 
 Two checks look for flicker. `check` fails a set where two objects of different materials have faces in one
 plane that a camera sees (`set_problems`): the renderer draws one or the other from frame to frame. And `render`
 reads the finished frames at points of the set that stand still: one that jumps for a frame and comes back, five
-times on one object in a shot, fails the render (`render_checks.json`).
+times on one object in a shot, fails the render (`render_checks.json`). The level is read at the point's exact
+place in the frame, between pixels. Read at the nearest whole pixel, a slow push-in over a board with writing
+on it stepped the reading a pixel at a time across the letters, and the lecture hall's board was reported as
+flickering on 104 frames with nothing to see; a surface with a picture on it is now read as smoothly as a
+plain one, and two faces in one plane are caught as before.
 
 ### A character from a generated 3D model (experimental)
 

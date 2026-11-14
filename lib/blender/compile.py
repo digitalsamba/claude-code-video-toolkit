@@ -25,21 +25,25 @@ sys.path.insert(0, str(HERE))
 
 import bpy  # noqa: E402
 
+import acting  # noqa: E402
 import cameras  # noqa: E402
 import cast as casting  # noqa: E402
 import kit  # noqa: E402
 from character import FACES, LEANS, LOOKS, POSES, POSTURES, TYPING, ClayPerson  # noqa: E402
 
 HAND_SHAPES = tuple(ClayPerson.HAND_SHAPES)
+from hall import LectureHall  # noqa: E402
 from sets import DeskRoom, confetti, title3d  # noqa: E402
 from studio import PROP_KINDS, Studio  # noqa: E402
 from timeline import SpecError, Timeline  # noqa: E402
 
-SET_KINDS = ("desk_room", "desk", "studio")
+SET_KINDS = ("desk_room", "desk", "studio", "lecture_hall")
+PROPS = ("cup", "chalk")  # what a lecture hall has to carry and put down
 SCORE_MOODS = ("calm", "tension", "resolve")
 CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_head", "gulp", "blink", "sweat",
               "tremble", "tap", "celebrate", "hold_arms", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
-              "look_at", "reach", "hand", "point"}
+              "look_at", "reach", "hand", "point", "talk", "blinks", "gesture", "dust_hands", "carry", "put_down",
+              "pick_up", "hold", "present", "whistle"}
 # how far (m) each kind of contact may be out before the check fails and says where (see ClayPerson.contacts)
 CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03, "snap": 0.02}
 HANDS_APART = 0.005  # nearer than this the two hands are into each other (m)
@@ -83,7 +87,7 @@ def validate(spec):
     if kind not in SET_KINDS:
         raise SpecError(f"unknown set kind {kind!r} (have: {', '.join(SET_KINDS)})")
     studio = kind == "studio"
-    if st.get("door") is not None and (not isinstance(st["door"], dict) or kind != "desk_room"):
+    if st.get("door") is not None and (not isinstance(st["door"], dict) or kind not in ("desk_room", "lecture_hall")):
         raise SpecError('"door" is an object (it may be empty: {}), and only a desk_room has a wall to put it in')
     if not _number(st.get("chair_out", 0)):
         raise SpecError('"chair_out" is how far the chair starts pulled back from the desk, in metres')
@@ -143,7 +147,16 @@ def validate(spec):
                             f'{b["by"]!r} (have: {", ".join(ids)})')
         if verb in CHAR_VERBS and b.get("who", ids[0]) not in ids:
             raise SpecError(f'beat at {b["at"]!r}: nobody in the cast is called {b["who"]!r} (have: {", ".join(ids)})')
-        if verb == "type":
+        if verb in ("carry", "put_down", "pick_up", "hold", "dust_hands", "talk", "blinks", "gesture"):
+            if kind != "lecture_hall" and verb in ("carry", "put_down", "pick_up", "hold"):
+                raise SpecError(f'beat at {b["at"]!r}: {verb} needs a set with things to hold (set kind lecture_hall)')
+            if verb in ("carry", "put_down", "pick_up", "hold") and b.get("prop") not in PROPS:
+                raise SpecError(f'beat at {b["at"]!r}: {verb} needs "prop", one of {", ".join(PROPS)}')
+            if b.get("hand", "left") not in ("left", "right"):
+                raise SpecError(f'beat at {b["at"]!r}: {verb} takes "hand": "left" or "right" (the character\'s own)')
+            if verb == "gesture":
+                _one_of(b, "kind", acting.GESTURES, default="open")
+        elif verb == "type":
             _one_of(b, "speed", TYPING, default="calm")
         elif verb == "pose":
             _one_of(b, "pose", POSES)
@@ -154,10 +167,12 @@ def validate(spec):
         elif verb == "lean":
             _one_of(b, "amount", LEANS, numbers=True, default="none")
         elif verb == "walk" and (not _point(b.get("to")) or not _number(b.get("facing", 0))
-                                 or not _number(b.get("heading", 0)) or not isinstance(b.get("curve", False), bool)):
+                                 or not _number(b.get("heading", 0)) or not isinstance(b.get("curve", False), bool)
+                                 or not (_number(b.get("stride", 0.5)) and 0.3 <= b.get("stride", 0.5) <= 0.85)):
             raise SpecError(f'beat at {b["at"]!r}: walk needs "to", a spot on the floor as [x, y] in metres (and '
                             f'takes "facing", degrees, for the way they end up looking; "curve": true for a bend '
-                            f'in place of a line, with "heading", degrees, for the way they are going as they arrive)')
+                            f'in place of a line, with "heading", degrees, for the way they are going as they arrive; "stride", 0.3 to '
+                            f'0.85 of a leg, for the length of a step)')
         elif verb == "hand" and (b.get("shape") not in HAND_SHAPES or b.get("hand", "left") not in ("left", "right")):
             raise SpecError(f'beat at {b["at"]!r}: hand needs "shape", one of {", ".join(HAND_SHAPES)} (and takes '
                             f'"hand": "left" or "right", the character\'s own; both without it)')
@@ -167,7 +182,7 @@ def validate(spec):
             raise SpecError(f'beat at {b["at"]!r}: {verb} takes "hand": "left" or "right" (the character\'s own)')
         elif verb == "point" and not isinstance(b.get("back", True), bool):
             raise SpecError(f'beat at {b["at"]!r}: point takes "back": true or false (the arm goes back after)')
-        elif verb in ("look_at", "reach", "point") and not (b.get("target") in LOOK_AT or (
+        elif verb in ("look_at", "reach", "point", "present") and not (b.get("target") in LOOK_AT or (
                 isinstance(b.get("target"), list) and len(b["target"]) == 3 and all(_number(x) for x in b["target"]))):
             raise SpecError(f'beat at {b["at"]!r}: {verb} needs "target": a point in the room as [x, y, z] in metres'
                             f', or one of {", ".join(LOOK_AT)}')
@@ -258,12 +273,22 @@ def build(spec, args):
     if not cast:
         raise SpecError("spec needs a cast")
     # the picture's emission cancels the film's exposure, so under the Standard view its colours come out as made
-    room = DeskRoom(st.get("palette"), scr, walls=kind == "desk_room", media_path=media_path,
-                    media_start=tl.frame(tl.time(scr.get("at", 0))), media_offset=int(scr.get("skip_frames", 0)),
-                    media_strength=float(scr.get("brightness", 1.0)) * 2 ** -exposure,
-                    fit=next(iter(cast.values())).furniture(),
-                    door=({**next(iter(cast.values())).door_fit(), **st["door"]} if isinstance(st.get("door"), dict)
-                          else None), chair_out=float(st.get("chair_out", 0.0)))
+    door = ({**next(iter(cast.values())).door_fit(), **st["door"]} if isinstance(st.get("door"), dict) else None)
+    if kind == "lecture_hall":
+        picture = (st.get("board") or {}).get("image")
+        if picture:
+            picture = Path(picture) if Path(picture).is_absolute() else base / picture
+            if not picture.exists():
+                raise SpecError(f"board image not found: {picture}")
+        room = LectureHall(st.get("palette"), walls=bool(st.get("walls", True)), door=door, board=st.get("board"),
+                           image=picture, strength=float((st.get("board") or {}).get("brightness", 1.0)) * 2 ** -exposure,
+                           table=st.get("table"))
+    else:
+        room = DeskRoom(st.get("palette"), scr, walls=kind == "desk_room", media_path=media_path,
+                        media_start=tl.frame(tl.time(scr.get("at", 0))), media_offset=int(scr.get("skip_frames", 0)),
+                        media_strength=float(scr.get("brightness", 1.0)) * 2 ** -exposure,
+                        fit=next(iter(cast.values())).furniture(), door=door,
+                        chair_out=float(st.get("chair_out", 0.0)))
     bpy.context.view_layer.update()  # the cameras read where the screen is: it has to have been worked out
     for p in cast.values():  # (hands with fingers are put on the keys where they are in the room)
         p.keys = bpy.data.objects.get("lap_keys")
@@ -312,6 +337,45 @@ def build(spec, args):
                 p.hand_shape(f0, f1, b["shape"], b.get("hand"))
             elif verb == "glance":
                 p.glance(f0, f1, float(b.get("yaw", 0)), float(b.get("pitch", 0)))
+            elif verb == "talk":  # the narration's words between the beat's start and its end
+                t1 = tl.time(b["until"]) if "until" in b else tl.duration
+                said = [w for w in tl.words if t0 - 0.01 <= w[1] < t1]
+                acting.talk(p, said, F, fps, float(b.get("amount", 1.5)), seed=f0)
+            elif verb == "whistle":
+                acting.whistle(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(60), seed=f0)
+            elif verb == "blinks":
+                acting.blinks(p, f0, f1 if "until" in b or "dur" in b else tl.frames - 1, fps, seed=f0)
+            elif verb == "present":
+                try:
+                    point = room.screen_center() if b["target"] == "screen" else b["target"]
+                    acting.present(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(36), point, b.get("hand"))
+                except ValueError as e:
+                    raise SpecError(f'beat at {b["at"]!r}: {e}')
+            elif verb in ("gesture", "dust_hands", "carry", "put_down", "pick_up", "hold"):
+                try:
+                    hand = b.get("hand")
+                    if verb == "gesture":
+                        acting.gesture(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(30),
+                                       b.get("kind", "open"), hand)
+                    elif verb == "dust_hands":
+                        acting.dust_hands(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(36))
+                    else:
+                        in_hand, on_table, spot = room.prop(b["prop"])
+                        small = b["prop"] == "chalk"
+                        end = f1 if "until" in b or "dur" in b else f0 + kit.n(18)
+                        if verb == "carry":
+                            acting.carry(p, in_hand, f0, hand or "left")
+                        elif verb == "hold":
+                            on_table.scale = (0, 0, 0)
+                            acting.hold_small(p, in_hand, f0, hand or "right")
+                        elif verb == "pick_up":
+                            acting.pick_up(p, in_hand, on_table, f0, end, hand or "right")
+                        elif small:
+                            acting.leave_small(p, in_hand, on_table, b.get("to", list(spot)), f0, end, hand or "right")
+                        else:
+                            acting.put_down(p, in_hand, on_table, b.get("to", list(spot)), f0, end, hand or "left")
+                except ValueError as e:
+                    raise SpecError(f'beat at {b["at"]!r}: {e}')
             elif verb == "look_at" and b["target"] == "camera":
                 at_camera.append((p, f0, f1))  # (the cameras are placed after the acting)
             elif verb == "point" and b["target"] == "camera":
@@ -330,7 +394,8 @@ def build(spec, args):
                         else:
                             p.reach(f0, f1, point, b.get("hand", "right"))
                     elif verb == "walk":  # (untimed, a walk takes what its steps need)
-                        p.walk(f0, f1 if timed else None, b["to"], b.get("facing"), bool(b.get("curve")), b.get("heading"))
+                        p.walk(f0, f1 if timed else None, b["to"], b.get("facing"), bool(b.get("curve")), b.get("heading"),
+                               float(b.get("stride", 0.5)))
                     elif verb == "turn":
                         p.turn(f0, f1 if timed else f0 + kit.n(20), b["facing"])
                     elif verb == "stand_up":
@@ -372,7 +437,10 @@ def build(spec, args):
             fx_events.append({"frame": f0, "kind": "title"})
 
     for p in cast.values():
-        p.breathe(1, tl.frames)
+        # ("clock": where this spec starts on a longer film's timeline, in seconds: clips made from several
+        # specs then breathe in step, and join without a jump)
+        period = 2 * kit.n(3.4 * 12)
+        p.breathe(1 - int(round(float(spec.get("clock", 0.0)) * fps)) % period, tl.frames)
 
     # cameras last, so the solver checks them against the finished acting
     reports, cams = [], []

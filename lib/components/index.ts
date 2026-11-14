@@ -78,8 +78,8 @@ export { LivingPhoto, livingFrame, livingRate } from './LivingPhoto';
 export type { LivingPhotoProps } from './LivingPhoto';
 
 // Blender renders as elements: one clip per shot, transparent if asked (tools/blender_render.py --clips)
-export { BlenderClip, blenderClip } from './BlenderClip';
-export type { BlenderClipProps, BlenderClipInfo, BlenderClipEntry, BlenderManifest } from './BlenderClip';
+export { BlenderClip, blenderClip, cropPlacement } from './BlenderClip';
+export type { BlenderClipProps, BlenderClipInfo, BlenderClipEntry, BlenderManifest, BlenderCrop } from './BlenderClip';
 
 // Utilities
 export { hexToRgba, SIZE_PRESETS, POSITION_PRESETS } from './utils';

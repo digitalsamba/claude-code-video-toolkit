@@ -1,18 +1,22 @@
 /**
  * The terminal scene. It plays flat for the first five seconds of the video, and the same render
  * (out/screen.mp4, `npm run screen`) is the picture on the laptop in blender/room.json, so the cut at
- * frame REVEAL lands on the frame it left and the camera pulls back from it.
+ * frame REVEAL (the spec's own `skip_frames`) lands on the frame it left and the camera pulls back from it.
  *
  * Every output line is what tools/blender_render.py printed when this example was built (captured.json).
  */
 import React from 'react';
 import { AbsoluteFill, Audio, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Terminal, TerminalLine, typedUntil } from '../../../lib/components';
+import room from '../blender/room.json';
 import captured from './captured.json';
 import { FIELDS, FONT, TERM } from './fields';
 
-export const REVEAL = 150;        // the frame the video cuts to the laptop
-export const SCREEN_FRAMES = 300; // the flat scene plus the pull-out it keeps playing through
+// The cut and the screen's length are read from the spec Blender renders (blender/room.json), not typed here:
+// the laptop starts this render `skip_frames` in, so that is the frame the video cuts to the laptop on.
+export const REVEAL: number = room.set.screen.skip_frames;
+const PULL_OUT = Math.ceil(room.shots[0].dur * room.fps);
+export const SCREEN_FRAMES = REVEAL + PULL_OUT + 15; // the flat scene, the pull-out it keeps playing through, and a margin
 
 const CHECK: TerminalLine = { at: 12, command: captured.check.command, perChar: 0.5, prompt: '$' };
 const checkOut: TerminalLine[] = captured.check.lines.map((text, i) => ({

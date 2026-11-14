@@ -85,7 +85,9 @@ in 9:16. Never hand-edit `scene.blend` as the source of truth; it is rebuilt fro
 }
 ```
 
-Also at the top level: `"transparent": true` (the same as `--alpha`) and `"voice"` (below).
+Also at the top level: `"transparent": true` (the same as `--alpha`) and `"voice"` (below), and `"clock"` (seconds): where
+this spec starts on a longer film's timeline, so clips made from several specs breathe in step and join without a
+jump. Start and end each such clip in the same pose, looking at the same thing.
 
 **Acting takes the same time at any `fps`.** A blink, a typing rhythm and a head shake are written in seconds
 inside the rig, so a 24 fps film and a 30 fps clip for Remotion act alike.
@@ -182,6 +184,7 @@ proportions. A worked example with an invented character is `tests/fixtures/blen
 | `full` | character, on their feet | head to toe; `"follow": true` travels with a walk |
 | `feet` | character, on their feet | a low insert on the feet, travelling with them: an entrance before the face |
 | `tilt_up` | character, on their feet | starts on the feet, holds, tilts up to the face (`hold` seconds at each end) |
+| `fixed` | none: the camera is put where the spec says | `"cam"` and `"aim"` are points in the room, `"lens"` is for the whole frame, `"push"` moves it that share of the way to the aim over the shot. `"window": [x0, y0, x1, y1]` (from the left and the bottom) renders only that share of the frame, by lens shift, so a clip of the window lies exactly where it would in the whole frame: set the spec's `resolution` to the window's shape |
 | `product` | a studio prop | a three-quarter view of the prop, pushing in a little |
 | `orbit` | a studio prop | the camera travels round the prop from `az` to `az_to` |
 | `reveal` | a studio `phone` or `card` | starts on its screen edge to edge, holds, then pulls back to the `product` view |
@@ -226,14 +229,29 @@ Character (`who` defaults to the first cast member):
 | `celebrate` | `until` | arms up, wiggling |
 | `hold_arms` | | freeze the arms where they are |
 | `stand_up` / `sit_down` | `dur` | off the chair onto their feet (the head lifts, hands to the knees, the chest comes forward over the feet, then up, the arms dropping last) / onto the chair behind them (a look down, the pelvis back before it goes down, hands to the knees, a small settle). Stand them a thigh's length in front of the seat first. About 1.7 s each reads well; under a second looks hurried |
-| `walk` | `to`: `[x, y]`, `facing`, `until`, `curve`, `heading` | walk to a spot and stop, facing `facing` degrees. They turn on the spot first when the way to go is more than 30 degrees off, and again at the end. With no `until` or `dur` it takes what the steps need. A footstep in the sound per step. `"curve": true` walks a bend in place of a line and two turns: the feet land on the bend, the body banks into it and the head looks along it; `heading` is the way they are going as they arrive (degrees, like `facing`) |
+| `walk` | `to`: `[x, y]`, `facing`, `until`, `curve`, `heading`, `stride` | walk to a spot and stop, facing `facing` degrees. They turn on the spot first when the way to go is more than 30 degrees off, and again at the end. With no `until` or `dur` it takes what the steps need. A footstep in the sound per step. `"curve": true` walks a bend in place of a line and two turns: the feet land on the bend, the body banks into it and the head looks along it; `heading` is the way they are going as they arrive (degrees, like `facing`). `stride` is a step's length as a share of the leg (0.5 by default, a stroll; 0.75 to 0.8 is an unhurried lecturer's walk in fewer steps, 0.3 to 0.85) |
 | `turn` | `facing`, `dur` | turn on the spot, stepping round: the eyes and head go first, the chest follows, and it swings a little past at the end |
 | `wink` | `side`: `left`/`right` | one eye, the brow dipping with it |
 | `look_at` | `target`: `[x, y, z]`, `camera` or `screen`, `dur` | head and eyes to a point: the neck turns most of the way, the eyes the rest |
 | `glance` | `yaw`, `pitch`, `dur` | the eyes alone, in degrees (up to about 25) |
 | `reach` | `target`: `[x, y, z]`, `hand`, `dur` | a hand to a point in the room; an error says how far short it is |
 | `point` | `target`: `[x, y, z]`, `camera` or `screen`; `hand`; `back`; `dur` | the arm lifts nearly straight at the target (it reads from across a room), index out, thumb up; held for the beat (1.5 s without `dur`), then back unless `"back": false`. Without `hand`, the one on the target's side. Add a `look_at` to the same target for the eyes. The event gives `aim_deg` |
-| `hand` | `shape`: `open`, `relaxed`, `grip`, `flat`, `type`, `point`, `fist`; `hand`: `left`/`right`; `dur` | the fingers take a shape (both hands without `hand`). Only a fitted model whose fit found fingers has them: the clay cast's mittens are left as they are. Poses and verbs set shapes themselves (`type` on the keys, flat on the desk, a grip on a door handle, relaxed at the sides), so this is for a point or a fist |
+| `hand` | `shape`: `open`, `relaxed`, `loose`, `grip`, `flat`, `type`, `point`, `fist`; `hand`: `left`/`right`; `dur` | the fingers take a shape (both hands without `hand`). Only a fitted model whose fit found fingers has them: the clay cast's mittens are left as they are. Poses and verbs set shapes themselves (`type` on the keys, flat on the desk, a grip on a door handle, relaxed at the sides), so this is for a point or a fist. `loose` hangs more open than `relaxed`: on a fit whose relaxed hand reads as a fist at the side, set the free hand `loose` at the clip's start (gestures come back to it) |
+
+A presenter on their feet (a `lecture_hall` set for the things that are carried; the rest work anywhere):
+
+| verb | fields | |
+|---|---|---|
+| `talk` | `until`, `amount` | the mouth opens and closes on the narration's words between the beat and `until` (the spec's `voice` captions): one opening a syllable, wider for an open vowel, rounder for an o or a u, shut on a pause and on b, m and p; the head dips a little on the longer words. A fitted face only |
+| `blinks` | `until` | blinks every two to five seconds, now and then twice |
+| `whistle` | `until`/`dur` | the lips purse as for a whistle and swell a little on each breath, eased in and out (the sound is yours to lay on: a recording, placed on the same seconds). A fitted face only |
+| `gesture` | `kind`: `open`, `both`, `shrug`, `count`; `hand`; `dur` | a talking gesture held for the beat, then the hands go back: one open hand lifting on a point, both hands opening out, a shrug with the head tipping, a raised index |
+| `present` | `target`: `[x, y, z]` or `screen`; `hand`; `dur` | show something beside or behind them (a board): the chest turns part of the way, the head and eyes go to it and stay for the first half, the arm on that side points; then all come back. Follow it with a `look_at` |
+| `dust_hands` | `dur` | the hands come up palms together and brush past each other |
+| `carry` | `prop`: `cup`; `hand` | from this beat the cup is in a hand held in front of the chest, and that arm stays out of a walk's swing |
+| `put_down` | `prop`: `cup` or `chalk`; `hand`; `to`: `[x, y, z]`; `dur` | the hand takes what it holds to its spot on the table and lets go; an error says how far short the arm is |
+| `pick_up` | `prop`: `chalk`; `hand`; `dur` | a hand takes the chalk off the table; it lies along the index finger and the hand keeps hold of it through every later shape |
+| `hold` | `prop`: `chalk`; `hand` | the chalk is in the hand from this beat (a clip that starts after it was picked up) |
 
 Poses also has `down` (arms at the sides), which a standing character starts in; arms swing on a walk only from
 `down`. A posture verb used in the wrong state is a named error ("dev is sitting: walk needs them standing
@@ -283,7 +301,8 @@ with `--keep-frames` and tile every second or third frame.
 **A render is checked too.** `render` writes `still_points.json` (points of the set that stand still, and where
 each is in every frame) and reads them back out of the picture: a still point that jumps for one frame and comes
 back is flicker. Five such frames on one object in a shot fail (`render_checks.json`, and the tool exits 1);
-fewer are listed as notes. It runs on the film and on `--clips`.
+fewer are listed as notes. It runs on the film and on `--clips`. Points are read between pixels, so a camera
+moving over a surface with a picture on it (a board with writing) is not reported.
 
 Set (`desk_room`): `alert` (popup + red screen light), `work` (`until`: bar drains bad → mid → good),
 `done` (the "after" line pops in), `open_door` / `close_door` (`dur`, `angle`, and `by`: a cast member whose hand
@@ -305,6 +324,7 @@ of the handle), `open_door` with `"by"`, `walk` in, `walk` to a thigh's length i
 |---|---|
 | `desk_room` (default) | a room: walls, window, posters, rug, desk, chair, laptop, mug, plant. `palette` recolours it (`wall`, `wall2`, `floor`, `desk`, `accent1`, `accent2`, `rug`) |
 | `desk` | the desk, chair and laptop with no room, for `--alpha`: the character sits on whatever the Remotion scene puts behind it |
+| `lecture_hall` | a wall with a board that shows a picture (`"board": {"image": ..., "x0", "x1", "z0", "z1"}`: the rectangle of the wall it covers, the same one a `fixed` camera can frame square on), a `"door"`, and a small table (`"table": {"at", "size", "height", "cup", "chalk"}`) with a takeaway cup and a stick of chalk. `"walls": false` leaves the room out for `--alpha`; `"table": {"hidden": true}` keeps the table to reach for and does not draw it; `"cup_on": true` starts with the cup already on it. The cast stands |
 | `studio` | a product stage: a backdrop curving from floor to wall, soft lights sized to the props, no character and no beats. `palette.backdrop` colours it; with `--alpha` the backdrop is left out |
 
 **Studio props** (`set.props`, each with an `id` that shots name as their `subject`):
@@ -377,7 +397,10 @@ uv run tools/blender_render.py render spec.json --clips --shots B1_act --to ... 
 ```
 
 One clip per shot lands in the project with a `clips.json` manifest: `.webm` (VP9 with alpha) with `--alpha`,
-`.mp4` without, and a `.wav` of the shot's own effects. `--prores` adds ProRes 4444 for other editors.
+`.mp4` without, and a `.wav` of the shot's own effects. `--prores` adds ProRes 4444 for other editors. To change
+one kind of effect against the rest (footsteps too loud under a door), write the WAV again from the render's
+`events.json` with `sound.render(events, wav, start=, end=, score=False, room=False, gains={"step": 0.35})`
+(0.35 is 9 dB down).
 
 Several specs can render `--to` one folder (a room and a transparent desk). Each clip in `clips.json` carries its
 own `fps`, `resolution` and the `spec` it came from, so they can differ; give the specs' shots different ids (a
@@ -407,6 +430,31 @@ What makes it sit in the scene:
 - A transparent clip has no cast shadow (EEVEE can't render one onto nothing). Keep the character on a flat
   field, where none is expected.
 - A transparent render of a full room is a waste: use kind `desk`.
+
+**An inset of a clip** is the clip with a `crop` (the clip's own pixels), scaled to fill the box, with the
+clip's backdrop as `background` (a picture the size of the clip's frame, cropped with it) and a shadow that
+follows the character in `clipStyle`. Do not build one by scaling a layer round the clip: the clip keeps its
+full-size box and draws outside it.
+
+```tsx
+<BlenderClip clip={act} volume={0} crop={{ x: 518, y: 92, w: 475, h: 422 }} background="board/bg-presenter.png"
+  clipStyle={{ filter: 'drop-shadow(-6px 4px 6px rgba(0,0,0,0.38))' }} style={{ left: 1620, top: 810, width: 270 }} />
+```
+
+In a video of many clips (a presenter clip per segment, room shots, a Remotion board):
+
+- **Read every frame from its source**: clip starts from the timeline or `cue()`, lengths from `clips.json`,
+  sound frames from `clip.event(...)`, and the spec generator from the same timeline file. Never type a frame
+  seen in an earlier render: when the script grows, it is silently wrong.
+- **Play shots by id, not by `clips.json` order**: a shot rendered again goes to the end of the manifest.
+- **Sounds for small props** (a cup, a chalk tap) that the clip's WAV does not carry are laid on the clip's
+  event frames in the composition and checked with `tools/sync_check.py`: `impact` for a landing, `onset` for
+  something picked up.
+- **One Blender render at a time**: it is bound by the GPU (0.69 s a frame alone, 0.9 s with three side by
+  side), so queue the specs.
+- **After the full render, read the render itself**: `qc.py --render`, then one frame every 10 s tiled
+  (`uv run tools/contact_sheet.py out/video.mp4 --count <seconds / 10>`). Stills of each part can all look
+  right while a layer over them is empty in the render.
 
 The order to build in when the screen shows the video's own scene: render the Remotion scene
 (`npx remotion render ... Screen out/screen.mp4`), then the Blender clips, then the video.

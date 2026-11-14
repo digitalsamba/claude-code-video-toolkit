@@ -54,6 +54,11 @@ SHOT_TYPES = {
     "screen_fill":   dict(move="fill", lens=28, check="screen"),
     "pull_out":      dict(move="out", lens=28, az=-78, elev=20, dist=2.6, hold=0.4, aim=(0.55, 0.3), check="screen"),
     "push_in":       dict(move="in", lens=28, az=-78, elev=20, dist=2.6, hold=0.4, aim=(0.55, 0.3), check="screen"),
+    # a camera put where the spec says: "cam" and "aim" are points in the room, "lens" is for the whole frame.
+    # "push" moves it that share of the way to "aim" over the shot.
+    # "window": [x0, y0, x1, y1] renders only that share of the frame (from the left and from the bottom): set
+    # the spec's resolution to the window's shape
+    "fixed":         dict(fixed=True, lens=50, check="face"),
     # a prop on a studio set: the distance comes from the prop's size (`fill` is the share of the frame it takes)
     "product":       dict(prop=True, az=-28, elev=14, lens=60, fill=0.7, push=0.06, check="prop"),
     "orbit":         dict(prop=True, az=-55, az_to=55, elev=12, lens=60, fill=0.7, push=0.0, check="prop"),
@@ -342,12 +347,53 @@ def _solve_prop(shot, spec, sub, f0, f1):
     return cam, report
 
 
+def _solve_fixed(shot, spec, f0, f1):
+    """A camera where the spec puts it, looking at "aim". With a "window" it sees only that share of the frame
+    the lens would give at `frame` (16:9 unless said): the same lens from the same place, shifted and narrowed,
+    so what it renders lies exactly where it would in the whole frame."""
+    if not all(isinstance(shot.get(k), (list, tuple)) and len(shot[k]) == 3 for k in ("cam", "aim")):
+        raise ValueError(f'shot {shot["id"]}: a fixed shot needs "cam" and "aim", each a point as [x, y, z] in metres')
+    sc = bpy.context.scene
+    cd = D.cameras.new(shot["id"])
+    cd.clip_start, cd.clip_end, cd.sensor_fit = 0.05, 200.0, "HORIZONTAL"
+    cam = link(D.objects.new(shot["id"], cd))
+    cam.location = shot["cam"]
+    aim = empty(shot["id"] + "_tgt", None, shot["aim"])
+    cam.constraints.new("TRACK_TO").target = aim
+    lens = spec["lens"]
+    report = {"id": shot["id"], "type": shot["type"], "frames": [f0, f1], "passed": True, "issues": [],
+              "adjusted": False, "swing": 0, "rise": 0, "back": 1.0}
+    win = shot.get("window")
+    if win:
+        x0, y0, x1, y1 = win
+        fw, fh = (float(v) for v in str(shot.get("frame", "16:9")).split(":"))
+        w, h = x1 - x0, y1 - y0
+        want = w * fw / (h * fh)
+        got = sc.render.resolution_x / sc.render.resolution_y
+        if not (0 < w <= 1 and 0 < h <= 1) or abs(got / want - 1) > 0.01:
+            raise ValueError(f'shot {shot["id"]}: the window is {want:.3f} wide for its height and the spec\'s '
+                             f'resolution is {got:.3f}: set "resolution" to the window\'s own shape')
+        cd.lens = lens / w
+        cd.shift_x = ((x0 + x1) / 2 - 0.5) / w
+        cd.shift_y = ((y0 + y1) / 2 - 0.5) * (fh / fw) / w
+        report["window"] = list(win)
+    else:
+        cd.lens = lens
+    push = float(shot.get("push", 0.0))
+    if push:  # a slow move toward what it looks at, by this share of the distance over the shot
+        key(cam, "location", f0, Vector(shot["cam"]))
+        key(cam, "location", f1, Vector(shot["cam"]).lerp(Vector(shot["aim"]), push))
+    return cam, report
+
+
 def solve(shot, sub, f0, f1, seed=0, fps=24, avoid=()):
     """Create the shot's camera, choose a placement that passes the checks, key its move. Returns (cam, report)."""
     spec = {**SHOT_TYPES[shot["type"]],
             **{k: shot[k] for k in ("dist", "az", "az_to", "h", "lens", "push", "elev", "hold", "fill") if k in shot}}
     if spec.get("prop"):
         return _solve_prop(shot, spec, sub, f0, f1)
+    if spec.get("fixed"):
+        return _solve_fixed(shot, spec, f0, f1)
     if shot["type"] == "reveal":  # the far end is the product view of the prop the screen belongs to
         prop = getattr(sub, "prop", None)
         if sub.kind != "screen" or prop is None:

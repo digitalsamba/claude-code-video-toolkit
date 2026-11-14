@@ -371,6 +371,42 @@ class BlenderCheckTests(unittest.TestCase):
                           'beats': [{'at': 'A+0.3', 'do': 'point', 'target': 'the door'}]})
         self.assertIn('target', str(ctx.exception))
 
+    def test_a_presenter_carries_a_cup_in_puts_it_down_and_talks_at_a_board(self):
+        """A lecture hall: someone comes to the table carrying a cup, puts it down, takes the chalk, shows the
+        board, makes a gesture, dusts their hands and talks, filmed by a camera put where the spec says. The cup
+        and the chalk are each in the hand until they are put down, and what is wrong in a beat is named."""
+        spec = {
+            'set': {'kind': 'lecture_hall', 'table': {'at': [1.6, 1.3], 'cup': [1.45, 1.5], 'chalk': [1.4, 1.52]}},
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 1.9], 'facing': -90}],
+            'shots': [{'id': 'A', 'dur': 9, 'type': 'fixed', 'cam': [-0.5, -3.0, 1.6], 'aim': [1.2, 2.0, 1.3],
+                       'lens': 30, 'push': 0.1}],
+            'beats': [{'at': 0, 'do': 'carry', 'prop': 'cup', 'hand': 'left'},
+                      {'at': 'A+0.2', 'do': 'walk', 'to': [1.25, 1.82], 'facing': 20, 'until': 'A+2.0'},
+                      {'at': 'A+2.2', 'do': 'put_down', 'prop': 'cup', 'dur': 0.7},
+                      {'at': 'A+3.5', 'do': 'pick_up', 'prop': 'chalk', 'hand': 'left', 'dur': 0.6},
+                      {'at': 'A+4.8', 'do': 'present', 'target': [-1.0, 2.9, 2.2], 'dur': 1.2},
+                      {'at': 'A+6.6', 'do': 'gesture', 'kind': 'open', 'hand': 'right', 'dur': 0.8},
+                      {'at': 'A+7.6', 'do': 'dust_hands', 'dur': 0.8},
+                      {'at': 'A+0.1', 'do': 'blinks'}, {'at': 'A+4.0', 'do': 'talk'}]}
+        checks, events = self.compile(spec)
+        self.assertTrue(checks['shots'][0]['passed'], checks)
+        kinds = [e['kind'] for e in events['events']]
+        for kind in ('put_down', 'pick_up', 'point', 'dust'):
+            self.assertIn(kind, kinds)
+        self.assertLess(kinds.index('put_down'), kinds.index('pick_up'))
+        self.assertLessEqual(checks['through_m'], 0.03)                    # nothing goes through the table
+        far = {**spec, 'cast': [{'id': 'dev', 'posture': 'stand', 'at': [0.0, 0.0]}], 'beats': [
+            {'at': 0, 'do': 'carry', 'prop': 'cup'}, {'at': 'A+1', 'do': 'put_down', 'prop': 'cup'}]}
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile(far)
+        self.assertIn('short of putting it down', str(ctx.exception))
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({**spec, 'beats': [{'at': 0, 'do': 'carry', 'prop': 'umbrella'}]})
+        self.assertIn('cup, chalk', str(ctx.exception))
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({**spec, 'shots': [{'id': 'A', 'dur': 2, 'type': 'fixed', 'cam': [0, -3, 1.5]}], 'beats': []})
+        self.assertIn('"cam" and "aim"', str(ctx.exception))
+
     def test_a_walk_can_bend_and_the_body_leans_into_it(self):
         """A curved walk: the path bows away from the straight line, the body banks into the bend, and the
         check reports each walk. A straight walk reports no bow."""
@@ -392,6 +428,37 @@ class BlenderCheckTests(unittest.TestCase):
                           'set': {'kind': 'desk_room', 'door': {}}, 'shots': [{'id': 'A', 'dur': 3, 'type': 'full'}],
                           'beats': [{'at': 'A+0.2', 'do': 'walk', 'to': [0, 0.41], 'curve': 'yes'}]})
         self.assertIn('curve', str(ctx.exception))
+
+    def test_a_longer_stride_takes_fewer_steps_and_a_whistle_purses_the_lips(self):
+        """`stride` makes the same walk in fewer, longer steps; outside 0.3 to 0.85 of a leg it is a named error.
+        `whistle` compiles beside a walk, and the sound's `gains` turns the steps down and leaves the rest."""
+        def walk(stride):
+            checks, events = self.compile({
+                'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 2.0]}],
+                'set': {'kind': 'desk_room', 'door': {}},
+                'shots': [{'id': 'A', 'dur': 5, 'type': 'full', 'follow': True}],
+                'beats': [{'at': 'A+0.2', 'do': 'walk', 'to': [0, 0.41], 'until': 'A+4.4', 'stride': stride},
+                          {'at': 'A+0.3', 'do': 'whistle', 'until': 'A+4.0'}]})
+            return checks, [e for e in events['events'] if e['kind'] == 'step']
+        short, short_steps = walk(0.5)
+        long, long_steps = walk(0.8)
+        self.assertLess(len(long_steps), len(short_steps))
+        self.assertLessEqual(long['foot_slide_m'], 0.03)
+        with self.assertRaises(RuntimeError) as ctx:
+            walk(1.4)
+        self.assertIn('stride', str(ctx.exception))
+        events = {'fps': 30, 'duration': 1.0, 'events': [{'t': 0.1, 'frame': 3, 'kind': 'step'}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            (folder / 'steps.json').write_text(json.dumps(events))
+
+            def peak(**kw):
+                out = folder / 'steps.wav'
+                sound.render(folder / 'steps.json', out, score=False, room=False, **kw)
+                with wave.open(str(out)) as w:
+                    data = w.readframes(w.getnframes())
+                return max(abs(int.from_bytes(data[i:i + 2], 'little', signed=True)) for i in range(0, len(data), 2))
+            self.assertAlmostEqual(peak(gains={'step': 0.35}) / peak(), 0.35, delta=0.02)
 
     def test_a_door_and_a_screen_graphic_have_no_faces_in_one_plane(self):
         """The set is checked for surfaces that would flicker: the door's frame against the wall does not, and
@@ -535,6 +602,40 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertEqual(by['door_frame']['frames'], [5, 9, 13, 17, 21])
         self.assertFalse(by['wall']['fails'])
         self.assertNotIn('lamp', by)
+
+    def test_flicker_is_not_a_picture_sliding_under_a_slow_camera(self):
+        """A push-in moves a still point a fraction of a pixel a frame. Over a board with writing on it, a
+        patch that snaps to whole pixels reads each snap as a jump (the lecture hall's board: 104 frames
+        reported, none to see). Read at the point's own place, the level changes smoothly; two faces
+        in one plane on the same surface, under the same move, are still caught."""
+        import numpy as np
+        yy, xx = np.mgrid[0:60, 0:200].astype(np.float32)
+        writing = 60.0 + 120.0 * ((xx.astype(int) // 3) % 2)     # chalk strokes: 3 px light, 3 px dark
+        frames = [writing.copy() for _ in range(60)]
+        for f in (10, 20, 30, 40, 50):
+            frames[f][:, 120:] += 25.0                            # the right half fights with another face
+        drift = lambda f: 0.3 * f                                 # pixels: the camera pushing in
+        at = lambda f, x: (x + drift(f)) / 200
+        rows = [[f, k, at(f, x), 0.5, at(f - 1, x), 0.5, at(f + 1, x), 0.5]
+                for f in range(1, 61) for k, x in enumerate((40.0, 150.0))]
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            (out / 'still_points.json').write_text(json.dumps(
+                {'objects': ['board_face', 'board_patch'], 'shots': {'A': {'frames': [1, 60], 'points': rows}}}))
+            (out / 'A.mp4').write_bytes(b'')
+            real = blender_render.gray_frames
+            # the picture slides with the camera: frame f shows the writing moved by drift(f)
+            moved = [np.stack([np.interp(np.arange(200) - drift(i + 1), np.arange(200), fr[r]) for r in range(60)])
+                     for i, fr in enumerate(frames)]
+            blender_render.gray_frames = lambda video, size: iter(moved)
+            try:
+                found = blender_render.flicker(out, {'A': (out / 'A.mp4', 1)}, (200, 60))
+            finally:
+                blender_render.gray_frames = real
+        by = {r['object']: r for r in found}
+        self.assertNotIn('board_face', by)
+        self.assertTrue(by['board_patch']['fails'])
+        self.assertEqual(by['board_patch']['frames'], [11, 21, 31, 41, 51])
 
     def test_mistakes_with_postures_are_named(self):
         shots = [{'id': 'A', 'dur': 3, 'type': 'wide'}]

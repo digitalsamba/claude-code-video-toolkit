@@ -135,6 +135,9 @@ class ClayPerson:
         self.wrist_q = {}   # each hand's last turn on the forearm (so the next key goes the short way round)
         self.palm_off = []  # each time a hand was laid on something: how far its palm was from facing it (degrees)
         self.hold_at, self.holding = {}, {1: False, -1: False}  # where a hand holds a bar (the hand bone's space)
+        self.carry_spans = {}  # each arm's stretches of carrying something (first frame, last)
+        self.busy = set()   # arms that carry something: a walk leaves them where they are
+        self.keeps = {}     # the shape a hand keeps while it has something small in it (a stick of chalk)
         self._finger_setup()
         self.neck_pitch, self.spine_pitch, self.height = 7.0, 0.0, self.seat_h
         key(self.spine, "rotation_euler", 1, (0, 0, 0))
@@ -366,11 +369,14 @@ class ClayPerson:
     HAND_SHAPES = {
         "open":    ((0, 0), (0, 0), False, 0.5),
         "relaxed": ((24, 20), (6, 10), False, 0.5),
+        "loose":   ((6, 5), (3, 8), False, 0.5),      # hanging open at the side: a relaxed curl read as a fist on some fits
         "grip":    ((58, 64), (30, 36), False, 0.0),
         "flat":    ((5, 4), (0, 6), False, 0.6),    # laid on a table top
         "type":    ((20, 15), (10, 14), False, 0.6),  # on a keyboard (lay "keys"): the fingertips come down onto the keys
         "fist":    ((84, 86), (40, 50), False, 0.3),
         "point":   ((84, 86), (40, 50), True, 0.3),
+        "hold":    ((30, 36), (10, 16), False, 0.0),   # round a cup
+        "chalk":   ((66, 70), (30, 30), True, 0.15),   # a stick of chalk along the index finger, the thumb on it
     }
 
     def _finger_setup(self):
@@ -443,6 +449,8 @@ class ClayPerson:
         return bones
 
     def _fingers_key(self, s, f, shape, lift=None):
+        if s in self.keeps and shape in ("relaxed", "open", "point", "flat"):
+            shape = self.keeps[s]  # (a hand with something small in it keeps hold of it)
         for bone in self._fingers_set(s, shape, lift):
             bone.keyframe_insert("rotation_quaternion", frame=f)
         self.hand_shape_now[s] = shape
@@ -1979,6 +1987,8 @@ class ClayPerson:
                 return sh + (arm + Vector((side * out, 0, 0))).normalized() * arm.length
 
             for side in (1, -1):
+                if side in self.busy:
+                    continue
                 fwd = reach * (1.0 if side == -s else -0.7) if s else 0.0
                 k = fwd / (0.5 * full)  # about 1 at the front of a full stride
                 swing = max(-16.0, min(20.0, 18.0 * k))
@@ -1998,6 +2008,8 @@ class ClayPerson:
                 self.swung[side] = (f, swing, elbow, side_out)
             return
         for side in (1, -1):
+            if side in self.busy:
+                continue
             fwd = reach * (1.0 if side == -s else -0.7) if s else 0.0
             lift = fwd * 0.5 if fwd > 0 else -fwd * 0.15  # the hand rises more in front than behind
             # (`out`: the hand on the stepping side stands off, for a leg that steps out sideways in a turn)
@@ -2078,7 +2090,7 @@ class ClayPerson:
                 lambda d: float(np.interp(d, mid, yaw)), lambda d: float(np.interp(d, mid, soft)))
 
     def walk(self, f0: int, f1: int | None, to, facing: float | None = None, curve: bool = False,
-             heading: float | None = None):
+             heading: float | None = None, stride: float = 0.5):
         """Walk to a point on the floor and stop there, facing `facing` degrees (or the way they came). A small
         change of direction happens on the first step; for a bigger one they turn on the spot first. They turn
         to `facing` on the last step. With no f1 they take the time the steps need at a stroll; returns the
@@ -2087,7 +2099,10 @@ class ClayPerson:
         With `curve` the way there is a bend and not a line: they set off the way they are facing and come round
         to the spot, arriving in the direction `heading` (degrees) if one is given. The feet land along the
         bend, the body turns with it and leans into it, as a body does to stay over its feet (more when the
-        bend is tighter or the walk faster), and the head looks along the path ahead."""
+        bend is tighter or the walk faster), and the head looks along the path ahead.
+
+        `stride` is each step's length as a share of the leg (0.5 a stroll; 0.75 to 0.8 a long, unhurried
+        step, so fewer steps for the same way)."""
         self._need("stand", "walk")
         p0, p1 = self.at.copy(), Vector(to[:2])
         dist = (p1 - p0).length
@@ -2116,7 +2131,7 @@ class ClayPerson:
             after = (pivots * n(8) if f1 is None else round((f1 - f0) * 0.3), math.degrees(yaw1))
             f1 = None if f1 is None else f1 - after[0]
             yaw1 = yaw_w
-        steps = max(2, math.ceil(dist / (0.5 * leg)) + 1)  # the last step brings the feet together
+        steps = max(2, math.ceil(dist / (stride * leg)) + 1)  # the last step brings the feet together
         half = dist / (steps - 1)                          # how far each landing is past the one before
         f1 = f0 + steps * n(8) if f1 is None else f1
         # no two steps quite alike: each takes a little more or less time and lands a little long or short
@@ -2244,10 +2259,14 @@ class ClayPerson:
             hands[s] = np.array([sum(g.weight for g in v.groups if g.group in groups) > 0.5 for v in self.body.data.vertices])
         elbow, fore, off, offs = 0.0, 90.0, 0.0, {1: [], -1: []}
         worst = {"elbow": f0, "fore": f0, "off": f0}
+        # (an arm that carries something through the walk is held where it is, not swung: it is not judged)
+        carried = {s: any(a <= f1 and b >= f0 for a, b in self.carry_spans.get(s, [])) for s in (1, -1)}
         for f in range(f0, f1 + 1, 2):
             sc.frame_set(f)
             mw = self.rig.matrix_world
             for sd in "LR":
+                if carried[1 if sd == "L" else -1]:
+                    continue
                 sh, el, wr = (mw @ pb[b + sd].head for b in ("upper.", "fore.", "hand."))
                 bend = math.degrees((el - sh).angle(wr - el, 0.0))
                 below = math.degrees(math.asin(max(-1.0, min(1.0, -(wr - el).normalized().z))))
@@ -2266,6 +2285,8 @@ class ClayPerson:
             L = co.reshape(-1, 3) @ inv[:3, :3].T + inv[:3, 3]  # in the body's own frame, on the floor
             trunk = L[~mask]
             for s in (1, -1):
+                if carried[s]:
+                    continue
                 H = L[hands[s]][::3]
                 gap = self._beside(trunk[trunk[:, 0] * s > 0], H, s)
                 if gap < 1.0:
@@ -2680,6 +2701,11 @@ class ClayPerson:
                     tris = self._body_tris(arm)
                 pb, rw = self.rig.pose.bones, self.rig.matrix_world
                 for sd in "LR":
+                    # (a hand that carries something in front of the body is put there on purpose, a hand's
+                    # breadth off the chest: the test below asks which side of the surface a hand is on with a
+                    # line out to the side, and from in front of a turning body that line is not out)
+                    if any(a <= f <= b for a, b in self.carry_spans.get(1 if sd == "L" else -1, [])):
+                        continue
                     h, t = rw @ pb["hand." + sd].head, rw @ pb["hand." + sd].tail
                     # the palm (two spots, as thick as the hand) and each fingertip (as thick as a finger)
                     probes = [(h.lerp(t, 0.35), hand_r), (h.lerp(t, 0.8), hand_r)]
