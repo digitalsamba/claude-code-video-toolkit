@@ -96,11 +96,14 @@ section { margin-top: var(--gap-section); }
 .band { margin: 0; }
 .band img { width: 100%; border-radius: 0; height: auto; aspect-ratio: 1920 / 822; object-fit: cover; }
 .band figcaption { font-size: var(--step-small); color: var(--muted); margin-top: 12px; }
+.band-lead .say { font-size: var(--step-statement); line-height: 1.2; letter-spacing: -0.025em; color: var(--ink); margin: 6px 0 10px; }
+.band-lead figcaption p + p { max-width: 62em; }
+.band-lead .go { margin-top: 18px; display: flex; gap: 22px; align-items: center; flex-wrap: wrap; color: var(--ink); }
+section + .band, section + .band-wide + .band-narrow { margin-top: var(--gap-section); }
 .band-narrow { display: none; }
 @media (max-width: 720px) {
   .band-wide { display: none; }
   .band-narrow { display: block; }
-  .hero + .band-wide + .band-narrow { margin-top: clamp(24px, 4vw, 64px); }
 }
 
 /* work: names as one paragraph */

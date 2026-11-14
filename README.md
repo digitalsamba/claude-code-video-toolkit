@@ -6,20 +6,20 @@
 
 [![GitHub release](https://img.shields.io/github/v/release/digitalsamba/claude-code-video-toolkit)](https://github.com/digitalsamba/claude-code-video-toolkit/releases) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/digitalsamba/claude-code-video-toolkit?style=social)](https://github.com/digitalsamba/claude-code-video-toolkit/stargazers) [![YouTube: subscribe](https://img.shields.io/badge/YouTube-Subscribe-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/@claudecodevideotoolkit?sub_confirmation=1)
 
-Tell [Claude Code](https://claude.ai/code) what video you want — it writes the script, generates the voiceover, music, and visuals, and renders the MP4. An AI-native video production workspace: the skills, commands, templates, and tools your AI agent needs to take a video from concept to final render, on open-source models that cost cents (voiceover ~$0.01, AI video clips ~$0.23).
+Tell [Claude Code](https://claude.ai/code) what video you want: it writes the script, generates the voiceover, music, and visuals, and renders the MP4. An AI-native video production workspace: the skills, commands, templates, and tools your AI agent needs to take a video from concept to final render, on open-source models that cost cents (voiceover ~$0.01, AI video clips ~$0.23). With Blender installed (optional), it also makes films with a 3D character who acts from a JSON spec.
 
 ## See What It Makes
 
 Every frame below was generated in this workspace. Click one to watch it.
 
-<a href="https://www.youtube.com/watch?v=3HjPatdeal4"><img src="assets/readme-thumbs/made-with-itself.jpg" width="870" alt="Made with itself: the toolkit's own video, made in the toolkit"></a><br>
-**Made with itself**: this toolkit in 90 seconds, made with this toolkit. Every terminal line on screen is the real
-output of the command that made that part, and the bill is measured ($0.33).
-
 <a href="https://www.youtube.com/watch?v=CgxzhKQ0Afg"><img src="assets/readme-thumbs/just-a-quick-one.jpg" width="870" alt="Just a Quick One: a 3D character in his kitchen with a mug of tea, and a small computer with a face on the counter"></a><br>
 **Just a Quick One**: the toolkit's trailer, with a 3D character acting from a JSON spec. He walks into his kitchen
 with his tea, sits down and opens the laptop; every move is a verb in the spec, checked before Blender renders it.
 [How it works](https://digitalsamba.github.io/claude-code-video-toolkit/3d-characters.html), and what your machine needs.
+
+<a href="https://www.youtube.com/watch?v=3HjPatdeal4"><img src="assets/readme-thumbs/made-with-itself.jpg" width="870" alt="Made with itself: the toolkit's own video, made in the toolkit"></a><br>
+**Made with itself**: this toolkit in 90 seconds, made with this toolkit. Every terminal line on screen is the real
+output of the command that made that part, and the bill is measured ($0.33).
 
 | | |
 |:--:|:--:|
