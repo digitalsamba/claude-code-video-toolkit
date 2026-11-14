@@ -39,7 +39,14 @@ SCREEN_W = 0.456  # the picture's width (m); its height follows the aspect
 
 class DeskRoom:
     def __init__(self, palette: dict | None = None, screen: dict | None = None, walls: bool = True,
-                 media_path=None, media_start: int = 1, media_offset: int = 0, media_strength: float = 1.0):
+                 media_path=None, media_start: int = 1, media_offset: int = 0, media_strength: float = 1.0,
+                 fit: dict | None = None, door: dict | None = None, chair_out: float = 0.0):
+        # the furniture is the clay cast's size; `fit` (a character's furniture()) moves it to suit someone else:
+        # the seat up or down, the desk and all that stands on it forward or back and up or down
+        fit = fit or {"chair": 0.0, "desk": (0.0, 0.0)}
+        self.chair_z, (self.desk_y, self.desk_z) = fit["chair"], fit["desk"]
+        self.door_cfg, self.door, self.handle = door, None, None
+        self.chair = empty("chair", None, (0, chair_out, 0))  # the chair moves as one: pulled out, pulled in
         p = {"wall": "#A9B3BD", "wall2": "#909DAA", "floor": "#8A6B55", "desk": "#9C7552", "accent1": "#2E73B8",
              "accent2": "#F2C230", "rug": "#B25570", **(palette or {})}
         self.cfg = {**SCREEN_DEFAULTS, **(screen or {})}
@@ -67,7 +74,10 @@ class DeskRoom:
         M = self.m
         if self.walls:
             box("floor", (10, 10, 0.02), M["floor"], loc=(0, 0, -0.01))
-            box("wall_back", (10, 0.1, 4), M["wall"], loc=(0, 3, 2))
+            if self.door_cfg:
+                self._door(M)
+            else:
+                box("wall_back", (10, 0.1, 4), M["wall"], loc=(0, 3, 2))
             box("wall_front", (10, 0.1, 4), M["wall2"], loc=(0, -4.6, 2))
             box("wall_left", (0.1, 10, 4), M["wall2"], loc=(-4.2, 0, 2))
             box("wall_right", (0.1, 10, 4), M["wall"], loc=(4.2, 0, 2))
@@ -79,27 +89,92 @@ class DeskRoom:
             box("poster1", (0.8, 0.02, 1.0), M["poster1"], loc=(-1.3, 2.94, 1.9), bevel=0.01)
             box("poster2", (0.55, 0.02, 0.7), M["poster2"], loc=(1.25, 2.94, 2.0), bevel=0.01)
             cyl("rug", 1.4, 0.01, M["rug"], loc=(0, -0.3, 0.005), seg=48)
-        box("desk_top", (1.7, 0.8, 0.05), M["wood"], loc=(0, -0.75, 0.875), bevel=0.01)
+        Y, Z, C = self.desk_y, self.desk_z, self.chair_z
+        self.desk_top = box("desk_top", (1.7, 0.8, 0.05), M["wood"], loc=(0, -0.75 + Y, 0.875 + Z), bevel=0.01)
         for x in (-0.8, 0.8):
             for y in (-0.4, -1.1):
-                cyl("desk_leg", 0.03, 0.85, M["metal"], loc=(x, y, 0.425))
-        cyl("pot", 0.07, 0.12, M["pot"], loc=(0.66, -0.88, 0.96))
+                cyl("desk_leg", 0.03, 0.85 + Z, M["metal"], loc=(x, y + Y, 0.425 + Z / 2))
+        cyl("pot", 0.07, 0.12, M["pot"], loc=(0.66, -0.88 + Y, 0.96 + Z))
         for i, (dx, dy, dz, r) in enumerate([(0, 0, .1, .08), (.05, .03, .16, .06), (-.05, -.02, .15, .065), (0, .05, .21, .05)]):
-            sphere(f"leaf{i}", r, M["leaf"], loc=(0.66 + dx, -0.88 + dy, 0.96 + dz), seg=16)
-        cyl("mug", 0.045, 0.1, M["mug"], loc=(-0.5, -0.52, 0.95))
-        cyl("coffee", 0.04, 0.002, M["coffee"], loc=(-0.5, -0.52, 0.997))
-        box("seat", (0.52, 0.5, 0.07), M["chair"], loc=(0, 0.05, 0.5), bevel=0.02)
-        box("chair_back", (0.5, 0.06, 0.6), M["chair"], loc=(0, 0.34, 0.86), rot=(R(-8), 0, 0), bevel=0.02)
-        cyl("chair_post", 0.03, 0.45, M["metal"], loc=(0, 0.05, 0.24))
-        box("chair_base", (0.5, 0.05, 0.03), M["metal"], loc=(0, 0.05, 0.03))
-        box("chair_base2", (0.05, 0.5, 0.03), M["metal"], loc=(0, 0.05, 0.03))
+            sphere(f"leaf{i}", r, M["leaf"], loc=(0.66 + dx, -0.88 + dy + Y, 0.96 + dz + Z), seg=16)
+        cyl("mug", 0.045, 0.1, M["mug"], loc=(-0.5, -0.52 + Y, 0.95 + Z))
+        cyl("coffee", 0.04, 0.002, M["coffee"], loc=(-0.5, -0.52 + Y, 0.997 + Z))
+        ch = self.chair
+        self.seat = box("seat", (0.52, 0.5, 0.07), M["chair"], ch, (0, 0.05, 0.5 + C), bevel=0.02)
+        self.chair_back = box("chair_back", (0.5, 0.06, 0.6), M["chair"], ch, (0, 0.34, 0.86 + C), (R(-8), 0, 0), bevel=0.02)
+        cyl("chair_post", 0.03, 0.45 + C, M["metal"], ch, (0, 0.05, 0.24 + C / 2))
+        box("chair_base", (0.5, 0.05, 0.03), M["metal"], ch, (0, 0.05, 0.03))
+        box("chair_base2", (0.05, 0.5, 0.03), M["metal"], ch, (0, 0.05, 0.03))
+
+    def _door(self, M):
+        """A doorway in the back wall (the one behind the desk chair), as tall and with its handle as high as
+        the spec says (compile.py sizes both from the character), a leaf that swings into the room, and a dim
+        hall behind it."""
+        d = self.door_cfg
+        x, w, h, hz = d.get("x", 2.6), d["width"], d["height"], d["handle"]
+        left, right = x - w / 2, x + w / 2
+        # No face of the wall lies in a face of the frame, or of another piece of wall: two faces in one plane
+        # take turns being drawn as the camera moves, and the strip flickers. So the wall stops inside the frame
+        # (`e` past its inner face), and the hall's floor starts where the room's ends.
+        e = 0.02
+        box("wall_back", (left - e + 5, 0.1, 4), M["wall"], loc=((left - e - 5) / 2, 3, 2))
+        box("wall_back_r", (5 - right - e, 0.1, 4), M["wall"], loc=((right + e + 5) / 2, 3, 2))
+        box("wall_back_top", (w + 2 * e, 0.1, 4 - h - e), M["wall"], loc=(x, 3, (4 + h + e) / 2))
+        hall = mat("hall", (0.2, 0.19, 0.18), 0.9)
+        box("hall_floor", (3, 0.3, 0.02), M["floor"], loc=(x, 5.15, -0.01))
+        for size, at in (((3, 0.1, 4), (x, 5.2, 2)), ((0.1, 2.2, 4), (x - 1.5, 4.1, 2)), ((0.1, 2.2, 4), (x + 1.5, 4.1, 2)),
+                         ((3, 2.2, 0.1), (x, 4.1, 4))):
+            box("hall_wall", size, hall, loc=at)
+        # a hall is dimmer than the room, not black: whoever stands in the doorway keeps their outline
+        area_light("hall_light", (x, 4.2, 3.6), 40, 1.2, (1, 0.86, 0.7), empty("hall_aim", None, (x, 4.0, 0)))
+        trim = mat("door_trim", (0.93, 0.92, 0.88), 0.5)
+        for size, at in (((0.07, 0.14, h), (left - 0.035, 3, h / 2)), ((0.07, 0.14, h), (right + 0.035, 3, h / 2)),
+                         ((w + 0.14, 0.14, 0.07), (x, 3, h + 0.035))):
+            box("door_frame", size, trim, loc=at)
+        # hinged on the side nearer the corner, so the leaf opens against the wall and not across the room. The
+        # pivot is the leaf's own corner on the room side, as a hinge is: open, the leaf stands clear of the frame
+        side = 1 if x > 0 else -1
+        self.door = empty("door", None, (x + side * (w / 2 - 0.01), 2.925, 0))
+        leaf = mat("door_leaf", d.get("color", "#D8D2C4"), 0.55)
+        self.leaf = box("door_leaf", (w - 0.02, 0.05, h - 0.02), leaf, self.door, (-side * (w / 2 - 0.01), 0.025, h / 2),
+                        bevel=0.008)
+        # the handles stand far enough off the leaf for fingers to close round the bar
+        off = d.get("handle_off", 0.07)
+        self.handle = empty("handle", self.door, (-side * (w - 0.13), -off, hz))
+        cyl("handle_stem", 0.012, off, M["metal"], self.handle, (0, off / 2, 0), (R(90), 0, 0))
+        box("handle_bar", (0.13, 0.022, 0.022), M["metal"], self.handle, (side * 0.05, 0, 0), bevel=0.006)
+        # the same handle on the hall side, for whoever comes in
+        self.handle_out = empty("handle_out", self.door, (-side * (w - 0.13), 0.05 + off, hz))
+        cyl("handle_stem", 0.012, off, M["metal"], self.handle_out, (0, -off / 2, 0), (R(90), 0, 0))
+        box("handle_bar", (0.13, 0.022, 0.022), M["metal"], self.handle_out, (side * 0.05, 0, 0), bevel=0.006)
+        self.door_side = side
+
+    def handle_for(self, point):
+        """The door handle on the side of the door a point in the room is on: the one a hand there would take."""
+        return min((self.handle, self.handle_out), key=lambda h: (h.matrix_world.translation - Vector(point)).length)
+
+    def bar_of(self, handle) -> Vector:
+        """The middle of a handle's bar, in the room, now: where a hand takes hold of it."""
+        return handle.matrix_world @ Vector((self.door_side * 0.05, 0, 0))
+
+    def open_door(self, f0: int, f1: int, angle: float = 100.0):
+        """The door swings into the room (0 shuts it again)."""
+        if not self.door:
+            raise ValueError('this set has no door: give the set "door": {}')
+        tween(self.door, "rotation_euler", f0, f1, (0, 0, R(angle) * self.door_side))
+        self.events.append({"frame": f0, "kind": "door_open" if angle else "door_close"})
+
+    def move_chair(self, f0: int, f1: int, out: float):
+        tween(self.chair, "location", f0, f1, (0, out, 0))
+        self.events.append({"frame": f0, "kind": "chair"})
 
     def _laptop(self):
         M = self.m
-        box("lap_base", (0.5, 0.34, 0.022), M["silver"], loc=(0, -0.6, 0.911), bevel=0.005)
-        box("lap_keys", (0.44, 0.15, 0.004), M["keys"], loc=(0, -0.665, 0.923))
-        box("lap_pad", (0.14, 0.08, 0.002), M["keys"], loc=(0, -0.49, 0.923))
-        self.hinge = h = empty("hinge", None, (0, -0.77, 0.922), (R(15), 0, 0))
+        Y, Z = self.desk_y, self.desk_z
+        self.lap_base = box("lap_base", (0.5, 0.34, 0.022), M["silver"], loc=(0, -0.6 + Y, 0.911 + Z), bevel=0.005)
+        box("lap_keys", (0.44, 0.15, 0.004), M["keys"], loc=(0, -0.665 + Y, 0.923 + Z))
+        box("lap_pad", (0.14, 0.08, 0.002), M["keys"], loc=(0, -0.49 + Y, 0.923 + Z))
+        self.hinge = h = empty("hinge", None, (0, -0.77 + Y, 0.922 + Z), (R(15), 0, 0))
         hw, z0, z1 = self.sw / 2, 0.015, 0.015 + self.sh
         self.lid = box("lid", (0.5, 0.014, self.sh + 0.03), M["silver"], h, (0, 0, (self.sh + 0.03) / 2), bevel=0.004)
         cyl("sticker", 0.04, 0.002, M["sticker"], h, (0.09, -0.0075, 0.2 * self.sh / 0.3), (R(90), 0, 0))
@@ -151,7 +226,18 @@ class DeskRoom:
 
     # ------------------------------------------------------------ anchors / checks
     def anchors(self) -> dict:
-        return {"screen": tuple(self.screen_center()), "desk": (0, -0.75, 0.9)}
+        return {"screen": tuple(self.screen_center()), "desk": (0, -0.75 + self.desk_y, 0.9 + self.desk_z)}
+
+    def desk_edge(self, s) -> Vector:
+        """Where a hand takes hold of the desk to pull a chair in: on top, just in from the near edge, to the
+        left (s = 1) or right of whoever sits at it."""
+        return Vector((0.3 * s, -0.35 + self.desk_y - 0.06, 0.9 + self.desk_z))
+
+    def solids(self) -> list:
+        """What a body should not pass through, each with how far it may be pressed into (m): the seat is a
+        cushion, the rest is hard."""
+        out = [(self.seat, 0.03), (self.chair_back, 0.02), (self.desk_top, 0.0), (self.lap_base, 0.0), (self.lid, 0.0)]
+        return out + ([(self.leaf, 0.0)] if self.door else [])
 
     def screen_center(self) -> Vector:
         return self.hinge.matrix_world @ Vector((0, 0.008, 0.015 + self.sh / 2))
@@ -208,14 +294,14 @@ class DeskRoom:
         self.events.append({"frame": f, "kind": "success"})
 
 
-def confetti(f: int, count: int = 60, seed: int = 7, colors=None):
+def confetti(f: int, count: int = 60, seed: int = 7, colors=None, desk=(0.0, 0.0)):
     rng = random.Random(seed)
     mats = [mat(f"conf{i}", c, 0.4, emit=0.8) for i, c in enumerate(
         colors or [(1, .3, .3), (.3, .8, 1), (1, .85, .2), (.4, 1, .5), (.9, .4, 1)])]
     for i in range(count):
         c = box(f"confetti{i}", (0.035, 0.004, 0.05), mats[i % len(mats)])
         x, y, f0 = rng.uniform(-1.3, 1.3), rng.uniform(-1.4, 0.6), f + n(rng.randint(0, 10)) - n(4)
-        land = 0.905 if (-1.15 < y < -0.35 and abs(x) < 0.85) else 0.01
+        land = 0.905 + desk[1] if (-1.15 < y - desk[0] < -0.35 and abs(x) < 0.85) else 0.01
         key(c, "scale", f0 - 1, (0, 0, 0))
         key(c, "scale", f0, (1, 1, 1))
         key(c, "location", f0, (x, y, 3.3))

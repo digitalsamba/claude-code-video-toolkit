@@ -264,7 +264,8 @@ def check(args) -> int:
         shot["problems"] = problems
         note = describe_fix(shot) if shot["adjusted"] else ""
         sheet_rows.append((f"{shot['id']} ({shot['type']}) {note}".strip(), png, problems))
-    checks["passed"] = all(s["passed"] for s in checks["shots"]) and checks["ik_max_error_m"] < 0.01
+    checks["passed"] = (all(s["passed"] for s in checks["shots"]) and checks["ik_max_error_m"] < 0.01
+                        and not checks.get("body_problems") and not checks.get("set_problems"))
     checks["contact_sheet"] = str(out / "contact_sheet.png")
     contact_sheet(sheet_rows, out / "contact_sheet.png")
     write_json(out / "checks.json", checks)
@@ -284,6 +285,10 @@ def check(args) -> int:
             for p in s["problems"]:
                 print(f"        - {p}")
         print(f"  IK reach error: {checks['ik_max_error_m'] * 1000:.1f} mm (limit 10 mm)")
+        for p in checks.get("body_problems", []):  # contact: feet on the floor, hands on things, nothing passed through
+            print(f"  FAIL  {p}")
+        for p in checks.get("set_problems", []):  # the set itself: faces in one plane, which flicker
+            print(f"  FAIL  {p}")
         print(f"  contact sheet: {checks['contact_sheet']}")
         print("PASSED" if checks["passed"] else "FAILED")
     return 0 if checks["passed"] else 1
@@ -333,6 +338,94 @@ def encode_clips(out: Path, checks: dict, wanted: list[str], prores: bool, sound
             entry["sound"] = f"{sid}.wav"
         made.append(entry)
     return made
+
+
+FLICKER_LEVELS = 4.0  # a still point brighter or darker than the frames either side of it by this (0-255)
+FLICKER_COUNT = 5     # this many such frames on one object in a shot is flicker; fewer is noted, not failed (a
+                      # hand's reflection crossing a laptop, a shadow passing, change a point for a frame or two)
+
+
+def gray_frames(video: Path, size: tuple[int, int]):
+    """The frames of a video as luma arrays, one at a time."""
+    import numpy as np
+    w, h = size
+    proc = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-i", str(video), "-f", "rawvideo", "-pix_fmt", "gray",
+                             "-s", f"{w}x{h}", "-"], stdout=subprocess.PIPE)
+    try:
+        while True:
+            buf = proc.stdout.read(w * h)
+            if len(buf) < w * h:
+                return
+            yield np.frombuffer(buf, dtype=np.uint8).reshape(h, w).astype(np.float32)
+    finally:
+        proc.stdout.close()
+        proc.wait()
+
+
+def flicker(out: Path, videos: dict, size: tuple[int, int]) -> list[dict]:
+    """Flicker in rendered video: `check` knows which points of the set stand still and where each is in every
+    frame (still_points.json, written at render); a still surface's brightness changes smoothly or not at all,
+    so a point that jumps for one frame and comes back is flicker (two faces in one plane, light noise).
+    `videos` maps a shot id to (file, the frame number of its first frame). Returns one finding per object and
+    shot: {"object", "shot", "frames", "worst", "at"}."""
+    points = json.loads((out / "still_points.json").read_text())
+    w, h = size
+    found = []
+    for sid, (video, first) in videos.items():
+        shot = points["shots"].get(sid)
+        if not shot or not Path(video).exists():
+            continue
+        f0, f1 = shot["frames"]
+        by_frame = {}
+        for row in shot["points"]:
+            by_frame.setdefault(row[0], []).append(row)
+
+        def level(im, x, y):
+            px, py = min(w - 3, max(2, int(x * w))), min(h - 3, max(2, int(y * h)))
+            return float(im[py - 2:py + 3, px - 2:px + 3].mean())
+
+        spikes, window = {}, {}
+        for i, im in enumerate(gray_frames(Path(video), size)):
+            f = first + i
+            if f > f1 + 1:
+                break
+            window[f] = im
+            window.pop(f - 3, None)
+            mid = f - 1  # the frame with a neighbour on each side now
+            if mid - 1 not in window:
+                continue
+            for _f, k, x, y, xa, ya, xb, yb in by_frame.get(mid, ()):
+                a, b, c = level(window[mid - 1], xa, ya), level(window[mid], x, y), level(window[f], xb, yb)
+                jump = min(abs(b - a), abs(b - c)) if (b - a) * (b - c) > 0 else 0.0
+                if jump >= FLICKER_LEVELS:
+                    spikes.setdefault(points["objects"][k], {}).setdefault(mid, 0.0)
+                    spikes[points["objects"][k]][mid] = max(spikes[points["objects"][k]][mid], jump)
+        for name, frames in spikes.items():
+            if len(frames) >= 2:
+                worst = max(frames, key=frames.get)
+                found.append({"object": name, "shot": sid, "frames": sorted(frames), "worst": round(frames[worst], 1),
+                              "at": worst, "fails": len(frames) >= FLICKER_COUNT})
+    return sorted(found, key=lambda r: -len(r["frames"]))
+
+
+def report_flicker(out: Path, videos: dict, size) -> bool:
+    """Measure, print and save (render_checks.json); True when the render is clean."""
+    if not (out / "still_points.json").exists():
+        return True
+    found = flicker(out, videos, size)
+    failed = [r for r in found if r["fails"]]
+    write_json(out / "render_checks.json", {"passed": not failed, "flicker": failed,
+                                            "flicker_notes": [r for r in found if not r["fails"]]})
+    for r in failed:
+        print(f"  FAIL  {r['object']} flickers in {r['shot']}: {len(r['frames'])} frames jump and come back (worst "
+              f"{r['worst']:.0f} levels at frame {r['at']}). Two faces in one plane, or light noise: see docs/blender.md")
+    for r in found:
+        if not r["fails"]:
+            print(f"  note  {r['object']} in {r['shot']}: {len(r['frames'])} frames jump (worst {r['worst']:.0f} levels at "
+                  f"frame {r['at']}): look if it is not a reflection or a shadow passing")
+    if not failed:
+        print("  no flicker: every still surface the cameras see changes smoothly")
+    return not failed
 
 
 def render(args) -> int:
@@ -385,7 +478,10 @@ def render(args) -> int:
         print(f"rendered {len(made)} clip(s) to {dest} ({total} frames in {rate})")
         for c in made:
             print(f"  {c['file']:<24} {c['frames']} frames, {c['seconds']}s" + (f", sound {c['sound']}" if c.get("sound") else ""))
-        return 0
+        starts = {s["id"]: s["frames"][0] for s in checks["shots"]}
+        clean = report_flicker(out, {c["id"]: (out / "clips" / c["file"], starts[c["id"]]) for c in made},
+                               tuple(checks["resolution"]))
+        return 0 if clean else 1
     final = out / f"{spec.stem if spec.stem != 'spec' else spec.parent.name}.mp4"  # a folder may be called v1.2
     heard = json.loads((out / "events.json").read_text(encoding="utf-8"))
     if args.no_sound or not (heard["events"] or heard["score"]):
@@ -399,7 +495,8 @@ def render(args) -> int:
         ffmpeg("-i", out / "silent.mp4", "-i", out / "sound.wav", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
                "-shortest", final)
     print(f"rendered {final} ({total} frames in {rate})")
-    return 0
+    clean = report_flicker(out, {s["id"]: (out / "silent.mp4", 1) for s in checks["shots"]}, tuple(checks["resolution"]))
+    return 0 if clean else 1
 
 
 def open_scene(args) -> int:
@@ -411,6 +508,31 @@ def open_scene(args) -> int:
             return code
     subprocess.Popen([find_blender(), str(blend)])
     print(f"opened {blend} (a copy to look at: it is rebuilt from the spec on every run, so change the spec)")
+    return 0
+
+
+def fit(args) -> int:
+    """Bind a generated character model to the cast's rig (lib/blender/fit_model.py), and say what it made."""
+    model, fit_json, out = Path(args.model), Path(args.fit), Path(args.out)
+    for path in (model, fit_json):
+        if not path.exists():
+            print(f"not found: {path}")
+            return 2
+    cmd = [find_blender(), "-b", "-noaudio", "-P", str(ROOT / "lib" / "blender" / "fit_model.py"), "--",
+           "--model", str(model), "--fit", str(fit_json), "--out", str(out)]
+    if args.preview:
+        Path(args.preview).mkdir(parents=True, exist_ok=True)
+        cmd += ["--preview", args.preview]
+    done = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    lines = [ln for ln in done.stdout.splitlines() if ln.startswith(("fit:", "FIT "))]
+    print("\n".join(lines))
+    if not any(ln.startswith("FIT ") for ln in lines):
+        print((done.stdout + done.stderr)[-1500:])
+        return 2
+    if any(" FAIL " in ln for ln in lines):
+        return 1
+    print(f'fitted: name it in a character file with "model": "{out.name}"'
+          + (f", and look at {args.preview}/fit-front.png" if args.preview else ""))
     return 0
 
 
@@ -492,6 +614,11 @@ def main():
     o = sub.add_parser("open", help="open the built scene in Blender to look round it")
     o.add_argument("spec")
     o.add_argument("--out")
+    f = sub.add_parser("fit", help="experimental: bind a generated 3D character (GLB) to the cast's rig")
+    f.add_argument("--model", required=True, help="one textured mesh, standing in an A-pose, facing -Y")
+    f.add_argument("--fit", required=True, help="fit.json: its joints, clothes line and face (docs/blender.md)")
+    f.add_argument("--out", required=True, help="the fitted .blend, named by a character file's \"model\"")
+    f.add_argument("--preview", help="folder for three stills of the fitted model")
     d = sub.add_parser("doctor", help="check Blender, ffmpeg and Pillow, and time a test render")
     d.add_argument("spec", nargs="?", help="spec to time (default: examples/blender-disk-panic)")
     d.add_argument("--res")
@@ -501,7 +628,7 @@ def main():
     args = ap.parse_args()
     if args.cmd == "render" and not args.clips and (args.shots or args.to or args.prores or args.alpha):
         ap.error("--alpha, --shots, --to and --prores need --clips (a film is one opaque MP4)")
-    sys.exit({"check": check, "render": render, "open": open_scene, "doctor": doctor}[args.cmd](args))
+    sys.exit({"check": check, "render": render, "open": open_scene, "doctor": doctor, "fit": fit}[args.cmd](args))
 
 
 if __name__ == "__main__":

@@ -25,6 +25,7 @@ import math
 import random
 
 import bpy
+import numpy as np
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
@@ -41,6 +42,14 @@ SHOT_TYPES = {
     "side":          dict(target=(0, -0.4, 1.25), dist=2.32, az=-88, h=0.2, lens=40, push=0.04, check="face"),
     "over_shoulder": dict(target=(0, 0, 0), dist=1.58, az=-52, h=0.82, lens=45, push=0.08, check="screen", dof=3.5),
     "insert":        dict(target=(0, 0, 0), dist=1.27, az=-51, h=0.5, lens=50, push=0.1, check="screen", dof=3.5),
+    # a character on their feet. `body` aims at that share of their height; `floor` measures the target from the
+    # floor and not from the seated chest; `follow` keeps the camera with them as they walk
+    "full":          dict(target=(0, 0, 0), body=0.5, dist=4.7, az=-24, h=0.25, lens=28, push=0.04, check="body"),
+    "feet":          dict(target=(0, -0.1, 0.14), floor=True, dist=1.9, az=-38, h=0.22, lens=50, push=0.0,
+                          check="feet", follow=True),
+    # starts on the feet and tilts up to the face: hold (seconds) at each end
+    "tilt_up":       dict(target=(0, -0.05, 0.14), floor=True, tilt=True, dist=3.4, az=-14, h=0.75, lens=40, push=0.0,
+                          hold=0.5, check="face"),
     # moves from/to the screen filling the frame: az/elev (degrees) and dist (m) are the far end, hold in seconds
     "screen_fill":   dict(move="fill", lens=28, check="screen"),
     "pull_out":      dict(move="out", lens=28, az=-78, elev=20, dist=2.6, hold=0.4, aim=(0.55, 0.3), check="screen"),
@@ -55,6 +64,9 @@ READABLE_DEG = 60  # a screen turned further than this from the lens is not bein
 # tried in order until one passes: (swing degrees, extra height m, distance factor)
 CANDIDATES = [(0, 0, 1), (0, 0, 1.15), (12, 0, 1), (-12, 0, 1), (24, 0, 1), (-24, 0, 1), (0, 0.3, 1), (12, 0.3, 1),
               (-12, 0.3, 1), (0, 0, 1.3), (36, 0, 1), (-36, 0, 1), (24, 0, 1.15), (-24, 0, 1.15), (0, 0.6, 1)]
+# someone on their feet can face any way, anywhere in a room: further round, for when a wall is in the way
+CANDIDATES_ROUND = CANDIDATES + [(a * sg, h, 1) for h in (0, 0.4) for a in (48, 72, 96, 120, 150) for sg in (1, -1)] \
+    + [(180, 0, 1), (60, 0, 0.8), (-60, 0, 0.8), (120, 0, 0.8), (-120, 0, 0.8), (180, 0, 0.8)]
 BLOCKED_LIMIT = 2  # key points hidden behind something else before a view counts as blocked
 MARGIN = 0.03
 NEAR_SCREEN = 0.78  # a move is not checked closer to the screen than this (m)
@@ -71,8 +83,26 @@ class Subject:
 
 
 def character_subject(person):
-    return Subject("character", (0, 0, 0), (0, -1, 0), person.face_points, person.frame_points,
-                   person.visible_objects(), person.head)
+    # shot types are placed for the clay cast sitting: someone who sits lower is filmed that much lower
+    sub = Subject("character", (0, 0, -person.drop), (0, -1, 0), person.face_points, person.frame_points,
+                  person.visible_objects(), person.head)
+    sub.person = person
+    return sub
+
+
+CLAY_HEAD = 1.72  # how high the clay cast's head is, sitting: the shots' targets are set from it
+
+
+def _standing_at(person, f):
+    """Where a character whose legs are under control is at a frame: the spot on the floor under them, lifted by
+    as much as they are above their chair (cameras are placed for someone sitting), and the way they face."""
+    bpy.context.scene.frame_set(f)
+    bpy.context.view_layer.update()
+    m = person.root.matrix_world
+    yaw = m.to_euler().z
+    rise = person.hips.location.z - person.seat_h
+    return (Vector((m.translation.x, m.translation.y, rise - person.drop)),
+            Vector((math.sin(yaw), -math.cos(yaw), 0)))
 
 
 def screen_subject(room):
@@ -334,29 +364,80 @@ def solve(shot, sub, f0, f1, seed=0, fps=24, avoid=()):
         spec["az"] = -abs(spec["az"])
     elif shot.get("side") == "left":
         spec["az"] = abs(spec["az"])
-    target = sub.origin + Vector(spec["target"])
+    person = getattr(sub, "person", None)
+    moving = person is not None and bool(person.foot_t)  # legs under control: they may be anywhere, facing any way
+    follow = moving and bool(shot.get("follow", spec.get("follow")))
+    if spec["check"] in ("body", "feet") or spec.get("floor") or spec.get("body"):
+        if not moving:
+            raise ValueError(f'shot {shot["id"]}: {shot["type"]} films someone on their feet: give the cast member '
+                             f'"posture": "stand", or a stand_up beat')
+    front, shift = sub.front, lambda f: Vector((0, 0, 0))  # noqa: E731
+    if moving:
+        mid = (f0 + f1) // 2
+        origin, front = _standing_at(person, mid)
+        tx, ty, tz = spec["target"]
+        left = Vector((-front.y, front.x, 0))
+        target = origin + left * tx - front * ty + Vector((0, 0, tz))
+        if spec.get("floor"):
+            target.z = tz
+        elif person.desc.get("model") and spec["check"] in ("face", "head"):
+            # (a fitted body has its own proportions: its head is not where the clay cast's would be on legs as
+            # long, so the shot aims as far from its own head as the clay cast's shots aim from the clay head)
+            target.z = person.head.matrix_world.translation.z + tz - CLAY_HEAD
+        elif spec.get("body"):
+            target.z = spec["body"] * (person.head.matrix_world.translation.z + person.head_r)
+        if spec["check"] in ("body", "feet"):
+            pts = person.feet_points if spec["check"] == "feet" else lambda: person.feet_points() + person.face_points()
+            sub = Subject(sub.kind, origin, front, pts, pts, sub.visible, sub.focus)
+        if follow:  # the camera and its aim travel with the spot under them (not with the bob of the walk)
+            # ... and not with each step either: the spot's path is smoothed over about a second, so the camera
+            # glides and the walker moves a little in the frame, as one does in front of an operator
+            spots = {f: _standing_at(person, f)[0] for f in range(f0, f1 + 1)}
+            for _ in range(2):
+                w = max(1, round(fps * 0.3))
+                spots = {f: sum((spots[min(f1, max(f0, g))] for g in range(f - w, f + w + 1)), Vector()) / (2 * w + 1)
+                         for f in spots}
+            shift = lambda f: Vector((spots[f].x - origin.x, spots[f].y - origin.y, 0))  # noqa: E731
+    else:
+        target = sub.origin + Vector(spec["target"])
     cd = D.cameras.new(shot["id"])
     cd.lens, cd.clip_start = spec["lens"], 0.05
     if spec.get("dof"):
         cd.dof.use_dof, cd.dof.focus_object, cd.dof.aperture_fstop = True, sub.focus, spec["dof"]
     cam = link(D.objects.new(shot["id"], cd))
-    cam.constraints.new("TRACK_TO").target = empty(shot["id"] + "_tgt", None, target)
+    aim = empty(shot["id"] + "_tgt", None, target)
+    cam.constraints.new("TRACK_TO").target = aim
     frames = [f0 + 1, (f0 + f1) // 2, f1 - 1]
     push = spec["push"]
+    if follow:
+        for f in range(f0, f1 + 1):
+            key(aim, "location", f, target + shift(f))
+    elif spec.get("tilt"):  # the aim climbs from the feet to the face; the picture is judged where it ends
+        hold = min(round(spec["hold"] * fps), (f1 - f0) // 3)
+        bpy.context.scene.frame_set(f1)
+        bpy.context.view_layer.update()
+        face = person.head.matrix_world.translation.copy()
+        key(aim, "location", f0, target)
+        key(aim, "location", f0 + hold, target)
+        key(aim, "location", f1 - hold, face)
+        key(aim, "location", f1, face)
+        frames = [f1 - 1]
+    if shot.get("reveal"):  # the subject comes into view during the shot (through a door): judged where it ends
+        frames = [f1 - 1]
 
     def placer(daz, dh, back=1.0):
-        off = _offset(sub.front, spec["az"] + daz, spec["dist"] * back)
+        off = _offset(front, spec["az"] + daz, spec["dist"] * back)
         z = spec["h"] + dh
 
         def place(f):
             t = (f - f0) / max(1, f1 - f0)
             o = off * (1 - push * t)
-            return target + Vector((o.x, o.y, z * (1 - push * t)))
+            return target + Vector((o.x, o.y, z * (1 - push * t))) + shift(f)
         return place
 
     report = {"id": shot["id"], "type": shot["type"], "frames": [f0, f1]}
     best = None
-    for daz, dh, back in CANDIDATES:
+    for daz, dh, back in CANDIDATES_ROUND if moving and spec["check"] != "screen" else CANDIDATES:
         issues = _check(cam, sub, frames, placer(daz, dh, back), spec["check"])
         if best is None or len(issues) < len(best[3]):
             best = (daz, dh, back, issues)
@@ -370,9 +451,175 @@ def solve(shot, sub, f0, f1, seed=0, fps=24, avoid=()):
     place = placer(daz, dh, back)
     key(cam, "location", f0, place(f0))
     key(cam, "location", f1, place(f1))
+    if follow:
+        for f in range(f0 + 1, f1):
+            key(cam, "location", f, place(f))
     shake = shot.get("shake", 0.0)
     if shake:
         rng = random.Random(seed)
         for f in ticks(f0 + n(3), f1, 3):
             key(cam, "location", f, place(f) + Vector([rng.uniform(-shake, shake) for _ in range(3)]))
     return cam, report
+
+
+# ---------------------------------------------------------------- surfaces
+def _flat_faces(o, cache={}):
+    """An object's flat faces, in its own space: (normal, corners) for each face of a square centimetre or more."""
+    if o.data.name not in cache:
+        cache[o.data.name] = [(pl.normal.copy(), [o.data.vertices[i].co.copy() for i in pl.vertices])
+                              for pl in o.data.polygons if pl.area > 1e-4]
+    return cache[o.data.name]
+
+
+def _inside(p, corners, normal, slack=1e-4):
+    k = len(corners)
+    return all((corners[(i + 1) % k] - corners[i]).cross(p - corners[i]).dot(normal) > slack for i in range(k))
+
+
+def fighting(cams, every: int = 4, gap: float = 0.0002) -> list:
+    """Pairs of objects with faces in one plane that a camera sees: the renderer draws one or the other from
+    frame to frame, so the strip flickers as the camera or the object moves (z-fighting). Faces are grouped by
+    the plane they lie in; where two objects' faces face the same way within `gap` of each other and overlap,
+    and a shot's lens sees the overlap, the two fight (`gap` is under the 0.4 mm that screen graphics are layered
+    by, which render clean). Returns [{"a", "b", "shot", "frame", "points"}]."""
+    sc = bpy.context.scene
+    solid = [o for o in sc.objects if o.type == "MESH" and not o.hide_render
+             and not any(m.type == "ARMATURE" for m in o.modifiers)]
+    found = {}
+    for f0, f1, cam in cams:
+        for f in range(f0, f1 + 1, every):
+            sc.frame_set(f)
+            dg = bpy.context.evaluated_depsgraph_get()
+            origin = cam.matrix_world.translation
+            planes = {}
+            for o in solid:
+                mw = o.matrix_world
+                if abs(mw.determinant()) < 1e-9:  # scaled to nothing: a hidden mouth shape
+                    continue
+                rot = mw.to_3x3().inverted().transposed()
+                for nor, corners in _flat_faces(o):
+                    wn = (rot @ nor).normalized()
+                    wc = [mw @ c for c in corners]
+                    d = wn.dot(wc[0])
+                    key = (round(wn.x, 2), round(wn.y, 2), round(wn.z, 2))
+                    planes.setdefault(key, []).append((d, o, wn, wc))
+            for faces in planes.values():
+                faces.sort(key=lambda r: r[0])
+                for i, (d, o, wn, wc) in enumerate(faces):
+                    # (a graphic that pops up is layered by a set share of its size, and stays layered while it
+                    # is scaled small: the gap that counts shrinks with the face)
+                    near = min(gap, 0.0005 * max((a - b).length for a in wc for b in wc))
+                    for d2, o2, wn2, wc2 in faces[i + 1:]:
+                        if d2 - d > near:
+                            break
+                        if o2 is o or wn.dot(wn2) < 0.9995:
+                            continue
+                        if [m.material for m in o.material_slots] == [m.material for m in o2.material_slots]:
+                            continue  # (two bars of one window frame: the same surface either way)
+                        mid, mid2 = sum(wc, Vector()) / len(wc), sum(wc2, Vector()) / len(wc2)
+                        shared = [p for c, m, other, on in ((wc, mid, wc2, wn2), (wc2, mid2, wc, wn))
+                                  for p in [m] + [m + (v - m) * t for v in c for t in (0.5, 0.9)]
+                                  if _inside(p, other, on)]
+                        seen = 0
+                        for p in shared:
+                            way = p - origin
+                            v = world_to_camera_view(sc, cam, p)
+                            if v.z <= 0 or not (0 <= v.x <= 1 and 0 <= v.y <= 1):
+                                continue
+                            hit, at, _n, _i, _ob, _m = sc.ray_cast(dg, origin, way.normalized(), distance=way.length + 0.01)
+                            seen += bool(hit and (at - p).length < 0.002)
+                        if seen:
+                            pair = tuple(sorted((o.name, o2.name)))
+                            rec = found.setdefault(pair, {"a": pair[0], "b": pair[1], "shot": cam.name, "frame": f,
+                                                          "points": 0})
+                            rec["points"] += seen
+    return sorted(found.values(), key=lambda r: -r["points"])
+
+
+LIMB_NEAR = 0.3  # a moving part of a character this near a still point puts its shadow on it (m)
+
+
+def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pixels: float = 0.002) -> dict:
+    """Points on flat surfaces, and where each is in the picture on every frame it is seen and standing still
+    (the frame before and after too). A render's pixels at such a point change smoothly or not at all: a jump
+    for one frame is flicker. `blender_render.py` reads this beside the clips it has rendered.
+
+    A point counts only where the surface is flat for `flat` metres round it, and on frames where that patch is
+    in clear view and at least `pixels` of the picture's width across: the reader averages a few pixels, and an
+    edge, a thin leg or something passing in front would look like a jump. A point is also left out on frames
+    when part of a character is moving within `LIMB_NEAR` of it: fingers passing over a desk put a shadow on a
+    point for one frame and take it off the next, which is the picture changing and not flicker."""
+    sc = bpy.context.scene
+    pts = []
+    for o in sc.objects:
+        if o.type != "MESH" or o.hide_render or any(m.type == "ARMATURE" for m in o.modifiers):
+            continue
+        lo = Vector(tuple(min(c[i] for c in o.bound_box) for i in range(3)))
+        hi = Vector(tuple(max(c[i] for c in o.bound_box) for i in range(3)))
+        size = hi - lo
+        if max(size) < 0.05:
+            continue
+        for ax in range(3):
+            u, v = (i for i in range(3) if i != ax)
+            if size[u] < 3 * flat or size[v] < 3 * flat:
+                continue
+            nu, nv = (max(1, min(most, int(size[k] / step))) for k in (u, v))
+            for side in (0, 1):
+                for i in range(nu):
+                    for j in range(nv):
+                        p = Vector((0, 0, 0))
+                        p[ax] = hi[ax] if side else lo[ax]
+                        p[u], p[v] = lo[u] + size[u] * (i + 0.5) / nu, lo[v] + size[v] * (j + 0.5) / nv
+                        round_it = []
+                        for k, way in ((u, 1), (u, -1), (v, 1), (v, -1)):
+                            q = p.copy()
+                            q[k] += way * flat
+                            round_it.append(q)
+                        if all((o.closest_point_on_mesh(q)[1] - q).length < 5e-4 for q in [p] + round_it):
+                            pts.append((o, p, round_it))
+    out = {"objects": [o.name for o, _p, _r in pts], "shots": {}}
+    rigs = [o for o in sc.objects if o.type == "ARMATURE"]
+
+    def limbs():  # where every bone of every character is, in the room, on this frame
+        return np.array([tuple(r.matrix_world @ b.head) for r in rigs for b in r.pose.bones]
+                        + [tuple(r.matrix_world @ b.tail) for r in rigs for b in r.pose.bones]).reshape(-1, 3)
+
+    for f0, f1, cam in cams:
+        seen, where = {}, {}
+        sc.frame_set(max(1, f0 - 1))
+        before = limbs()
+        for f in range(f0, f1 + 1):
+            sc.frame_set(f)
+            dg = bpy.context.evaluated_depsgraph_get()
+            origin = cam.matrix_world.translation
+            now = limbs()
+            moving = now[np.linalg.norm(now - before, axis=1) > 0.002] if len(now) == len(before) else now
+            before = now
+
+            def clear(w):
+                d = w - origin
+                hit, at, _n, _i, _ob, _m = sc.ray_cast(dg, origin, d.normalized(), distance=d.length + 0.01)
+                return hit and (at - w).length < 0.004
+
+            for k, (o, p, round_it) in enumerate(pts):
+                w = o.matrix_world @ p
+                x, y, z = world_to_camera_view(sc, cam, w)
+                if z <= 0 or not (0.02 < x < 0.98 and 0.02 < y < 0.98):
+                    continue
+                if len(moving) and float(np.linalg.norm(moving - np.array(w), axis=1).min()) < LIMB_NEAR:
+                    continue
+                edge = [o.matrix_world @ q for q in round_it]
+                views = [world_to_camera_view(sc, cam, q) for q in edge]
+                if min(math.hypot(q.x - x, (q.y - y) * 0.5625) for q in views) < pixels:  # too small or too edge-on
+                    continue
+                if clear(w) and all(clear(q) for q in edge):
+                    seen.setdefault(k, {})[f] = (round(x, 5), round(1 - y, 5))
+                    where.setdefault(k, {})[f] = w.copy()
+        rows = []
+        for k, at in seen.items():
+            for f, xy in at.items():
+                near = [where[k].get(f + s) for s in (-1, 1)]
+                if all(n is not None and (n - where[k][f]).length < 1e-5 for n in near):
+                    rows.append([f, k, xy[0], xy[1], *at[f - 1], *at[f + 1]])
+        out["shots"][cam.name] = {"frames": [f0, f1], "points": sorted(rows)}
+    return out

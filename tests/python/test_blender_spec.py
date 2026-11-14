@@ -287,6 +287,273 @@ class BlenderCheckTests(unittest.TestCase):
             self.assertIn(said, str(ctx.exception))
             self.assertNotIn('Traceback', str(ctx.exception))
 
+    def test_a_character_comes_in_walks_sits_down_and_winks(self):
+        """The clay cast on its feet: through a door, across the room, onto a pulled-out chair, in to the desk."""
+        checks, events = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 3.7]}],
+            'set': {'kind': 'desk_room', 'door': {}, 'chair_out': 0.8},
+            'shots': [{'id': 'feet', 'dur': 3, 'type': 'feet', 'reveal': True},
+                      {'id': 'up', 'dur': 2, 'type': 'tilt_up'},
+                      {'id': 'walk', 'dur': 5, 'type': 'full', 'follow': True},
+                      {'id': 'sit', 'dur': 4, 'type': 'wide'},
+                      {'id': 'face', 'dur': 2, 'type': 'closeup'}],
+            'beats': [{'at': 'feet+0.2', 'do': 'open_door', 'dur': 0.7},
+                      {'at': 'feet+0.9', 'do': 'walk', 'to': [2.6, 2.0], 'until': 'feet.end'},
+                      {'at': 'walk+0.1', 'do': 'walk', 'to': [1.1, 0.33], 'until': 'walk+2.5'},
+                      {'at': 'walk+2.6', 'do': 'walk', 'to': [0, 0.33], 'facing': 0, 'until': 'walk+4.8'},
+                      {'at': 'sit+0.1', 'do': 'sit_down', 'dur': 1.2},
+                      {'at': 'sit+1.5', 'do': 'pull_in', 'dur': 0.9},
+                      {'at': 'sit+2.6', 'do': 'pose', 'pose': 'type', 'dur': 0.5},
+                      {'at': 'face+0.2', 'do': 'look_at', 'target': 'camera', 'dur': 0.4},
+                      {'at': 'face+1', 'do': 'wink', 'side': 'right'}]})
+        self.assertTrue(checks['passed'], checks)
+        self.assertLess(checks['ik_max_error_m'], 0.01)  # every step was one the legs could make
+        self.assertLessEqual(checks['under_floor_m'], 0.015)  # and no foot went through the floor on the way
+        kinds = [e['kind'] for e in events['events']]
+        self.assertIn('door_open', kinds)
+        self.assertGreater(kinds.count('step'), 8)
+        # contact: no hand inside the body, nothing passed through the furniture, no planted foot slid
+        for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
+            self.assertLessEqual(checks[kind], 0.03, kind)
+        # nothing jumps in a single frame: the chest comes to rest after its last sway, a hand travels from one
+        # spot to the next (in a move this short the keys used to land out of order)
+        self.assertLessEqual(checks['snap_m'], 0.02)
+        self.assertNotIn('body_problems', checks)
+
+    def test_a_body_does_not_move_like_a_machine(self):
+        """Standing up, turning, sitting down and pulling in: the parts of the body do not all start and stop
+        on one frame, and the left side does not mirror the right."""
+        checks, _ = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'sit', 'at': [0, 0.8]}],
+            'set': {'kind': 'desk_room', 'chair_out': 0.8},
+            'shots': [{'id': 'A', 'dur': 11, 'type': 'wide'}],
+            'beats': [{'at': 'A+0.3', 'do': 'stand_up', 'dur': 1.7},
+                      {'at': 'A+2.4', 'do': 'turn', 'facing': 110, 'dur': 1.3},
+                      {'at': 'A+4.0', 'do': 'turn', 'facing': 0, 'dur': 1.3},
+                      {'at': 'A+5.8', 'do': 'sit_down', 'dur': 1.8},
+                      {'at': 'A+8.0', 'do': 'pull_in', 'dur': 1.5}]})
+        self.assertTrue(checks['passed'], checks)
+        self.assertEqual([m['do'] for m in checks['moves']], ['stand_up', 'turn', 'turn', 'sit_down', 'pull_in'])
+        for move in checks['moves']:
+            self.assertGreaterEqual(move['starts_spread_s'] + move['stops_spread_s'], 0.2, move)  # something leads, something settles
+            self.assertGreater(move['sides_differ_m'], 0.02, move)
+
+    def test_a_hand_opens_the_door_and_the_check_says_if_it_cannot(self):
+        shots = [{'id': 'A', 'dur': 4, 'type': 'full', 'reveal': True}]
+        door = {'kind': 'desk_room', 'door': {}}
+        checks, events = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 3.5]}], 'set': door, 'shots': shots,
+            'beats': [{'at': 'A+0.5', 'do': 'open_door', 'dur': 0.8, 'by': 'dev'},
+                      {'at': 'A+1.4', 'do': 'walk', 'to': [2.6, 1.8]}]})
+        self.assertLessEqual(checks['touch_miss_m'], 0.03)  # the knuckles are on the handle when it starts to move
+        self.assertIn('touch', [e['kind'] for e in events['events']])
+        for cast_at, by, said in (([2.6, 4.6], 'dev', 'stand them closer'), ([2.6, 3.5], 'sam', 'sam')):
+            with self.assertRaises(RuntimeError) as ctx:
+                self.compile({'cast': [{'id': 'dev', 'posture': 'stand', 'at': cast_at}], 'set': door, 'shots': shots,
+                              'beats': [{'at': 'A+0.5', 'do': 'open_door', 'by': by}]})
+            self.assertIn(said, str(ctx.exception))
+
+    def test_a_point_lifts_the_arm_at_the_target_with_the_hand_on_its_side(self):
+        """A point raises the arm along the line to the target (so it reads from across a room), with the hand
+        on the target's side unless the beat names one, and says how true the aim is."""
+        checks, events = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [1.6, 1.6]}], 'set': {'kind': 'desk_room', 'door': {}},
+            'shots': [{'id': 'A', 'dur': 4, 'type': 'full'}],
+            'beats': [{'at': 'A+0.3', 'do': 'point', 'target': [3.5, 0.0, 2.2], 'dur': 1.2},
+                      {'at': 'A+2.2', 'do': 'point', 'target': 'camera', 'hand': 'right'}]})
+        self.assertTrue(checks['passed'], checks)
+        points = [e for e in events['events'] if e['kind'] == 'point']
+        self.assertEqual([p['hand'] for p in points], ['left', 'right'])  # (the target at +x is on dev's left)
+        for p in points:
+            self.assertLessEqual(p['aim_deg'], 12)
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({'shots': [{'id': 'A', 'dur': 2, 'type': 'wide'}],
+                          'beats': [{'at': 'A+0.3', 'do': 'point', 'target': 'the door'}]})
+        self.assertIn('target', str(ctx.exception))
+
+    def test_a_walk_can_bend_and_the_body_leans_into_it(self):
+        """A curved walk: the path bows away from the straight line, the body banks into the bend, and the
+        check reports each walk. A straight walk reports no bow."""
+        checks, _ = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 2.0]}],
+            'set': {'kind': 'desk_room', 'door': {}, 'chair_out': 0.8},
+            'shots': [{'id': 'A', 'dur': 6, 'type': 'full', 'follow': True}],
+            'beats': [{'at': 'A+0.2', 'do': 'walk', 'to': [0, 0.41], 'facing': 0, 'curve': True, 'heading': -90,
+                       'until': 'A+4.6'}]})
+        self.assertTrue(checks['passed'], checks)
+        bend = checks['walks'][0]
+        self.assertTrue(bend['curve'])
+        self.assertGreater(bend['bow_m'], 0.2)
+        self.assertGreaterEqual(bend['into_bend'], 0.5)
+        self.assertGreater(bend['lean_deg'], 1.0)
+        self.assertLessEqual(checks['foot_slide_m'], 0.03)  # feet land on the bend and stay where they land
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 2.0]}],
+                          'set': {'kind': 'desk_room', 'door': {}}, 'shots': [{'id': 'A', 'dur': 3, 'type': 'full'}],
+                          'beats': [{'at': 'A+0.2', 'do': 'walk', 'to': [0, 0.41], 'curve': 'yes'}]})
+        self.assertIn('curve', str(ctx.exception))
+
+    def test_a_door_and_a_screen_graphic_have_no_faces_in_one_plane(self):
+        """The set is checked for surfaces that would flicker: the door's frame against the wall does not, and
+        an alert laid 0.4 mm over the screen does not count."""
+        checks, _ = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [2.6, 2.4]}],
+            'set': {'kind': 'desk_room', 'door': {}},
+            'shots': [{'id': 'A', 'dur': 2, 'type': 'full'}, {'id': 'B', 'dur': 2, 'type': 'over_shoulder', 'subject': 'screen'}],
+            'beats': [{'at': 'A+0.2', 'do': 'open_door', 'dur': 0.8}, {'at': 'B+0.3', 'do': 'alert'}]})
+        self.assertNotIn('surfaces_fight', checks)
+        self.assertNotIn('set_problems', checks)
+
+    def test_hand_shapes_are_named_and_a_mitten_keeps_its_shape(self):
+        """The clay cast's hands are mittens: a hand beat is accepted and changes nothing, and none of the
+        checks that need fingers is reported. A shape that does not exist is named with the ones that do."""
+        checks, _ = self.compile({
+            'cast': [{'id': 'dev', 'posture': 'stand', 'at': [1.6, 1.6]}], 'set': {'kind': 'desk_room', 'door': {}},
+            'shots': [{'id': 'A', 'dur': 2, 'type': 'full'}],
+            'beats': [{'at': 'A+0.3', 'do': 'hand', 'shape': 'point', 'hand': 'right', 'dur': 0.3},
+                      {'at': 'A+1.0', 'do': 'hand', 'shape': 'fist'}]})
+        self.assertTrue(checks['passed'], checks)
+        for key in ('grip_open', 'hands_apart_m', 'palm_tilt_deg', 'palm_turn_deg', 'face', 'skin'):
+            self.assertNotIn(key, checks)
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({'shots': [{'id': 'A', 'dur': 2, 'type': 'wide'}],
+                          'beats': [{'at': 'A+0.3', 'do': 'hand', 'shape': 'claw'}]})
+        for word in ('shape', 'grip', 'point', 'fist', 'flat'):
+            self.assertIn(word, str(ctx.exception))
+
+    FITTED = ROOT / 'projects' / 'character-conal' / 'test' / 'enter.json'
+
+    @unittest.skipUnless(FITTED.exists(), 'needs the private fitted model of the toolkit\'s author (Mara, in tests/fixtures, is the one in the repo)')
+    def test_a_fitted_character_with_fingers_passes_its_own_checks(self):
+        """A generated model fitted to the rig, where one is on this machine: its face, its skin and its hands
+        are measured, and the walk-in passes."""
+        with tempfile.TemporaryDirectory() as tmp:
+            checks = blender_render.run_compiler(self.FITTED, Path(tmp) / 'out', 'check', '480x270', None)
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        self.assertGreaterEqual(checks['face']['mouth_share'], 0.18)   # a mouth wide enough to read
+        self.assertEqual(checks['skin']['leg_above_hips'], 0)           # no hem that tears when the thighs bend
+        self.assertLessEqual(checks['skin']['stretch'], 4.0)
+        self.assertLessEqual(checks['grip_open'], 0.75)                 # the hand closes on the door handle
+        self.assertGreaterEqual(checks['hands_apart_m'], 0.005)         # the hands never go into each other
+        self.assertLessEqual(checks['palm_tilt_deg'], 35)               # and lie palm down on the desk
+        self.assertLessEqual(checks['palm_turn_deg'], 35)               # and stay palm to the leg in a walk
+        for walk in checks['walks']:                                     # arms hang and swing from the shoulder
+            self.assertLessEqual(walk['arms']['elbow_deg'], 35)
+            self.assertGreaterEqual(walk['arms']['forearm_deg'], 40)
+            self.assertLessEqual(walk['arms']['hand_off_m'], 0.04)
+        self.assertLessEqual(checks['typing']['rest_m'], 0.008)         # the fingers rest on the keys
+        self.assertGreaterEqual(checks['typing']['finger_travel_m'], 0.006)  # and press them
+        for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
+            self.assertLessEqual(checks[kind], 0.03, kind)
+        self.assertLessEqual(checks['snap_m'], 0.02)                    # nothing jumps in a single frame
+
+    MARA = ROOT / 'tests' / 'fixtures' / 'blender-fitted'
+
+    def test_an_invented_model_is_fitted_with_a_face_and_fingers_and_acts(self):
+        """Mara (tests/fixtures/blender-fitted, made up, not a likeness) goes through the fit as anyone's model
+        would: five fingers found on each hand, sized to her own, the wrist put at the cuff, the thumb laid in to
+        the palm, legs that touched parted; then she takes hand shapes, points, pulls faces and winks, and the
+        checks pass. Then the walk-in: through the door, across the room, onto the chair, in to the desk and
+        typing, on a body nothing in the rig was tuned on (short arms, long legs, narrow shoulders)."""
+        import contextlib
+        import io
+        import re
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            for name in ('spec.json', 'enter.json', 'mara.json'):
+                shutil.copy(self.MARA / name, tmp / name)
+            said = io.StringIO()
+            args = mock.Mock(model=str(self.MARA / 'mara.glb'), fit=str(self.MARA / 'fit.json'),
+                             out=str(tmp / 'mara-fitted.blend'), preview=None)
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(args)
+            said = said.getvalue()
+            self.assertEqual(code, 0, said)
+            self.assertEqual(len(re.findall(r'fit: hands, [LR] 5 fingers', said)), 2, said)
+            depth = re.search(r"thumb root (\d+)% of the hand's length out of the palm \(made (\d+)%\)", said)
+            self.assertIsNotNone(depth, said)
+            self.assertLessEqual(int(depth.group(1)), 10)                  # laid in from the generator's 20%
+            self.assertGreater(int(depth.group(2)), int(depth.group(1)))
+            self.assertIn('legs touched', said)                            # her shoes are one piece in the model
+            sized = re.search(r"scaled (\d\.\d+)x to match", said)             # the donor's hands are a fifth too long
+            self.assertIsNotNone(sized, said)
+            self.assertLess(float(sized.group(1)), 0.95)
+            self.assertIn('wrist joint moved', said)                       # read off a still, it was up the sleeve
+            checks = blender_render.run_compiler(tmp / 'spec.json', tmp / 'out', 'check', '480x270', None)
+            events = json.loads((tmp / 'out' / 'events.json').read_text())
+            enter = blender_render.run_compiler(tmp / 'enter.json', tmp / 'enter', 'check', '480x270', None)
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        self.assertGreaterEqual(checks['face']['mouth_share'], 0.18)
+        self.assertGreater(checks['face']['mouth_travel_m'], 0.005)        # the mouth moves for the faces
+        self.assertEqual(checks['skin']['leg_above_hips'], 0)
+        self.assertLessEqual(checks['skin']['stretch'], 4.0)
+        self.assertGreaterEqual(checks['hands_apart_m'], 0.005)
+        points = [e for e in events['events'] if e['kind'] == 'point']
+        self.assertEqual(len(points), 1)
+        self.assertLessEqual(points[0]['aim_deg'], 12)
+        for shot in checks['shots']:                                       # the close-up finds her own head
+            self.assertTrue(shot['passed'], shot)
+        self.assertTrue(enter['passed'], enter.get('body_problems'))
+        self.assertLessEqual(enter['ik_max_error_m'], 0.01)                # every reach is one her arms can make
+        self.assertLessEqual(enter['grip_open'], 0.75)                     # the hand closes on the door handle
+        self.assertGreaterEqual(enter['hands_apart_m'], 0.005)             # broad hands on narrow shoulders stay apart
+        self.assertLessEqual(enter['snap_m'], 0.02)                        # nothing jumps in a single frame
+        self.assertLessEqual(enter['skin']['stretch'], 4.0)
+        self.assertLessEqual(enter['typing']['rest_m'], 0.008)
+        self.assertGreaterEqual(enter['typing']['into_m'], -0.004)
+        for walk in enter['walks']:
+            self.assertLessEqual(walk['arms']['elbow_deg'], 35)
+            self.assertLessEqual(walk['arms']['hand_off_m'], 0.04)
+        for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
+            self.assertLessEqual(enter[kind], 0.03, kind)
+
+    def test_flicker_is_a_still_point_that_jumps_for_a_frame_and_comes_back(self):
+        """The render check reads still points of the set out of the frames: one that jumps and comes back on
+        five frames of a shot fails, a single blip is only noted, and a smooth change is neither."""
+        import numpy as np
+        frames = [np.full((40, 40), 100.0, dtype=np.float32) for _ in range(30)]
+        for f in (4, 8, 12, 16, 20):
+            frames[f][8:13, 8:13] = 130.0       # the door frame: five one-frame jumps
+        for f in (6, 14):
+            frames[f][28:33, 8:13] = 130.0      # the wall: two
+        for f in range(30):
+            frames[f][18:23, 28:33] = 100 + 3 * f   # a lamp coming up smoothly
+        rows = [[f, k, x, y, x, y, x, y] for f in range(1, 31) for k, (x, y) in enumerate(((0.25, 0.25), (0.25, 0.75), (0.75, 0.5)))]
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            (out / 'still_points.json').write_text(json.dumps(
+                {'objects': ['door_frame', 'wall', 'lamp'], 'shots': {'A': {'frames': [1, 30], 'points': rows}}}))
+            (out / 'A.mp4').write_bytes(b'')
+            real = blender_render.gray_frames
+            blender_render.gray_frames = lambda video, size: iter(frames)
+            try:
+                found = blender_render.flicker(out, {'A': (out / 'A.mp4', 1)}, (40, 40))
+            finally:
+                blender_render.gray_frames = real
+        by = {r['object']: r for r in found}
+        self.assertTrue(by['door_frame']['fails'])
+        self.assertEqual(by['door_frame']['frames'], [5, 9, 13, 17, 21])
+        self.assertFalse(by['wall']['fails'])
+        self.assertNotIn('lamp', by)
+
+    def test_mistakes_with_postures_are_named(self):
+        shots = [{'id': 'A', 'dur': 3, 'type': 'wide'}]
+        for extra, said in (
+                ({'beats': [{'at': 'A', 'do': 'walk', 'to': [1, 1]}]}, 'stand_up first'),     # still on the chair
+                ({'beats': [{'at': 'A', 'do': 'walk'}]}, '[x, y]'),
+                ({'beats': [{'at': 'A', 'do': 'turn'}]}, 'degrees'),
+                ({'beats': [{'at': 'A', 'do': 'open_door'}]}, 'no door'),
+                ({'beats': [{'at': 'A', 'do': 'wink', 'side': 'both'}]}, 'left'),
+                ({'beats': [{'at': 'A', 'do': 'reach', 'target': [0, -9, 1]}]}, 'walk them closer'),
+                ({'beats': [{'at': 'A', 'do': 'look_at', 'target': 'moon'}]}, 'camera'),
+                ({'cast': [{'id': 'dev', 'posture': 'lying'}]}, 'stand'),
+                ({'shots': [{'id': 'A', 'dur': 3, 'type': 'feet'}]}, 'on their feet'),
+                ({'set': {'kind': 'desk', 'door': {}}}, 'desk_room')):
+            with self.assertRaises(RuntimeError) as ctx:
+                self.compile({'shots': shots, **extra})
+            self.assertIn(said, str(ctx.exception))
+            self.assertNotIn('Traceback', str(ctx.exception))
+
     def test_acting_takes_the_same_time_at_any_frame_rate(self):
         spec = {'shots': [{'id': 'A', 'dur': 4, 'type': 'wide'}],
                 'beats': [{'at': 0.5, 'do': 'type', 'until': 2.5}, {'at': 3, 'do': 'tap'},

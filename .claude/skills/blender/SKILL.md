@@ -147,6 +147,23 @@ from a sentence ("a woman in her forties with a grey bob, glasses and a green sh
   result is a caricature in the toolkit's style, not a likeness.
 - Every character has the same rig, so every verb works on every character. Check a new one with a `closeup` and
   a `medium` shot before writing the beats.
+- **Where they start.** A cast member sits at the desk unless told otherwise: `"posture": "stand"`, `"at": [x, y]`
+  (a spot on the floor, metres) and `"facing"` (degrees: 0 faces -Y, toward the desk; positive turns to their own
+  left) put them on their feet anywhere in the room.
+
+**A fitted model (experimental).** `"model": "lead.blend"` in a character file swaps the clay body for a
+generated 3D character fitted to the rig by `lib/blender/fit_model.py` (an A-pose mesh from an image-to-3D
+service, plus a `fit.json` of its joints and face). The model keeps its own shape: it is bound in its A-pose and
+the rig poses it, so the same verbs drive it, and the chair, desk and laptop are placed for its legs and arms (seat
+at its knee height, keyboard under its hands). `glasses` is the one accessory a model takes. Its face is made from its own marks (a lower
+lip, teeth and lids on the model's lip line and eyes, with the cheeks and chin moving for a smile or an open
+mouth), and with a second model of the same character with open hands the fit gives it fingers: hand shapes, a
+grip on a door handle, hands laid flat on the desk, fingertips on the keys. The fit lays a generated thumb in to
+the palm (it stands off it on a thick wedge), so the hands type at a typist's slope. The donor's hands are sized to the body's own, the wrist joint
+is put at the cuff, and the desk, the keys and how far apart the hands lie come from the body's measures, so one spec
+runs on characters of different builds (run a spec on two to find a number tuned on one; `docs/blender.md` has the
+method). Head shots aim at a fitted character's own head, whatever its
+proportions. A worked example with an invented character is `tests/fixtures/blender-fitted`. The steps and their costs are in `docs/blender.md`.
 
 ### Shots
 
@@ -162,6 +179,9 @@ from a sentence ("a woman in her forties with a grey bob, glasses and a green sh
 | `screen_fill` | `"subject": "screen"` | the screen covers the frame edge to edge, square on |
 | `pull_out` | `"subject": "screen"` | starts as `screen_fill`, holds, then travels back round the shoulder to a side view of the desk |
 | `push_in` | `"subject": "screen"` | `pull_out` reversed: ends on the screen, ready to cut to the flat scene |
+| `full` | character, on their feet | head to toe; `"follow": true` travels with a walk |
+| `feet` | character, on their feet | a low insert on the feet, travelling with them: an entrance before the face |
+| `tilt_up` | character, on their feet | starts on the feet, holds, tilts up to the face (`hold` seconds at each end) |
 | `product` | a studio prop | a three-quarter view of the prop, pushing in a little |
 | `orbit` | a studio prop | the camera travels round the prop from `az` to `az_to` |
 | `reveal` | a studio `phone` or `card` | starts on its screen edge to edge, holds, then pulls back to the `product` view |
@@ -172,6 +192,11 @@ Overrides per shot: `az` (degrees round the subject; 0 = straight in front, + = 
 
 The solver tries the nominal placement, then pulls back, swings ±12/24/36°, and rises, keeping the first that
 passes at the shot's start, middle and end. What it changed is in the report.
+
+A character who has left the chair is filmed where they are at the middle of the shot, facing the way they face
+then, and the solver also tries the far side of them when a wall is in the way. `"follow": true` on any character
+shot makes the camera travel with them. `"reveal": true` is for a shot the subject enters (through a door): it is
+judged on its last frame only. `tilt_up` is judged where it ends, on the face.
 
 The three moves take `az`, `elev` (degrees) and `dist` (m) for their far end, `hold` (seconds on the full screen
 before moving, default 0.4) and `lens`. They are checked at 13 points along the way, also for the lens passing
@@ -200,14 +225,81 @@ Character (`who` defaults to the first cast member):
 | `sweat`, `tremble` | `until` | a drop slides down / pupils jitter |
 | `celebrate` | `until` | arms up, wiggling |
 | `hold_arms` | | freeze the arms where they are |
+| `stand_up` / `sit_down` | `dur` | off the chair onto their feet (the head lifts, hands to the knees, the chest comes forward over the feet, then up, the arms dropping last) / onto the chair behind them (a look down, the pelvis back before it goes down, hands to the knees, a small settle). Stand them a thigh's length in front of the seat first. About 1.7 s each reads well; under a second looks hurried |
+| `walk` | `to`: `[x, y]`, `facing`, `until`, `curve`, `heading` | walk to a spot and stop, facing `facing` degrees. They turn on the spot first when the way to go is more than 30 degrees off, and again at the end. With no `until` or `dur` it takes what the steps need. A footstep in the sound per step. `"curve": true` walks a bend in place of a line and two turns: the feet land on the bend, the body banks into it and the head looks along it; `heading` is the way they are going as they arrive (degrees, like `facing`) |
+| `turn` | `facing`, `dur` | turn on the spot, stepping round: the eyes and head go first, the chest follows, and it swings a little past at the end |
+| `wink` | `side`: `left`/`right` | one eye, the brow dipping with it |
+| `look_at` | `target`: `[x, y, z]`, `camera` or `screen`, `dur` | head and eyes to a point: the neck turns most of the way, the eyes the rest |
+| `glance` | `yaw`, `pitch`, `dur` | the eyes alone, in degrees (up to about 25) |
+| `reach` | `target`: `[x, y, z]`, `hand`, `dur` | a hand to a point in the room; an error says how far short it is |
+| `point` | `target`: `[x, y, z]`, `camera` or `screen`; `hand`; `back`; `dur` | the arm lifts nearly straight at the target (it reads from across a room), index out, thumb up; held for the beat (1.5 s without `dur`), then back unless `"back": false`. Without `hand`, the one on the target's side. Add a `look_at` to the same target for the eyes. The event gives `aim_deg` |
+| `hand` | `shape`: `open`, `relaxed`, `grip`, `flat`, `type`, `point`, `fist`; `hand`: `left`/`right`; `dur` | the fingers take a shape (both hands without `hand`). Only a fitted model whose fit found fingers has them: the clay cast's mittens are left as they are. Poses and verbs set shapes themselves (`type` on the keys, flat on the desk, a grip on a door handle, relaxed at the sides), so this is for a point or a fist |
+
+Poses also has `down` (arms at the sides), which a standing character starts in; arms swing on a walk only from
+`down`. A posture verb used in the wrong state is a named error ("dev is sitting: walk needs them standing
+(stand_up first)"). `ik_max_error_m` in the report covers feet as well as hands, and `ik_worst` names the limb
+and the second when it is over a centimetre: usually a step or a reach that was too far.
+
+**Contact is checked for anyone on their feet.** The report measures, on every frame, what a still can't show:
+
+| in `checks.json` | fails over | |
+|---|---|---|
+| `under_floor_m` | 1.5 cm | any of the body below the floor |
+| `hand_in_body_m` | 3 cm | a hand inside the torso, head or legs |
+| `through_m` | 3 cm | the body inside the seat, chair back, desk, laptop or door (a seat cushion gives 3 cm) |
+| `foot_slide_m` | 3 cm | a foot travelling along the floor while it stands flat on it |
+| `touch_miss_m` | 3 cm | a hand off the thing it was put on (the door handle, the desk's edge) |
+| `grip_open` | over 0.75 | hands with fingers: how open a hand still is round what it holds (fingertips' distance from it over a finger's length; a flat hand is about 1) |
+| `hands_apart_m` | under 0.5 cm | hands with fingers: the nearest the two hands come to each other |
+| `palm_tilt_deg` | 35 degrees | hands with fingers: a hand resting over a table top, rolled from palm down onto its side (a typing hand slopes down from the wrist on purpose; the slope is not counted) |
+| `palm_turn_deg` | 35 degrees | hands with fingers: a hanging hand's palm turning away from the leg as the arm swings in a walk (it reads as a flapping hand) |
+| `snap_m` | 2 cm | the chest or a hand moving much further in one frame than in the frames either side (a key beside another, a hand put from one spot to the next in a frame) |
+
+A thin thing (a door leaf, a desk top) counts as gone through once anything is half way into it, and `through`
+says how long it lasted ("from 14.50 s to 20.67 s"). A hand is checked at its palm and at every fingertip.
+
+A failure is said in words in `body_problems` ("left hand 9 cm inside the body at 5.12 s") and each number gets an
+`_at` with the frame. `moves` lists every posture verb with how far apart in time its parts start and stop and how
+different left is from right: all zeros would be a machine. To look at a move yourself, render the shot as a clip
+with `--keep-frames` and tile every second or third frame.
+
+**More that `check` reports**, each failing the check in words when it is wrong:
+
+- `walks`: each walk's bow off the straight line, its turn, and how far the body leans into a bend. For a fitted
+  model, `arms` too: `elbow_deg` (the most an elbow bends, fails over 35: arms swing from the shoulder),
+  `forearm_deg` (the forearm's least angle below level, fails under 40: it reads as marching) and `hand_off_m`
+  (how far a hand stands out from the body beside it, the middle value through the walk, fails over 4 cm: arms
+  held out like a gunslinger's; `hand_off_max_m` is the most, which a thigh swinging away makes on long legs).
+- `typing`, for hands with fingers: `rest_m` (the fingertips' usual height over the keys, fails over 8 mm),
+  `into_m` (fails under -4 mm) and `finger_travel_m` (how far a finger moves on its own, fails under 6 mm: hands
+  that type without moving their fingers).
+- `surfaces_fight` and `set_problems`: two objects of different materials with faces in one plane that a camera
+  sees. The renderer draws one or the other from frame to frame, so the strip flickers. Move one, or end it
+  inside the other. Graphics layered a little over a screen do not count.
+- For a fitted model: `face` (`mouth_share`, the mouth's width against the face's, fails under 0.18; how far the
+  lip stands off the face; how far its corners travel between a frown and a smile) and `skin`
+  (`leg_above_hips`, vertices above the hips that move with a leg and tear a hem; `stretch`, fails over 4).
+
+**A render is checked too.** `render` writes `still_points.json` (points of the set that stand still, and where
+each is in every frame) and reads them back out of the picture: a still point that jumps for one frame and comes
+back is flicker. Five such frames on one object in a shot fail (`render_checks.json`, and the tool exits 1);
+fewer are listed as notes. It runs on the film and on `--clips`.
 
 Set (`desk_room`): `alert` (popup + red screen light), `work` (`until`: bar drains bad → mid → good),
-`done` (the "after" line pops in). The screen's words and numbers come from `set.screen`
+`done` (the "after" line pops in), `open_door` / `close_door` (`dur`, `angle`, and `by`: a cast member whose hand
+takes the handle and goes with the door as far as the arm reaches; an error says how far short they stand),
+`pull_in` (the chair and whoever sits on it come in to the desk: the feet walk it in with short steps and, once
+the desk is in reach, the hands take its edge and pull). The screen's words and numbers come from `set.screen`
 (`title`, `subtitle`, `before`, `after`, `fill_before`, `fill_after`, `alert` [2 lines], `working`).
 
 Effects: `confetti` (`count`, `colors`: a list of hex colours, for the brand's), `title` (`text`, `color`): 3D text above the character, wobbles to the end.
 
 ### Sets
+
+`desk_room` takes `"door": {}` (a doorway in the wall behind the chair, at `x` 2.6 unless given, as tall as the
+character needs and with the handle where their hand falls, opening onto a dim hall) and `"chair_out"` (metres the
+chair starts pulled back from the desk). An entrance: the character starts in the hall at `[2.6, 3.5]` (in reach
+of the handle), `open_door` with `"by"`, `walk` in, `walk` to a thigh's length in front of the pulled-out chair, `sit_down`, `pull_in`.
 
 | `kind` | |
 |---|---|
@@ -365,8 +457,11 @@ The reasoning is in `docs/blender.md`.
 
 ## Limits (experimental)
 
-One character per set, seated, at the origin; a studio set has props and no character; cartoon "clay" style;
+One character per set; the clay cast's hands are one bone (a mitten), so its `reach` puts the hand on a thing
+but does not close round it (a fitted model can have fingers); nothing stops a walk going through furniture (walk
+round it, or bend the walk with `curve`); the clay cast's hoodie hem is ragged when it stands, because its
+body is made seated; a studio set has props and no character; cartoon "clay" style;
 hand-keyed acting (no motion capture); no cast shadow on a transparent background; studio props don't move (the
 camera does). Next on the roadmap: props that move and a tablet prop, cast shadows on transparent clips, two
-characters in a set, standing and walking, your own `.blend` as a set, a `script` hook in the spec, imported rigs,
+characters in a set, hand shapes and props in the hand, your own `.blend` as a set, a `script` hook in the spec, imported rigs,
 and a `blender` visual kind in `video_job.py`.

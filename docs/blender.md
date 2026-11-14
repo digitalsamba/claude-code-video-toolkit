@@ -162,6 +162,153 @@ named choice or a hex colour. An agent can write one from a sentence or a photo.
 
 The full table of choices is in the skill.
 
+### On their feet
+
+A character sits at the desk unless the cast entry says `"posture": "stand"`, with `"at": [x, y]` and `"facing"`.
+From there the verbs are `walk` (to a spot, turning into it and out of it), `turn`, `sit_down`, `stand_up`, and for
+the set `open_door` and `pull_in`. The feet are planted: a foot on the floor stays where it is while the body
+moves over it, and the report's `ik_max_error_m` says so (under a centimetre), naming the limb and the second if
+a step was too far. Three shot types film someone standing: `full`, `feet` and `tilt_up`; `"follow": true` makes
+any character shot travel with a walk (the camera glides: its path is the walker's, smoothed over about a second).
+A walk is a straight line with a turn at each end unless it has `"curve": true`, which walks one bend, the body
+leaning into it; `"heading"` is the way they are going as they arrive.
+The clay cast gets its leg controls only when a spec uses one of these, so a desk-only spec renders exactly as it
+did before they existed.
+
+The posture verbs are built from the same few pieces, so they move alike: the eyes and head lead, the weight
+shifts before a foot lifts, the chest follows the pelvis and the hands follow the chest, a move lands a little
+past its mark and settles, and one side goes before the other. Hands are put on things (the knees, the desk's
+edge, a door handle with `"by"` on `open_door`) and stay on them while the body moves.
+
+Contact is measured on every frame and fails the check: a foot under the floor, a hand inside the body, the body
+through furniture, a planted foot sliding, a hand off what it holds. The report says which, how far and when
+(`body_problems`), and `moves` gives each posture verb's timing spread. The table is in the skill.
+
+Two checks look for flicker. `check` fails a set where two objects of different materials have faces in one
+plane that a camera sees (`set_problems`): the renderer draws one or the other from frame to frame. And `render`
+reads the finished frames at points of the set that stand still: one that jumps for a frame and comes back, five
+times on one object in a shot, fails the render (`render_checks.json`).
+
+### A character from a generated 3D model (experimental)
+
+The clay cast is built from a description. A fitted model is a 3D character made elsewhere, put on the same
+rig, so the same verbs and shots work on it. The pattern, one step each:
+
+1. **A character sheet.** One front view of the character standing in an A-pose (arms away from the body, legs
+   apart), plain background. Draw it, or generate it: `flux2.py` for an invented character, `image_edit.py` then
+   `flux2.py --input` to stylise a photo.
+2. **A model.** Any image-to-3D service that returns one textured GLB. Through the Blender MCP server's
+   `generate_3d` it is one generation, a minute or three, and may cost a credit on that service: check before
+   you run it.
+3. **Fit it.** `uv run tools/blender_render.py fit --model lead.glb --fit fit.json --out lead.blend --preview fit/`
+   binds the model to the rig in its own A-pose: nothing is re-posed or stretched. `fit.json`
+   holds what the fit can't yet see by itself: the joints (shoulder, elbow, wrist, hip, knee, ankle...), where the
+   clothes end and the head starts, and the eyes, brows and mouth, all in metres read off a front view. The
+   painted eyes and brows are erased, because the rig's own are placed there and move. The face also takes
+   `mouth` (where the lips meet: under a moustache, its lower edge), `mouth_width` (corner to corner; under 18%
+   of the face's width fails the check as too small to read), `moustache` (true when the upper lip is under
+   hair) and `chin` (the height of the chin's underside). From these the fit builds a lower lip, teeth and the
+   dark of an open mouth on the model's own lip line, smile, frown and jaw shapes in the head's surface, and
+   skin-coloured lids that close for a blink or a wink. A brow hidden under a fringe goes in `brows_hidden` (its
+   index in `brows`, the character's right first): the rig still gives it a brow, and nothing is erased there.
+   **Hands with fingers** are optional: `"hands": {"model": "lead_open.glb"}` names a second model made from
+   the same sheet with the hands open and the fingers apart (one more generation). Only its hands are used.
+   The fit finds each by its skin colour up to the cuff, finds the fingers and thumb, uses the better formed
+   hand for both arms (mirrored for the other), seats it in the cuff with the palm toward the leg, and gives
+   every finger two bones. A generated thumb stands off the palm on a thick wedge (its root about 40% of the
+   hand's length out of the palm), so the fit presses what stands in front of the palm in towards it, until the
+   thumb's root is 8% of the hand's length out: the wedge thins evenly, the cuff ring and the fingers do not
+   move. The fit prints the depth before and after and how far any edge was stretched, and fails if the root
+   still stands over 20% out (a hand like that rests on its thumb).
+   A second generation of the same character comes with hands a fifth to a third too long, so the fit makes the
+   donor's hand as long as the body's own, cuff to fingertip, and prints both lengths. `"scale": 0.7` in `hands`
+   sets the donor's scale by hand instead (the fit then prints what would have matched). The wrist joint is put
+   where the hand meets the cuff, whatever `fit.json` says: read off a still it lands some centimetres up the
+   sleeve or inside the hand, and then the sleeve folds where there is no joint. A nub the generator left on a
+   hand is smoothed flat with `"smooth": [[along, out_of_palm, across, radius]]`, in cm on the fitted hand from
+   the middle of the knuckle row (the back of the hand is negative out of the palm).
+4. **Name it.** A character file with `"model": "lead.blend"` beside it, and `"accessories": ["glasses"]` if they
+   wear them. Keep the folder in a kit (`kits/<name>/cast/`).
+5. **Look at it** before writing beats: a `check` of any spec with the cast entry swapped, and read the contact
+   sheet. Arms up, hands on head and sitting show the skin weights at their worst.
+
+What the fit does for you: legs that touch in the model (shoes generated as one piece) are parted, since a face
+joining one leg to the other tears across the gap on the first step; weights come from a clean stand-in body on
+the same joints, copied only between
+surfaces that face the same way (so a sleeve does not take the chest's weights), and kept inside the sleeve, whose
+thickness is measured round the upper arm and round the forearm on the side away from the body; bends
+keep their volume; the seat is as high as the character's knees and the desk comes to its hands, so nobody is
+stretched to fit furniture.
+
+The furniture and the reaches come from the body's own measures, so a build the rig was not worked out on still
+sits at its desk: the desk's underside stays over the thighs and a hand resting on them (long hands on short arms
+hang deep under the wrist, and a desk set by the hands alone came down into the legs); the keys' near edge comes to
+the fingertips, a hand's reach from where the wrist is comfortable; two hands on the keys lie 30% of a hand's
+breadth apart, measured on the mesh (broad hands on narrow shoulders met in the middle); a hand on a thigh stands
+off the leg's skin as it is posed on that frame. Pulling in to the desk, a hand takes the desk's edge only if it
+can lie flat there in front of the shoulder; otherwise the hands lift off the lap while the desk is still far off
+and wait over the keys.
+
+To keep a model in a repository, weld its UV seams before reducing it (the importer splits the vertices along
+every seam, and a split mesh decimated opens into cracks along all of them, which show as torn cloth and shards
+round the eyes). In Blender: merge by distance at 0.00001, then Decimate.
+
+What it does not do: without a `hands` model the hands are whatever the model has (usually fists), on one
+bone; generated hands are thick and cupped, so they read as mitts with finger grooves. A typing hand slopes down
+from the wrist 20 degrees, as a typist's does, with the fingertips on the keys; a hand laid flat slopes just
+enough for the heel of the hand and the fingers to rest together (a generated hand's heel is deep). A likeness
+of a real person belongs in your own project folder, not in a repository. `tests/fixtures/blender-fitted` is a worked
+example with an invented character: both models, the `fit.json` read off gridded stills, and a README saying how
+each was made (her generated hands had the fingers joined, so the hands came from a second model).
+
+How the hands are held is measured, not set: the rig poses the fingers in each shape, reads how far the hand's
+underside is below its wrist (on a desk or the keys, the whole hand, heel and all), and holds the wrist that far over the desk, the keys or a thigh. The wrist is
+turned from the arm as it is posed on each frame, so a palm faces the leg when the arm hangs and faces down
+on a desk whatever the forearm is doing. `check` then measures what a still can't show: a fingertip inside the
+body, the two hands into each other, a hand rolled off palm down on a table top, a hand still open on what it
+holds (`grip_open`).
+
+Typing hands are put on the keys where they are in the room, measured on each frame, not where the pose says (the
+body's lean and how it sits put a pose's wrist a couple of centimetres off). On each beat one finger of one hand
+lifts and comes down on the next one; the wrists hardly move. `typing` in `checks.json` says how far the
+fingertips are over the keys and how far the fingers move.
+
+A fitted model's arms hang from the shoulder: the elbow bent about 12 degrees, the arm tipped out only as far as
+the relaxed hand needs to clear the hip (about a centimetre, measured on the mesh). In a walk the arm swings like
+a pendulum, nearly straight behind and bending a little more in front, keyed along its arc so the elbow does not
+fold between keys. `walks` in `checks.json` gives each walk's `arms`: the most the elbow bends, how near level
+the forearm comes, how far a hand stands off the body (the middle value through the walk: a thigh swings out
+from under the hand on every stride, and that is the leg moving, not the arm held out). `snap_m` is the furthest
+the chest or a hand moves in one frame when it hardly moves in the frames either side (over 2 cm fails): a key
+that landed beside another, or a hand held on one spot and then put on the next.
+
+### Refining a rig: one spec, two bodies
+
+How the fitted rig was worked up, and how to carry on with it or with your own. It has been run with Claude Fable
+5.2 in Claude Code; other models are untested.
+
+1. **Two characters, one spec.** Keep a second fitted character of a different build beside the first (the repo
+   has Mara) and run every spec on both. A number tuned on one body passes on that body: nearly everything found
+   in the session that made Mara pass came from her failing a film the first character passed.
+2. **Look, then measure.** Render or `check`, tile every second or third frame of a shot, and look. When
+   something is wrong, find the number behind it before changing anything: print it per frame, and compare it on
+   both characters.
+3. **Turn what was seen into a check.** Each fault becomes a number in `checks.json` with a limit and a test, so
+   it cannot come back unseen. Prove a new check on the code as it was (it should fail there). The checks are
+   the memory of the work; a note that says "watch the hands" is not.
+4. **Fix the cause where it is measured.** A constant that made one character pass is replaced by a measure of
+   the body (a length, a thickness, a reach), and the fix is right when both characters pass without a number
+   of their own.
+5. **Prove nothing else moved.** The clay cast's check stills are compared with a baseline, the tests run, and
+   the film is rendered at full size with the flicker check before anyone is shown it.
+6. **Carry it across sessions in one status file.** Each session ends by updating one file (what was done, what
+   is open and in what order, what was spent) and writing the next session's prompt from it. A fresh session
+   reads the file and the checks, not the old conversation.
+
+What could be better: the proof scripts (tiled stills, close cameras on a hand or a face, per-frame traces) live
+in a project folder and are not yet tools in the toolkit; the fit still wants its joints read off a still by hand;
+and two characters is the least that shows a tuned number, where three of different builds would show more.
+
 ## A product stage
 
 Set kind `studio` is a backdrop that curves from floor to wall, with soft lights and no character. Its props are a
@@ -200,7 +347,8 @@ environment for no gain over the Blender most people already have, so the toolki
 `check` builds its stills in the film's own shape (the spec's `resolution`, or `--res`), because where the solver
 puts a camera depends on the shape of the frame.
 
-One character per set, seated at a desk; three sets (`desk_room`, `desk` with no room for transparent renders,
+One character per set; hands on one bone, with no open, grip or point shapes; a walk is a straight line that
+nothing stops going through furniture; three sets (`desk_room`, `desk` with no room for transparent renders,
 and `studio`, which has props and no character); a cartoon style; acting keyed from verbs, with no motion
 capture; studio props stand still while the camera moves. EEVEE cannot render a shadow onto a transparent
 background, so a transparent character or prop has no cast shadow on the Remotion scene. The room's light is dim
@@ -209,7 +357,8 @@ close to the character's hand on its way back, inside the limit the check enforc
 moment.
 
 The roadmap goes two ways. More from the spec: props that move, a tablet prop, cast shadows on transparent clips,
-two characters in a set, standing and walking, and a `blender` visual kind in `video_job.py`. And more of Blender
+two characters in a set, hand shapes and props in the hand, a fit that finds the joints and face by itself, and a
+`blender` visual kind in `video_job.py`. And more of Blender
 itself: your own `.blend` as a set, a `script` hook that runs your Python between the build and the checks, and
 imported rigs whose actions become verbs.
 
