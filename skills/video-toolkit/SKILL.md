@@ -337,7 +337,7 @@ for JSON-lines progress on stderr, and `--json` for a machine-readable result on
 | Sound effects | `sfx.py` (ElevenLabs, generated) or `sfx_search.py` (real recordings from Freesound via Openverse, free, no key) | |
 | Before delivering any render | `qc.py --render out.mp4 --fix` | shipping unchecked |
 | Captions for a Remotion template | `captions.py public/audio/scenes` (`--srt`/`--vtt` for subtitle files too) | burning the recogniser's own transcript |
-| Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` (`--mode track` keeps a talking head in frame) | |
+| Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` (`--mode track` keeps a talking head in frame; `--segment 4-11@0.6,0.4` moves a crop across the frame by hand) | |
 | A highlight reel from a long recording | `highlights.py` (picks final takes from a word-timed transcript), then `cutdown.py --segment` | cutting by eye |
 | Upload to YouTube | `youtube_upload.py` (OAuth, private by default; `--check` first) | |
 | Subtitles and chapters for the upload | `publish_kit.py --project DIR` (one transcription of the render, ~$0.01 a 90 s video) | adding scene caption offsets by hand |

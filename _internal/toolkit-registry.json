@@ -449,7 +449,7 @@
     "cutdown": {
       "path": "tools/cutdown.py",
       "description": "Social cut-downs to 9:16 / 1:1 / 4:5, optional highlight segments and subject tracking; FFmpeg for all modes, optional vision extra for --mode track",
-      "usage": "uv run tools/cutdown.py --input input.mp4 --platform shorts [--mode blur|crop|pad|track] [--segment START-END[@FOCUS] ...]",
+      "usage": "uv run tools/cutdown.py --input input.mp4 --platform shorts [--mode blur|crop|pad|track] [--segment START-END[@FOCUS[,FOCUS...]] ...]",
       "status": "beta",
       "category": "utility",
       "requires": "ffmpeg",
@@ -461,7 +461,7 @@
         ],
         "platform": "shorts, reels (9:16, 3 min), tiktok (9:16, 10 min), square (1:1), feed (4:5) - sets the default format and warns past the short-form limit",
         "mode": "blur (fit over a blurred copy, default), crop (fill, cut the sides; --focus 0-1), pad (fit over --pad-color or --brand bgDark); track follows a single face or --box subject, holding position on loss (uv sync --extra vision)",
-        "segments": "--start/--end for one range, repeated --segment for a highlight reel joined with click-free audio fades; @FOCUS sets crop focus per segment",
+        "segments": "--start/--end for one range, repeated --segment for a highlight reel joined with click-free audio fades; @FOCUS sets crop focus per segment, and several values (@0.57,0.7,0.4) move the crop through them across the segment (crop, blur and pad)",
         "extras": [
           "--zoom",
           "--overlay",

@@ -22,7 +22,9 @@ shows at 56% scale, so burned captions and small slide text shrink with it.
 
 Cut-downs: --start/--end keep one range; repeated --segment keeps several,
 joined in order with a short audio fade at each join so cuts don't click.
-A segment can carry its own crop focus: --segment 0:12-0:30@0.3.
+A segment can carry its own crop focus: --segment 0:12-0:30@0.3. Several values move the
+focus across the segment, for a subject that crosses more of the frame than the crop
+keeps: --segment 6.5-14.1@0.57,0.7,0.4 (evenly spaced in time, straight between).
 
 Usage:
     # Vertical Short of the whole video, blurred fill
@@ -83,6 +85,7 @@ class Segment:
     start: float
     end: float | None  # None = to the end of the input
     focus: float | None = None  # per-segment crop focus, overrides --focus
+    path: tuple[float, ...] | None = None  # two or more focus values the crop moves through
 
 
 @dataclass
@@ -108,11 +111,15 @@ def parse_time(value: str) -> float:
 
 
 def parse_segment(value: str) -> Segment:
-    """'START-END' or 'START-END@FOCUS'; END may be empty for 'to the end'."""
+    """'START-END', 'START-END@FOCUS' or 'START-END@FOCUS,FOCUS[,...]'; END may be empty for 'to the end'."""
     focus = None
+    path = None
     if "@" in value:
         value, focus_text = value.rsplit("@", 1)
-        focus = parse_focus(focus_text)
+        points = tuple(parse_focus(part) for part in focus_text.split(","))
+        focus = points[0]
+        if len(points) > 1:
+            path = points
     if "-" not in value:
         raise ValueError(f"segment {value!r} needs START-END, e.g. 0:12-0:30")
     start_text, end_text = value.split("-", 1)
@@ -120,7 +127,7 @@ def parse_segment(value: str) -> Segment:
     end = parse_time(end_text) if end_text.strip() else None
     if end is not None and end <= start:
         raise ValueError(f"segment {value!r} ends before it starts")
-    return Segment(start, end, focus)
+    return Segment(start, end, focus, path)
 
 
 def parse_focus(value: str) -> float:
@@ -196,9 +203,23 @@ def even(x: float) -> int:
     return max(2, int(round(x / 2)) * 2)
 
 
+def focus_x(spare: int, focus: float, path: tuple[float, ...] | None = None, length: float = 0.0) -> str:
+    """The crop's x for `spare` pixels of room: a number, or an expression of t that moves through `path`."""
+    if not path or spare <= 0 or length <= 0:
+        return str(round(spare * focus))
+    leg = length / (len(path) - 1)
+    expr = f"{spare * path[-1]:.2f}"
+    for i in range(len(path) - 2, -1, -1):
+        a, b = spare * path[i], spare * path[i + 1]
+        expr = f"if(lt(t,{(i + 1) * leg:.4f}),{a:.2f}+({b - a:.2f})*(t-{i * leg:.4f})/{leg:.4f},{expr})"
+    return f"'{expr}'"
+
+
 def reframe_filter(src: Source, width: int, height: int, mode: str,
-                   focus: float, zoom: float, pad_color: str) -> str:
-    """Filter chain from one input video stream ([in]) to a WxH frame ([out])."""
+                   focus: float, zoom: float, pad_color: str,
+                   path: tuple[float, ...] | None = None, length: float = 0.0) -> str:
+    """Filter chain from one input video stream ([in]) to a WxH frame ([out]). `path` moves the crop
+    through several focus values over `length` seconds (not in track mode, which moves it itself)."""
     if mode == 'track':
         from cutdown_tracking import crop_dimensions
         cw, ch = crop_dimensions(src, width, height, zoom)
@@ -208,7 +229,7 @@ def reframe_filter(src: Source, width: int, height: int, mode: str,
     if mode == "crop":
         scale = max(width / src.width, height / src.height) * zoom
         sw, sh = even(src.width * scale), even(src.height * scale)
-        x = round((sw - width) * focus)
+        x = focus_x(sw - width, focus, path, length)
         y = (sh - height) // 2
         return f"[in]scale={sw}:{sh},crop={width}:{height}:{x}:{y},setsar=1[out]"
 
@@ -218,7 +239,7 @@ def reframe_filter(src: Source, width: int, height: int, mode: str,
     cw, ch = min(fw, width), min(fh, height)
     fg = f"scale={fw}:{fh}"
     if (cw, ch) != (fw, fh):
-        fg += f",crop={cw}:{ch}:{round((fw - cw) * focus)}:{(fh - ch) // 2}"
+        fg += f",crop={cw}:{ch}:{focus_x(fw - cw, focus, path, length)}:{(fh - ch) // 2}"
 
     if mode == "pad":
         return (f"[in]{fg},pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:color={pad_color},"
@@ -260,7 +281,8 @@ def build_command(args, src: Source, segments: list[Segment], fmt: str,
         total += length
         chain = reframe_filter(src, width, height, args.mode,
                                seg.focus if seg.focus is not None else args.focus,
-                               args.zoom, args.pad_color)
+                               args.zoom, args.pad_color,
+                               None if args.mode == 'track' else seg.path, length)
         if args.mode == 'track':
             chain = chain.replace('TRACKFILE', f'track{i}.cmd').replace('TRACKLABEL', f'track{i}')
         chain = chain.replace("[in]", f"[v{i}in]", 1).replace("[out]", f"[v{i}]")
@@ -343,8 +365,9 @@ Platforms (default format, short-form length limit):
     parser.add_argument("--zoom", type=float, default=1.0,
                         help="blur/pad: enlarge the fitted frame, cropping its sides (e.g. 1.3)")
     cut = parser.add_mutually_exclusive_group()
-    cut.add_argument("--segment", action="append", type=arg_type(parse_segment), metavar="START-END[@FOCUS]",
-                     help="Keep a time range (seconds, M:SS or H:MM:SS); repeat to join several")
+    cut.add_argument("--segment", action="append", type=arg_type(parse_segment), metavar="START-END[@FOCUS[,FOCUS...]]",
+                     help="Keep a time range (seconds, M:SS or H:MM:SS); repeat to join several. "
+                          "@0.3 sets its crop focus; @0.6,0.4 moves the focus across it")
     cut.add_argument("--start", type=arg_type(parse_time), help="Keep from this time")
     parser.add_argument("--end", type=arg_type(parse_time), help="Keep until this time (with --start, or alone)")
     parser.add_argument("--pad-color", type=arg_type(parse_hex), help="pad mode background, #RRGGBB (default black)")
@@ -433,6 +456,9 @@ def main(argv=None) -> int:
     args.input = str(source_path.resolve())
     if args.overlay:
         args.overlay = str(Path(args.overlay).resolve())
+    if args.mode == 'track' and any(seg.path for seg in segments):
+        print('Error: a moving focus (@0.6,0.4) is for crop, blur and pad; track moves the crop itself', file=sys.stderr)
+        return 1
     if args.mode == 'track' and args.box is not None:
         from cutdown_tracking import rectangle
         try:
