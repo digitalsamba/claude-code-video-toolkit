@@ -349,7 +349,8 @@ the fingertips, a hand's reach from where the wrist is comfortable; two hands on
 breadth apart, measured on the mesh (broad hands on narrow shoulders met in the middle); a hand on a thigh stands
 off the leg's skin as it is posed on that frame. Pulling in to the desk, a hand takes the desk's edge only if it
 can lie flat there in front of the shoulder; otherwise the hands lift off the lap while the desk is still far off
-and wait over the keys.
+and wait over the keys. Until it lifts, a hand on the lap rides the leg: the chest leans into the pull, and a hand
+held to the chest went 2 to 3 cm down into the thigh with it.
 
 To keep a model in a repository, reduce it no further than the fit's own size (`"faces"` in the fit file, 150,000
 by default for a body): a body that passed every check at that size failed the sleeve check at 60,000 faces,

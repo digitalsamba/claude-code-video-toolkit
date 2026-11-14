@@ -1595,6 +1595,33 @@ class ClayPerson:
         at.lay = lay
         return at
 
+    def _stays_on_thigh(self, s, f):
+        """Hand `s` kept where it lies on its thigh on frame f, as a target for `_hands_path`: the spot and the
+        way the hand lies are read off the leg on that frame and ride it afterwards. A hand held in the chest's
+        space (a pose) goes where the chest goes, and a chest that leans forward over a lap pushes it down into
+        the leg."""
+        sc = bpy.context.scene
+        if sc.frame_current != f:
+            sc.frame_set(f)
+        bpy.context.view_layer.update()
+        sd = "L" if s > 0 else "R"
+        thigh, hand = self.rig.pose.bones["thigh." + sd], self.rig.pose.bones["hand." + sd]
+        mw = self.rig.matrix_world
+        leg = mw @ thigh.matrix
+        spot = leg.inverted() @ self._hold_point(s)
+        posed = (mw @ hand.matrix).to_3x3() @ self.rig.data.bones["hand." + sd].matrix_local.to_3x3().inverted()
+        turn = leg.to_3x3().inverted()
+        palm, way = turn @ (posed @ self.palm[s]), turn @ (posed @ self.hand_way[s])
+
+        def at(f):
+            return self.rig.matrix_world @ thigh.matrix @ spot
+
+        def lay(f):
+            now = (self.rig.matrix_world @ thigh.matrix).to_3x3()
+            return now @ palm, now @ way
+        at.lay = lay
+        return at
+
     def _wrist_for(self, s, point):
         """Where the wrist goes for hand `s` to touch a point in the room: back along the line to the shoulder
         by the hand's own length, so it is the knuckles that arrive and not the wrist (in the chest's space)."""
@@ -2249,7 +2276,10 @@ class ClayPerson:
                     waits = True
                     # (up off the leg before forward: curled fingers hang below the knuckles by this much)
                     up = self._hand_under(s, "relaxed")[0] - self._hand_under(s, "relaxed")[1] + 0.02
-                    stages[s] = [(f0 + d, begin, pole, 0), (go + d, begin, pole, 0), (edge[1] + d, over, over_pole, up),
+                    # (until it lifts, a hand on the lap stays on the leg: the chest leans into the pull, and
+                    # a hand held to the chest went 2 to 3 cm down into the thigh with it)
+                    lies = self._stays_on_thigh(s, f0 + d) if self.arm_pose == "lap" else begin
+                    stages[s] = [(f0 + d, lies, pole, 0), (go + d, lies, pole, 0), (edge[1] + d, over, over_pole, up),
                                  (f1, over, over_pole, 0)]
                 elif took is None:
                     stages[s] += [(f1 - (late - d), self._on_thigh(s, lap, 20), self.LAP, 0.01), (f1, self._on_thigh(s, lap, 20), self.LAP, 0)]
