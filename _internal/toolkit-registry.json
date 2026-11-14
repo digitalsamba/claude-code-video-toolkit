@@ -1182,6 +1182,8 @@
         "check": "Build, verify shots, measure exposure, write stills + contact_sheet.png (exit 1 on a failed check, 2 on a spec error)",
         "render": "Check, then render the film with sound",
         "open": "Open the built scene.blend in Blender to look round it",
+        "fit": "Experimental: bind a generated 3D character (GLB) to the cast's rig from a fit.json",
+        "reduce": "Experimental: a smaller copy of a generated model to keep in a repository, thinned inside the islands of its texture so no face is painted from the wrong place (--faces, --texture)",
         "--clips": "One clip per shot in out/clips/ with clips.json and each shot's effects as a WAV, instead of one film",
         "--alpha": "Transparent background: clips are WebM (VP9 with alpha)",
         "--prores": "Also ProRes 4444 .mov per clip, for other editors",

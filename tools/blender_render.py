@@ -544,6 +544,23 @@ def fit(args) -> int:
     return 0
 
 
+def reduce(args) -> int:
+    """A smaller copy of a generated model, to keep in a repository (lib/blender/reduce_model.py)."""
+    model = Path(args.model)
+    if not model.exists():
+        print(f"not found: {model}")
+        return 2
+    cmd = [find_blender(), "-b", "-noaudio", "-P", str(ROOT / "lib" / "blender" / "reduce_model.py"), "--",
+           "--model", str(model), "--out", str(args.out), "--faces", str(args.faces), "--texture", str(args.texture)]
+    done = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    lines = [ln for ln in done.stdout.splitlines() if ln.startswith("REDUCED ")]
+    if not lines:
+        print((done.stdout + done.stderr)[-1500:])
+        return 2
+    print(lines[-1])
+    return 0
+
+
 def doctor(args) -> int:
     """Is everything a render needs here, and how long will one take on this machine?"""
     ok = True
@@ -627,6 +644,11 @@ def main():
     f.add_argument("--fit", required=True, help="fit.json: its joints, clothes line and face (docs/blender.md)")
     f.add_argument("--out", required=True, help="the fitted .blend, named by a character file's \"model\"")
     f.add_argument("--preview", help="folder for three stills of the fitted model")
+    m = sub.add_parser("reduce", help="experimental: a smaller copy of a generated model, to keep in a repository")
+    m.add_argument("--model", required=True, help="the model as generated (GLB)")
+    m.add_argument("--out", required=True, help="the smaller GLB")
+    m.add_argument("--faces", type=int, default=60000, help="faces to keep (0: all of them)")
+    m.add_argument("--texture", type=int, default=1024, help="the base colour texture's size in pixels")
     d = sub.add_parser("doctor", help="check Blender, ffmpeg and Pillow, and time a test render")
     d.add_argument("spec", nargs="?", help="spec to time (default: examples/blender-disk-panic)")
     d.add_argument("--res")
@@ -636,7 +658,7 @@ def main():
     args = ap.parse_args()
     if args.cmd == "render" and not args.clips and (args.shots or args.to or args.prores or args.alpha):
         ap.error("--alpha, --shots, --to and --prores need --clips (a film is one opaque MP4)")
-    sys.exit({"check": check, "render": render, "open": open_scene, "doctor": doctor, "fit": fit}[args.cmd](args))
+    sys.exit({"check": check, "render": render, "open": open_scene, "doctor": doctor, "fit": fit, "reduce": reduce}[args.cmd](args))
 
 
 if __name__ == "__main__":
