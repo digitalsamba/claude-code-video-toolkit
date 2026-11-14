@@ -1726,6 +1726,13 @@ class ClayPerson:
         d = (self.pole_t[s].location - mid).normalized()
         return (d.x * s, d.y, d.z)
 
+    class _Laid:
+        """A wrist position in the chest's space with the way the hand lies there ("keys", "flat"): a target
+        for `_hands_path` that is held out in the air but lies as it would on the thing it is waiting for."""
+
+        def __init__(self, at, lay):
+            self.at, self.lay = Vector(at), lay
+
     def _hands_path(self, stages: dict):
         """Move hands through stages, keyed on every frame so a hand stays on what it touches while the body
         moves under it. `stages` is {side: [(frame, target, pole, arc), ...]}: a target is a wrist position in the
@@ -1751,8 +1758,8 @@ class ClayPerson:
                 u = u * u * (3 - 2 * u)
                 pole = self._mirror(Vector(pa).lerp(Vector(pb), u), s)
                 # how the hand lies on what it is leaving and on what it is going to
-                was, lay = (getattr(t, "lay", None) if callable(t) else lies.get(s, self._lay()) if t is st[0][1]
-                            else None for t in (ta, tb))
+                was, lay = (getattr(t, "lay", None) if callable(t) or hasattr(t, "lay")
+                            else lies.get(s, self._lay()) if t is st[0][1] else None for t in (ta, tb))
 
                 def wrist(t, how):
                     """Where the wrist is (the chest's space) with the hand on target t on this frame: a pose is
@@ -1760,7 +1767,7 @@ class ClayPerson:
                     knuckles came out and move the wrist by what they missed (a few times: moving it turns the
                     forearm)."""
                     if not callable(t):
-                        return Vector(t)
+                        return Vector(getattr(t, "at", t))
                     at = self._wrist_for(s, t(f))
                     self._arm_key(s, f, at, pole, how, how, 1.0)
                     inv = self.spine.matrix_world.inverted().to_3x3()
@@ -2317,7 +2324,7 @@ class ClayPerson:
         # hands: on the knees while the feet do the work; once the desk is in reach they take its edge and
         # pull, and stay on it
         for _ in range(4):
-            stages, grips, waits = {}, [], False
+            stages, grips, waits, ready = {}, [], False, []
             for s in (1, -1):
                 if s in self.busy:  # (the hand with the mug keeps it level over the table: `_carry_keys` below)
                     continue
@@ -2351,8 +2358,13 @@ class ClayPerson:
                     # (until it lifts, a hand on the lap stays on the leg: the chest leans into the pull, and
                     # a hand held to the chest went 2 to 3 cm down into the thigh with it)
                     lies = self._stays_on_thigh(s, f0 + d) if self.arm_pose == "lap" else begin
+                    # (and they wait as they will lie on the keys, palms down and fingers out: left to follow the
+                    # forearm, a hand held out in front points up off a low elbow, palm forward, and curled it
+                    # is a fist held up at the chest)
+                    over = self._Laid(over, "flat")
                     stages[s] = [(f0 + d, lies, pole, 0), (go + d, lies, pole, 0), (edge[1] + d, over, over_pole, up),
                                  (f1, over, over_pole, 0)]
+                    ready.append((s, go + d, edge[1] + d))
                 elif took is None:
                     stages[s] += [(f1 - (late - d), self._on_thigh(s, lap, 20), self.LAP, 0.01), (f1, self._on_thigh(s, lap, 20), self.LAP, 0)]
                 else:
@@ -2376,6 +2388,8 @@ class ClayPerson:
                 break
             self.apart += 0.5 * (self.HANDS_GAP * self._breadth() - self._hands_gap(f1)) + 0.002
         self._carry_keys(f0, f1)
+        for s, a, b in ready:
+            self.hand_shape(a, b, "type", "left" if s > 0 else "right")
         for s, f, point in grips:
             side = "left" if s > 0 else "right"
             self.hand_shape(f - n(8), f - n(3), "open", side)  # open over the desk's edge, then laid flat on it,
