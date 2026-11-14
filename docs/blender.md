@@ -277,9 +277,19 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    aloud so they can look away from the screen, and keeps the sharpest frame of a short burst. It needs a browser
    and a camera, the photos stay on the machine, and the person in them decides where they go next: keep them
    out of a public repository.
+   To choose a style, make a few first: `image_edit.py` with the full-body photo and a front photo as its two
+   inputs (`--input full-body.jpg front.jpg`), one prompt that says "image 2 for the face" and describes the
+   person, the clothes and the A-pose, and only the style line changed between runs (an animated feature, a clay
+   puppet, a game hero, toon shading), all at one seed. Lay them side by side and let the person pick. Then make
+   the side, back and open-hands views from the one they picked with `flux2.py --input picked.png`:
+   Qwen-Image-Edit restyles well but cannot turn a figure round. Ask for the feet under the hips, not wide apart:
+   a wide stance spreads wide trousers or a skirt with the legs, and the fit tips the hanging arms out to clear
+   that, so in a walk, with the legs back under the body, the hands stand out from the sides.
 2. **A model.** Any image-to-3D service that returns one textured GLB. Through the Blender MCP server's
    `generate_3d` it is one generation, a minute or three, and may cost a credit on that service: check before
-   you run it.
+   you run it. With MCP for Blender Premium, Premium being on is not enough: tick **Meshy** in its sidebar (N in
+   the 3D viewport). Until then `get_addon_status` lists every generator as off and a generation is refused,
+   which costs nothing. Start the body and the open-hands model one after the other: they generate side by side.
 3. **Fit it.** `uv run tools/blender_render.py fit --model lead.glb --fit fit.json --out lead.blend --preview fit/`
    binds the model to the rig in its own A-pose: nothing is re-posed or stretched. `fit.json`
    holds what the fit can't yet see by itself: the joints (shoulder, elbow, wrist, hip, knee, ankle...), where the
@@ -307,10 +317,21 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    sleeve or inside the hand, and then the sleeve folds where there is no joint. A nub the generator left on a
    hand is smoothed flat with `"smooth": [[along, out_of_palm, across, radius]]`, in cm on the fitted hand from
    the middle of the knuckle row (the back of the hand is negative out of the palm).
+   **Measuring.** Read the joints off the model, not the sheet: render orthographic front and side stills of the
+   GLB in Workbench (flat light, texture colour) with a centimetre grid over them, and print horizontal slices of
+   the mesh every 2 cm (each slice's runs of x, with their y). The slices give what a still hides: the neck is the
+   narrowest slice above the shoulders, the chin is where the slice's front jumps forward, an arm is the run that
+   splits off the trunk, and its centre slice by slice draws the arm's line down to the hand. In a side still
+   seen from +x, the character's front (-y) is on the left. Legs hidden in wide trousers or a long skirt have no
+   slice of their own: put the knee on the line from hip to ankle.
 4. **Name it.** A character file with `"model": "lead.blend"` beside it, and `"accessories": ["glasses"]` if they
    wear them. Keep the folder in a kit (`kits/<name>/cast/`).
 5. **Look at it** before writing beats: a `check` of any spec with the cast entry swapped, and read the contact
-   sheet. Arms up, hands on head and sitting show the skin weights at their worst.
+   sheet. Arms up, hands on head and sitting show the skin weights at their worst. The walk-in
+   (`tests/fixtures/blender-fitted/enter.json`) is the one every fitted character passes. Its cast `at` is set
+   per character: shorter arms stand nearer the door (3.46 for Conal, 3.32 for Mara), and the check says how
+   far short the hand is. A hand that reaches the handle but strains shows as the IK reach error at the door's
+   frame (`ik_worst` in `checks.json` names the frame and limb).
 
 What the fit does for you: legs that touch in the model (shoes generated as one piece) are parted, since a face
 joining one leg to the other tears across the gap on the first step; weights come from a clean stand-in body on
@@ -339,7 +360,10 @@ round the eyes). In Blender: merge by distance at 0.00001, then Decimate.
 What it does not do: without a `hands` model the hands are whatever the model has (usually fists), on one
 bone; generated hands are thick and cupped, so they read as mitts with finger grooves. A typing hand slopes down
 from the wrist 20 degrees, as a typist's does, with the fingertips on the keys; a hand laid flat slopes just
-enough for the heel of the hand and the fingers to rest together (a generated hand's heel is deep). A likeness
+enough for the heel of the hand and the fingers to rest together (a generated hand's heel is deep). Hands with
+fingers need a sleeve: a hand is found by its skin colour up to the cuff, and on a bare arm (a vest top, a
+sleeveless dress) the skin runs on to the shoulder, so the fit stops with "found 0 finger(s)". Fit a bare-armed
+character without `hands` for now. A likeness
 of a real person belongs in your own project folder, not in a repository. `tests/fixtures/blender-fitted` is a worked
 example with an invented character: both models, the `fit.json` read off gridded stills, and a README saying how
 each was made (her generated hands had the fingers joined, so the hands came from a second model).
