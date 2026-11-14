@@ -248,9 +248,10 @@ A presenter on their feet (a `lecture_hall` set for the things that are carried;
 | `gesture` | `kind`: `open`, `both`, `shrug`, `count`; `hand`; `dur` | a talking gesture held for the beat, then the hands go back: one open hand lifting on a point, both hands opening out, a shrug with the head tipping, a raised index |
 | `present` | `target`: `[x, y, z]` or `screen`; `hand`; `dur` | show something beside or behind them (a board): the chest turns part of the way, the head and eyes go to it and stay for the first half, the arm on that side points; then all come back. Follow it with a `look_at` |
 | `dust_hands` | `dur` | the hands come up palms together and brush past each other |
-| `carry` | `prop`: `cup`; `hand` | from this beat the cup is in a hand held in front of the chest, and that arm stays out of a walk's swing |
+| `carry` | `prop`: `cup`; `hand` | from this beat the cup is in a hand held in front of the chest, and that arm stays out of a walk's swing. A mug is held by its handle (the fist closed on it, the mug out past the knuckles); a takeaway cup in a hand round it. The hand goes on carrying through `sit_down` and `pull_in`, level, and lifts the cup clear of the table as it comes under it |
 | `put_down` | `prop`: `cup` or `chalk`; `hand`; `to`: `[x, y, z]`; `lean`; `dur` | the hand takes what it holds to its spot on the table and lets go; an error says how far short the arm is. `lean` is how far the chest bends to it (9 degrees unless given). Someone sitting at a kitchen table leans only as far as the table's edge allows, the hand lies flat beside the laptop afterwards, and the other hand stays where it lies on the table |
-| `pick_up` | `prop`: `chalk`; `hand`; `dur` | a hand takes the chalk off the table; it lies along the index finger and the hand keeps hold of it through every later shape |
+| `pick_up` | `prop`: `chalk` or the kitchen's `cup`; `hand`; `dur` | a hand takes the chalk off the table; it lies along the index finger and the hand keeps hold of it through every later shape. The kitchen's mug is taken by its handle and lifted to where a cup is carried (about half a second after the beat), so `sip` and `put_down` follow; a mug that has stood there since the film began is turned to offer its handle to that hand |
+| `sip` | `hand`; `dur`; `part`: 0 to 1; `stay`: true | the mug in that hand goes up to the mouth, tips, and comes back down by the end of the beat, the elbow rising out to the side over the top half of the way. `part` stops it short (0.5 is half way up); `stay` leaves it up there, for a sip that is interrupted. Needs a `carry` or `pick_up` first |
 | `hold` | `prop`: `chalk`; `hand` | the chalk is in the hand from this beat (a clip that starts after it was picked up) |
 
 At a kitchen table (a `kitchen` set; `carry` and `put_down` with `"prop": "cup"` work there too, the cup being
@@ -278,6 +279,8 @@ and the second when it is over a centimetre: usually a step or a reach that was 
 | `touch_miss_m` | 3 cm | a hand off the thing it was put on (the door handle, the desk's edge) |
 | `grip_open` | over 0.75 | hands with fingers: how open a hand still is round what it holds (fingertips' distance from it over a finger's length; a flat hand is about 1) |
 | `hands_apart_m` | under 0.5 cm | hands with fingers: the nearest the two hands come to each other |
+| `carried_tilt_deg` | 12 degrees | something in the hand (a mug of tea) tipped from upright; the tip of a `sip` is the mug's own and is not counted |
+| `carried_through_m` | 0.6 cm | something in the hand inside a table, a door or a lid |
 | `palm_tilt_deg` | 35 degrees | hands with fingers: a hand resting over a table top, rolled from palm down onto its side (a typing hand slopes down from the wrist on purpose; the slope is not counted) |
 | `palm_turn_deg` | 35 degrees | hands with fingers: a hanging hand's palm turning away from the leg as the arm swings in a walk (it reads as a flapping hand) |
 | `snap_m` | 2 cm | the chest or a hand moving much further in one frame than in the frames either side (a key beside another, a hand put from one spot to the next in a frame) |
@@ -334,7 +337,7 @@ of the handle), `open_door` with `"by"`, `walk` in, `walk` to a thigh's length i
 | `desk_room` (default) | a room: walls, window, posters, rug, desk, chair, laptop, mug, plant. `palette` recolours it (`wall`, `wall2`, `floor`, `desk`, `accent1`, `accent2`, `rug`) |
 | `desk` | the desk, chair and laptop with no room, for `--alpha`: the character sits on whatever the Remotion scene puts behind it |
 | `lecture_hall` | a wall with a board that shows a picture (`"board": {"image": ..., "x0", "x1", "z0", "z1"}`: the rectangle of the wall it covers, the same one a `fixed` camera can frame square on), a `"door"`, and a small table (`"table": {"at", "size", "height", "cup", "chalk"}`) with a takeaway cup and a stick of chalk. `"walls": false` leaves the room out for `--alpha`; `"table": {"hidden": true}` keeps the table to reach for and does not draw it; `"cup_on": true` starts with the cup already on it. The cast stands |
-| `kitchen` | a home kitchen at night, built round the desk room's table, chair and laptop (so `door`, `chair_out`, `pull_in` and the screen work as they do there): a run of units with a sink under a window, a kettle and a hob, a fridge, a second run on the left wall, a pendant lamp over the table, a clock. `"lid": "closed"` starts the laptop shut. `"mug": {"at": [x, y], "on_table": true, "color"}` places the mug of tea (`on_table` for a clip that starts after it was put down). `"claude": {"at": [x, y], "facing", "screen": {"video" or "image", "at", "brightness"}, "hat": false}` stands Claude on the worktop: a beige CRT with a face on its screen (bars until you give it a picture or a video at the spec's `fps`), a tinfoil hat and two arms at a keyboard. `palette` adds `units`, `worktop`, `night`, `lamp` |
+| `kitchen` | a home kitchen at night, built round the desk room's table, chair and laptop (so `door`, `chair_out`, `pull_in` and the screen work as they do there): a run of units with a sink under a window, a kettle and a hob, a fridge, a second run on the left wall, a pendant lamp over the table, a clock. `"lid": "closed"` starts the laptop shut. `"mug": {"at": [x, y], "on_table": true, "color", "inside"}` places the mug of tea (`on_table` for a clip that starts after it was put down): 12 cm tall with a handle a hand fits, in the room's accent colour unless given one. `"claude": {"at": [x, y], "facing", "screen": {"video" or "image", "at", "brightness"}, "hat": false}` stands Claude on the worktop: a beige CRT with a face on its screen (bars until you give it a picture or a video at the spec's `fps`), a tinfoil hat and two arms at a keyboard. `palette` adds `units`, `worktop`, `night`, `lamp` |
 | `studio` | a product stage: a backdrop curving from floor to wall, soft lights sized to the props, no character and no beats. `palette.backdrop` colours it; with `--alpha` the backdrop is left out |
 
 An evening at the kitchen table, from the door to the screen (the character starts in the hall, a forearm
@@ -356,7 +359,9 @@ further from the door than without a mug, so the hand that carries it is not in 
 ```
 
 They sit before the mug goes down: a standing arm does not reach a table that low (only the chest bends, and
-the error says "sit them down first"). A hand's move runs on for about half a second after its beat ends (the
+the error says "sit them down first"). Later, `{"do": "pick_up", "prop": "cup", "hand": "left", "dur": 0.6}` and,
+half a second after it ends, `{"do": "sip", "hand": "left", "dur": 2.0}` have them drink; `"stay": true` on a
+short `sip` stops the mug at the lips for something to interrupt. A hand's move runs on for about half a second after its beat ends (the
 hand comes to rest on the table), so leave that before the next beat that uses the arms; a beat that starts
 inside another's move takes the hand from wherever it is on that frame.
 
@@ -543,7 +548,8 @@ and shut by hand only by a fitted character with fingers who can reach it, and o
 shut it, or who cannot lay a hand flat beside the laptop, gets an error that says so (leave out `"by"`, and the
 check then fails a lid that shuts on hands left on the keys); a `lean` beat carries hands that rest on a table
 down through it, since they hang from the chest (use the verbs that put a hand somewhere); a standing
-`put_down` needs a table near shoulder height; the kitchen is 6 m deep, so a `wide` on the clay cast is behind
+`put_down` needs a table near shoulder height; a `sip` on a broad short-armed character bunches the sleeve at the
+shoulder from a wide camera (film it close, or use `part`); the kitchen is 6 m deep, so a `wide` on the clay cast is behind
 its front wall (use `medium` or a `fixed` camera); the clay cast's hands are one bone (a mitten), so its `reach` puts the hand on a thing
 but does not close round it (a fitted model can have fingers); nothing stops a walk going through furniture (walk
 round it, or bend the walk with `curve`); the clay cast's hoodie hem is ragged when it stands, because its

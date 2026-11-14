@@ -395,6 +395,31 @@ What building it taught, each now in the code or a check:
 - **A beat that starts inside another's move** takes the hand from wherever it is on that frame, and the result
   is a one-frame jump or a hand left in the air. A hand's move runs about half a second past its beat.
 
+What the first viewing taught ("I seem to be carrying a candle", and "some of the alignment is out"):
+
+- **A prop is told by its outline, its colour and its size against the hand.** The first mug was a cream cylinder
+  8 cm across, held from above with its handle inside the fist: a candle. Now it is 12 cm tall in the room's
+  accent colour, with tea in it and a handle a hand fits, and it is held by that handle, out past the knuckles
+  where a camera sees it.
+- **What a hand carries needs its own checks.** The body's checks passed while the mug went through the table's
+  edge: a carrying hand went to the thigh with the other one when he sat, and took the table's edge with it when
+  he pulled the chair in. A carrying hand now keeps carrying through posture verbs and lifts clear of the table,
+  and the check reports `carried_tilt_deg` (a full mug stays level) and `carried_through_m`.
+- **A hand held one way in the room runs into the wrist's limit as the forearm swings**, and the mug tips with it.
+  A hand that carries follows its own forearm and only stays level. An upright forearm has no level direction, so
+  the elbow rises out to the side for a sip, as a drinker's does.
+- **The straight line from the mouth to the table passes the shoulder.** The arm folded shut on the way and the
+  hand swung right round. A hand with something in it comes down to where it carries first, and no point of its
+  way is nearer the shoulder than a bent arm holds a mug.
+- **Rotation keys are written in the order the verbs run, not the order of their frames.** Two neighbours can
+  hold opposite signs of the same rotation, and the curve between them passes through zero: the hand spun 139
+  degrees in six frames. Each carrying verb now ends by putting the hand's keys in order. On a frame between two
+  keys the four numbers are not a unit rotation either; read without normalising, they keyed the hand a long way
+  off for one frame. That was an old fault in every fitted hand, found by the new check.
+- **A fitted face's brows are shaped, not slabs.** On a sculpted face a box read as a shelf over each eye, in the
+  hair's colour, half hidden by the glasses. They taper, arch, follow the head, are a shade darker than the hair
+  and clear the frames at rest. The clay cast keeps its slabs, which suit it.
+
 ## Limits today
 
 9:16 works: set `"resolution": "1080x1920"` and read the contact sheet, since a `wide` shot crops the desk.

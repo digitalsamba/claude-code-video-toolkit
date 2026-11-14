@@ -63,7 +63,7 @@ def crumpled_cone(name, r0, depth, m, parent, loc, seed=5):
 
 
 class Kitchen(DeskRoom):
-    MUG_H, MUG_R = 0.11, 0.041
+    MUG_H, MUG_R, MUG_LOOP = 0.118, 0.058, 0.043   # tall, radius, and the handle's loop out from its wall
 
     def __init__(self, palette: dict | None = None, screen: dict | None = None, media_path=None,
                  media_start: int = 1, media_offset: int = 0, media_strength: float = 1.0, fit: dict | None = None,
@@ -255,20 +255,29 @@ class Kitchen(DeskRoom):
 
     # ------------------------------------------------------------ a mug of tea
     def _mug(self, name):
-        """A mug: its middle at the object's origin, the handle on its +X side, tea near the brim."""
+        """A mug of tea: its middle at the object's origin, a handle big enough for a hand on its +X side, a rim,
+        a band of the room's accent round it and tea near the brim. (The first one was a small cream cylinder
+        with its handle hidden in the fist, and read as a candle: a mug is told by its handle, its colour and
+        being wider than the hand that holds it.) `handle` on the object is how far the handle's bar is from
+        the mug's middle: a hand takes it there (acting.carry)."""
         M, h, r = self.m, self.MUG_H, self.MUG_R
-        c = mat(name + "_glaze", self.mug_cfg.get("color", "#E9E4D8"), 0.3)
-        root = empty(name)
-        cyl(name + "_body", r, h, c, root, (0, 0, 0), seg=32, smooth=True)
-        cyl(name + "_tea", r - 0.004, 0.002, mat(name + "_tea", "#7A4A28", 0.15), root, (0, 0, h / 2 - 0.012), seg=32)
-        arc_tube(name + "_handle", 0.028, 0.007, -math.pi / 2, math.pi / 2, c, root, (r - 0.002, 0, 0), seg=14, ring=8)
+        c = mat(name + "_glaze", self.mug_cfg.get("color", self.kp["accent1"]), 0.28)
+        inner = mat(name + "_inside", self.mug_cfg.get("inside", "#EFE8DA"), 0.3)
+        top = empty(name)
+        root = empty(name + "_pour", top)  # (what tips when it is drunk from: the mug in the hand stays level)
+        cyl(name + "_body", r, h, c, root, (0, 0, 0), seg=40, smooth=True)
+        arc_tube(name + "_rim", r - 0.004, 0.005, 0, 2 * math.pi, inner, root, (0, 0, h / 2), seg=40, ring=8).rotation_euler = (R(90), 0, 0)
+        cyl(name + "_inside", r - 0.006, 0.004, inner, root, (0, 0, h / 2 - 0.001), seg=40)
+        cyl(name + "_tea", r - 0.009, 0.003, mat(name + "_tea", "#6B3A1C", 0.12), root, (0, 0, h / 2 + 0.0012), seg=40)
+        arc_tube(name + "_handle", self.MUG_LOOP, 0.0085, -math.pi / 2, math.pi / 2, c, root, (r - 0.004, 0, 0), seg=18, ring=10)
+        root = top
+        root["handle"], root["rim"], root["tall"] = r - 0.004 + self.MUG_LOOP, r, h
+        root["hold_drop"] = 0.024  # (the fist a little above the handle's middle: clear of the table as it is set down)
         return root
 
     def _mug_props(self):
         Y, Z = self.desk_y, self.desk_z
         self.cup_hand, self.cup_table = self._mug("cup_hand"), self._mug("cup_table")
-        # (held near its rim: a hand round its middle has its little finger in the table as it is set down)
-        self.cup_hand["hold_drop"] = 0.045
         self.cup_hand.scale = (0, 0, 0)
         at = self.mug_cfg.get("at", (0.5, -0.47 + Y))  # (out past a hand that lies beside the laptop)
         self.cup_spot = Vector((at[0], at[1], 0.9 + Z + self.MUG_H / 2 + 0.001))

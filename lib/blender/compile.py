@@ -44,7 +44,7 @@ SCORE_MOODS = ("calm", "tension", "resolve")
 CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_head", "gulp", "blink", "sweat",
               "tremble", "tap", "celebrate", "hold_arms", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
               "look_at", "reach", "hand", "point", "talk", "blinks", "gesture", "dust_hands", "carry", "put_down",
-              "pick_up", "hold", "present", "whistle"}
+              "pick_up", "hold", "present", "whistle", "sip"}
 # how far (m) each kind of contact may be out before the check fails and says where (see ClayPerson.contacts)
 CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03, "snap": 0.02}
 HANDS_APART = 0.005  # nearer than this the two hands are into each other (m)
@@ -52,6 +52,8 @@ PALM_TILT = 35.0     # a hand resting over a table top is palm down to within th
 PALM_TURN = 35.0     # a hanging hand keeps its palm to the leg through a walk to within this (degrees)
 ARM_LIMITS = {"elbow_deg": 35.0, "forearm_deg": 40.0, "hand_off_m": 0.04}  # a fitted model's arms in a walk (arms_report)
 TYPING_LIMITS = {"rest_m": 0.008, "into_m": -0.004, "finger_travel_m": 0.006}  # hands with fingers on the keys
+CARRIED_TILT = 12.0     # a mug in the hand is level to within this (degrees; the tip of a sip is its own part)
+CARRIED_THROUGH = 0.006  # and no deeper than this in a table or a door (m)
 GRIP_OPEN = 0.75  # a hand holding something has its fingertips within this share of a finger's length of it
 SKIN_LIMITS = {"leg_above_hips": 50, "stretch": 4.0}  # a fitted model's weights (character.skin_report)
 SET_VERBS = {"alert", "work", "done", "open_door", "close_door", "pull_in", "open_lid", "close_lid", "claude_type",
@@ -391,10 +393,13 @@ def build(spec, args):
                     acting.present(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(36), point, b.get("hand"))
                 except ValueError as e:
                     raise SpecError(f'beat at {b["at"]!r}: {e}')
-            elif verb in ("gesture", "dust_hands", "carry", "put_down", "pick_up", "hold"):
+            elif verb in ("gesture", "dust_hands", "carry", "put_down", "pick_up", "hold", "sip"):
                 try:
                     hand = b.get("hand")
-                    if verb == "gesture":
+                    if verb == "sip":
+                        acting.sip(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(40), hand or "left",
+                                   part=float(b.get("part", 1.0)), stay=bool(b.get("stay", False)))
+                    elif verb == "gesture":
                         acting.gesture(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(30),
                                        b.get("kind", "open"), hand)
                     elif verb == "dust_hands":
@@ -409,7 +414,7 @@ def build(spec, args):
                             on_table.scale = (0, 0, 0)
                             acting.hold_small(p, in_hand, f0, hand or "right")
                         elif verb == "pick_up":
-                            acting.pick_up(p, in_hand, on_table, f0, end, hand or "right")
+                            acting.pick_up(p, in_hand, on_table, f0, end, hand or ("right" if small else "left"))
                         elif small:
                             acting.leave_small(p, in_hand, on_table, b.get("to", list(spot)), f0, end, hand or "right")
                         else:
@@ -585,6 +590,7 @@ def main():
     contacts = {k: c for k, c in (getattr(kit, "contacts", None) or {}).items() if k != "under_floor"}
     apart, tilt = contacts.pop("hands_apart", None), contacts.pop("palm_tilt", None)
     turned = contacts.pop("palm_turn", None)
+    tipped, sunk_in = contacts.pop("carried_tilt", None), contacts.pop("carried_through", None)
     touching = all(c["m"] <= CONTACT_LIMITS[k] for k, c in contacts.items())
     checks = {"passed": all(r["passed"] for r in reports) and ik < 0.01 and sunk <= 0.015 and touching,
               "duration": tl.duration, "fps": tl.fps,
@@ -622,6 +628,18 @@ def main():
             checks["passed"] = False
             problems.append(f'{turned["hand"]} palm turns {turned["deg"]:.0f} degrees away from the leg as the arm swings '
                             f'in a walk at {(turned["frame"] - 1) / tl.fps:.2f} s')
+    if tipped and tipped["frame"] is not None:  # something carried: is it level, is it clear of the furniture
+        checks["carried_tilt_deg"] = round(tipped["deg"], 1)
+        if tipped["deg"] > CARRIED_TILT:
+            checks["passed"] = False
+            problems.append(f'the {tipped["what"]} is tipped {tipped["deg"]:.0f} degrees in the hand at '
+                            f'{(tipped["frame"] - 1) / tl.fps:.2f} s: a full mug is carried level')
+    if sunk_in and sunk_in["frame"] is not None:
+        checks["carried_through_m"] = round(sunk_in["m"], 3)
+        if sunk_in["m"] > CARRIED_THROUGH:
+            checks["passed"] = False
+            problems.append(f'the {sunk_in["what"]} in the hand is {sunk_in["m"] * 100:.1f} cm into the {sunk_in["into"]} at '
+                            f'{(sunk_in["frame"] - 1) / tl.fps:.2f} s')
     if getattr(kit, "moves", None):  # each posture verb: do its parts start and stop together, are the sides the same
         checks["moves"] = kit.moves
     if problems:  # in words, for the person or agent reading the check

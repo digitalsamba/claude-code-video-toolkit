@@ -138,6 +138,8 @@ class ClayPerson:
         self.hold_at, self.holding = {}, {1: False, -1: False}  # where a hand holds a bar (the hand bone's space)
         self.carry_spans = {}  # each arm's stretches of carrying something (first frame, last)
         self.busy = set()   # arms that carry something: a walk leaves them where they are
+        self.carrying = {}  # what each of those arms carries: the thing, the wrist, the elbow, how the hand lies
+        self.carried_all = []  # everything that was carried at some point in the film (the checks follow each)
         self.keeps = {}     # the shape a hand keeps while it has something small in it (a stick of chalk)
         self._finger_setup()
         self.neck_pitch, self.spine_pitch, self.height = 7.0, 0.0, self.seat_h
@@ -584,7 +586,10 @@ class ClayPerson:
         bpy.context.view_layer.update()
         sd = "L" if s > 0 else "R"
         bone, rest = self.rig.pose.bones["hand." + sd], self.rig.data.bones["hand." + sd]
-        plain = bone.matrix.to_3x3() @ bone.rotation_quaternion.to_matrix().inverted()  # with no turn of its own
+        # with no turn of its own. (The turn is normalised as Blender does when it poses the bone: on a frame
+        # between two keys the four numbers are eased one by one and are not a unit rotation, and between keys of
+        # opposite sign they pass near zero: taken as they are, the hand was keyed a long way off for one frame)
+        plain = bone.matrix.to_3x3() @ bone.rotation_quaternion.normalized().to_matrix().inverted()
         posed = plain @ rest.matrix_local.to_3x3().inverted()
         way0, palm0 = (posed @ self.hand_way[s]).normalized(), (posed @ self.palm[s]).normalized()
         to_rig = self.rig.matrix_world.to_3x3().inverted()
@@ -643,6 +648,29 @@ class ClayPerson:
         self.wrist_q[s] = q.copy()
         bone.rotation_quaternion = q
         bone.keyframe_insert("rotation_quaternion", frame=f)
+
+    def _wrist_continuous(self, s):
+        """Make hand `s`'s keys turn the short way from each to the next, in the order of their frames. A
+        rotation has two sets of numbers (q and -q); keys are written in the order the verbs run, not the order
+        of their frames, so two neighbours can hold opposite ones, and the curve between them goes through
+        zero: the hand, and a mug in it, spins right round in a few frames (seen: 139 degrees between a mug
+        lifted and a sip)."""
+        path = f'pose.bones["hand.{"L" if s > 0 else "R"}"].rotation_quaternion'
+        fcs = sorted((fc for fc in kit.fcurves(self.rig) if fc.data_path == path), key=lambda fc: fc.array_index)
+        if len(fcs) != 4:
+            return
+        at = [{round(k.co.x): k for k in fc.keyframe_points} for fc in fcs]
+        last = None
+        for f in sorted(set(at[0]) & set(at[1]) & set(at[2]) & set(at[3])):
+            ks = [a[f] for a in at]
+            q = [k.co.y for k in ks]
+            if last is not None and sum(a * b for a, b in zip(last, q)) < 0:
+                for k in ks:
+                    k.co.y, k.handle_left.y, k.handle_right.y = -k.co.y, -k.handle_left.y, -k.handle_right.y
+                q = [-x for x in q]
+            last = q
+        for fc in fcs:
+            fc.update()
 
     def _hold_point(self, s) -> Vector:
         """The point of hand `s` that goes on a thing, in the world, now: the knuckles, or for a hand with
@@ -759,6 +787,11 @@ class ClayPerson:
         self.brow_len, brow_h = BROW[face["brows"]]
         if fit:
             self.brow_len, brow_h = fit["brow_size"][0] / head.scale[0], fit["brow_size"][1] / head.scale[0]
+        if fit and "glasses" in self.desc["accessories"]:
+            # (frames sit where a painted brow was: at rest the brow clears their top edge, or it is a dark line
+            # behind the rim and the face has no brows at all from the front)
+            rim = 0.035 + 0.155 / 2
+            self.brow_at = (self.brow_at[0], self.brow_at[1], max(self.brow_at[2], rim + 0.014 + brow_h / 2 - 0.16))
         self.eyes, self.pupils, self.brows = {}, {}, {}
         for s in (1, -1):
             e = empty(f"{cid}_eye{s}", eye_parent[s]) if fit else empty(f"{cid}_eye{s}", head, (0.1 * s, -0.235, 0.05))
@@ -769,9 +802,12 @@ class ClayPerson:
             if face["eyes"].upper() != "#17110D":  # the default eye is all pupil; a colour gets an iris round it
                 sphere(f"{cid}_iris", 0.052, M["iris"], p, (0, 0.016, 0), (1, 0.5, 1), seg=24)
             sphere(f"{cid}_glint", 0.011, M["glint"], p, (0.012, -0.03, 0.014), seg=12)
-            self.brows[s] = box(f"{cid}_brow", (self.brow_len, 0.025, brow_h), M["hair"], head,
-                                (self.brow_at[0] * s, self.brow_at[1], 0.16 + self.brow_at[2]),
-                                bevel=min(0.01, brow_h * 0.4))
+            at = (self.brow_at[0] * s, self.brow_at[1], 0.16 + self.brow_at[2])
+            if fit:  # (on a sculpted face a slab reads as a shelf over the eye: a brow has a shape and lies on the head)
+                self.brows[s] = self._brow(f"{cid}_brow", self.brow_len, brow_h, s, head, at)
+            else:
+                self.brows[s] = box(f"{cid}_brow", (self.brow_len, 0.025, brow_h), M["hair"], head, at,
+                                    bevel=min(0.01, brow_h * 0.4))
         if fit:
             # a fitted face has its own mouth: made on the model's lip line, with keys on the head for the corners,
             # cheeks and jaw (face.py). The clay cast keeps its three drawn shapes.
@@ -831,6 +867,34 @@ class ClayPerson:
                 blob(f"curl{made}", rng.uniform(0.07, 0.1),
                      (x / length * 0.3, y / length * 0.3 + 0.03, z / length * 0.3 + 0.04))
                 made += 1
+
+    def _brow(self, name, length, h, s, head, at):
+        """A fitted face's brow: thickest a third of the way out from the nose, tapering to its outer end, a
+        little arched, thin, and bent back round the head so its outer end lies on the temple and does not
+        stand off it. A shade darker than the hair. Its origin is its middle, as the slab's is, so an
+        expression turns and lifts it the same way."""
+        if "brow" not in self.m:
+            r, g, b = kit.color(self.desc["hair"]["color"])[:3]
+            self.m["brow"] = mat(f"{self.id}_browhair", (r * 0.5, g * 0.5, b * 0.5), 0.75)
+        h, bm, rows, seg, ring, head_r = h * 1.2, bmesh.new(), [], 14, 8, 0.3
+        back = lambda x: math.sqrt(max(1e-6, head_r ** 2 - at[0] ** 2)) - math.sqrt(max(1e-6, head_r ** 2 - x ** 2))  # noqa: E731
+        for i in range(seg + 1):
+            t = i / seg                                   # 0 at the nose end, 1 at the temple end
+            x = s * (t - 0.5) * length
+            fat = (0.7 + 0.3 * math.sin(math.pi * min(1.0, t / 0.33) / 2)) if t < 0.33 else 1.0 - 0.72 * ((t - 0.33) / 0.67) ** 1.5
+            if i in (0, seg):
+                fat *= 0.55                               # (rounded ends)
+            z = h * (0.22 * math.sin(math.pi * min(1.0, t / 0.6) / 2) - 0.38 * max(0.0, (t - 0.6) / 0.4) ** 2)
+            c = Vector((x, back(at[0] + x), z))
+            rows.append([bm.verts.new(c + Vector((0, 0.009 * math.cos(v), 0.5 * h * fat * math.sin(v))))
+                         for v in (2 * math.pi * k / ring for k in range(ring))])
+        for a, b in zip(rows, rows[1:]):
+            for k in range(ring):
+                bm.faces.new((a[k], a[(k + 1) % ring], b[(k + 1) % ring], b[k]))
+        bm.faces.new(rows[0][::-1])
+        bm.faces.new(rows[-1])
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        return kit.mesh_obj(name, bm, self.m["brow"], head, at)
 
     def _build_frames(self, head, face_y=-0.29):
         """Thick rectangular glasses, a separate item on the head: one front cut from a slab (two lens openings
@@ -1998,6 +2062,8 @@ class ClayPerson:
         # they slide back to rest, last of all
         stages = {}
         for s in (1, -1):
+            if s in self.busy:  # (a hand with a mug in it does not go to the thigh: `_carry_keys` below)
+                continue
             d = 0 if s == lead else late
             start, pole = hands[s]
             # (down the outside of the thigh to the knee: straight there would go through the leg as it comes up)
@@ -2007,10 +2073,58 @@ class ClayPerson:
                          (land + d, self._on_thigh(s, min(0.97, lap + 0.12), 55), self.LAP, 0),
                          (f1 - (late - d), self._on_thigh(s, lap + (0 if s == lead else 0.05), 20), self.LAP, 0.012)]
             stages[s].append((f1, stages[s][-1][1], self.LAP, 0))
-        self._hands_path(stages)
+        if stages:
+            self._hands_path(stages)
+        self._carry_keys(f0, f1)
         self.arm_pose = "lap"
         self.posture = "sit"
         self.events.append({"frame": land, "kind": "rustle"})
+
+    CARRY_CLEAR = 0.035  # how far over a table top a carried thing is held as the table comes under it (m)
+
+    def _carry_short(self, ob, f) -> float:
+        """How far the underside of a carried thing is below its clearance over the table top on frame f (m),
+        if it is over the table at all: what its wrist has to rise by."""
+        if self.table is None:
+            return 0.0
+        bpy.context.scene.frame_set(f)
+        bpy.context.view_layer.update()
+        box = [Vector(v) for v in self.table.bound_box]
+        top = max((self.table.matrix_world @ v).z for v in box)
+        lo, hi = [min(v[i] for v in box) for i in range(2)], [max(v[i] for v in box) for i in range(2)]
+        pts = [m.matrix_world @ Vector(v) for m in [ob, *ob.children_recursive] if m.type == "MESH" for v in m.bound_box]
+        if not pts:
+            return 0.0
+        inv = self.table.matrix_world.inverted()
+        over = any(lo[0] - 0.03 < (inv @ q).x < hi[0] + 0.03 and lo[1] - 0.03 < (inv @ q).y < hi[1] + 0.03 for q in pts)
+        return max(0.0, top + self.CARRY_CLEAR - min(q.z for q in pts)) if over else 0.0
+
+    def _carry_keys(self, f0: int, f1: int):
+        """A hand that carries something goes on carrying it through a posture verb (sitting down, pulling the
+        chair in): the wrist stays in front of the chest and the hand is keyed on every frame, so the thing stays
+        level while the chest tips, and it is lifted clear of the table when the table comes under it. Without
+        this the carrying hand went to the thigh with the others and the mug went through the table's edge."""
+        for s in sorted(self.busy):
+            c = self.carrying.get(s)
+            if not c:
+                continue
+            for f in range(f0, f1 + 1):
+                self._arm_key(s, f, c["wrist"], c["pole"], c["lay"])
+            short, first = 0.0, None
+            for f in range(f0, f1 + 1):
+                under = self._carry_short(c["ob"], f)
+                if under > 0:
+                    short, first = max(short, under), first if first is not None else f
+            if short <= 0:
+                continue
+            rise = Vector((0, 0, short))
+            begin = max(f0, first - n(10))
+            for f in range(begin, f1 + 1):
+                u = min(1.0, (f - begin) / max(1, first - begin))
+                self._arm_key(s, f, c["wrist"] + rise * (u * u * (3 - 2 * u)), c["pole"], c["lay"])
+            c["wrist"] = c["wrist"] + rise
+        for s in self.busy:
+            self._wrist_continuous(s)
 
     OVER_KEYS = 0.05  # how far over the keys hands wait that came in off the lap (m)
     STOP_LEAN = 9.0   # degrees the chest carries on forward as the chair stops
@@ -2081,6 +2195,8 @@ class ClayPerson:
         for _ in range(4):
             stages, grips, waits = {}, [], False
             for s in (1, -1):
+                if s in self.busy:  # (the hand with the mug keeps it level over the table: `_carry_keys` below)
+                    continue
                 d = 0 if s == lead else late
                 begin, pole = hands[s]
                 on_knee = self._on_thigh(s, min(0.97, lap + 0.08), 40)
@@ -2126,11 +2242,13 @@ class ClayPerson:
                                   (f1, edge_at, (1, 0.3, -0.8), 0)]
                     self.events.append({"frame": took + d, "kind": "touch"})
                     grips.append((s, took + d, point))
-            self._hands_path(stages)
+            if stages:
+                self._hands_path(stages)
             # (hands that wait over the keys side by side stay clear of each other, as in a pose: see pose())
             if not waits or self._hands_gap(f1) >= self.HANDS_GAP * self._breadth():
                 break
             self.apart += 0.5 * (self.HANDS_GAP * self._breadth() - self._hands_gap(f1)) + 0.002
+        self._carry_keys(f0, f1)
         for s, f, point in grips:
             side = "left" if s > 0 else "right"
             self.hand_shape(f - n(8), f - n(3), "open", side)  # open over the desk's edge, then laid flat on it,
@@ -2878,6 +2996,9 @@ class ClayPerson:
                                       if sum(g.weight for g in v.groups if g.group in mine) > 0.5])[::4]
 
         self.contact_trace = trace = []  # every frame's numbers, for looking into a failure
+        out["carried_tilt"], out["carried_through"] = {"deg": 0.0, "frame": None}, {"m": 0.0, "frame": None}
+        carried = [(c["ob"], [m for m in [c["ob"], *c["ob"].children_recursive] if m.type == "MESH"])
+                   for c in self.carried_all]
         tris = None
         out["snap"] = {"m": 0.0, "frame": None}
         parts = {"chest": ("spine", True), "left hand": ("hand.L", False), "right hand": ("hand.R", False)}
@@ -2898,6 +3019,23 @@ class ClayPerson:
             mw = np.array(ev.matrix_world)
             W = co.reshape(-1, 3) @ mw[:3, :3].T + mw[:3, 3]
             worst("under_floor", -float(W[:, 2].min()), f)
+            for ob, meshes in carried:  # a thing in the hand: is it level (a mug of tea), is it in the furniture
+                if ob.matrix_world.to_scale().x < 0.5:
+                    continue
+                tip = math.degrees(Vector((0, 0, 1)).angle(ob.matrix_world.to_3x3().col[2].normalized()))
+                trace.append((f, "carried_tilt", round(tip, 1), ob.name))
+                if tip > out["carried_tilt"]["deg"]:
+                    out["carried_tilt"] = {"deg": tip, "frame": f, "what": ob.name}
+                P = np.array([tuple(m.matrix_world @ v.co) for m in meshes for v in m.data.vertices])
+                for sob, give, lo, hi in boxes:
+                    inv = np.array(sob.matrix_world.inverted())
+                    Lp = P @ inv[:3, :3].T + inv[:3, 3]
+                    inside = np.all((Lp > lo) & (Lp < hi), axis=1)
+                    if inside.any():
+                        depth = float((np.minimum(Lp[inside] - lo, hi - Lp[inside]) * np.array(sob.matrix_world.to_scale())).min(axis=1).max())
+                        trace.append((f, "carried_through", round(depth, 4), ob.name, sob.name))
+                        if depth > out["carried_through"]["m"]:
+                            out["carried_through"] = {"m": depth, "frame": f, "what": ob.name, "into": sob.name}
             own = self.root.matrix_world.inverted() @ self.rig.matrix_world
             for k, (bone, tail) in parts.items():
                 b = self.rig.pose.bones[bone]

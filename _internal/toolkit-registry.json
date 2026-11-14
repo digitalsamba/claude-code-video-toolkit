@@ -131,7 +131,7 @@
     },
     "blender": {
       "path": ".claude/skills/blender/",
-      "description": "3D scenes, character acting and product shots from a shot spec, as a film, as clips for any build, or as elements of a Remotion video: spec format, the cast schema (build, face, hair, clothes, accessories, seed, a character file per kit), sets (desk_room, desk, lecture_hall, kitchen with a mug, a lid opened by hand and Claude the CRT, studio with phone, card and model props), shot types and camera moves, acting verbs, narration cues, the check/contact-sheet loop, BlenderClip compositing, brief-to-beats shot grammar, Blender Python vs MCP, Blender 5 gotchas",
+      "description": "3D scenes, character acting and product shots from a shot spec, as a film, as clips for any build, or as elements of a Remotion video: spec format, the cast schema (build, face, hair, clothes, accessories, seed, a character file per kit), sets (desk_room, desk, lecture_hall, kitchen with a mug carried by its handle, picked up and drunk from, a lid opened by hand and Claude the CRT, studio with phone, card and model props), shot types and camera moves, acting verbs, narration cues, the check/contact-sheet loop, BlenderClip compositing, brief-to-beats shot grammar, Blender Python vs MCP, Blender 5 gotchas",
       "status": "experimental",
       "created": "2026-11-11"
     }

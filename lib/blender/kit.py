@@ -210,6 +210,22 @@ def area_light(name, loc, energy, size, c, target):
 
 
 # ---------------------------------------------------------------- keyframes
+def fcurves(ob):
+    """An object's animation curves, wherever this Blender keeps them (layered actions from 4.4)."""
+    ad = ob.animation_data
+    if ad is None or ad.action is None:
+        return []
+    act = ad.action
+    out = []
+    for layer in getattr(act, "layers", []):
+        for strip in layer.strips:
+            for bag in getattr(strip, "channelbags", []):
+                out += list(bag.fcurves)
+    if not out and getattr(act, "fcurves", None) is not None:
+        out = list(act.fcurves)
+    return out
+
+
 def key(t, attr, f, val=None):
     if val is not None:
         setattr(t, attr, val)

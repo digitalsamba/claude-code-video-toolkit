@@ -147,6 +147,19 @@
    "prop": "cup",
    "hand": "left",
    "dur": 0.8
+  },
+  {
+   "at": "T9_claude+0.2",
+   "do": "pick_up",
+   "prop": "cup",
+   "hand": "left",
+   "dur": 0.7
+  },
+  {
+   "at": "T9_claude+1.5",
+   "do": "sip",
+   "hand": "left",
+   "dur": 1.4
   }
  ]
 }
