@@ -16,7 +16,7 @@ Every frame below was generated in this workspace. Click one to watch it.
 **Made with itself**: this toolkit in 90 seconds, made with this toolkit. Every terminal line on screen is the real
 output of the command that made that part, and the bill is measured ($0.33).
 
-<a href="https://demos.digitalsamba.com/video/just-a-quick-one-v2-7add8b74.mp4"><img src="assets/readme-thumbs/just-a-quick-one.jpg" width="870" alt="Just a Quick One: a 3D character in his kitchen with a mug of tea, and a small computer with a face on the counter"></a><br>
+<a href="https://www.youtube.com/watch?v=CgxzhKQ0Afg"><img src="assets/readme-thumbs/just-a-quick-one.jpg" width="870" alt="Just a Quick One: a 3D character in his kitchen with a mug of tea, and a small computer with a face on the counter"></a><br>
 **Just a Quick One**: the toolkit's trailer, with a 3D character acting from a JSON spec. He walks into his kitchen
 with his tea, sits down and opens the laptop; every move is a verb in the spec, checked before Blender renders it.
 [How it works](https://digitalsamba.github.io/claude-code-video-toolkit/3d-characters.html), and what your machine needs.
