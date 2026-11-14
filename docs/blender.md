@@ -347,7 +347,10 @@ sits at its desk: the desk's underside stays over the thighs and a hand resting 
 hang deep under the wrist, and a desk set by the hands alone came down into the legs); the keys' near edge comes to
 the fingertips, a hand's reach from where the wrist is comfortable; two hands on the keys lie 30% of a hand's
 breadth apart, measured on the mesh (broad hands on narrow shoulders met in the middle); a hand on a thigh stands
-off the leg's skin as it is posed on that frame. Pulling in to the desk, a hand takes the desk's edge only if it
+off the leg's skin as it is posed on that frame. A reach is measured from the shoulder joint where the fit put it,
+front to back as well as across and up: on a deep chest the joint is some centimetres behind the middle of the
+body, and measured from in front of it every reach asked for more arm than there was (a wrist 14 mm short of its
+target sitting down, and a hand that strained at the door from a start spot found that way). Pulling in to the desk, a hand takes the desk's edge only if it
 can lie flat there in front of the shoulder; otherwise the hands lift off the lap while the desk is still far off
 and wait over the keys. Until it lifts, a hand on the lap rides the leg: the chest leans into the pull, and a hand
 held to the chest went 2 to 3 cm down into the thigh with it.

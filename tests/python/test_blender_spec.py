@@ -723,6 +723,38 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertIn('leave out "by"', str(cannot_shut.exception))
         self.assertIn('sit them down first', str(too_low.exception))      # a standing arm can't reach a table
 
+    def test_a_deep_chest_reaches_from_its_own_shoulder_and_a_hand_on_the_lap_stays_on_the_leg(self):
+        """Mara fitted again with her shoulder joints 4.5 cm behind the chest (a deep chest, as a third body
+        had): a reach is measured from the joint where it is, so sitting down her hands come to her thighs
+        with the arm they have; and pulling in, a hand waiting on her lap rides the leg while the chest leans
+        over it. Measured from in front of the joint, the wrist missed its target; held to the chest, the hand
+        went near 3 cm into the thigh."""
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            shutil.copy(self.MARA / 'mara.json', tmp / 'mara.json')
+            fit = json.loads((self.MARA / 'fit.json').read_text())
+            fit['joints']['sh'][1] += 0.045
+            fit['hands']['model'] = str(self.MARA / fit['hands']['model'])
+            (tmp / 'fit.json').write_text(json.dumps(fit))
+            args = mock.Mock(model=str(self.MARA / 'mara.glb'), fit=str(tmp / 'fit.json'),
+                             out=str(tmp / 'mara-fitted.blend'), preview=None)
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(args)
+            self.assertEqual(code, 0, said.getvalue())
+            (tmp / 'sit.json').write_text(json.dumps({
+                'fps': 24, 'resolution': '960x540', 'engine': 'eevee', 'set': {'kind': 'desk_room', 'chair_out': 0.75},
+                'cast': [{'id': 'mara', 'from': 'mara.json', 'posture': 'stand', 'at': [0, 0.41], 'facing': 0}],
+                'shots': [{'id': 'A', 'dur': 4.5, 'type': 'wide'}],
+                'beats': [{'at': 'A+0.2', 'do': 'sit_down', 'dur': 1.8}, {'at': 'A+2.3', 'do': 'pull_in', 'dur': 1.5}]}))
+            checks = blender_render.run_compiler(tmp / 'sit.json', tmp / 'out', 'check', '480x270', None)
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        self.assertLessEqual(checks['ik_max_error_m'], 0.001)    # (3.4 mm with the reach measured from the chest)
+        self.assertLessEqual(checks['hand_in_body_m'], 0.015)    # (2.8 cm with the hand held to the chest)
+        self.assertLessEqual(checks['snap_m'], 0.02)
+
     def test_flicker_is_a_still_point_that_jumps_for_a_frame_and_comes_back(self):
         """The render check reads still points of the set out of the frames: one that jumps and comes back on
         five frames of a shot fails, a single blip is only noted, and a smooth change is neither."""

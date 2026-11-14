@@ -345,7 +345,9 @@ class ClayPerson:
                     mod.use_deform_preserve_volume = True
 
         # 5) controls: spine/neck empties -> Child Of; wrist + pole empties -> IK (pole angle +90 for roll-0 bones)
-        self.SH = {s: Vector((P("shL").x * s, 0, P("shL").z - 0.62 + self.drop)) for s in (1, -1)}
+        # (the shoulder joint as the chest control sees it, its depth too: a deep chest has it some centimetres
+        # behind the control, and a reach measured from in front of the joint asks for more arm than there is)
+        self.SH = {s: Vector((P("shL").x * s, P("shL").y, P("shL").z - 0.62 + self.drop)) for s in (1, -1)}
         # arm length against the clay cast's (1 for the clay cast)
         self.arm = ((P("elL") - P("shL")).length + (P("wrL") - P("elL")).length) / 0.7122 if a_pose else 1
         self.hand_len = (P("tipL") - P("wrL")).length
