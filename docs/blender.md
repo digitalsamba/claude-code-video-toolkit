@@ -295,13 +295,38 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    binds the model to the rig in its own A-pose: nothing is re-posed or stretched. `fit.json`
    holds what the fit can't yet see by itself: the joints (shoulder, elbow, wrist, hip, knee, ankle...), where the
    clothes end and the head starts, and the eyes, brows and mouth, all in metres read off a front view. The
-   painted eyes and brows are erased, because the rig's own are placed there and move. The face also takes
+   painted eyes and brows are erased, because the rig's own are placed there and move (unless the painted
+   face is kept, below). The face also takes
    `mouth` (where the lips meet: under a moustache, its lower edge), `mouth_width` (corner to corner; under 18%
    of the face's width fails the check as too small to read), `moustache` (true when the upper lip is under
    hair) and `chin` (the height of the chin's underside). From these the fit builds a lower lip, teeth and the
    dark of an open mouth on the model's own lip line, smile, frown and jaw shapes in the head's surface, and
    skin-coloured lids that close for a blink or a wink. A brow hidden under a fringe goes in `brows_hidden` (its
    index in `brows`, the character's right first): the rig still gives it a brow, and nothing is erased there.
+   **The painted face.** Before anything is erased the fit reads the face that came painted on the model and
+   prints it: each eye's opening, its iris and pupil, how much of the iris the upper lid covers, the lash line,
+   the lips. `check` then holds the rig's eyes against the painted ones (`face` in `checks.json`:
+   `painted_eye_m`, `painted_lid_over_iris`, `eye_tall`) and fails when the rig's are over 1.5 times as tall,
+   which is a stare. A cartoon model passes: its painted eyes are round, wide open and the size the rig makes
+   them (two came in at 0.98 and 1.26). A model painted nearer to life does not: one had eyes 32 by 15 mm with
+   the lid over 13% of the iris, and the rig put 40 by 30 mm white ovals with a bare iris over them (2.0).
+   For that kind of face put `"paint": "keep"` in the fit's `face`. Nothing is erased, so at rest the face is
+   the model's own, texel for texel, and only what has to move is cut from the paint:
+   - each eye is a thin patch 0.3 mm over the painted one, shaded with the body's own normals. It draws the
+     white with the iris painted out, the painted iris as a disc that slides inside the opening for a glance,
+     and a lid in the skin's colour that comes down from the painted lid line for a blink or a wink. The same
+     controls move it that move the rig's eyes, so no verb changes;
+   - the brows stay painted and ride the skin: two shapes in the head for each lift and tilt the forehead over
+     the eye, driven by the brow control;
+   - the lips stay painted and smile shut (the head's smile and frown shapes move them). The rig's mouth, in the
+     painted lips' colour, waits behind the face and comes forward only when the mouth opens: `happy` is a
+     closed smile on such a face, and teeth are for `grin`, `shocked` and speech.
+   What it cannot do: the eyes open no wider than they were painted (`shocked` is brows and mouth); the shut
+   lid is one flat skin colour, right for a blink and plain in a held close-up; a soft painted brow cannot be
+   lifted off its skin as a part of its own (cut out by colour it took the lid's crease with it on one face
+   and half the brow on another), so a brow moves a few millimetres with its skin, not across it. Keep the rig's
+   face for cartoon eyes with long painted lashes: the lid line is read between the lashes and a blink comes
+   out ragged. The fit refuses `keep` when it finds no painted eye (white beside an iris) where `eyes` says.
    **Hands with fingers** are optional: `"hands": {"model": "lead_open.glb"}` names a second model made from
    the same sheet with the hands open and the fingers apart (one more generation). Only its hands are used.
    The fit finds each by its skin colour up to the cuff, finds the fingers and thumb, uses the better formed
@@ -433,6 +458,20 @@ Claude Opus 5.5.
    is open and in what order, what was spent) and writing the next session's prompt from it. A fresh session
    reads the file and the checks, not the old conversation. The same bridge carries a film between
    revisions: see [A film over several sessions](#a-film-over-several-sessions).
+
+Things that cost time in Blender itself, worth knowing before building on this:
+- An image made in memory (`bpy.data.images.new`, pixels set) is not kept by `pack()`: it comes back blank from
+  the saved file. Save it as a PNG, load that as a file, then pack.
+- `libraries.load` fills the list you give it in place: `dst.images = names` turns `names` into the loaded
+  images. Give it a copy if the names are needed afterwards.
+- A driver of type `SUM` with one transform variable needs no script, so it still runs in a file opened with
+  scripts off (a proof script opening `scene.blend` in the background). Do the arithmetic in the nodes.
+- A glossy patch on the bulge of an eye picks up the room as a grey haze over the pupil that stays put when
+  the iris moves. Make the patch matt: a painted eye's shine is its painted glint.
+- Two soft masks that meet (the eye's opening and the band over it) leave a seam where each is half: add them,
+  do not take the larger, or the paint underneath shows through as a line.
+- Read a painted feature's edge by the step in brightness along a line, not by a threshold against skin: the
+  white of an eye is shaded pink at its corners and a hazel iris is no darker than a shadow.
 
 What could be better: the proof scripts (tiled stills, close cameras on a hand or a face, per-frame traces) live
 in a project folder and are not yet tools in the toolkit; the fit still wants its joints read off a still by hand;

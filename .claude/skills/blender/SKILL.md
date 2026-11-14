@@ -168,7 +168,9 @@ service, plus a `fit.json` of its joints and face). The model keeps its own shap
 the rig poses it, so the same verbs drive it, and the chair, desk and laptop are placed for its legs and arms (seat
 at its knee height, keyboard under its hands). `glasses` is the one accessory a model takes. Its face is made from its own marks (a lower
 lip, teeth and lids on the model's lip line and eyes, with the cheeks and chin moving for a smile or an open
-mouth), and with a second model of the same character with open hands the fit gives it fingers: hand shapes, a
+mouth). If `check` says the rig's eyes are far taller than the ones painted on the model (a stare, on a face
+painted nearer to life than a cartoon), put `"paint": "keep"` in the fit's `face` and fit again: the painted face
+stays, the eyes that move are cut from it, and `happy` becomes a closed smile. With a second model of the same character with open hands the fit gives it fingers: hand shapes, a
 grip on a door handle, hands laid flat on the desk, fingertips on the keys. The fit lays a generated thumb in to
 the palm (it stands off it on a thick wedge), so the hands type at a typist's slope. The donor's hands are sized to the body's own, the wrist joint
 is put at the cuff, and the desk, the keys and how far apart the hands lie come from the body's measures, so one spec
