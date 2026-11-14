@@ -994,21 +994,12 @@
       "category": "publishing",
       "backend": "ElevenLabs Scribe ($0.40/audio hour) or local whisper",
       "options": {
-        "engine": [
-          "auto",
-          "scribe",
-          "whisper"
-        ],
-        "skip": [
-          "--no-captions",
-          "--no-chapters"
-        ],
+        "engine": ["auto", "scribe", "whisper"],
+        "skip": ["--no-captions", "--no-chapters"],
         "fresh": "--fresh (transcribe again; otherwise a saved transcript newer than the render is reused)",
         "jsonOut": true
       },
-      "envVars": [
-        "ELEVENLABS_API_KEY"
-      ],
+      "envVars": ["ELEVENLABS_API_KEY"],
       "note": "Writes out/publish/ (video.srt, video.captions.json, chapters.txt, kit.json). Chapter titles from project.json scenes[].title or the scene file names. /publish runs it before the dry run.",
       "created": "2026-11-10",
       "updated": "2026-11-10"
@@ -1209,21 +1200,21 @@
       "created": "2026-11-11",
       "updated": "2026-11-11"
     },
-    "reference_capture": {
-      "path": "tools/reference_capture.py",
-      "description": "Reference photos of a person for a fitted 3D character, from a webcam: a local page talks the sitter through eight poses (front, both three-quarters, both profiles, a smile, glasses off, full body), counts down aloud, takes a short burst and keeps the sharpest frame. Photos are saved to the output folder and nothing leaves the machine. Needs a person at a browser with a camera, so it is not a step for an unattended job",
-      "usage": "uv run tools/reference_capture.py --out projects/my-character/reference [--port 8765] [--no-open]",
-      "status": "beta",
-      "category": "utility",
-      "options": {
-        "out": "Folder for the photos, one JPEG per pose (default reference-capture)",
-        "port": "Local port (default 8765)",
-        "no-open": "Don't open the browser"
-      },
-      "documentation": "docs/blender.md",
-      "created": "2026-11-12",
-      "updated": "2026-11-14"
-    }
+      "reference_capture": {
+        "path": "tools/reference_capture.py",
+        "description": "Reference photos of a person for a fitted 3D character, from a webcam: a local page talks the sitter through eight poses (front, both three-quarters, both profiles, a smile, glasses off, full body), counts down aloud, takes a short burst and keeps the sharpest frame. Photos are saved to the output folder and nothing leaves the machine. Needs a person at a browser with a camera, so it is not a step for an unattended job",
+        "usage": "uv run tools/reference_capture.py --out projects/my-character/reference [--port 8765] [--no-open]",
+        "status": "beta",
+        "category": "utility",
+        "options": {
+          "out": "Folder for the photos, one JPEG per pose (default reference-capture)",
+          "port": "Local port (default 8765)",
+          "no-open": "Don't open the browser"
+        },
+        "documentation": "docs/blender.md",
+        "created": "2026-11-12",
+        "updated": "2026-11-14"
+      }
   },
   "optionalComponents": {
     "propainter": {
