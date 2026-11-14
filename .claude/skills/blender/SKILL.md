@@ -29,6 +29,12 @@ uv run tools/blender_render.py render spec.json --clips --alpha --to projects/my
 uv run tools/blender_render.py open   spec.json                               # the built scene in Blender
 ```
 
+**Tell the person how long it will take before you start.** A fitted character acting in a room renders at about
+2.2 s a frame at 1080p (45 s of film is close to an hour, and is rendered more than once), so a film of this kind
+is two to three hours of unattended work a session, and takes a few sessions with the person's notes between
+them. End each session with the film, its checks, a decisions file and a prompt for the next session that leaves
+a gap for their notes: `docs/blender.md`, "A film over several sessions".
+
 Output in `<spec dir>/out/` (`out/<name>/` for a spec not called `spec.json`): `checks.json`, `contact_sheet.png`, `stills/`, `events.json`, `scene.blend` (open it
 in Blender and scrub), and after `render` the `.mp4` named after the spec's folder, or `clips/` with `--clips`.
 

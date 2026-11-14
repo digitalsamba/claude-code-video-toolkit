@@ -67,6 +67,18 @@ Measured on a MacBook with an Apple M4 (10 cores, 24 GB), Blender 5.3, EEVEE, 32
 | `render --engine cycles` at 1920x1080 | 17 s a frame |
 | The 22.5 s example film (`blender-disk-panic`, 540 frames) | 15 min |
 | All four clips of `blender-in-remotion` (555 frames) | 10 min |
+| A fitted character in a lit room at 1920x1080 (a kitchen, 13 clips, 45 s, 1,365 frames) | 2.1 to 2.4 s a frame, 55 min |
+| The same clips at 640x360, a draft to judge motion | 0.8 s a frame |
+
+**A character film takes hours, not minutes.** The table is one pass of rendering. A film with a fitted character
+acting in a room is rendered more than once (a draft to judge the motion, the full pass, then the shots that
+changed after the frames were read), and around the rendering sit the checks, the sound, the Remotion side and
+the reading of the result. Measured on a 103 s trailer with 45 s of kitchen: the first build took about three
+hours from the brief to the delivered file and the revision about two and a half, each as one unattended session,
+with about an hour of each spent in Blender. Plan a film of this kind as an evening or an overnight run, start
+the render queue in the background as soon as the specs pass `check`, and render one clip at a time: two renders
+at once share the GPU and each frame takes longer. How the work is carried from one session to the next is in
+[A film over several sessions](#a-film-over-several-sessions).
 
 So iterate in `check`, which is seconds, and render when the contact sheet reads right. A render prints its
 progress and time left every 30 seconds. The first Cycles frame also compiles GPU kernels, which takes minutes
@@ -331,7 +343,8 @@ How the fitted rig was worked up, and how to carry on with it or with your own. 
    the film is rendered at full size with the flicker check before anyone is shown it.
 6. **Carry it across sessions in one status file.** Each session ends by updating one file (what was done, what
    is open and in what order, what was spent) and writing the next session's prompt from it. A fresh session
-   reads the file and the checks, not the old conversation.
+   reads the file and the checks, not the old conversation. The same bridge carries a film between
+   revisions: see [A film over several sessions](#a-film-over-several-sessions).
 
 What could be better: the proof scripts (tiled stills, close cameras on a hand or a face, per-frame traces) live
 in a project folder and are not yet tools in the toolkit; the fit still wants its joints read off a still by hand;
@@ -419,6 +432,55 @@ What the first viewing taught ("I seem to be carrying a candle", and "some of th
 - **A fitted face's brows are shaped, not slabs.** On a sculpted face a box read as a shelf over each eye, in the
   hair's colour, half hidden by the glasses. They taper, arch, follow the head, are a shade darker than the hair
   and clear the frames at rest. The clay cast keeps its slabs, which suit it.
+
+## A film over several sessions
+
+A film with a character in it is not finished in one sitting, and no session should try. What has worked, on two
+films so far, is a run of separate sessions with a person's notes between them, each session started from a
+prompt the session before it wrote. It has been run with Claude Fable 5.2 in Claude Code; other models are
+untested.
+
+1. **A brief starts the first session.** It settles what the agent may not decide alone: the scope, the voice and
+   whether new audio may be bought, whether anything is uploaded, and what stays off screen. The agent then works
+   without supervision for a few hours and writes every choice the brief left open, with its reason, in a
+   decisions file in the project.
+2. **The session ends with three things.** The rendered film with its checks run and anything that failed said
+   plainly; the decisions file; and a prompt for the next session, saved in the project and copied to the
+   clipboard.
+3. **The prompt is the bridge.** A new session has none of the old conversation, and should not need it. The
+   prompt names the files to read and in what order, the render to keep, and the rules that still hold, and
+   leaves a gap for the person's notes. It is short because the state lives in the files it points to.
+4. **The person watches, then pastes.** They watch and listen to the film, write what they saw in their own
+   words ("I seem to be carrying a candle", "the pacing in the middle worries me"), paste that into the gap and
+   start a fresh session with it. A note can be loose: finding what "the alignment is out" means, by tiling the
+   frames and looking, is the agent's job.
+5. **Each revision keeps the last.** Before anything changes, the renders, clips, specs and source of the cut
+   being revised are copied aside, so two cuts can be compared and a revision that went wrong costs nothing.
+6. **What a revision teaches goes into the rig.** A fault seen in a film (a mug held like a candle, a hand through
+   a table) is fixed in `lib/blender`, proven on two bodies, given a check, and written into this page and the
+   `blender` skill before the film is rendered again, as in
+   [Refining a rig](#refining-a-rig-one-spec-two-bodies). The next film starts with it.
+
+A prompt of this kind, as one session left it for the next:
+
+```text
+Revise "<film>" (projects/<film>) from my notes on revision 2.
+
+Read in order: the status file, the playbook, then in the project DECISIONS.md ("Revision 2" at the end).
+Revision 2 is out/<film>.mp4; keep it (copy renders, clips, specs and source to audition/v2 before changing
+anything).
+
+My notes on revision 2 (what I heard and saw):
+<PASTE NOTES HERE>
+
+Rules as before: local commits only; every choice I have not settled goes in DECISIONS.md under "Revision 3";
+any change to lib/blender is run on two characters, gets a check or a test, and goes into the docs; run every
+check and say plainly what did not meet it. I may not be available during the run.
+```
+
+Fresh sessions are deliberate. A revision fills a long conversation with frames and logs, and a session that
+starts from the files reads what is true now, not what was tried three hours ago. Two to four sessions took each
+film from a brief to a cut its author would publish.
 
 ## Limits today
 
