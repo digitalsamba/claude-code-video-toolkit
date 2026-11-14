@@ -1819,7 +1819,7 @@
     },
     "blender-kitchen": {
       "path": "examples/blender-kitchen/",
-      "description": "27.6s film with a fitted character (experimental): Mara, a generated 3D model seated on the rig, comes through a door with a mug, walks a bend, sits, puts the mug down by its handle, opens a laptop and drinks, with the body checked before the render",
+      "description": "27.6s film with a fitted character (experimental): Mara, a generated 3D model seated on the rig, comes through a door with a mug, walks a bend, sits, puts the mug down by its handle, opens a laptop and drinks, with the body checked before the render; a second spec plays the toolkit's author in the same kitchen",
       "complexity": "intermediate",
       "created": "2026-11-14"
     }

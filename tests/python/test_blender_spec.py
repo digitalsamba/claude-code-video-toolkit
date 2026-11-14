@@ -520,14 +520,35 @@ class BlenderCheckTests(unittest.TestCase):
         for word in ('shape', 'grip', 'point', 'fist', 'flat'):
             self.assertIn(word, str(ctx.exception))
 
-    FITTED = ROOT / 'projects' / 'character-conal' / 'test' / 'enter.json'
+    CONAL = ROOT / 'tests' / 'fixtures' / 'blender-fitted'
+    _conal = None
 
-    @unittest.skipUnless(FITTED.exists(), 'needs the private fitted model of the toolkit\'s author (Mara, in tests/fixtures, is the one in the repo)')
+    @classmethod
+    def conal(cls):
+        """The toolkit's author as a fitted character (a caricature he shares, in tests/fixtures beside Mara):
+        fitted once for the tests that use him, into a folder that lasts as long as the class."""
+        if cls._conal is None:
+            import contextlib
+            import io
+            tmp = Path(tempfile.mkdtemp())
+            cls.addClassCleanup(shutil.rmtree, tmp, ignore_errors=True)
+            shutil.copy(cls.CONAL / 'conal.json', tmp / 'conal.json')
+            shutil.copy(cls.CONAL / 'enter-conal.json', tmp / 'enter.json')
+            args = mock.Mock(model=str(cls.CONAL / 'conal.glb'), fit=str(cls.CONAL / 'conal-fit.json'),
+                             out=str(tmp / 'conal-fitted.blend'), preview=None)
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(args)
+            assert code == 0, said.getvalue()
+            cls._conal = tmp
+        return cls._conal
+
+
     def test_a_fitted_character_with_fingers_passes_its_own_checks(self):
-        """A generated model fitted to the rig, where one is on this machine: its face, its skin and its hands
-        are measured, and the walk-in passes."""
+        """A generated model fitted to the rig (the author's, the body the rig was worked out on): its face, its
+        skin and its hands are measured, and the walk-in passes."""
         with tempfile.TemporaryDirectory() as tmp:
-            checks = blender_render.run_compiler(self.FITTED, Path(tmp) / 'out', 'check', '480x270', None)
+            checks = blender_render.run_compiler(self.conal() / 'enter.json', Path(tmp) / 'out', 'check', '480x270', None)
         self.assertTrue(checks['passed'], checks.get('body_problems'))
         self.assertGreaterEqual(checks['face']['mouth_share'], 0.18)   # a mouth wide enough to read
         self.assertEqual(checks['skin']['leg_above_hips'], 0)           # no hem that tears when the thighs bend
@@ -546,13 +567,24 @@ class BlenderCheckTests(unittest.TestCase):
             self.assertLessEqual(checks[kind], 0.03, kind)
         self.assertLessEqual(checks['snap_m'], 0.02)                    # nothing jumps in a single frame
 
-    @unittest.skipUnless(FITTED.exists(), 'needs the private fitted model of the toolkit\'s author (Mara, in tests/fixtures, is the one in the repo)')
+    def test_the_kitchen_example_passes_on_its_second_character(self):
+        """examples/blender-kitchen has a film for each fitted character in the repo; this is the author's."""
+        film = json.loads((ROOT / 'examples' / 'blender-kitchen' / 'spec-conal.json').read_text())
+        film['cast'][0]['from'] = str(self.conal() / 'conal.json')
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'film.json').write_text(json.dumps(film))
+            checks = blender_render.run_compiler(Path(tmp) / 'film.json', Path(tmp) / 'out', 'check', '480x270', None)
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        self.assertLessEqual(checks['skin']['stretch'], 4.0)
+        self.assertLessEqual(checks['carried_tilt_deg'], 12.0)
+        self.assertLessEqual(checks['carried_through_m'], 0.006)
+
     def test_someone_at_a_table_shuts_a_lid_without_going_through_it(self):
         """A laptop's lid is further off than a seated arm: the chest turns the shoulder to it and leans only
         as far as the table's edge lets it, the fingertips take the lid's top edge and come down with it, the
         other hand gets off the keys first, and both end flat on the table. Nothing passes through the table,
         the lid, the laptop or the body on the way (a lean given in the spec took both hands through the table)."""
-        cast = self.FITTED.parent.parent / 'cast' / 'conal.json'
+        cast = self.conal() / 'conal.json'
         spec = {'fps': 30, 'set': {'kind': 'kitchen', 'mug': {'on_table': True}}, 'cast': [{'id': 'conal', 'from': str(cast)}],
                 'shots': [{'id': 'A', 'dur': 3.0, 'type': 'medium'}],
                 'beats': [{'at': 0, 'do': 'pose', 'pose': 'rest', 'dur': 0.1},
@@ -567,13 +599,12 @@ class BlenderCheckTests(unittest.TestCase):
             self.assertLessEqual(checks[kind], 0.03, kind)
         self.assertLessEqual(checks['snap_m'], 0.02)
 
-    @unittest.skipUnless(FITTED.exists(), 'needs the private fitted model of the toolkit\'s author (Mara, in tests/fixtures, is the one in the repo)')
     def test_a_mug_is_taken_by_its_handle_drunk_from_and_put_down_level(self):
         """Someone at the kitchen table takes the mug by its handle, lifts it, starts a sip that stops short,
         drinks, and puts it down. The mug is level in the hand throughout (the tip of a sip is the mug's own),
         clear of the table and the shut laptop, and the hand's turn has no frame that spins (rotation keys
         written out of frame order held opposite signs, and the mug turned 139 degrees between two of them)."""
-        cast = self.FITTED.parent.parent / 'cast' / 'conal.json'
+        cast = self.conal() / 'conal.json'
         spec = {'fps': 30, 'set': {'kind': 'kitchen', 'lid': 'closed', 'mug': {'at': [0.5, -0.465], 'on_table': True}},
                 'cast': [{'id': 'conal', 'from': str(cast)}],
                 'shots': [{'id': 'A', 'dur': 4.5, 'type': 'medium'}, {'id': 'B', 'dur': 5.5, 'type': 'closeup'}],

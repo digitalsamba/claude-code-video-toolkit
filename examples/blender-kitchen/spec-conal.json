@@ -1,0 +1,197 @@
+{
+ "title": "An ordinary evening",
+ "fps": 30,
+ "resolution": "1920x1080",
+ "engine": "eevee",
+ "look": {
+  "view": "Standard",
+  "exposure": -0.9
+ },
+ "set": {
+  "kind": "kitchen",
+  "door": {},
+  "chair_out": 0.75,
+  "lid": "closed"
+ },
+ "cast": [
+  {
+   "id": "conal",
+   "from": "conal.json",
+   "posture": "stand",
+   "at": [
+    2.6,
+    3.5
+   ],
+   "facing": 0
+  }
+ ],
+ "shots": [
+  {
+   "id": "K1_window",
+   "dur": 3.5,
+   "type": "fixed",
+   "cam": [
+    0.7,
+    -1.3,
+    1.4
+   ],
+   "aim": [
+    -0.2,
+    2.9,
+    1.45
+   ],
+   "lens": 38,
+   "push": 0.04
+  },
+  {
+   "id": "K2_table",
+   "dur": 3.0,
+   "type": "fixed",
+   "cam": [
+    1.5,
+    -2.3,
+    1.2
+   ],
+   "aim": [
+    0.0,
+    -0.75,
+    0.9
+   ],
+   "lens": 50,
+   "push": 0.05
+  },
+  {
+   "id": "K3_enter",
+   "dur": 7.6,
+   "type": "fixed",
+   "cam": [
+    -1.5,
+    -2.9,
+    1.6
+   ],
+   "aim": [
+    1.2,
+    1.6,
+    1.15
+   ],
+   "lens": 26
+  },
+  {
+   "id": "K4_sit",
+   "dur": 5.2,
+   "type": "wide"
+  },
+  {
+   "id": "K5_lid",
+   "dur": 3.0,
+   "type": "side"
+  },
+  {
+   "id": "K6_quick",
+   "dur": 2.8,
+   "type": "closeup"
+  },
+  {
+   "id": "K7_types",
+   "dur": 2.4,
+   "type": "medium"
+  }
+ ],
+ "beats": [
+  {
+   "at": 0,
+   "do": "carry",
+   "prop": "cup",
+   "hand": "left"
+  },
+  {
+   "at": "K3_enter+0.1",
+   "do": "blinks",
+   "until": "K6_quick+0.3"
+  },
+  {
+   "at": "K3_enter+0.3",
+   "do": "open_door",
+   "dur": 0.8,
+   "by": "conal",
+   "hand": "right"
+  },
+  {
+   "at": "K3_enter+0.9",
+   "do": "whistle",
+   "until": "K3_enter+5.6"
+  },
+  {
+   "at": "K3_enter+1.2",
+   "do": "walk",
+   "to": [
+    2.6,
+    2.0
+   ],
+   "until": "K3_enter+3.0"
+  },
+  {
+   "at": "K3_enter+3.1",
+   "do": "walk",
+   "to": [
+    0,
+    0.41
+   ],
+   "facing": 0,
+   "curve": true,
+   "heading": -90,
+   "until": "K3_enter.end-0.1"
+  },
+  {
+   "at": "K4_sit+0.1",
+   "do": "sit_down",
+   "dur": 1.8
+  },
+  {
+   "at": "K4_sit+2.0",
+   "do": "pull_in",
+   "dur": 1.3
+  },
+  {
+   "at": "K4_sit+3.5",
+   "do": "put_down",
+   "prop": "cup",
+   "hand": "left",
+   "dur": 0.8
+  },
+  {
+   "at": "K5_lid+0.9",
+   "do": "open_lid",
+   "dur": 0.9,
+   "by": "conal"
+  },
+  {
+   "at": "K5_lid+2.3",
+   "do": "look",
+   "target": "screen",
+   "dur": 0.4
+  },
+  {
+   "at": "K6_quick+1.8",
+   "do": "expression",
+   "face": "content",
+   "dur": 0.3
+  },
+  {
+   "at": "K6_quick+2.2",
+   "do": "blink"
+  },
+  {
+   "at": "K7_types+0.2",
+   "do": "pose",
+   "pose": "type",
+   "dur": 0.45
+  },
+  {
+   "at": "K7_types+0.8",
+   "do": "type",
+   "speed": "calm",
+   "until": "K7_types.end"
+  }
+ ]
+}
