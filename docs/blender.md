@@ -10,6 +10,33 @@ moviepy timeline, a video job, an editor), or both from the same spec.
 - **Blender clips inside a Remotion video:** `examples/blender-in-remotion`
 - **A product stage with no character:** `examples/blender-product-shot`
 
+## Model, rig and render
+
+Three things that are easy to run together, and most of the work is in the middle one.
+
+![A generated model, the rig's joints fitted to it, and a rendered frame of the same character in a kitchen](images/blender-model-rig-render.jpg)
+
+1. **A model** is a shape and its colours: a mesh. It cannot move. The clay cast is built from a JSON description;
+   a fitted character starts as a model from an image-to-3D service (this one is Mara, the invented character in
+   `tests/fixtures/blender-fitted`).
+2. **The rig** is what makes a model a character: the joints inside it, how much of the mesh each joint carries,
+   a face and fingers, and the verbs that move them (`walk`, `sit_down`, `carry`, `sip`). It lives in
+   `lib/blender` and is shared by every character, so a verb written once works on all of them, and a fault
+   fixed in it is fixed for every film after. Fitting (`blender_render.py fit`) is the step that seats a model
+   on the rig and saves the result as a `.blend` beside the character's JSON.
+3. **A render** is one film: a spec puts the rigged character in a set, the verbs act on cue, cameras are placed
+   and checked, and Blender draws every frame. Renders are slow (see the times below) and are thrown away and
+   made again whenever the spec or the rig changes.
+
+So a note on a film is one of two kinds. "Hold that look a second longer" is the spec: change a number, render
+the shot again. "The mug goes through the table" is the rig: fix it in `lib/blender`, prove it on two bodies,
+add a check, and then render. Rig work is slower the first time and free ever after.
+
+**What is saved.** Every `check` and `render` writes `scene.blend` in the spec's `out/` folder: the built scene
+with its keyed acting, to open and scrub in Blender when a number does not explain what a frame shows. It is
+written again on each run, so copy one aside to keep it. A fitted character's `.blend` holds only its body
+(`model_body`) and is made again by `fit`. Both kinds are build output and stay out of git.
+
 ## Setup
 
 1. Install Blender 4.2 or later. The toolkit is made on 5.3 (see *What it has been run on*, below).
@@ -460,6 +487,23 @@ untested.
    a table) is fixed in `lib/blender`, proven on two bodies, given a check, and written into this page and the
    `blender` skill before the film is rendered again, as in
    [Refining a rig](#refining-a-rig-one-spec-two-bodies). The next film starts with it.
+
+**What a session checks before it hands over.** The agent does not judge the film by eye alone, and it cannot
+hear it at all, so each kind of fault has a measure:
+
+| Where | What is measured |
+|---|---|
+| `blender_render.py check`, before a frame is rendered | every camera (subject in frame, nothing in the way), and the body: a hand inside the body, a limb through furniture, a sliding foot, a missed touch, a jump in one frame, a stretched cuff, a carried thing tipped or through a table |
+| `blender_render.py render` | flicker, read from still points in the finished frames |
+| `qc.py --render` | loudness, a missing or silent track, black gaps, stretches where nothing moves, motion that stops dead |
+| `qc.py --layout` | text off the canvas, low contrast, type too small for a phone |
+| `sync_check.py --cues` | each sound against the movement it belongs to, within 0.1 s |
+| Reading the frames | the render tiled every few seconds and looked at, and a shot tiled frame by frame where a check or a note points |
+
+A check that fails and cannot be fixed in the session is not hidden: it is named in the report and the decisions
+file with its number, and the agent can carry it into the next prompt as a suggested note, beside the gap for the
+person's own. What no check covers is taste and sound: whether the music suits it, whether a line lands, whether
+it is too long. Those are what the person's notes are for.
 
 A prompt of this kind, as one session left it for the next:
 
