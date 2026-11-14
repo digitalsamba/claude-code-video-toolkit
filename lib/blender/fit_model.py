@@ -585,6 +585,15 @@ def main():
         donor_path = Path(fit["hands"]["model"])
         donor = load_donor(donor_path if donor_path.is_absolute() else Path(args.fit).resolve().parent / donor_path,
                            fit["hands"].get("centre_x"))
+        # (a hands model made from a closer picture, hips up so the hands are bigger in it, comes back sized as
+        # if it were the whole figure: the hands are looked for by lengths in metres, so it is brought to the
+        # body's arm span first)
+        span = max(abs(v.co.x) for v in body.data.vertices) / max(abs(v.co.x) for v in donor.data.vertices)
+        if abs(span - 1) > 0.15:
+            donor.data.transform(Matrix.Scale(span, 4))
+            donor.data.update()
+            print(f"fit: hands, the hands model is {1 / span:.2f}x the body's arm span: scaled to match before "
+                  "its hands are looked for")
         fingers, pieces = hand_graft.graft(body, donor, src, int(fit["hands"].get("faces", 9000)),
                                            float(fit["hands"]["scale"]) if "scale" in fit["hands"] else None,
                                            lumps=fit["hands"].get("smooth", ()))
@@ -601,7 +610,9 @@ def main():
         for before, after in hand_graft.seal(body, pieces):
             print(f"fit: hands, a bare arm's end drawn in onto the hand: the ring stood {1000 * before:.1f} mm off "
                   f"the hand's skin, now {1000 * after:.1f} mm")
-        hand_graft.join(body, pieces)
+        ring = hand_graft.join(body, pieces)
+        if ring:
+            print(f"fit: hands, {ring} vertices on the ring where a bare arm meets its hand share their normals")
         body["hand_material"] = len(body.data.materials) - 1  # (the rig measures a hand's whole skin by it)
     body.data.transform(Matrix.Scale(scale, 4))  # the whole model, evenly: nothing is stretched or re-posed
     lift = -min(v.co.z for v in body.data.vertices)  # soles on the floor

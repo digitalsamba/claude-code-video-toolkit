@@ -81,7 +81,7 @@ def _bare_wrist(co, far, flood, skin, col):
     if (centre_all - tip) @ axis < 0:
         axis = -axis  # from the fingertips toward the elbow
     t = (co - tip) @ axis
-    best, d_best = None, None
+    slices = []
     for d in np.arange(0.09, 0.30, 0.005):
         slab = arm & (np.abs(t - d) < 0.006)
         if slab.sum() < 12:
@@ -89,11 +89,13 @@ def _bare_wrist(co, far, flood, skin, col):
         c = co[slab].mean(axis=0)
         rel = co[slab] - c
         radial = np.linalg.norm(rel - np.outer(rel @ axis, axis), axis=1)
-        r = float(np.median(radial))
-        if best is None or r < best[0]:
-            best, d_best = (r, c, slab), d
-    if best is None:
+        slices.append((float(np.median(radial)), c, slab, d))
+    if not slices:
         return None
+    # (a forearm can be as narrow for some centimetres above the wrist as at it, and which slice of that stretch
+    # measures narrowest changes with the mesh: the wrist is the end of the stretch nearest the hand)
+    narrow = min(sl[0] for sl in slices)
+    *best, d_best = next(sl for sl in slices if sl[0] <= 1.05 * narrow)
     radius, centre, slab = best
     # (the skin's colour is read at the wrist, where the two models meet with nothing over the join: fingertips
     # are paler or pinker than a forearm, and matched by them the hand ends in a line of another colour)
@@ -869,9 +871,42 @@ def seal(body, pieces) -> list:
     return out
 
 
-def join(body, pieces):
-    """The hands become part of the body mesh (a second material: their own texture)."""
+def join(body, pieces) -> int:
+    """The hands become part of the body mesh (a second material: their own texture). On a bare arm the two
+    meet with nothing over the join, and they are still two surfaces there: each shades by its own normals, so
+    the light breaks along the ring and the join shows as a line however well the colours match. The vertices
+    of both on the ring are given one normal between them (the mean of those within a few millimetres), and
+    the mesh keeps those normals. Returns how many vertices were given a shared normal."""
+    from mathutils.kdtree import KDTree
+    cuts = [(Vector(list(p["bare_cut"])[:3]), Vector(list(p["bare_cut"])[3:6]), list(p["bare_cut"])[6])
+            for p in pieces if "bare_cut" in p.keys()]
     for o in bpy.context.view_layer.objects:
         o.select_set(o in pieces or o is body)
     bpy.context.view_layer.objects.active = body
     bpy.ops.object.join()
+    if not cuts:
+        return 0
+    me = body.data
+    normals = [v.normal.copy() for v in me.vertices]
+    ring = [v.index for v in me.vertices
+            if any(abs((v.co - at).dot(no)) < RING_NEAR and (v.co - at).length < 4 * radius for at, no, radius in cuts)]
+    tree = KDTree(len(ring))
+    for i, index in enumerate(ring):
+        tree.insert(me.vertices[index].co, i)
+    tree.balance()
+    shared = {}
+    for index in ring:
+        total = Vector()
+        for _co, i, _d in tree.find_range(me.vertices[index].co, RING_SHARE):
+            total += me.vertices[ring[i]].normal
+        if total.length > 1e-6:
+            shared[index] = total.normalized()
+    for index, n in shared.items():
+        normals[index] = n
+    me.normals_split_custom_set_from_vertices([tuple(n) for n in normals])
+    me.update()
+    return len(shared)
+
+
+RING_NEAR = 0.0015   # a vertex this near a bare arm's cut plane (m) is on the ring where arm and hand meet
+RING_SHARE = 0.004   # and shares its normal with the ring's vertices within this (m)
