@@ -1588,6 +1588,43 @@ class ClayPerson:
 
     ON_LEG = 0.006  # how far the fingertips of a hand resting on a leg are held off its skin (m): cloth gives
 
+    def _off_leg(self, s) -> Vector:
+        """How far, and which way in the room, hand `s` has to move for its fingertips and knuckles to be clear
+        of its own thigh as both are posed on this frame (zero when they are). A hand on its way to a leg
+        travels between two spots that are each clear of it, and the line between them is not: the leg comes
+        up under the hand as the body sits, and wide trousers stand further out at the fingertips than at the
+        wrist. Measured against the leg's skin beside each point, out from the thigh bone."""
+        if not self.fingers.get(s):
+            return Vector()
+        self._leg_radius(s, 0.5, 90)  # (the leg's skin as it is posed on this frame)
+        skin = self.leg_skin[1][self.leg_verts[s]]
+        sd = "L" if s > 0 else "R"
+        pb, mw = self.rig.pose.bones, self.rig.matrix_world
+        hip, knee = mw @ pb["thigh." + sd].head, mw @ pb["thigh." + sd].tail
+        axis, length = np.array((knee - hip).normalized()), (knee - hip).length
+        rel = skin - np.array(hip)
+        along = rel @ axis
+        off = rel - np.outer(along, axis)
+        d = np.linalg.norm(off, axis=1)
+        probes = [mw @ pb[f"{f['name']}.b.{sd}"].tail for f in self.fingers[s][1:]] + [mw @ pb["hand." + sd].tail]
+        worst, way = 0.0, None
+        for p in probes:
+            r = np.array(p - hip)
+            a = float(r @ axis)
+            if not -0.03 < a < length:
+                continue
+            out = r - a * axis
+            dist = float(np.linalg.norm(out))
+            if dist < 1e-4:
+                continue
+            near = (np.abs(along - a) < 0.025) & (d > 1e-4) & (off @ (out / dist) > 0.9 * d)  # within 25 degrees
+            if not near.any():
+                continue
+            short = float(np.percentile(d[near], 95)) + 0.012 + self.ON_LEG - dist  # (a finger is 12 mm thick)
+            if short > worst:
+                worst, way = short, out / dist
+        return Vector() if way is None else Vector((way * worst).tolist())
+
     def _on_thigh(self, s, u=0.55, round_=0.0):
         """The spot on thigh `s` for its hand to rest on, `u` of the way from hip to knee and `round_` degrees
         round from the top toward the outside (where a belly leaning over the leg is not): a function of the
@@ -1606,6 +1643,7 @@ class ClayPerson:
             top = (knee - hip).normalized().cross(left).normalized()  # the leg's front standing, its top sitting
             out = r if off is None else self._leg_radius(s, u, round_) + off
             return hip.lerp(knee, u) + (top * math.cos(R(round_)) + left * s * math.sin(R(round_))) * out
+        at.leg = s
 
         def lay(f):  # the palm on the leg, the fingers along it toward the knee
             bone, mw = self.rig.pose.bones["thigh." + sd], self.rig.matrix_world
@@ -1744,6 +1782,19 @@ class ClayPerson:
                 at = start if end is None else end if start is None else start.lerp(end, u)
                 at = at + Vector((0, -0.4, 0.9)) * arc * math.sin(math.pi * u)
                 self._arm_key(s, f, at, pole, lay, was, u)
+                if getattr(ta, "leg", None) == s or getattr(tb, "leg", None) == s:
+                    # on its way to or from its own leg, the hand goes round the leg, not through it. Where it
+                    # comes to rest (the last stage, or the first when it sets out from the leg) it lies as the
+                    # leg's own measure puts it, so the push fades out into that
+                    share = (1 - u if tb is st[-1][1] else 1.0) * (u if ta is st[0][1] and callable(ta) else 1.0)
+                    inv = self.spine.matrix_world.inverted().to_3x3()
+                    for _ in range(4 if share > 0 else 0):
+                        bpy.context.view_layer.update()
+                        push = self._off_leg(s) * share
+                        if push.length < 0.0005:
+                            break
+                        at = at + inv @ push
+                        self._arm_key(s, f, at, pole, lay, was, u)
 
     def _touched(self, s, f, point, what, held=False):
         """Note how far hand `s` is from what it is meant to be touching on frame f (checked by contacts());
