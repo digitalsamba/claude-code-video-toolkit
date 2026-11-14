@@ -1347,14 +1347,41 @@ class ClayPerson:
                 self.arm_mask[v.index] = sum(g.weight for g in v.groups if g.group in groups) > 0.2
         return self.arm_mask
 
+    def _standing_mesh(self):
+        """The body's vertices as it was made (plus its location), with each leg swung in or out at the hip so
+        its ankle is under the hip joint, where a standing character's feet are (_foot_spot). A model generated
+        with its feet wide apart spreads wide trousers or a skirt with them, and a hand that clears the hip
+        measured on that hangs out from the side once the legs come in under the body. Each vertex moves by its
+        weight on that leg's bones, so the top of the thigh blends into the hips. A model made with its ankles
+        under its hips is returned as it is."""
+        if getattr(self, "standing_mesh", None) is None:
+            co = np.empty(len(self.body.data.vertices) * 3, dtype=np.float32)
+            self.body.data.vertices.foreach_get("co", co)
+            co = co.reshape(-1, 3) + np.array(self.body.location, dtype=np.float32)
+            bones = self.rig.data.bones
+            for sd in "LR":
+                hip, ankle = bones["thigh." + sd].head_local, bones["foot." + sd].head_local
+                phi = math.atan2(ankle.x - hip.x, hip.z - ankle.z)  # the leg's angle out from straight down
+                if abs(phi) < math.radians(0.5):
+                    continue
+                groups = {g.index for g in self.body.vertex_groups
+                          if g.name in ("thigh." + sd, "shin." + sd, "foot." + sd)}
+                w = np.array([min(1.0, sum(g.weight for g in v.groups if g.group in groups))
+                              for v in self.body.data.vertices], dtype=np.float32)
+                u, d = co[:, 0] - hip.x, hip.z - co[:, 2]  # out from the hip, and down from it
+                c, s_ = math.cos(phi), math.sin(phi)
+                swung = np.stack([hip.x + u * c - d * s_, co[:, 1], hip.z - (u * s_ + d * c)], axis=1)
+                co = co + w[:, None] * (swung - co)
+            self.standing_mesh = co
+        return self.standing_mesh
+
     def _side_clear(self):
         """How far out from the middle (m) a wrist hangs for the hand to clear the hip and thigh: the body's
         half width where the hand hangs, the hand's own thickness and a finger's width. Measured on the mesh
-        as it was made, so a broad character's arms hang wider than a slim one's and no wider than they need."""
+        as it was made, with the legs under the hips as they stand (_standing_mesh), so a broad character's arms
+        hang wider than a slim one's and no wider than they need."""
         if getattr(self, "side_clear", None) is None:
-            co = np.empty(len(self.body.data.vertices) * 3, dtype=np.float32)
-            self.body.data.vertices.foreach_get("co", co)
-            co = (co.reshape(-1, 3) + np.array(self.body.location, dtype=np.float32))[~self._arm_mask()]
+            co = self._standing_mesh()[~self._arm_mask()]
             z = co[:, 2] - self.rig.data.bones["spine"].head_local.z
             lo = self.SH[1].z - 0.7122 * self.arm - self.hand_len   # from the knuckles of a hanging hand
             band = co[(z > lo) & (z < lo + self.hand_len * 1.6) & (np.abs(co[:, 1]) < 0.12)]
@@ -1410,9 +1437,7 @@ class ClayPerson:
 
         if self.fingers.get(s):
             pts = self._hand_points(s, "relaxed")[0][::4]
-            co = np.empty(len(self.body.data.vertices) * 3, dtype=np.float32)
-            self.body.data.vertices.foreach_get("co", co)
-            body = (co.reshape(-1, 3) + np.array(self.body.location - Vector((0, 0, self.seat_h)), dtype=np.float32))
+            body = self._standing_mesh() - np.array((0, 0, self.seat_h), dtype=np.float32)
             body = body[~self._arm_mask()]
             body = body[body[:, 0] * s > 0]
 
