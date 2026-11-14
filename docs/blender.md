@@ -5,7 +5,8 @@ machine, not the tool: it renders in minutes with a GPU and slowly without one (
 [How long a render takes](#how-long-a-render-takes) has the numbers). The clay cast, the desk sets, the studio
 stage and clips in a Remotion video are the settled part. Characters fitted from a generated 3D model, the
 kitchen and the lecture hall are experimental: they have made two finished films on one machine, the fit still
-wants its joints read off a picture by hand, and Windows is untested.
+wants its joints read off a picture by hand, and Windows is untested. Their checks also pass on Linux with
+Blender 4.2.
 
 With it installed, a JSON **shot spec** becomes a 3D scene: a rigged cartoon character acting at a desk, or a product stage with a phone, a floating card
 or an imported model. The render is a finished film, a set of clips for another build (a Remotion video, a
@@ -82,7 +83,7 @@ the Homebrew, winget and distro builds include.
 | System | Blender | Result |
 |---|---|---|
 | macOS, Apple M4 | 5.3 | Everything: both engines, films, transparent clips, the tests |
-| Linux x64, in a container with no GPU | 4.2 LTS | All four example specs build and pass `check` under Cycles; the film, the clip and the transparent-clip paths render. EEVEE also runs, on Mesa's software OpenGL, slowly |
+| Linux x64, in a container with no GPU | 4.2 LTS | The disk-panic film, the product stage and both kitchen films build and pass `check` under Cycles (the two `blender-in-remotion` specs passed there at v0.28.0 and were not run again), both fitted characters fit and pass their walk-ins and kitchen films (the sleeve measure reads 3.8 and 3.6 there against 4.0 and 3.9 on the Mac, limit 4); the film, the clip and the transparent-clip paths render. EEVEE also runs, on Mesa's software OpenGL, slowly. The test file has not been run there: without a GPU one `check` takes 2 to 8 minutes |
 | Windows | | Not run yet. The code finds Blender under `Program Files` and reads and writes UTF-8 throughout; treat it as untested |
 
 Transparent WebM clips have been played in Remotion on the Mac only.
