@@ -631,6 +631,13 @@ class BlenderCheckTests(unittest.TestCase):
             enter = blender_render.run_compiler(tmp / 'enter.json', tmp / 'enter', 'check', '480x270', None)
             kitchen = blender_render.run_compiler(tmp / 'kitchen.json', tmp / 'kitchen', 'check', '480x270', None)
             kitchen_events = json.loads((tmp / 'kitchen' / 'events.json').read_text())
+            film = json.loads((ROOT / 'examples' / 'blender-kitchen' / 'spec.json').read_text())
+            film['cast'][0]['from'] = 'mara.json'                          # the copy here, fitted above
+            (tmp / 'film.json').write_text(json.dumps(film))
+            example = blender_render.run_compiler(tmp / 'film.json', tmp / 'film', 'check', '480x270', None)
+            self.assertTrue(example['passed'], example)                    # the example passes outright: its
+            self.assertLessEqual(example['skin']['stretch'], 4.0)          # sip is part height for the sleeve
+            self.assertLessEqual(example['carried_tilt_deg'], 12.0)
             at_table = json.loads((tmp / 'kitchen.json').read_text())
             shut = {**at_table, 'beats': at_table['beats'] + [{'at': 'T9_claude+0.5', 'do': 'close_lid', 'by': 'mara'}]}
             (tmp / 'shut.json').write_text(json.dumps(shut))

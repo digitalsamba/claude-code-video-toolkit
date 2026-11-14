@@ -11,13 +11,16 @@ decides *where things go*: cameras are placed by shot type round their subject a
 the way) before they are kept; acting is verbs (`expression`, `pose`, `shake_head`) rather than keyframes; every
 moment worth a sound is exported with its time, so the sound is on the motion by construction.
 
-Three worked examples:
+Four worked examples:
 
 - `examples/blender-product-shot/spec.json`: a studio stage with no character: a picture on a floating card and
   on a phone, and an imported model, with `reveal`, `orbit` and `product` shots.
 - `examples/blender-disk-panic/spec.json`: a film from one spec (22.5 s, 8 shots, 37 beats).
 - `examples/blender-in-remotion/`: Blender clips inside a Remotion video. A terminal scene cuts to itself on a 3D
   laptop and the camera pulls back; then a transparent character acts beside the list of beats it is acting.
+- `examples/blender-kitchen/`: a fitted character (experimental). Mara, a generated model seated on the rig with
+  `fit`, walks in with a mug, sits, puts it down, opens the laptop and drinks. Its README says what the spec
+  works round.
 
 ```bash
 uv run tools/blender_render.py doctor                                         # Blender found? s/frame on this machine

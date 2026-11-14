@@ -9,6 +9,7 @@ moviepy timeline, a video job, an editor), or both from the same spec.
 - **A film from one spec:** `examples/blender-disk-panic`
 - **Blender clips inside a Remotion video:** `examples/blender-in-remotion`
 - **A product stage with no character:** `examples/blender-product-shot`
+- **A fitted character on her feet in a kitchen (experimental):** `examples/blender-kitchen`
 
 ## Model, rig and render
 
@@ -459,6 +460,16 @@ What the first viewing taught ("I seem to be carrying a candle", and "some of th
 - **A fitted face's brows are shaped, not slabs.** On a sculpted face a box read as a shelf over each eye, in the
   hair's colour, half hidden by the glasses. They taper, arch, follow the head, are a shade darker than the hair
   and clear the frames at rest. The clay cast keeps its slabs, which suit it.
+- **Choose the camera for what the hands are doing.** Seated at an open laptop, a front `medium` shows a face
+  over a lid: the lid hides the mug and both hands. A `closeup` turned to one side (`"az": -30`) shows the mug
+  reach the lips, and a `side` shows the hand on the lid. `over_shoulder` is placed for the desk sets and lands
+  under the kitchen table; `check` fails it, so read the contact sheet before believing a shot type.
+- **A check that fails on one beat can be met by the spec while the rig catches up.** A full `sip` stretches a
+  fitted sleeve past the limit (4.7x on Mara, limit 4); `"part": 0.45` raises the mug less far and passes. Say
+  so where the spec lives (`examples/blender-kitchen` does), and never render past a failing check in something
+  other people will copy.
+- **Changing one beat moves the numbers of the next.** The same sip passed at one height in one shot and failed
+  in another, because a `look` before it turned the chest. Run `check` after every edit, not after a batch.
 
 ## A film over several sessions
 

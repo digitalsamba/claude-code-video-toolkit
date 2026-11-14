@@ -127,8 +127,9 @@ propose it unless the user asks for 3D. Blender runs headless through its own Py
 and what it finds goes back into the spec. Needs Blender 4.2+ (optional): run on 5.3 on macOS and 4.2 LTS on Linux
 (Cycles on a server with no GPU; EEVEE works there on software GL, slowly); Windows is not yet run. Format, verbs
 and the shot grammar are in the `blender` skill, setup and timings in `docs/blender.md`, and there is an example
-of each use: `examples/blender-disk-panic` (a film), `blender-product-shot` (a studio stage) and
-`blender-in-remotion` (clips in a Remotion video).
+of each use: `examples/blender-disk-panic` (a film), `blender-product-shot` (a studio stage),
+`blender-in-remotion` (clips in a Remotion video) and `blender-kitchen` (experimental: a character fitted from a
+generated 3D model, on her feet in a kitchen with a mug).
 
 ## Brand Profiles
 
