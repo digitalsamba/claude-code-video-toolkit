@@ -46,6 +46,21 @@ refused them in the past. When it refuses, the report says so; Studio still show
 - **The repo is the goal.** `--github` shows the last 14 days of repo referrers; `youtube.com` appearing there is
   the signal that a video sends people to the toolkit.
 
+## Before the next Short
+
+What the numbers above point at is nearly always the opening. Three things to settle while planning, each of
+which `qc.py --render` then measures on the finished file (and `--layout` for the text):
+
+- **The first 2 seconds.** Start on the action: movement, a strong picture or a line already being said. Cut the
+  lead-in, the establishing shot and any pause before the first word.
+- **Text from the first frame.** A short line that says what the viewer gets by staying. Frame 0 is also the
+  cover, so the same line sells the video in a grid.
+- **Something new every few seconds.** A cut, a push in, a new piece of text. The check reports how long the
+  first shot runs and warns past 5 s.
+
+Treat these as defaults to depart from on purpose, and let the retention graph say whether the departure
+worked: a slow opening that people watch through is a finding worth writing below.
+
 ## What has worked on Shorts
 
 Findings, not numbers: write each as what changed and what happened, with the dates, once there is a week of data.
