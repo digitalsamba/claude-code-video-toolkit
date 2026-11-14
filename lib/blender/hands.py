@@ -385,10 +385,13 @@ def find_fingers(hand, wrist: Vector, leaves: Vector) -> dict:
     laid = lay_thumb(hand, co, ed, wrist, axis, normal, thumb, rest, knuckle, length, a + b_)
     return {"palm": normal, "axis": axis, "knuckles": wrist + axis * knuckle + normal * (centre - wrist).dot(normal),
             "side": side, "weights": weights, "thumb": laid,
-            "fingers": [{"name": f["name"], "joints": f["joints"]} for f in [thumb] + rest]}
+            # (thumb first, then index to little whichever hand it is: across the palm a right hand runs the other way)
+            "fingers": [{"name": f["name"], "joints": f["joints"]}
+                        for f in [thumb] + sorted(rest, key=lambda f: NAMES.index(f["name"]))]}
 
 
 THUMB_STRETCH_LIMIT = 3.0  # an edge of the thumb's web stretched more than this by laying the thumb in has torn
+THUMB_SPREAD_TO = 2.0  # laying the thumb in is spread over more of the web until no edge is stretched past this
 THUMB_DEPTH = 0.08  # how far the thumb's root lies out of the palm, as a share of the hand's length (wrist to tip)
 THUMB_DEPTH_LIMIT = 0.20  # the fit fails if the root still stands further off than this share
 
@@ -412,7 +415,7 @@ def lay_thumb(hand, co, ed, wrist: Vector, axis: Vector, normal: Vector, thumb: 
     thumb's joints; returns the depth before and after and the most an edge was stretched and squashed."""
     before = thumb_depth(thumb["joints"][0], rest, normal)
     target = THUMB_DEPTH * length
-    out = {"depth_before": before, "depth": before, "length": length, "stretch": 1.0, "squash": 1.0}
+    out = {"depth_before": before, "depth": before, "length": length, "stretch": 1.0, "squash": 1.0, "spread": 0}
     if before <= target:
         return out
     w_, a_, n_ = np.array(wrist), np.array(axis), np.array(normal)
@@ -426,9 +429,32 @@ def lay_thumb(hand, co, ed, wrist: Vector, axis: Vector, normal: Vector, thumb: 
     w = np.clip((off - front) / max(1e-4, before - front), 0, 1)
     w *= smooth((h - 0.05 * knuckle) / (0.6 * knuckle))  # none at the cuff ring, all from part way up the palm
     w = np.maximum(w, held)  # the thumb moves whole
-    new = co - np.outer(w * (before - target), n_)
     made = np.linalg.norm(co[ed[:, 0]] - co[ed[:, 1]], axis=1)
-    ratio = np.linalg.norm(new[ed[:, 0]] - new[ed[:, 1]], axis=1) / np.maximum(made, 1e-6)
+
+    def pressed(w):
+        new = co - np.outer(w * (before - target), n_)
+        return new, np.linalg.norm(new[ed[:, 0]] - new[ed[:, 1]], axis=1) / np.maximum(made, 1e-6)
+
+    new, ratio = pressed(w)
+    # A thumb that was made near the palm has a thin web and no wedge to thin: the thumb moves whole, the skin
+    # beside its root hardly at all, and the edges between them are pulled to several times their length (the
+    # web folds over itself, a torn patch at the thumb's root). So the move is spread out over the skin round
+    # the thumb, each vertex taking the mean of its neighbours, until no edge is stretched past THUMB_SPREAD_TO.
+    # The cuff ring and the fingers past the knuckles still do not move, and the thumb still moves whole.
+    stays = smooth((h - 0.05 * knuckle) / (0.6 * knuckle)) * (1 - smooth((h - knuckle) / (0.25 * (length - knuckle))))
+    count = np.zeros(len(co))
+    np.add.at(count, ed[:, 0], 1)
+    np.add.at(count, ed[:, 1], 1)
+    rounds = 0
+    while np.percentile(ratio, 99.9) > THUMB_SPREAD_TO and rounds < 60:
+        for _ in range(5):
+            total = np.zeros(len(co))
+            np.add.at(total, ed[:, 0], w[ed[:, 1]])
+            np.add.at(total, ed[:, 1], w[ed[:, 0]])
+            w = np.maximum(held, np.minimum(stays, total / np.maximum(count, 1)))
+        new, ratio = pressed(w)
+        rounds += 1
+    out["spread"] = rounds
     hand.data.vertices.foreach_set("co", new.astype(np.float32).ravel())
     hand.data.update()
     thumb["joints"] = [j - normal * (before - target) for j in thumb["joints"]]
@@ -573,7 +599,8 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
     laid = best[2]["thumb"]  # (the hand's length is wrist to fingertip, so the depth reads the same at any size)
     print(f"fit: hands, thumb root {100 * laid['depth'] / laid['length']:.0f}% of the hand's length out of the palm "
           f"(made {100 * laid['depth_before'] / laid['length']:.0f}%), edges stretched {laid['stretch']:.2f}x and "
-          f"squashed {laid['squash']:.2f}x at most")
+          f"squashed {laid['squash']:.2f}x at most"
+          + (f" (the move spread over the web in {laid['spread']} rounds)" if laid["spread"] else ""))
     if laid["depth"] > THUMB_DEPTH_LIMIT * laid["length"]:
         print(f"fit: FAIL hands, the thumb's root stands {100 * laid['depth'] / laid['length']:.0f}% of the hand's "
               f"length off the palm (limit {100 * THUMB_DEPTH_LIMIT:.0f}%): the hand will rest on its thumb")
