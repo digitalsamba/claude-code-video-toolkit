@@ -393,8 +393,9 @@ that landed beside another, or a hand held on one spot and then put on the next.
 
 ### Refining a rig: one spec, two bodies
 
-How the fitted rig was worked up, and how to carry on with it or with your own. It has been run with Claude Fable
-5.2 in Claude Code; other models are untested.
+How the fitted rig was worked up, and how to carry on with it or with your own. It was worked up with Claude Fable
+5.2 in Claude Code. A third character, from photos to a fitted model and three fixes to the rig, was done with
+Claude Opus 5.5.
 
 1. **Two characters, one spec.** Keep a second fitted character of a different build beside the first (the repo
    has Mara) and run every spec on both. A number tuned on one body passes on that body: nearly everything found
