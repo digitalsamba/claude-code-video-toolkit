@@ -628,6 +628,11 @@ is required. Reruns overwrite outputs via temporary files and `os.replace`; `--d
   nothing is cut: right for slides and screen recordings. `crop` fills the frame by cutting the
   sides: right for talking heads and single-subject shots; `--focus 0-1` (or `@FOCUS` per
   segment) picks what to keep. `pad` is `blur` over a solid colour (`--brand` uses `bgDark`).
+- **A subject that crosses the frame.** Try `--mode track` first: it follows a face that is in frame when the
+  segment starts. When the thing to keep is not the face (a mug set down, a laptop lid), or the subject walks in
+  after the start, give the segment several focus values and the crop moves through them, evenly spaced in time:
+  `--segment 6.5-14.1@0.57,0.7,0.4`. On a sit-down shot, track held the face and let the mug leave the frame as
+  it was put down; the focus values kept both.
 - **Fitted modes shrink text.** In 9:16 a 1080p source shows at 56% scale, so burned captions
   get small. `--zoom 1.3` trades a little of each side for size. For a vertical cut of a
   captioned Remotion video, consider re-rendering it with larger captions first.

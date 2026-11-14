@@ -571,6 +571,31 @@ shots. It also said, unasked, that the character's hair looked lighter in the cl
 That film had already been revised twice with its author's notes, so this shows the retelling agrees with a
 film that is right, not yet that it catches one that is wrong. What it catches on the next film goes here.
 
+Tried a second time, on a cut nobody had revised: a 44 s vertical version of the same trailer, cropped from the
+16:9 clips, with four storyboard rows. This time it caught three things, and all three were fixed before anyone
+watched the cut:
+
+- **A character who was never introduced.** The film ends on a close shot of a small computer typing. The reader
+  wrote that the arms in front of its screen were "unexplained" and that it was "unclear whose they are". In the
+  16:9 film a wide two-shot sets the computer on the counter behind the man. The vertical crop had cut it out
+  of every earlier shot, and its author, who knew it was there, had not seen that. The two-shot went back in,
+  with the crop moved until both are in frame.
+- **An end card that named no destination.** The card said to watch the full trailer "on the channel". The
+  reader pointed out that no channel was named, so the step only worked for someone already there. The handle
+  was added.
+- **Small type.** It called the repository address faint and small for a phone; the layout check had passed it
+  (it was over the minimum). It was made larger.
+
+What it did not see was again smaller than the sampling, with one exception worth knowing: it described the man
+as standing when he had sat down, because the chair is outside a 9:16 crop of that shot. A crop can remove the
+thing that tells the viewer what an action is. Two spoken lines and the lid closing fell between frames; 18
+frames over 44 s is one every 2.5 s, so for a cut with shots under 2 s raise `--count` until each shot has a
+frame.
+
+It also listed things that were meant (a title card with only its word on it for a third of a second, a heading
+set at a tilt). Read those as questions, and answer each from the storyboard, not from memory of what was
+intended.
+
 A prompt of this kind, as one session left it for the next:
 
 ```text
