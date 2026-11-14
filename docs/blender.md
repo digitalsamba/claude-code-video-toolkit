@@ -310,7 +310,13 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    hand's length out of the palm), so the fit presses what stands in front of the palm in towards it, until the
    thumb's root is 8% of the hand's length out: the wedge thins evenly, the cuff ring and the fingers do not
    move. The fit prints the depth before and after and how far any edge was stretched, and fails if the root
-   still stands over 20% out (a hand like that rests on its thumb).
+   still stands over 20% out (a hand like that rests on its thumb), or if an edge was stretched over 3x (two
+   bodies came in at 1.2x and 1.6x; a third at 5.2x had the web fold over itself, a torn patch at the thumb's
+   root in a close shot: make the open-hands model again with the thumb nearer the palm).
+   A model made from a picture of open hands has the picture's background baked into the sides of the fingers
+   and the webbing between them, grey streaks down every finger once the hand is on an arm. The fit paints
+   every texel of the hands that is nearer grey than skin's hue as skin, as light or dark as it was, and prints
+   the share (0.5% on the hands that showed it, under 0.2% on two that did not).
    A second generation of the same character comes with hands a fifth to a third too long, so the fit makes the
    donor's hand as long as the body's own, cuff to fingertip, and prints both lengths. `"scale": 0.7` in `hands`
    sets the donor's scale by hand instead (the fit then prints what would have matched). The wrist joint is put

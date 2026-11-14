@@ -388,6 +388,7 @@ def find_fingers(hand, wrist: Vector, leaves: Vector) -> dict:
             "fingers": [{"name": f["name"], "joints": f["joints"]} for f in [thumb] + rest]}
 
 
+THUMB_STRETCH_LIMIT = 3.0  # an edge of the thumb's web stretched more than this by laying the thumb in has torn
 THUMB_DEPTH = 0.08  # how far the thumb's root lies out of the palm, as a share of the hand's length (wrist to tip)
 THUMB_DEPTH_LIMIT = 0.20  # the fit fails if the root still stands further off than this share
 
@@ -447,6 +448,60 @@ def tint(hand_img, was, want):
     hand_img.pixels.foreach_set(px.ravel())
     hand_img.update()
     hand_img.pack()
+
+
+NOT_SKIN = 0.45  # a texel this far from skin's hue toward grey (0 skin, 1 no colour at all) is not skin
+
+
+def skin_only(pieces, hand_img, skin) -> float:
+    """Paint out what is not skin in the texture the hands use. A model generated from a picture of open hands
+    has the picture's background baked into the sides of the fingers and the webbing between them, where the
+    picture showed background: grey streaks down every finger once the hand is on an arm. Every texel inside a
+    face of the hands whose hue is nearer no colour than skin's becomes skin, as light or dark as it was.
+    Returns the share of the hands' texels that were painted."""
+    w, h = hand_img.size
+    px = np.empty(w * h * 4, dtype=np.float32)
+    hand_img.pixels.foreach_get(px)
+    px = px.reshape(h, w, 4)
+    skin = np.array(skin, dtype=np.float32)
+    hue0, grey = skin / max(float(skin.sum()), 1e-3), np.full(3, 1 / 3, dtype=np.float32)
+    line = grey - hue0
+    if float(line @ line) < 1e-4:  # (skin with no colour of its own: nothing to tell it from grey by)
+        return 0.0
+    seen = painted = 0
+    for piece in pieces:
+        me = piece.data
+        uv = np.empty(len(me.loops) * 2, dtype=np.float32)
+        me.uv_layers.active.data.foreach_get("uv", uv)
+        uv = uv.reshape(-1, 2) % 1 * (w, h)
+        for poly in me.polygons:
+            if poly.loop_total != 3:
+                continue
+            a, b, c = uv[poly.loop_start:poly.loop_start + 3]
+            x0, x1 = int(min(a[0], b[0], c[0])), int(max(a[0], b[0], c[0])) + 1
+            y0, y1 = int(min(a[1], b[1], c[1])), int(max(a[1], b[1], c[1])) + 1
+            if x1 - x0 > 96 or y1 - y0 > 96:  # (a face across two islands of the atlas: a cap, not skin)
+                continue
+            ys, xs = np.mgrid[y0:min(y1 + 1, h), x0:min(x1 + 1, w)]
+            det = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
+            if abs(det) < 1e-9:
+                continue
+            l1 = ((b[1] - c[1]) * (xs + 0.5 - c[0]) + (c[0] - b[0]) * (ys + 0.5 - c[1])) / det
+            l2 = ((c[1] - a[1]) * (xs + 0.5 - c[0]) + (a[0] - c[0]) * (ys + 0.5 - c[1])) / det
+            inside = (l1 > -0.35) & (l2 > -0.35) & (l1 + l2 < 1.35)  # (and a texel's width round it: filtering)
+            if not inside.any():
+                continue
+            tile = px[y0:y0 + inside.shape[0], x0:x0 + inside.shape[1], :3]
+            total = tile.sum(axis=2)
+            t = ((tile / np.maximum(total[..., None], 1e-3) - hue0) @ line) / float(line @ line)
+            off = inside & (t > NOT_SKIN) & (total > 0.1)
+            seen += int(inside.sum())
+            painted += int(off.sum())
+            if off.any():
+                tile[off] = skin * np.clip(total[off] / float(skin.sum()), 0.6, 1.05)[:, None]
+    hand_img.pixels.foreach_set(px.ravel())
+    hand_img.update()
+    return painted / max(1, seen)
 
 
 def _mirrored(piece, theirs: dict, found: dict):
@@ -522,6 +577,10 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
     if laid["depth"] > THUMB_DEPTH_LIMIT * laid["length"]:
         print(f"fit: FAIL hands, the thumb's root stands {100 * laid['depth'] / laid['length']:.0f}% of the hand's "
               f"length off the palm (limit {100 * THUMB_DEPTH_LIMIT:.0f}%): the hand will rest on its thumb")
+    if laid["stretch"] > THUMB_STRETCH_LIMIT:
+        print(f"fit: FAIL hands, laying the thumb in stretched an edge of its web {laid['stretch']:.1f}x (limit "
+              f"{THUMB_STRETCH_LIMIT:.0f}x): the skin there folds over itself and shows as a torn patch at the "
+              "thumb's root in a close shot. Make the open-hands model again with the thumb nearer the palm")
     for piece, _t, _f in cut:
         if piece is not best[0]:
             D.objects.remove(piece)
@@ -584,6 +643,9 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
         print(f"fit: hands, {sd} {len(found['fingers'])} fingers ({', '.join(f['name'] for f in found['fingers'])}), "
               f"{len(piece.data.polygons)} faces, wrist {mine['radius'] * 100:.1f} cm against the donor's "
               f"{theirs['radius'] * 100:.1f} cm")
+    grey = skin_only(pieces, donor_img, np.mean([s[1] for s in skins], axis=0))
+    print(f"fit: hands, {100 * grey:.2f}% of their texture was not skin's colour (background baked between the "
+          "fingers) and was painted skin")
     tint(donor_img, np.mean([s[1] for s in skins], axis=0), np.mean([s[0] for s in skins], axis=0))
     bm = bmesh.new()  # the body loses its own hands
     bm.from_mesh(body.data)
