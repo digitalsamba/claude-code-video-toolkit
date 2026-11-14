@@ -14,6 +14,7 @@ import bpy
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
+import face as fitted_face
 import kit
 from kit import R, key, n, ticks
 
@@ -55,6 +56,7 @@ def _talk_keys(p):
 
     p.talk_blocks = (copy(p.mouth, mouth, "open", "talk"), copy(p.mouth, mouth, "round", "talk_round"),
                      copy(p.body, head, "jaw", "talk_jaw"))
+    fitted_face.shut_driver(p.mouth)  # (a kept face's mouth comes out from behind the lips for speech too)
     return p.talk_blocks
 
 

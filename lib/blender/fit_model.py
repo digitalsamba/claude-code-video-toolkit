@@ -27,6 +27,8 @@ Optional: "hands": {"model": "open_hands.glb", "scale": 0.7, "smooth": [[along, 
 (hands.py: the donor's hands are sized to the body's own unless `scale` says, the wrist joint moves to the cuff
 whatever `wr` says, and `smooth` flattens a lump on both hands, in cm from the middle of the knuckle row), and in
 "face", "brows_hidden": [0] for a brow under a fringe.
+"face", "paint": "keep" leaves the painted face on the model and cuts the eyes that move from it (facepaint.py):
+for a face painted nearer to life than a cartoon, where the rig's own eyes would be twice the size and stare.
 """
 from __future__ import annotations
 
@@ -42,6 +44,7 @@ import bpy  # noqa: E402
 import numpy as np  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
+import facepaint  # noqa: E402
 import hands as hand_graft  # noqa: E402
 from character import skeleton  # noqa: E402
 
@@ -234,7 +237,18 @@ def load_model(path: Path, centre_x: float, faces: int, face: dict):
              "brows": [(x - centre_x, front_y(ob, x - centre_x, z), z) for x, z in face["brows"]],
              "mouth": (face["mouth"][0] - centre_x, front_y(ob, face["mouth"][0] - centre_x, face["mouth"][1]),
                        face["mouth"][1])}
-    erase(ob, [(x - centre_x, z, rx, rz) for x, z, rx, rz in face_shapes(face)])
+    # the painted face is read before anything is taken off it: `check` holds the rig's face against it, and
+    # with "paint": "keep" the paint stays and the eyes that move are cut from it (facepaint.py)
+    bpy.context.view_layer.update()
+    seen = facepaint.measure(ob, face, centre_x)
+    for line in facepaint.words(seen):
+        print(f"fit: painted face, {line}")
+    keep = face.get("paint") == "keep"
+    if keep and not all(seen["eyes"]):
+        raise SystemExit('fit: "paint": "keep" needs a painted eye on each side (white beside an iris) and found '
+                         "none on one: check the fit's eyes are on the model's eyes, or leave paint out")
+    if not keep:
+        erase(ob, [(x - centre_x, z, rx, rz) for x, z, rx, rz in face_shapes(face)])
     if len(ob.data.polygons) > faces:
         dec = ob.modifiers.new("Decimate", "DECIMATE")
         dec.ratio = faces / len(ob.data.polygons)
@@ -242,7 +256,7 @@ def load_model(path: Path, centre_x: float, faces: int, face: dict):
     for poly in ob.data.polygons:
         poly.use_smooth = True
     ob.name = "model_body"
-    return ob, marks
+    return ob, marks, seen
 
 
 def head_mask(body, clothes):
@@ -503,7 +517,7 @@ def main():
     fit = json.loads(Path(args.fit).read_text(encoding="utf-8"))
 
     cx, scale = fit.get("centre_x", 0.0), float(fit.get("scale", 1.0))
-    body, marks = load_model(Path(args.model), cx, int(fit.get("faces", 150000)), fit["face"])
+    body, marks, seen = load_model(Path(args.model), cx, int(fit.get("faces", 150000)), fit["face"])
     src = source_joints(fit)
     if "arm_stretch" in fit:
         print("fit: arm_stretch is no longer used: the model keeps its own arms")
@@ -559,7 +573,8 @@ def main():
         "half_width": face["half_width"] * scale, "moustache": bool(face.get("moustache")),
         # the chin's underside (the jaw key moves what is between it and the lips): given, or a mouth's width down
         "chin": placed((0, 0, face["chin"])).z if "chin" in face
-        else on_head(marks["mouth"])[2] - 1.2 * face["mouth_width"] * scale})
+        else on_head(marks["mouth"])[2] - 1.2 * face["mouth_width"] * scale,
+        **facepaint.store(seen, placed, scale, fit.get("gamma"), keep=face.get("paint") == "keep")})
     if args.preview:
         preview(body, Path(args.preview))
     bpy.ops.file.pack_all()

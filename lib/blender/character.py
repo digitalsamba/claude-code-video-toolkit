@@ -28,6 +28,7 @@ import numpy as np
 from mathutils import Euler, Matrix, Quaternion, Vector
 
 import face as fitted_face
+import facepaint
 import kit
 from kit import (R, arc_tube, box, cyl, empty, key, link, mat, n, sphere, ticks, tween)
 
@@ -754,6 +755,9 @@ class ClayPerson:
         self.head_r, self.brow_at, self.sweat_x, eye_parent = 0.3, (0.1, -0.275, 0.0), 0.27, {}
         self.mouth, self.lids = None, {}
         marks = json.loads(self.body["face"]) if fit else None  # (as fitted: the mesh's own space)
+        # a face fitted with "paint": "keep" has the model's own painted eyes and brows: the controls below are
+        # made all the same (every verb keys them), and what they move is cut from the paint (facepaint.py)
+        paint = fit.get("paint") if fit else None
         if fit:
             # the model's head is part of the body mesh, on the neck bone. The face parts are made for a head
             # 0.3 m in radius, so they go on an empty scaled to the model's face: verbs and checks are unchanged
@@ -798,6 +802,10 @@ class ClayPerson:
         for s in (1, -1):
             e = empty(f"{cid}_eye{s}", eye_parent[s]) if fit else empty(f"{cid}_eye{s}", head, (0.1 * s, -0.235, 0.05))
             self.eyes[s] = e
+            if paint:
+                self.pupils[s] = empty(f"{cid}_pupil{s}", e, (0, -0.052, -0.012))
+                self.brows[s] = empty(f"{cid}_brow{s}", head, (self.brow_at[0] * s, self.brow_at[1], 0.16 + self.brow_at[2]))
+                continue
             sphere(f"{cid}_eyewhite", 0.075, M["eyew"], e, (0, 0, 0), (1, 0.75, 1))
             p = sphere(f"{cid}_pupil", 0.036, M["pupil"], e, (0, -0.052, -0.012))
             self.pupils[s] = p
@@ -813,13 +821,24 @@ class ClayPerson:
         if fit:
             # a fitted face has its own mouth: made on the model's lip line, with keys on the head for the corners,
             # cheeks and jaw (face.py). The clay cast keeps its three drawn shapes.
-            FM = fitted_face.materials(cid, self.body, marks)
+            lips = (marks.get("seen") or {}).get("lips") if paint else None
+            FM = fitted_face.materials(cid, self.body, marks, lips)
             fitted_face.body_keys(self.body, marks)
             self.mouths = {}
-            self.mouth = fitted_face.mouth(f"{cid}_mouth", self.body, marks, {**M, **FM}, head,
-                                           lambda p: (p + self.seat - Vector(self.head_at)) / head.scale[0])
+            to_head = lambda p: (p + self.seat - Vector(self.head_at)) / head.scale[0]  # noqa: E731
+            self.mouth = fitted_face.mouth(f"{cid}_mouth", self.body, marks, {**M, **FM}, head, to_head,
+                                           hides=bool(paint))
             self.face_marks = marks
-            self.lids = {s: fitted_face.eyelid(f"{cid}_eye{s}", self.eyes[s], FM["lid"], FM["lash"]) for s in (1, -1)}
+            self.paint = paint
+            if paint:
+                lo, hi = R(fitted_face.LID_OPEN), R(fitted_face.LID_SHUT)
+                self.lids = {s: empty(f"{cid}_eye{s}_lid", self.eyes[s], rot=(lo, 0, 0)) for s in (1, -1)}
+                facepaint.eyes(cid, self.body, paint, self.desc["model"], head, to_head,
+                               {s: (self.eyes[s], self.pupils[s], self.lids[s]) for s in (1, -1)}, lo, hi)
+                facepaint.brow_keys(self.body, marks, marks["seen"], marks["brow_size"][0], self.brows,
+                                    0.16 + self.brow_at[2], head.scale[0])
+            else:
+                self.lids = {s: fitted_face.eyelid(f"{cid}_eye{s}", self.eyes[s], FM["lid"], FM["lash"]) for s in (1, -1)}
             self._mouth_now = (0.0, 0.0, 0.0, 0.0)
             self._face_keys(1, 1, "neutral")
         else:
@@ -2753,7 +2772,7 @@ class ClayPerson:
     def _face_keys(self, f0: int, f1: int, face: str):
         """A fitted face takes an expression in its keys: the mouth's own (smile, frown, open, round) and the
         head's (the corners and cheeks with smile and frown, the jaw with open)."""
-        want = fitted_face.MOUTHS[face]
+        want = (fitted_face.MOUTHS_PAINT if self.paint else fitted_face.MOUTHS)[face]
         blocks = self.mouth.data.shape_keys.key_blocks
         head = self.body.data.shape_keys.key_blocks
         was = dict(zip(fitted_face.KEYS, self._mouth_now))
@@ -2773,7 +2792,14 @@ class ClayPerson:
         if not self.mouth:
             return None
         k, at = self.head.scale[0], Vector(self.head_at)
-        return fitted_face.report(self.body, self.mouth, self.face_marks, lambda p: Vector(p) * k + at - self.seat)
+        out = fitted_face.report(self.body, self.mouth, self.face_marks, lambda p: Vector(p) * k + at - self.seat)
+        seen = self.face_marks.get("seen")
+        if seen:  # the rig's eyes against the ones painted on the model (a file fitted before this has none)
+            eyes = facepaint.stare(seen, self.face_marks["eye_size"], bool(self.paint))
+            if eyes.get("problems"):
+                out["problems"] = out.get("problems", []) + eyes.pop("problems")
+            out.update(eyes)
+        return out
 
     def skin_report(self, frames) -> dict | None:
         """How a fitted body's skin holds up (None for the clay cast, whose mesh is made for the rig): how many
