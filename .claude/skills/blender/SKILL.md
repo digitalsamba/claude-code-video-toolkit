@@ -550,7 +550,7 @@ The reasoning is in `docs/blender.md`.
 - `film_transparent` gives straight alpha in the PNGs; encode with `-pix_fmt yuva420p -auto-alt-ref 0` or
   libvpx drops the alpha plane.
 
-## Limits (experimental)
+## Limits
 
 One character per set (Claude in the kitchen is a prop with two verbs, not a cast member); a lid is opened
 and shut by hand only by a fitted character with fingers who can reach it, and one whose arm is too short to

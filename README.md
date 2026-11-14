@@ -16,6 +16,11 @@ Every frame below was generated in this workspace. Click one to watch it.
 **Made with itself**: this toolkit in 90 seconds, made with this toolkit. Every terminal line on screen is the real
 output of the command that made that part, and the bill is measured ($0.33).
 
+<a href="https://demos.digitalsamba.com/video/just-a-quick-one-v2-7add8b74.mp4"><img src="assets/readme-thumbs/just-a-quick-one.jpg" width="870" alt="Just a Quick One: a 3D character in his kitchen with a mug of tea, and a small computer with a face on the counter"></a><br>
+**Just a Quick One**: the toolkit's trailer, with a 3D character acting from a JSON spec. He walks into his kitchen
+with his tea, sits down and opens the laptop; every move is a verb in the spec, checked before Blender renders it.
+[How it works](https://digitalsamba.github.io/claude-code-video-toolkit/3d-characters.html), and what your machine needs.
+
 | | |
 |:--:|:--:|
 | <a href="https://demos.digitalsamba.com/video/ds-release-650.mp4"><img src="assets/readme-thumbs/ds-release-650.jpg" width="430" alt="Release-notes video with product UI rebuilt from source"></a> | <a href="https://www.youtube.com/watch?v=AQLzseZ2aAY"><img src="assets/readme-thumbs/design-sources.jpg" width="430" alt="Design a video with Claude Code: one chart, three design skills"></a> |
@@ -92,7 +97,7 @@ Claude Code has deep knowledge in:
 | **acestep** | AI music generation — prompts, lyrics, scene presets, video integration |
 | **ltx2** | AI video generation — text-to-video, image-to-video clips, prompting guide |
 | **parody-short** | Comedy shorts about a group's own life or a shared topic, in a borrowed genre: in-jokes from the group's own chat and docs, costumed and animated photos or an invented cast, sound placed on the movement, vertical cuts |
-| **blender** *(experimental, optional)* | 3D from a JSON shot spec: a rigged cartoon cast acting on cue, a scene that turns out to be on a laptop, an app on a phone or a 3D model on a studio stage; every camera checked before the render; as a film or as clips in any video. Needs [Blender](docs/blender.md) |
+| **blender** *(optional)* | 3D from a JSON shot spec: a rigged cartoon cast acting on cue, a scene that turns out to be on a laptop, an app on a phone or a 3D model on a studio stage; every camera checked before the render; as a film or as clips in any video. Needs [Blender](docs/blender.md) and renders in minutes with a GPU. Characters fitted from a generated 3D model are experimental |
 | **moviepy** | Python video composition — overlay text on LTX-2/SadTalker output, build.py-style projects |
 | **runpod** | Cloud GPU — setup, Docker images, endpoint management, costs |
 
@@ -293,7 +298,7 @@ uv run tools/flux2.py --list-presets
 uv run tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
 uv run tools/ltx2.py --prompt "Gentle camera drift" --input photo.jpg --cloud modal
 
-# 3D shots from a JSON spec (experimental; needs Blender 4.2+, see docs/blender.md)
+# 3D shots from a JSON spec (optional; needs Blender 4.2+, and a GPU to render in minutes: see docs/blender.md)
 uv run tools/blender_render.py doctor                                    # is Blender here, and how fast is it?
 uv run tools/blender_render.py check examples/blender-disk-panic/spec.json    # cameras verified, contact sheet, ~5 s
 uv run tools/blender_render.py render spec.json --clips --alpha --to projects/my-video/public/blender
@@ -371,7 +376,7 @@ claude-code-video-toolkit/
 - [Creating Brands](docs/creating-brands.md)
 - [Project System](lib/project/README.md) — Multi-session lifecycle, schema, reconciliation
 - [Optional Components](docs/optional-components.md) — Local GPU tools setup
-- [Blender](docs/blender.md): 3D shot specs (experimental): setup, timings, what it has been run on
+- [Blender](docs/blender.md): 3D shot specs (optional): setup, what your machine needs, timings, what it has been run on, and how a character film is made over several sessions
 - [Agent Video Jobs](docs/agent-video-jobs.md) — Brief in, MP4 out for any agent: `video_job.py` submit/status/result, the MCP server, and the `skills/video-toolkit/` skill for OpenClaw, Codex, Hermes and friends
 - [Toolkit Development](_internal/ROADMAP.md) — Roadmap, backlog, changelog
 

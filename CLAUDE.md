@@ -90,7 +90,12 @@ replace `src/scenes/` and the voice phrases. Method in the `synthetic-ui-demo` s
 ### concept-explainer-short
 9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts). **Python/moviepy, not Remotion** — the whole video derives from `scenes.json` (per-scene narration + visual asset). Pipeline: `gen_vo.py` (per-scene TTS via voiceover.py, clone or built-in, `--max-wpm` pacing clamp) → `gen_captions.py` (whisper word timing force-aligned to script text, needs `uv sync --extra whisper`) → `build.py` (audio-anchored composite: Ken Burns on stills, boomerang-looped clips, burned karaoke caption pills, ducked music). Renders at every stage — placeholder cards before assets, silent before audio. Visuals follow the FLUX/Ideogram/LTX split: Ideogram cards at `1440x2560` for anything text-bearing, LTX b-roll at `576x1024` for motion.
 
-## Blender shot specs (experimental, optional)
+## Blender shot specs (optional)
+
+Optional, and limited by the machine more than by the tool: it needs Blender and renders in minutes with a GPU
+(`doctor` times a frame). The clay cast, the desk sets, the studio stage and clips in Remotion are the settled
+part. Characters fitted from a generated 3D model, the kitchen and the lecture hall are experimental. Before
+proposing a character film, tell the person it is hours of rendering over a few sessions.
 
 A general 3D tool, not a template: 3D scenes, character acting and product shots from a JSON spec: `tools/blender_render.py check|render spec.json`,
 built by `lib/blender/` (a rigged cartoon cast, a set, shots by type, acting beats in seconds or on narration words
