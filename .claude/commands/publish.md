@@ -67,10 +67,10 @@ editable, and re-runnable. If a `publish` block already exists, use it as defaul
 
 | Field | How to derive |
 |-------|---------------|
-| `title` | Existing `publish.title`, else the hook/title scene's `title`, else the project `name` (humanized). Keep ≤100 chars. |
-| `description` | Existing `publish.description`, else auto-draft: a 1–2 line summary from the scene narration/titles + a channel footer (links, hashtags). Keep ≤5000 chars. |
+| `title` | Existing `publish.title`, else the hook/title scene's `title`, else the project `name` (humanized). Keep ≤100 chars. Name the subject in the words people would type: a film's own name alone is not searched for. |
+| `description` | Existing `publish.description`, else auto-draft: a 1–2 line summary from the scene narration/titles, then the links (where the video should send people, in the first lines), and two or three hashtags on the last line (YouTube shows the first three above the title). Keep ≤5000 chars. |
 | `tags` | Existing `publish.tags`, else derive 5–12 topical tags from scene titles + the brand. Comma-joined when passed to the tool. |
-| `category` | Default `"22"` (People & Blogs). Override per channel/topic — e.g. `"28"` (Science & Tech), `"27"` (Education), `"24"` (Entertainment). |
+| `category` | Choose one by topic: `"28"` (Science & Tech), `"27"` (Education), `"24"` (Entertainment), `"26"` (Howto & Style). Left out, the tool uploads as `"22"` (People & Blogs) and says so. |
 | `thumbnail` | Existing `publish.thumbnail`, else `out/thumbnail.*` or `public/thumbnail.*`. If none and the user wants one, run `/thumbnail` first. |
 | `privacy` | Default **`private`** (safe — the video uploads but stays hidden until you flip it). Offer `unlisted`, `public`, or a scheduled go-live (`--publish-at`, e.g. next morning ~09:00 local in UTC) if the user asks. |
 | `playlist` | Optional; only if the user has one. |
@@ -97,7 +97,9 @@ cd /path/to/claude-code-video-toolkit && uv run tools/youtube_upload.py \
 
 Write the description to a temp file (`--description-file`) rather than passing a long
 `--description` on the command line. Parse the JSON: confirm `requestBody` looks right and
-`authOk` is `true`. If `authOk` is `false`, surface the auth error and have the user run
+`authOk` is `true`. Read `notes` too: advice on the metadata (no hashtags, no link, no tag in the title, no
+category, a Short that may need its related video). Fix what applies and show the user the rest; a note never
+stops the upload. If `authOk` is `false`, surface the auth error and have the user run
 `uv run tools/youtube_upload.py --auth` first — do not proceed.
 
 ### Step 4: Upload
@@ -132,6 +134,11 @@ Schedule: <publishAt or "—">
 user plainly: this is the unverified-app lock — the video uploaded but won't go public
 until their Google Cloud OAuth app is verified. They can publish manually in YouTube Studio.
 
+**If the upload is a Short cut from a longer video** (the `notes` say it is a Short), tell the user to link the
+two by hand: Studio, Content, Shorts, the Short's Details, Related video. The API can't set it, and the field
+only appears once the channel's advanced features are on (a one-time verification in Studio's channel settings).
+Put the long video's link in the Short's description as well, which works at once.
+
 Then offer once, in one line: "Want to share it in the toolkit's Show and tell? `/contribute` option 6 drafts the post for you to check." Don't post anything from here.
 
 ---
@@ -156,7 +163,7 @@ run a dry-run before the real upload.
 | `--title` | Title (≤100 chars) |
 | `--description` / `--description-file` | Description text, or a file (`-` = stdin) |
 | `--tags` | Comma-separated tags (combined ≤500 chars) |
-| `--category` | Numeric category ID string (default `22`; `28` = Science & Tech) |
+| `--category` | Numeric category ID string (`28` = Science & Tech; left out it is `22`, with a note) |
 | `--privacy` | `private` (default) / `unlisted` / `public` |
 | `--synthetic-media` | Disclose realistic AI-generated or altered people, places or voices |
 | `--publish-at` | ISO8601 UTC schedule, e.g. `2026-06-10T09:00:00Z` (forces private at insert) |

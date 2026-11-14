@@ -807,6 +807,10 @@ uv run tools/youtube_upload.py --check --account personal
 uv run tools/publish_kit.py --project projects/my-video --video out/video.mp4
 ```
 
+Before uploading, and in a dry run, the tool prints notes on the metadata (`notes` in the JSON): no hashtags, no
+link, no tag in the title, no `--category`, and a Short that may need its related video set by hand in Studio.
+They are advice and never stop an upload.
+
 The publish kit transcribes the render once (Scribe, about $0.01 for 90 s, or `--engine whisper`) and aligns it to
 the scene scripts, so the subtitles are spelled as written and timed to the render, with no scene offsets to add
 up. Chapters sit at each scene's cut, titled from `project.json` `scenes[].title` or the file names, under

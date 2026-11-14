@@ -137,7 +137,7 @@ Prefer **`/publish`** for finished projects — it derives the title/description
 | `--title` | Required, ≤100 chars |
 | `--description` / `--description-file` | Inline text, or a file (`-` = stdin); ≤5000 chars |
 | `--tags` | Comma-separated; combined length ≤500 chars (overflow is dropped with a warning) |
-| `--category` | Numeric ID string. `22` = People & Blogs, `28` = Science & Tech |
+| `--category` | Numeric ID string. `28` = Science & Tech, `27` = Education, `24` = Entertainment. Left out, it is `22` = People & Blogs, with a note |
 | `--privacy` | `private` (default) / `unlisted` / `public` |
 | `--publish-at` | ISO8601 UTC, e.g. `2026-06-10T09:00:00Z`. Forces `private` at insert, flips public at the time. |
 | `--thumbnail` | Custom thumbnail (≤2MB, 1280×720). Requires a phone-verified channel. |
@@ -150,6 +150,23 @@ Prefer **`/publish`** for finished projects — it derives the title/description
 | `--check` | Read-only setup check: the channel the login belongs to, its scopes, and whether the Data and Analytics APIs are on. Prints the fix for each problem, including the Cloud Console page that switches an API on. ~1 quota unit |
 | `--dry-run` | Builds + prints the request body and checks auth, but uploads nothing |
 | `--json-out` | Emits one machine-readable JSON line on stdout |
+
+### Notes on the metadata
+
+Before it uploads (and in a dry run), the tool reads the title, description, tags and category and prints a note
+for each thing a viewer or YouTube would miss. A note is advice: it never stops the upload. With `--json-out`
+they are in `notes`.
+
+| Note | Why |
+|------|-----|
+| No hashtags in the description | YouTube shows the first three above the title and links each to a topic page |
+| No link in the description | Nothing sends the viewer on to the repository, the site or the full video |
+| None of the tags appears in the title | The title counts for more than the tags in search |
+| No `--category` | The upload falls back to People & Blogs |
+| The file is vertical or square and 3 minutes or less | It becomes a Short. If it is a cut of a longer video, set that as its **Related video** by hand (Studio, Content, Shorts, Details): the API can't, and the field needs the channel's advanced features on |
+
+The notes read the request, not the audience. Whether a video reached anyone is in `youtube_stats.py`
+(see the `youtube-stats` skill): a Short is placed by the feed on how people watch it, not on its tags.
 
 ### JSON output (`--json-out`)
 
