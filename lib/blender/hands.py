@@ -65,7 +65,7 @@ def _arrays(ob):
 BARE_REACH = 0.30  # skin running further than this from the fingertips (m) is a bare arm, not a hand in a cuff
 
 
-def _bare_wrist(co, far, flood, skin):
+def _bare_wrist(co, far, flood, skin, col):
     """A hand on a bare arm (a vest top, a sleeveless dress): the skin runs on from the fingertips up to the
     shoulder, so there is no cuff to cut at. The cut is the wrist instead: the narrowest slice of the arm between
     a hand's length and a forearm's from the fingertips, across the line the hand and forearm make. Returns what
@@ -94,14 +94,18 @@ def _bare_wrist(co, far, flood, skin):
             best, d_best = (r, c, slab), d
     if best is None:
         return None
-    radius, centre, _ = best
+    radius, centre, slab = best
+    # (the skin's colour is read at the wrist, where the two models meet with nothing over the join: fingertips
+    # are paler or pinker than a forearm, and matched by them the hand ends in a line of another colour)
+    skin = np.median(col[slab], axis=0)
     normal = -axis  # the way the hand leaves the wrist
     hand = flood & (t < d_best + 0.15 * radius)
     length = float(((co[hand] - centre) @ normal).max())
     print(f"hands: a bare arm (skin runs {100 * dist[flood].max():.0f} cm from the fingertips), cut at the wrist "
           f"{100 * d_best:.1f} cm up from them, {100 * radius:.1f} cm across")
     return {"verts": hand, "centre": Vector(centre.tolist()), "normal": Vector(normal.tolist()), "radius": radius,
-            "skin": skin, "length": length, "bare": True}
+            "skin": skin, "length": length, "bare": True,
+            "cut": Vector((tip + axis * (d_best + 0.15 * radius)).tolist())}
 
 
 def find_hand(ob, side: int, col=None) -> dict:
@@ -134,7 +138,7 @@ def find_hand(ob, side: int, col=None) -> dict:
                 stack.append(u)
     flood = np.zeros(len(co), dtype=bool)
     flood[list(seen)] = True
-    bare = _bare_wrist(co, far, flood, skin)
+    bare = _bare_wrist(co, far, flood, skin, col)
     if bare is not None:
         return bare
     ring = np.array([int(v) for v in seen if any(not flood[u] for u in nb.get(v, ()))])
@@ -187,7 +191,18 @@ def cut_hand(ob, found: dict, name: str, faces: int):
     bm.from_mesh(new.data)
     bm.verts.ensure_lookup_table()
     keep = found["verts"]
-    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not keep[v.index]], context="VERTS")
+    kept = {v for v in bm.verts if keep[v.index]}
+    if found.get("bare"):
+        # (a hand on a bare arm is cut off with a plane: taken vertex by vertex, its wrist is the ragged edge of
+        # whatever triangles ended there, and with no cuff over it that edge shows as shards round the wrist)
+        at, normal, radius = found["cut"], found["normal"], found["radius"]
+        near = [v for v in bm.verts if (v.co - at).length < 4 * radius]
+        across = {f for v in near for f in v.link_faces}
+        edges = {e for f in across for e in f.edges}
+        cut = bmesh.ops.bisect_plane(bm, geom=[*near, *edges, *across], dist=1e-6, plane_co=at, plane_no=normal)
+        kept |= {v for v in cut["geom_cut"] if isinstance(v, bmesh.types.BMVert)
+                 and any(e.other_vert(v) in kept for e in v.link_edges)}
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v not in kept], context="VERTS")
     loose = [e for e in bm.edges if e.is_boundary]
     if loose:
         bmesh.ops.holes_fill(bm, edges=loose, sides=0)
@@ -513,7 +528,7 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
     cut = [best if best[2]["side"] == side else _mirrored(*best) for side in (1, -1)]
     print(f"fit: hands, both from the model's {'left' if best[1]['centre'].x > 0 else 'right'}-arm hand, which is a "
           f"{'left' if best[2]['side'] > 0 else 'right'} hand (form {best[2]['form']:.2f})")
-    out, pieces, skins, old = {}, [], [], np.zeros(len(body.data.vertices), dtype=bool)
+    out, pieces, skins, old, cuts = {}, [], [], np.zeros(len(body.data.vertices), dtype=bool), []
     own = {side: find_hand(body, side, body_col) for side in (1, -1)}
     measured = 0.5 * (own[1]["length"] + own[-1]["length"]) / best[1]["length"]
     print(f"fit: hands, the body's own are {50 * (own[1]['length'] + own[-1]['length']):.1f} cm from cuff to "
@@ -561,6 +576,9 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
         out[sd] = {"palm": list(spin @ found["palm"]), "axis": list(spin @ found["axis"]),
                    "fingers": [{"name": f["name"], "joints": [m @ j for j in f["joints"]]} for f in found["fingers"]]}
         skins.append((mine["skin"], theirs["skin"]))
+        if mine.get("bare"):  # (no cuff over the join: `seal` closes the arm's end onto the hand, once it has weights)
+            piece["bare_cut"] = [*mine["cut"], *mine["normal"], mine["radius"]]
+            cuts.append((mine["cut"], mine["normal"], mine["radius"]))
         old |= mine["verts"]
         pieces.append(piece)
         print(f"fit: hands, {sd} {len(found['fingers'])} fingers ({', '.join(f['name'] for f in found['fingers'])}), "
@@ -570,10 +588,109 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
     bm = bmesh.new()  # the body loses its own hands
     bm.from_mesh(body.data)
     bm.verts.ensure_lookup_table()
-    bmesh.ops.delete(bm, geom=[v for v in bm.verts if old[v.index]], context="VERTS")
+    gone = {v for v in bm.verts if old[v.index]}
+    for at, normal, radius in cuts:
+        # a bare arm is cut across with a plane, so its end is a clean ring: taking the hand's vertices away
+        # leaves the edge of whatever triangles straddled the wrist, a ragged ring with nothing over it
+        near = [v for v in bm.verts if (v.co - at).length < 4 * radius]
+        faces = {f for v in near for f in v.link_faces}
+        edges = {e for f in faces for e in f.edges}
+        bmesh.ops.bisect_plane(bm, geom=[*near, *edges, *faces], dist=1e-6, plane_co=at, plane_no=normal)
+        past = lambda v: (v.co - at).dot(normal) > 1e-5 and (v.co - at).length < 0.3  # noqa: E731
+        stack = [v for v in gone if past(v)]
+        while stack:  # (and the creases and flecks beyond the plane that were not skin's colour)
+            v = stack.pop()
+            for e in v.link_edges:
+                u = e.other_vert(v)
+                if u not in gone and past(u):
+                    gone.add(u)
+                    stack.append(u)
+    bmesh.ops.delete(bm, geom=list(gone), context="VERTS")
     bm.to_mesh(body.data)
     bm.free()
     return out, pieces
+
+
+SEAL_BAND = 0.03  # how far up a bare arm from its cut the skin is drawn in to meet the hand (m)
+
+
+def seal(body, pieces) -> list:
+    """Close the end of a bare arm onto the hand that was put in it (after the body has its weights, before the
+    hands are joined to it). A hand in a cuff is tucked up the sleeve and the cloth hides the join; a bare arm
+    ends in an open ring a few millimetres wider than the donor's wrist, with the hand's stub loose inside it.
+    Each vertex of that ring goes to the nearest point of the hand's skin and takes the weights the hand has
+    there, so the join stays shut when the wrist bends; the arm above it follows, less and less, over
+    SEAL_BAND. Returns, for each bare arm, the widest gap between ring and hand before and after (m)."""
+    from mathutils.kdtree import KDTree
+    names = {g.index: g.name for g in body.vertex_groups}
+    out = []
+    for piece in pieces:
+        if "bare_cut" not in piece.keys():
+            continue
+        c = list(piece["bare_cut"])
+        at, normal, radius = Vector(c[:3]), Vector(c[3:6]), c[6]
+        to_piece = piece.matrix_world.inverted() @ body.matrix_world
+        back = to_piece.inverted()
+        up = lambda v: -(v.co - at).dot(normal)  # noqa: E731  (how far up the arm from the cut)
+        band = [v for v in body.data.vertices if -1e-4 < up(v) < SEAL_BAND and (v.co - at).length < 4 * radius]
+        ring = [v for v in band if up(v) < 1e-4]
+        if len(ring) < 6:
+            continue
+        move, takes, before = {}, {}, 0.0
+        tree, ring_at = KDTree(len(ring)), [v.index for v in ring]
+        # the hand is cut across on the arm's own plane, so it has a ring of vertices where the arm ends, and
+        # its stub above that is drawn in to half its width: a donor's wrist is not the arm's shape, and where
+        # it was the wider its end stood over the arm like the cuff of a glove
+        bm = bmesh.new()
+        bm.from_mesh(piece.data)
+        p_at, p_no = to_piece @ at, (to_piece.to_3x3() @ normal).normalized()
+        bmesh.ops.bisect_plane(bm, geom=[*bm.verts, *bm.edges, *bm.faces], dist=1e-6, plane_co=p_at, plane_no=p_no)
+        flat = lambda v: abs((v.co - p_at).dot(p_no)) < 1e-5  # noqa: E731
+        on = [v.co.copy() for v in bm.verts if flat(v)]
+        middle = sum(on, Vector()) / max(1, len(on))
+        dv = bm.verts.layers.deform.verify()
+        gname = {g.index: g.name for g in piece.vertex_groups}
+        rim = [(back @ e.verts[0].co, back @ e.verts[1].co, *({gname[k]: w for k, w in v[dv].items()} for v in e.verts))
+               for e in bm.edges if flat(e.verts[0]) and flat(e.verts[1])]
+        for v in bm.verts:
+            rise = -(v.co - p_at).dot(p_no)
+            if rise > 1e-5:
+                out_ = (v.co - middle) - p_no * (v.co - middle).dot(p_no)
+                v.co = v.co - out_ * 0.5
+        bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
+        bm.to_mesh(piece.data)
+        bm.free()
+        piece.data.update()
+        for i, v in enumerate(ring):  # (onto the hand's own ring: the nearest point of its rim, edge by edge)
+            best = None
+            for a, b, wa, wb in rim:
+                t = max(0.0, min(1.0, (v.co - a).dot(b - a) / max((b - a).length_squared, 1e-12)))
+                d = (a.lerp(b, t) - v.co).length
+                if best is None or d < best[0]:
+                    best = (d, a.lerp(b, t), {k: wa.get(k, 0.0) * (1 - t) + wb.get(k, 0.0) * t for k in set(wa) | set(wb)})
+            before = max(before, best[0])
+            move[i], takes[i] = best[1] - v.co, best[2]
+            tree.insert(v.co, i)
+        tree.balance()
+        plan = []
+        for v in band:
+            _co, i, _d = tree.find(v.co)
+            k = 1 - up(v) / SEAL_BAND
+            plan.append((v.index, i, max(0.0, k) ** 2 * (3 - 2 * max(0.0, k))))
+        for index, i, k in plan:
+            v = body.data.vertices[index]
+            v.co = v.co + move[i] * k
+            own = {names[g.group]: g.weight for g in v.groups}
+            for name in set(own) | set(takes[i]):
+                if name not in body.vertex_groups:
+                    body.vertex_groups.new(name=name)
+                    names = {g.index: g.name for g in body.vertex_groups}
+                body.vertex_groups[name].add([index], own.get(name, 0.0) * (1 - k) + takes[i].get(name, 0.0) * k, "REPLACE")
+        after = max(min((a.lerp(b, max(0.0, min(1.0, (body.data.vertices[k].co - a).dot(b - a) / max((b - a).length_squared, 1e-12))))
+                         - body.data.vertices[k].co).length for a, b, _wa, _wb in rim) for k in ring_at)
+        out.append((before, after))
+    body.data.update()
+    return out
 
 
 def join(body, pieces):

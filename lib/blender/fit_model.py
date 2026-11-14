@@ -525,6 +525,9 @@ def main():
     if parted:
         print(f"fit: the legs touched in the model: {parted} faces joining one to the other were cut")
     if pieces:
+        for before, after in hand_graft.seal(body, pieces):
+            print(f"fit: hands, a bare arm's end drawn in onto the hand: the ring stood {1000 * before:.1f} mm off "
+                  f"the hand's skin, now {1000 * after:.1f} mm")
         hand_graft.join(body, pieces)
         body["hand_material"] = len(body.data.materials) - 1  # (the rig measures a hand's whole skin by it)
     body.data.transform(Matrix.Scale(scale, 4))  # the whole model, evenly: nothing is stretched or re-posed

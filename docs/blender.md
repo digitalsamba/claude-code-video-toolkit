@@ -368,8 +368,13 @@ from the wrist 20 degrees, as a typist's does, with the fingertips on the keys; 
 enough for the heel of the hand and the fingers to rest together (a generated hand's heel is deep). A hand is
 found by its skin colour up to the cuff. On a bare arm (a vest top, a sleeveless dress) the skin runs on to the
 shoulder, so the hand is cut at the wrist instead: the narrowest slice of the arm between a hand's length and a
-forearm's from the fingertips (the fit prints "a bare arm" and where it cut). With no cuff to hide it, the join at
-the wrist can show as a ragged ring in a close shot. A likeness
+forearm's from the fingertips (the fit prints "a bare arm" and where it cut). With no cuff to hide the join, both
+models are cut across with a plane there, not vertex by vertex (which leaves the ragged edge of whatever
+triangles ended at the wrist, and shows as shards round it). The hand gets a ring of its own on the arm's plane,
+the arm's end is drawn onto that ring and takes the hand's weights there, so the join stays shut when the wrist
+bends, and the hand's stub is pulled inside the arm. The skin colour the hand is tinted to is read at the wrist
+on both models, not at the fingertips, which are paler. The fit prints how far the two rings stood apart (up to a
+centimetre between two generations of one character). A likeness
 of a real person belongs in your own project folder, not in a repository. `tests/fixtures/blender-fitted` is a worked
 example with an invented character: both models, the `fit.json` read off gridded stills, and a README saying how
 each was made (her generated hands had the fingers joined, so the hands came from a second model).
@@ -406,7 +411,10 @@ Claude Opus 5.5.
    in the session that made Mara pass came from her failing a film the first character passed.
 2. **Look, then measure.** Render or `check`, tile every second or third frame of a shot, and look. When
    something is wrong, find the number behind it before changing anything: print it per frame, and compare it on
-   both characters.
+   both characters. Find out which mesh and which frame a fault belongs to before fixing it: a hand said to go
+   "into the chest" was going into the thigh six frames earlier (print each fingertip's nearest body part per
+   frame), and a ragged wrist blamed on the arm was the grafted hand's edge (render with one of the two
+   materials painted green).
 3. **Turn what was seen into a check.** Each fault becomes a number in `checks.json` with a limit and a test, so
    it cannot come back unseen. Prove a new check on the code as it was (it should fail there). The checks are
    the memory of the work; a note that says "watch the hands" is not.
