@@ -31,7 +31,7 @@ Use all dates or all categorical labels in one line chart; categories such as `A
 keep equal spacing. Duplicate date instants are rejected.
 
 Bar charts show the period above the plot. While values interpolate, the label shows the transition,
-such as `Jan → Feb`, then holds the final period with its values. Bars and the first line use the
+such as `Jan to Feb`, then holds the final period with its values. Bars and the first line use the
 brand primary. Additional lines share one neutral, and a single line has no redundant legend.
 
 `--brand <name>` loads colours and `fonts.primary` from `brands/<name>/brand.json`. The first

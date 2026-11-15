@@ -302,7 +302,7 @@ def chart_renderer(report):
             faded.putalpha(headline.getchannel('A').point(lambda a: round(a * opacity)))
             image.alpha_composite(faded)
         if report['type'] == 'bar':
-            label = periods[left] if fraction == 0 or left == right else f'{periods[left]} → {periods[right]}'
+            label = periods[left] if fraction == 0 or left == right else f'{periods[left]} to {periods[right]}'
             if label != period_text:
                 period_text = label
                 period_overlay = text_overlay({**report, 'period': label}, fields=('period',))

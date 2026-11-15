@@ -103,6 +103,34 @@ class ChartReviewTests(unittest.TestCase):
         self.assertGreater(full, partial)
         self.assertAlmostEqual(partial / full, .5, delta=.05)
 
+    def test_bar_transition_renders_without_missing_glyphs(self):
+        import matplotlib
+        from matplotlib.ft2font import FT2Font
+        from PIL import ImageDraw
+
+        # This bundled font supports the label's letters but lacks the arrow, like Helvetica Neue.
+        font_path = Path(matplotlib.get_data_path()) / 'fonts/ttf/cmr10.ttf'
+        glyphs = FT2Font(str(font_path))
+        self.assertEqual(glyphs.get_char_index(0x2192), 0)
+        report = self.report(['Jan 2026', 'Feb 2026'], kind='bar', names=('A', 'B', 'C'))
+        report['theme']['fontPath'] = str(font_path)
+        rendered_labels = []
+        draw_text = ImageDraw.ImageDraw.text
+
+        def checked_text(draw, xy, text, *args, **kwargs):
+            rendered_labels.append(text)
+            for char in text:
+                if not char.isspace():
+                    self.assertNotEqual(glyphs.get_char_index(ord(char)), 0,
+                                        f'Missing glyph U+{ord(char):04X} in {text!r}')
+            return draw_text(draw, xy, text, *args, **kwargs)
+
+        with patch.object(ImageDraw.ImageDraw, 'text', checked_text):
+            _, frame_at = self.renderer(report)
+            frame = frame_at(.5)
+        self.assertIn('Jan 2026 to Feb 2026', rendered_labels)
+        self.assertGreater(np.abs(frame[70:86, 20:620].astype(float) - 255).sum(), 0)
+
     def test_invalid_headline_timing_is_rejected(self):
         for options in ({'headlineStartSeconds': -1}, {'headlineStartSeconds': float('nan')},
                         {'headlineStartSeconds': 3}, {'headlineFadeSeconds': -1},
