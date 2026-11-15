@@ -1,0 +1,156 @@
+[
+ {
+  "text": "Every",
+  "startMs": 80,
+  "endMs": 320,
+  "timestampMs": 200,
+  "confidence": null
+ },
+ {
+  "text": " scene",
+  "startMs": 420,
+  "endMs": 820,
+  "timestampMs": 620,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 880,
+  "endMs": 1020,
+  "timestampMs": 950,
+  "confidence": null
+ },
+ {
+  "text": " React,",
+  "startMs": 1080,
+  "endMs": 1560,
+  "timestampMs": 1320,
+  "confidence": null
+ },
+ {
+  "text": " rendered",
+  "startMs": 1960,
+  "endMs": 2420,
+  "timestampMs": 2190,
+  "confidence": null
+ },
+ {
+  "text": " with",
+  "startMs": 2460,
+  "endMs": 2620,
+  "timestampMs": 2540,
+  "confidence": null
+ },
+ {
+  "text": " Remotion.",
+  "startMs": 2660,
+  "endMs": 3280,
+  "timestampMs": 2970,
+  "confidence": null
+ },
+ {
+  "text": " This",
+  "startMs": 3820,
+  "endMs": 4019,
+  "timestampMs": 3919,
+  "confidence": null
+ },
+ {
+  "text": " terminal",
+  "startMs": 4080,
+  "endMs": 4580,
+  "timestampMs": 4330,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 4620,
+  "endMs": 4700,
+  "timestampMs": 4660,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 4740,
+  "endMs": 4780,
+  "timestampMs": 4760,
+  "confidence": null
+ },
+ {
+  "text": " component",
+  "startMs": 4820,
+  "endMs": 5400,
+  "timestampMs": 5110,
+  "confidence": null
+ },
+ {
+  "text": " too:",
+  "startMs": 5480,
+  "endMs": 5800,
+  "timestampMs": 5640,
+  "confidence": null
+ },
+ {
+  "text": " each",
+  "startMs": 6340,
+  "endMs": 6560,
+  "timestampMs": 6450,
+  "confidence": null
+ },
+ {
+  "text": " line",
+  "startMs": 6680,
+  "endMs": 7000,
+  "timestampMs": 6840,
+  "confidence": null
+ },
+ {
+  "text": " waits",
+  "startMs": 7160,
+  "endMs": 7480,
+  "timestampMs": 7320,
+  "confidence": null
+ },
+ {
+  "text": " for",
+  "startMs": 7540,
+  "endMs": 7620,
+  "timestampMs": 7580,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 7660,
+  "endMs": 7720,
+  "timestampMs": 7690,
+  "confidence": null
+ },
+ {
+  "text": " word",
+  "startMs": 7820,
+  "endMs": 8119,
+  "timestampMs": 7969,
+  "confidence": null
+ },
+ {
+  "text": " that",
+  "startMs": 8160,
+  "endMs": 8300,
+  "timestampMs": 8230,
+  "confidence": null
+ },
+ {
+  "text": " names",
+  "startMs": 8360,
+  "endMs": 8680,
+  "timestampMs": 8520,
+  "confidence": null
+ },
+ {
+  "text": " it.",
+  "startMs": 8760,
+  "endMs": 8960,
+  "timestampMs": 8860,
+  "confidence": null
+ }
+]

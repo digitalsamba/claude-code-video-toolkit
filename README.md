@@ -4,30 +4,34 @@
   <img src="assets/banner/toolkit-banner.gif" alt="claude-code-video-toolkit — NARRATE ▸ SCORE ▸ GENERATE ▸ COMPOSE ▸ RENDER" width="960" />
 </p>
 
-[![GitHub release](https://img.shields.io/github/v/release/digitalsamba/claude-code-video-toolkit)](https://github.com/digitalsamba/claude-code-video-toolkit/releases) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/digitalsamba/claude-code-video-toolkit?style=social)](https://github.com/digitalsamba/claude-code-video-toolkit/stargazers)
+[![GitHub release](https://img.shields.io/github/v/release/digitalsamba/claude-code-video-toolkit)](https://github.com/digitalsamba/claude-code-video-toolkit/releases) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/digitalsamba/claude-code-video-toolkit?style=social)](https://github.com/digitalsamba/claude-code-video-toolkit/stargazers) [![YouTube: subscribe](https://img.shields.io/badge/YouTube-Subscribe-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/@claudecodevideotoolkit?sub_confirmation=1)
 
-Tell [Claude Code](https://claude.ai/code) what video you want — it writes the script, generates the voiceover, music, and visuals, and renders the MP4. An AI-native video production workspace: the skills, commands, templates, and tools your AI agent needs to take a video from concept to final render, on open-source models that cost cents (voiceover ~$0.01, AI video clips ~$0.23).
+Tell [Claude Code](https://claude.ai/code) what video you want: it writes the script, generates the voiceover, music, and visuals, and renders the MP4. An AI-native video production workspace: the skills, commands, templates, and tools your AI agent needs to take a video from concept to final render, on open-source models that cost cents (voiceover ~$0.01, AI video clips ~$0.23). With Blender installed (optional), it also makes films with a 3D character who acts from a JSON spec.
 
 ## See What It Makes
 
-Every frame below was generated in this workspace — click to watch.
+Every frame below was generated in this workspace. Click one to watch it.
+
+<a href="https://www.youtube.com/watch?v=CgxzhKQ0Afg"><img src="assets/readme-thumbs/just-a-quick-one.jpg" width="870" alt="Just a Quick One: a 3D character in his kitchen with a mug of tea, and a small computer with a face on the counter"></a><br>
+**Just a Quick One**: the toolkit's trailer, with a 3D character acting from a JSON spec. He walks into his kitchen
+with his tea, sits down and opens the laptop; every move is a verb in the spec, checked before Blender renders it.
+[How it works](https://digitalsamba.github.io/claude-code-video-toolkit/3d-characters.html), and what your machine needs.
+
+<a href="https://www.youtube.com/watch?v=3HjPatdeal4"><img src="assets/readme-thumbs/made-with-itself.jpg" width="870" alt="Made with itself: the toolkit's own video, made in the toolkit"></a><br>
+**Made with itself**: this toolkit in 90 seconds, made with this toolkit. Every terminal line on screen is the real
+output of the command that made that part, and the bill is measured ($0.33).
 
 | | |
 |:--:|:--:|
-| <a href="https://demos.digitalsamba.com/video/ds-release-650.mp4"><img src="assets/readme-thumbs/ds-release-650.jpg" width="430" alt="Release-notes video with product UI rebuilt from source"></a> | <a href="https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4"><img src="assets/readme-thumbs/ds-free-schedule-demo.jpg" width="430" alt="Product demo with an AI narrator tile"></a> |
-| **Release-notes video**<br>product UI rebuilt from source,<br>no screen recording | **Product demo**<br>scripted cursor and camera,<br>AI narrator tile |
+| <a href="https://demos.digitalsamba.com/video/ds-release-650.mp4"><img src="assets/readme-thumbs/ds-release-650.jpg" width="430" alt="Release-notes video with product UI rebuilt from source"></a> | <a href="https://www.youtube.com/watch?v=AQLzseZ2aAY"><img src="assets/readme-thumbs/design-sources.jpg" width="430" alt="Design a video with Claude Code: one chart, three design skills"></a> |
+| **Release-notes video**<br>product UI rebuilt from source,<br>no screen recording | **Design sources**<br>one chart in three design skills,<br>plug in your own or use ours |
 
 | | | |
 |:--:|:--:|:--:|
-| <a href="https://demos.digitalsamba.com/video/q2-townhall-longarm-ad.mp4"><img src="assets/readme-thumbs/q2-townhall-longarm-ad.jpg" height="280" alt="Super Bowl-style launch ad"></a> | <a href="https://demos.digitalsamba.com/video/hallucinations_short.mp4"><img src="assets/readme-thumbs/hallucinations-short.jpg" height="280" alt="AI hallucinations explainer short"></a> | <a href="https://demos.digitalsamba.com/video/short-blue-sky.mp4"><img src="assets/readme-thumbs/sky-blue-short.jpg" height="280" alt="Why is the sky blue? short"></a> |
-| **Super Bowl-style launch ad**<br>LTX-2 animated cameo,<br>dramatic AI announcer | **AI hallucinations explainer**<br>9:16 short — Ideogram 4 cards,<br>cloned voice, burned captions | **"Why is the sky blue?"**<br>52s vertical short,<br>~$0.80 in generation |
+| <a href="https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4"><img src="assets/readme-thumbs/ds-free-schedule-demo.jpg" height="280" alt="Product demo with an AI narrator tile"></a> | <a href="https://demos.digitalsamba.com/video/hallucinations_short.mp4"><img src="assets/readme-thumbs/hallucinations-short.jpg" height="280" alt="AI hallucinations explainer short"></a> | <a href="https://youtube.com/shorts/1hyDgC5Qg_o"><img src="assets/readme-thumbs/youre-on-mute-short.jpg" height="280" alt="You're On Mute: every video call ever, as a horror trailer"></a> |
+| **Product demo**<br>scripted cursor and camera,<br>AI narrator tile | **AI hallucinations explainer**<br>9:16 Short: Ideogram 4 cards,<br>cloned voice, burned captions | **You're On Mute**<br>every video call ever, as a horror trailer;<br>invented cast, `parody-short` skill |
 
-| | |
-|:--:|:--:|
-| <a href="https://youtube.com/shorts/1hyDgC5Qg_o"><img src="assets/readme-thumbs/youre-on-mute-short.jpg" height="280" alt="You're On Mute: every video call ever, as a horror trailer"></a> | <a href="https://youtube.com/shorts/e4HW-tvi8-8"><img src="assets/readme-thumbs/the-great-return-short.jpg" height="280" alt="The Great Return: the return to the office, as a nature documentary"></a> |
-| **You're On Mute**<br>every video call ever, as a horror trailer;<br>invented cast, `parody-short` skill | **The Great Return**<br>the return to the office, as a wildlife film;<br>same cast, designed narrator voice |
-
-More in the [showcase table](#templates) below.
+More in the [showcase table](#templates) below, and new ones land on the [YouTube channel](https://www.youtube.com/@claudecodevideotoolkit) first ([subscribe](https://www.youtube.com/@claudecodevideotoolkit?sub_confirmation=1)). Made one yourself? Post it in [Show and tell](https://github.com/digitalsamba/claude-code-video-toolkit/discussions/categories/show-and-tell).
 
 ## Quick Start
 
@@ -93,6 +97,7 @@ Claude Code has deep knowledge in:
 | **acestep** | AI music generation — prompts, lyrics, scene presets, video integration |
 | **ltx2** | AI video generation — text-to-video, image-to-video clips, prompting guide |
 | **parody-short** | Comedy shorts about a group's own life or a shared topic, in a borrowed genre: in-jokes from the group's own chat and docs, costumed and animated photos or an invented cast, sound placed on the movement, vertical cuts |
+| **blender** *(optional)* | 3D from a JSON shot spec: a rigged cartoon cast acting on cue, a scene that turns out to be on a laptop, an app on a phone or a 3D model on a studio stage; every camera checked before the render; as a film or as clips in any video. Needs [Blender](docs/blender.md) and renders in minutes with a GPU. Characters fitted from a generated 3D model are experimental |
 | **moviepy** | Python video composition — overlay text on LTX-2/SadTalker output, build.py-style projects |
 | **runpod** | Cloud GPU — setup, Docker images, endpoint management, costs |
 
@@ -134,12 +139,14 @@ See `examples/` for finished projects you can learn from (newest first — scrol
 
 | Date | Demo | Description |
 |------|------|-------------|
-| 2026-11-07 | [the-great-return](https://demos.digitalsamba.com/video/the-great-return-v5-share.mp4) | 98s wildlife documentary about the return to the office, made with the `parody-short` skill and the same invented cast: mock-Latin lower thirds, a designed narrator voice, LTX clips lengthened with `ltx_extend.py` instead of frozen, every sound effect placed on its movement with `sync_check.py` ([vertical cut](https://demos.digitalsamba.com/video/the-great-return-vertical-v5-share.mp4)) |
-| 2026-11-07 | [youre-on-mute](https://demos.digitalsamba.com/video/youre-on-mute-v4-share.mp4) | 76s horror trailer about the video call that never ends, from the `parody-short` skill: an invented cast of four (FLUX portraits animated with LTX through `LivingPhoto`), a call UI built in Remotion that misbehaves, a stinger after the title ([vertical cut](https://demos.digitalsamba.com/video/youre-on-mute-vertical-v4-share.mp4)) |
+| 2026-11-12 | [made-with-itself](https://www.youtube.com/watch?v=3HjPatdeal4) | 93s video about the toolkit, made in the toolkit from one sentence typed into Claude Code: each stage (narrate, score, generate, compose, check) is the real command in the new `Terminal` component, every line its saved output, then what it made; narrated by Marilyn from the ElevenLabs voice library through the new `brands/video-toolkit`; the bill is measured ($0.33) and the Check scene shows what `qc.py` really found in the draft (`examples/toolkit-made-itself`) |
+| 2026-11-09 | [design-sources](https://www.youtube.com/watch?v=AQLzseZ2aAY) | 46s: one chart designed three ways (the toolkit's own palettes, taste-skill, and a house style of your own), the page turning between them on the narration with `PageTurns`, then the render checked one frame per scene with `contact_sheet.py` |
+| 2026-11-07 | [the-great-return](https://www.youtube.com/watch?v=YUqkQydQDh4) | 98s wildlife documentary about the return to the office, made with the `parody-short` skill and the same invented cast: mock-Latin lower thirds, a designed narrator voice, LTX clips lengthened with `ltx_extend.py` instead of frozen, every sound effect placed on its movement with `sync_check.py` ([vertical cut](https://youtube.com/shorts/e4HW-tvi8-8)) |
+| 2026-11-07 | [youre-on-mute](https://www.youtube.com/watch?v=73JNiOJgx5k) | 76s horror trailer about the video call that never ends, from the `parody-short` skill: an invented cast of four (FLUX portraits animated with LTX through `LivingPhoto`), a call UI built in Remotion that misbehaves, a stinger after the title ([vertical cut](https://youtube.com/shorts/1hyDgC5Qg_o)) |
 | 2026-11-04 | [data-chart-stars](https://demos.digitalsamba.com/video/data-chart-stars.mp4) | 31s chart video of the toolkit's GitHub star history, drawn as SVG by the new `LineChart` and `BarChart` components: the line is drawn while Lugh narrates each stretch, and the March spike's band and the monthly bars light on the words that name them, timed with `cue()` (`examples/data-chart-stars`) |
-| 2026-11-01 | [the-agent-handoff](https://demos.digitalsamba.com/video/the-agent-handoff.mp4) | 57s showcase an agent made unattended from one Discord message: the agent wrote the script and the shot list, `video_job.py` voiced it with a cloned voice, generated four LTX-2 clips and a diagram card, built and QC'd it, and the Discord bot posted the link when it went live; $0.47, the fourth take after three pipeline fixes (`docs/agent-video-jobs.md`) |
+| 2026-11-01 | [the-agent-handoff](https://demos.digitalsamba.com/video/the-agent-handoff.mp4) | *An experiment in agent-first, one-prompt video, kept for the record rather than as a showcase.* 57s an agent made unattended from one Discord message: the agent wrote the script and the shot list, `video_job.py` voiced it with a cloned voice, generated four LTX-2 clips and a diagram card, built and QC'd it, and the Discord bot posted the link when it went live; $0.47, the fourth take after three pipeline fixes (`docs/agent-video-jobs.md`) |
 | 2026-10-28 | [ds-release-650](https://demos.digitalsamba.com/video/ds-release-650.mp4) | 87s release-notes video built from the `ds-release-notes` template: six items across the room and account center, Lugh's cloned voice made livelier with `voice_prosody.py`, checked with `qc.py --render --layout` (`templates/ds-release-notes`) |
-| 2026-10-21 | [ds-release-649](https://demos.digitalsamba.com/video/ds-release-649.mp4) | Release-notes video with no screen recording: three product UIs rebuilt from their source code, driven by a scripted cursor and camera, narrated by Lugh (`examples/ds-release-649`) |
+| 2026-10-21 | [ds-release-649](https://demos.digitalsamba.com/video/ds-release-649.mp4) | Release-notes video with no screen recording: three product UIs rebuilt from their source code, driven by a scripted cursor and camera, narrated by Lugh; re-rendered 2026-11-09 in the DS act palette from `video-design` (`examples/ds-release-649`) |
 | 2026-10-21 | [ds-free-schedule-demo](https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4) | 26s synthetic product demo of scheduling a call, with a SoulX talking-head narrator tile (`examples/ds-free-schedule-demo`) |
 | 2026-06-09 | [hallucinations-short](https://demos.digitalsamba.com/video/hallucinations_short.mp4) | 3:41 vertical explainer on AI hallucinations — Ideogram 4 cards, LTX-2 b-roll, burned karaoke captions, Qwen3-TTS voice *clone* (reference sample from [Pixabay](https://pixabay.com/sound-effects/search/voice%20overs/)) |
 | 2026-06-09 | [sky-blue-short](https://demos.digitalsamba.com/video/short-blue-sky.mp4) | 52s "Why is the sky blue?" — concept-explainer-short template showcase (`examples/sky-blue-short`), stock Qwen3-TTS voice |
@@ -151,6 +158,8 @@ See `examples/` for finished projects you can learn from (newest first — scrol
 | 2026-01-22 | [ds-remote-mcp](https://demos.digitalsamba.com/video/ds-remote-mcp.mp4) | Remote MCP server demo *(the jazz background music is a joke)* |
 | 2025-12-10 | [digital-samba-skill-demo](https://demos.digitalsamba.com/video/digital-samba-skill-demo.mp4) | Product demo showcasing Claude Code skill |
 | 2025-12-05 | [sprint-review-cho-oyu](https://demos.digitalsamba.com/sprint-review-cho-oyu.mp4) | iOS sprint review with demos |
+
+Videos other people have made with the toolkit are in [Show and tell](https://github.com/digitalsamba/claude-code-video-toolkit/discussions/categories/show-and-tell). Share yours there: a link, the template or tools you used, and what it cost.
 
 ### Scene Transitions
 
@@ -289,6 +298,11 @@ uv run tools/flux2.py --list-presets
 uv run tools/ltx2.py --prompt "A sunset over the ocean, cinematic" --cloud modal
 uv run tools/ltx2.py --prompt "Gentle camera drift" --input photo.jpg --cloud modal
 
+# 3D shots from a JSON spec (optional; needs Blender 4.2+, and a GPU to render in minutes: see docs/blender.md)
+uv run tools/blender_render.py doctor                                    # is Blender here, and how fast is it?
+uv run tools/blender_render.py check examples/blender-disk-panic/spec.json    # cameras verified, contact sheet, ~5 s
+uv run tools/blender_render.py render spec.json --clips --alpha --to projects/my-video/public/blender
+
 # Publish a finished render to YouTube (OAuth 2.0 + Data API v3) — contributed by @dascope (#29)
 uv run tools/youtube_upload.py --auth                                   # one-time browser login
 uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privacy private --json-out
@@ -305,6 +319,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
 | **Checks** | qc, sync_check, contact_sheet | Before showing a render: freezes and motion that stops dead, loudness, layout, sound effects on their movement |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
+| **3D (optional)** | blender_render | Character acting, 3D reveals and product shots from a shot spec; does nothing unless Blender is installed |
 
 ### Cloud GPU (Modal + RunPod)
 
@@ -361,6 +376,7 @@ claude-code-video-toolkit/
 - [Creating Brands](docs/creating-brands.md)
 - [Project System](lib/project/README.md) — Multi-session lifecycle, schema, reconciliation
 - [Optional Components](docs/optional-components.md) — Local GPU tools setup
+- [Blender](docs/blender.md): 3D shot specs (optional): setup, what your machine needs, timings, what it has been run on, and how a character film is made over several sessions
 - [Agent Video Jobs](docs/agent-video-jobs.md) — Brief in, MP4 out for any agent: `video_job.py` submit/status/result, the MCP server, and the `skills/video-toolkit/` skill for OpenClaw, Codex, Hermes and friends
 - [Toolkit Development](_internal/ROADMAP.md) — Roadmap, backlog, changelog
 

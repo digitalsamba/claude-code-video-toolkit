@@ -50,9 +50,19 @@ written, QC can judge the result, and there's a cost cap. Offer a `job` when one
 | A sprint or monthly review | `templates/sprint-review`, `templates/sprint-review-v2` | session | the template's README | `examples/hello-world` |
 | A data story: a number or a trend drawn as the narration talks | `DataChart` (`LineChart`, `BarChart`, `Counter`, `SplitBar`) in Remotion; Matplotlib + moviepy without Node | session | `lib/components/DataChart.tsx`, `.claude/skills/moviepy/` | `examples/data-chart-stars`, `examples/data-viz-chart` |
 | A fun or holiday video about the user's own group (a release night as an action-show intro, a Christmas ad) starring their photos, or a spoof of a shared topic with an invented cast | Remotion shots + `LivingPhoto`, cast from `image_edit` then `ltx2.py --input` (`ltx_extend.py` for long shots), in-jokes from the group's own chat and docs | session | `.claude/skills/parody-short/SKILL.md` | |
+| A 3D character acting out a gag as a film of its own, or a 3D reveal or character inside another video (the scene turns out to be on a laptop; a character reacts beside the content) | Blender shot spec: `tools/blender_render.py` (`check`, then `render`, or `render --clips --alpha` for `BlenderClip` in Remotion). The cast is described in JSON (build, face, hair, clothes, a seed) and can be kept in a kit's `cast/` folder. Needs Blender on the host: `blender_render.py doctor`. Experimental: a character fitted from a generated 3D model (`blender_render.py fit`), on its feet in a kitchen or a lecture hall, walking, sitting, carrying a mug. For a character of a real person, `tools/reference_capture.py` takes the reference photos at a webcam (the person runs it in a browser; it is not a job step) | session | `.claude/skills/blender/`, `docs/blender.md` | `examples/blender-disk-panic`, `examples/blender-in-remotion`, `examples/blender-kitchen` |
+| An app, a UI or a product shown as a 3D object: a screenshot or a render on a phone or a floating card, or a 3D model (glTF, OBJ, FBX, STL) on a studio stage, with the camera orbiting or pulling back from the screen | Blender shot spec with set kind `studio` and `product`, `orbit`, `reveal` shots; `render` is a film of its own, `--clips` a clip for any build, `--clips --alpha` a transparent clip for a Remotion scene | session | `.claude/skills/blender/`, `docs/blender.md` | `examples/blender-product-shot` |
 | A sub-30 s ad spot or a brand stinger | moviepy, audio-anchored | session | `.claude/skills/moviepy/` | `examples/quick-spot`, `examples/ds-crt-stinger` |
 | A presenter talking to camera | `soulx.py` (below), placed in a template with `NarratorPiP` | tool, or session | Talking heads, below | |
 | Change an existing video: new voice, music, vertical cut, highlight reel, subtitles, watermark | `redub.py`, `addmusic.py`, `cutdown.py`, `highlights.py`, `captions.py --srt`, `dewatermark.py` | tool | QC, captions, cut-downs, below | |
+
+**Blender is optional, so check before offering it.** `uv run tools/blender_render.py doctor --no-bench` exits 0
+when the host has it. If it does, suggest a 3D shot wherever one fits while planning any video, not only when the
+user says "3D": its clips are ordinary video files, so one can sit in a Remotion scene, in a moviepy build, or as a
+`file` scene in a `video_job.py` spec. If it doesn't, leave the two Blender routes out of what you offer.
+Say how long it takes before starting: a few seconds of the clay cast is minutes, but a film with a fitted
+character in a room is about 2.2 s a frame with a GPU, two to three hours a session, over a few sessions with the
+person's notes between them (`docs/blender.md`, "A film over several sessions").
 
 `ds-release-notes` is built for one product's screens, but the method isn't: keep its `Stage` and `Cursor`
 wiring and rebuild your own app's screens the way `.claude/skills/synthetic-ui-demo/` describes.
@@ -325,11 +335,12 @@ for JSON-lines progress on stderr, and `--json` for a machine-readable result on
 | Talking head anyone will watch | `soulx.py` (SoulX-FlashHead Pro, Modal only) | `sadtalker.py` is drafts, or when Modal is down |
 | Music | `music_gen.py --variations 3`, then `pick_music.py` to rule takes out and `audition.py` to choose by watching | picking a take by ear alone |
 | Sound effects | `sfx.py` (ElevenLabs, generated) or `sfx_search.py` (real recordings from Freesound via Openverse, free, no key) | |
-| Before delivering any render | `qc.py --render out.mp4 --fix` | shipping unchecked |
+| Before delivering any render | `qc.py --render out.mp4 --fix` (on a vertical short it also measures the opening: first movement, first cut, first sound) | shipping unchecked |
 | Captions for a Remotion template | `captions.py public/audio/scenes` (`--srt`/`--vtt` for subtitle files too) | burning the recogniser's own transcript |
-| Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` (`--mode track` keeps a talking head in frame) | |
+| Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` (`--mode track` keeps a talking head in frame; `--segment 4-11@0.6,0.4` moves a crop across the frame by hand) | |
 | A highlight reel from a long recording | `highlights.py` (picks final takes from a word-timed transcript), then `cutdown.py --segment` | cutting by eye |
-| Upload to YouTube | `youtube_upload.py` (OAuth, private by default) | |
+| Upload to YouTube | `youtube_upload.py` (OAuth, private by default; `--check` first) | |
+| Subtitles and chapters for the upload | `publish_kit.py --project DIR` (one transcription of the render, ~$0.01 a 90 s video) | adding scene caption offsets by hand |
 
 ### Voiceover
 
@@ -433,7 +444,9 @@ silent on purpose passes with `--allow-silent`. In sprint-review configs, `align
 Fixing existing videos: `redub.py --input v.mp4 --voice-id ID --sync` (new voice, word-level re-timing),
 `addmusic.py` (a bed under a finished video; `--duck` lowers it under speech, `--events` adds timed effects), `locate_watermark.py` then `dewatermark.py` (ProPainter inpainting),
 `notebooklm_brand.py` (a NotebookLM video with your logo and outro). Publishing: `youtube_upload.py --video
-out.mp4 --title "..." --json-out` (one-time `--auth`, private unless told otherwise; `docs/youtube-upload.md`).
+out.mp4 --title "..." --json-out` (one-time `--auth`, private unless told otherwise; `--check` says what's
+missing and how to fix it; `docs/youtube-upload.md`). `publish_kit.py` writes the whole-video SRT for
+`--captions` and the chapter lines for the description.
 
 ### Remotion templates (when a job's compositor isn't enough)
 

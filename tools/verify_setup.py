@@ -320,6 +320,25 @@ def test_cloud_endpoint(tool_name: str, provider: str = "modal") -> dict:
         return {"ok": False, "detail": str(e)[:200]}
 
 
+def check_optional() -> list[dict]:
+    """Optional components: reported, never counted as missing."""
+    candidates = [os.environ.get("BLENDER"), shutil.which("blender"),
+                  "/Applications/Blender.app/Contents/MacOS/Blender",
+                  str(Path.home() / "Applications/Blender.app/Contents/MacOS/Blender")]
+    for base in (os.environ.get("ProgramFiles"), os.environ.get("ProgramW6432")):
+        if base:
+            candidates += sorted(Path(base).glob("Blender Foundation/Blender*/blender.exe"), reverse=True)
+    candidates += ["/usr/bin/blender", "/usr/local/bin/blender", "/snap/bin/blender", "/opt/blender/blender"]
+    binary = next((str(c) for c in candidates if c and Path(c).exists()), None)
+    ok, version = check_command([binary, "--version"]) if binary else (False, "")
+    return [{
+        "name": "Blender",
+        "required": False,
+        "ok": ok,
+        "detail": f"{version} at {binary}" if ok else "not installed (3D shots with tools/blender_render.py; docs/blender.md)",
+    }]
+
+
 def main():
     import argparse
 
@@ -340,6 +359,15 @@ def main():
             status = "OK" if p["ok"] else ("MISSING" if p["required"] else "not found")
             req = " (required)" if p["required"] else ""
             print(f"  {'[x]' if p['ok'] else '[ ]'} {p['name']}{req}: {p['detail']}")
+        print()
+
+    # 1b. Optional components (never part of "ready")
+    optional = check_optional()
+    results["optional"] = optional
+    if verbose:
+        print("Optional:")
+        for p in optional:
+            print(f"  {'[x]' if p['ok'] else '[-]'} {p['name']}: {p['detail']}")
         print()
 
     # 2. Cloudflare R2

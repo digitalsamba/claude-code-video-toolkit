@@ -10,6 +10,95 @@ All notable changes to claude-code-video-toolkit.
 
 ---
 
+## 2026-11-14 (v0.29.1)
+
+The release that says it: the toolkit makes films with a 3D character in them. That arrived across v0.28.0 and
+v0.29.0 without being announced, so the site, the README and this release's notes now open with it.
+
+### Added
+
+- **`tools/reference_capture.py`** (#234): the reference photos of a person for a fitted character, from a webcam. A local page talks the sitter through eight poses, counts down aloud and keeps the sharpest frame of a burst. Photos stay on the machine. Tests cover its local server.
+
+### Changed
+
+- **The site's home page and the README open with the trailer** (#232): a band for Just a Quick One under the hero, the Made with itself band moved below the pipeline section, and one sentence on 3D in the README's first paragraph.
+- **v0.29.0's notes** open with a line linking the announcement, Discussion #233.
+
+---
+
+## 2026-11-14 (v0.29.0)
+
+Characters get up from the desk. A character can now be fitted from a generated 3D model, stand, walk, sit, carry
+a mug and present at a board, in two new sets, with the body checked before a frame is rendered. Blender is
+labelled optional, not experimental; only fitted characters keep that label. The toolkit's trailer, Just a Quick
+One, was made with all of it.
+
+### Added
+
+- **Fitted characters** (experimental, #222): `blender_render.py fit` seats an image-to-3D model on the shared rig. It keeps its own shape and gets a face made from its own marks and hands with fingers. Two are in `tests/fixtures/blender-fitted`: Mara, who is invented, and the toolkit's author (#227).
+- **Characters on their feet** (#222): standing, walking straight or round furniture, turning, sitting down and standing up, a door opened by hand, a chair that pulls out and in; `follow`, `full`, `feet` and `tilt_up` shots; `wink`, `look_at`, `glance`, `reach` and `point`.
+- **`check` measures the body** (#222): a hand inside the body, a limb through furniture, a sliding foot, a missed touch, a turned palm, a stretched sleeve, a jump in one frame, and a set whose surfaces share a plane. `render` reads the finished frames and fails on flicker.
+- **A lecture hall and presenter verbs** (experimental, #223): the mouth moves on the narration's words, with gestures, showing a board, chalk in the hand, and a `fixed` camera put where the spec says. `BlenderClip` takes a crop and a background.
+- **A kitchen, and a mug that is a mug** (experimental, #224): `carry` holds it by the handle, `put_down`, `pick_up` and `sip` do what they say, and two checks measure how far a carried thing tips and whether it passes through furniture. A laptop lid opens and shuts by hand.
+- **`examples/blender-kitchen`** (#225, #227): two films in the same kitchen, one for each fitted character, that run from the repo in three commands.
+- **A site page on 3D characters** (#226) and the trailer on the README.
+
+### Changed
+
+- **Blender is optional, not experimental** (#226). The limit is the machine: it renders in minutes with a GPU. The README, `CLAUDE.md` and `docs/blender.md` say so early and point at `doctor`. Characters fitted from a generated model, the kitchen and the lecture hall stay experimental.
+- **`docs/blender.md`** tells a model from the rig and a render, says a character film takes hours, and describes making one over several sessions: a brief, a storyboard from `check` stills, an unattended build, and a prompt each session writes for the next (#224).
+- Fitted characters and four example films pass their checks on Linux with Blender 4.2.3 (#229).
+- The README has a YouTube subscribe badge and the site links the channel (#230).
+
+### Fixed
+
+- Two wrist faults on every fitted hand, found by the new tilt check: quaternion keys written out of frame order, and a rotation that was never normalised (#224).
+- The flicker check no longer reports fingers' shadows on a desk or writing on a board under a moving camera (#223).
+
+### Known limits
+
+- A full `sip` stretches a fitted sleeve past the check's limit on both characters; the examples drink at part height.
+- The fit wants its joints and face read off a picture by hand. One character per set. Windows is untested.
+
+---
+
+## 2026-11-12 (v0.28.0)
+
+3D arrives as an experimental, optional tool: a JSON shot spec becomes a Blender film, clips for any build, or
+transparent elements inside a Remotion video. Terminal demos get their own component, a brand can hold several
+narrators, and publishing to YouTube gets a whole-video SRT and chapters from the render. The toolkit's own video,
+Made with itself, ships as an example.
+
+### Added
+
+- **Blender shot specs** (experimental, optional, #214): `tools/blender_render.py check|render spec.json` builds 3D scenes from JSON: a rigged cartoon cast described by body, face, hair, clothes and a seed, a desk set and a product stage, shots by type, and acting beats in seconds or on narration words. `check` verifies every camera by geometry and writes a contact sheet before anything renders. `render --clips --alpha` gives one transparent clip per shot, which `BlenderClip` plays in a Remotion video; a Remotion render can play on the laptop in the scene. Three examples: `blender-disk-panic`, `blender-product-shot` and `blender-in-remotion`. Needs Blender 4.2+; without it nothing changes, and `/video` suggests it only when it is installed.
+- **`Terminal`** in `lib/components` (#207): commands type and output prints on narration cues, with menus and scrolling. `brands/video-toolkit` gives the toolkit its own look, with a terminal palette.
+- **Several narrators per brand** (#207): pick one per video with `voiceover.py --voice`; a brand's ElevenLabs model, settings and `maxWpm` now apply. The toolkit brand narrates with Marilyn and Bren.
+- **`tools/publish_kit.py`** (#211): one whole-video SRT and a chapter at each scene's cut, from a single transcription of the render. `/publish` runs it and passes both to the upload.
+- **`youtube_upload.py --check`** (#211): which channel a login is for, which scopes it has and whether the Data and Analytics APIs are on, with the fix for each.
+- **`youtube_upload.py --video-id`** (#209): adds captions, a thumbnail or a playlist to a video already uploaded.
+- **`examples/toolkit-made-itself`** (#217): the toolkit's own 93 second video, made in the toolkit. Every terminal line is the saved output of the command that made that part. The README and site lead with it.
+- **Show and tell** (#216): Discussions has a place to share videos made with the toolkit, `/contribute` drafts the post from `project.json` and the spend log, and `/publish` offers it after an upload.
+
+### Changed
+
+- `templates/ds-release-notes` and `examples/ds-release-649` use the DS act palette from `video-design` (#204): flat DS blue title and outro, cool grey cards with navy type.
+- `/video` offers music after the voiceover: `music_gen` takes, `pick_music`'s measured pick, then `audition.py` renders to choose by ear (#210).
+- Official Remotion skills synced to upstream v4.0.542 (#205).
+
+### Fixed
+
+- **`modal_setup.py` deploys on a new Modal workspace** (#212, jdela141252-lab): a workspace created now builds images with builder version 2026.10, which the toolkit's Modal client (1.5) refuses before building anything. The tool now retries a refused deploy with `MODAL_IMAGE_BUILDER_VERSION=2025.06` and keeps it for the rest of the run; a version the user set is left alone, and older workspaces keep their own. `docs/modal-setup.md`, `/setup` and `.env.example` say to export the variable before a deploy by hand.
+- **`qc.py --layout` on Windows** (#213, jdela141252-lab): subprocess output is read as UTF-8, so curly quotes on screen no longer crash the audit, and an empty or broken audit result is reported as an error.
+- `youtube_upload.py` asks for the captions scope and refuses `--captions` on an older token before uploading (#209).
+- `BarChart` grows a highlighted value by scaling it, instead of changing its font size every frame, which crashed Chrome mid-render (#217).
+- `Terminal` draws a line on the frame it is cued for, so a still at that frame shows it (#207).
+- Video jobs draw a local background one step off the caption pill's ink, so the pill no longer vanishes into it (#210).
+- `contact_sheet.py` takes `--at` more than once; `qc.py` messages pass the copy lint (#210).
+- A white picture on a Blender screen no longer fails `check` as blown out (#214).
+
+---
+
 ## 2026-11-09 (v0.27.0)
 
 Five contributor tools for working on footage you already have, a stats loop for what you publish, and a copy lint

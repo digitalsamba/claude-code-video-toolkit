@@ -62,6 +62,7 @@ import os
 import random
 import re
 import socket
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -128,6 +129,8 @@ RETRIABLE_EXCEPTIONS = (
 TITLE_MAX = 100
 DESCRIPTION_MAX = 5000
 TAGS_COMBINED_MAX = 500
+DEFAULT_CATEGORY = "22"  # People & Blogs: YouTube's own default, and rarely the right one
+SHORT_MAX_SECONDS = 180  # a vertical or square upload this long or shorter becomes a Short
 
 
 class AuthError(Exception):
@@ -321,6 +324,63 @@ def build_request_body(args, description: str, tags: list[str]) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Metadata notes: advice before an upload, never a refusal
+# ---------------------------------------------------------------------------
+_HASHTAG = re.compile(r"(?<!\S)#\w+")
+_LINK = re.compile(r"https?://\S+")
+
+
+def probe_shape(video: Optional[str]) -> Optional[dict]:
+    """Width, height and seconds of the file from ffprobe, or None when it can't be read."""
+    if not video:
+        return None
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+             "stream=width,height:format=duration", "-of", "json", str(video)],
+            capture_output=True, text=True, timeout=30, check=True).stdout
+        data = json.loads(out)
+        stream = data["streams"][0]
+        return {"width": int(stream["width"]), "height": int(stream["height"]),
+                "seconds": float(data["format"]["duration"])}
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, IndexError):
+        return None
+
+
+def is_short(shape: Optional[dict]) -> bool:
+    return bool(shape) and shape["height"] >= shape["width"] and shape["seconds"] <= SHORT_MAX_SECONDS
+
+
+def metadata_notes(title: str, description: str, tags: list[str], category: Optional[str],
+                   shape: Optional[dict] = None) -> list[str]:
+    """What a viewer or YouTube would miss in this title, description, tags and category.
+
+    Each note is one thing to consider before the upload; none of them stops it. They cover what
+    can be read from the request alone: whether the video will find its audience is in the stats.
+    """
+    notes: list[str] = []
+    if not _HASHTAG.search(description):
+        notes.append("The description has no hashtags. YouTube shows the first three above the title and "
+                     "links each to its topic page: end the description with two or three, such as #remotion.")
+    if not _LINK.search(description):
+        notes.append("The description has no link. If the video should send people somewhere (a repository, "
+                     "a site, the full video), put the link in the first lines.")
+    lowered = title.lower()
+    if tags and not any(t.lower() in lowered for t in tags):
+        notes.append("None of the tags appears in the title. The title counts for more than the tags in "
+                     "search: name the subject in it, in the words people would type.")
+    if category is None:
+        notes.append(f"No --category given, so this uploads as {DEFAULT_CATEGORY} (People & Blogs). Pick the "
+                     "one that fits: 28 Science & Tech, 27 Education, 24 Entertainment, 26 Howto & Style.")
+    if is_short(shape):
+        notes.append(f"This is {shape['width']}x{shape['height']} and {shape['seconds']:.0f} s, so YouTube "
+                     "makes it a Short. If it is a cut of a longer video, set that video as its related video "
+                     "afterwards, by hand: Studio, Content, Shorts, the video's Details, Related video. The "
+                     "API can't set it, and the field needs the channel's advanced features switched on.")
+    return notes
+
+
+# ---------------------------------------------------------------------------
 # Error classification
 # ---------------------------------------------------------------------------
 # YouTube returns a machine-readable reason in the error body (e.g. "quotaExceeded",
@@ -370,6 +430,79 @@ def classify_http_error(e: "HttpError") -> tuple[str, Optional[str]]:
     if status == 403:
         return "forbidden", reason
     return "http", reason
+
+
+ANALYTICS_SCOPE = "https://www.googleapis.com/auth/yt-analytics.readonly"
+APIS = {"data": "youtube.googleapis.com", "analytics": "youtubeanalytics.googleapis.com"}
+
+
+def cloud_project_number(client_secrets: Optional[str]) -> Optional[str]:
+    """The Cloud project number, from the OAuth client ID ('495036436430-abc.apps...' -> '495036436430')."""
+    from config import get_youtube_client_secrets_file
+    path = client_secrets or get_youtube_client_secrets_file()
+    try:
+        data = json.loads(Path(path).read_text())
+        cid = (data.get("installed") or data.get("web") or {}).get("client_id", "")
+    except (OSError, ValueError, TypeError):
+        return None
+    head = cid.split("-", 1)[0]
+    return head if head.isdigit() else None
+
+
+def enable_url(api: str, project: Optional[str]) -> str:
+    """The Cloud Console page that switches `api` on (the same link Google puts in an accessNotConfigured error)."""
+    url = f"https://console.developers.google.com/apis/api/{APIS[api]}/overview"
+    return f"{url}?project={project}" if project else url
+
+
+def check_setup(account: str, client_secrets: Optional[str]) -> dict:
+    """Read-only: is the login there, which channel is it, which scopes does it have, and are the Data and
+    Analytics APIs switched on? Costs about 1 quota unit (channels.list); nothing is written."""
+    project = cloud_project_number(client_secrets)
+    out: dict = {"account": account, "cloudProject": project, "ok": False, "fixes": []}
+    try:
+        creds = get_credentials(account, client_secrets, allow_interactive=False)
+    except AuthError as e:
+        out["auth"] = str(e)
+        out["fixes"].append(f"log in: uv run --extra youtube tools/youtube_upload.py --auth --account {account}")
+        return out
+    granted = list(getattr(creds, "scopes", None) or [])
+    out["scopes"] = granted
+    out["missingScopes"] = missing_scopes(creds, SCOPES)
+    if out["missingScopes"]:
+        out["fixes"].append(f"log in again for {', '.join(s.rsplit('/', 1)[-1] for s in out['missingScopes'])}: "
+                            f"uv run --extra youtube tools/youtube_upload.py --auth --account {account}")
+
+    try:
+        items = build_service(creds).channels().list(part="snippet", mine=True).execute().get("items", [])
+        out["dataApi"] = "on"
+        out["channel"] = ({"id": items[0]["id"], "title": items[0]["snippet"]["title"]} if items else None)
+        if not items:
+            out["fixes"].append("this Google account has no YouTube channel: create one, or log in with the right one")
+    except HttpError as e:
+        etype, reason = classify_http_error(e)
+        out["dataApi"] = "off" if etype == "config" else f"error: {reason or getattr(e.resp, 'status', '')}"
+        if etype == "config":
+            out["fixes"].append(f"switch on the YouTube Data API v3: {enable_url('data', project)}")
+
+    if ANALYTICS_SCOPE in granted:
+        try:
+            import datetime as dt
+            day = dt.date.today()
+            build("youtubeAnalytics", "v2", credentials=creds, cache_discovery=False).reports().query(
+                ids="channel==MINE", startDate=str(day - dt.timedelta(days=7)), endDate=str(day), metrics="views",
+            ).execute()
+            out["analyticsApi"] = "on"
+        except HttpError as e:
+            etype, reason = classify_http_error(e)
+            out["analyticsApi"] = "off" if etype == "config" else f"error: {reason or getattr(e.resp, 'status', '')}"
+            if etype == "config":
+                out["fixes"].append(f"switch on the YouTube Analytics API: {enable_url('analytics', project)}")
+    else:
+        out["analyticsApi"] = "no scope"   # optional: only youtube_stats.py needs it
+
+    out["ok"] = out["dataApi"] == "on" and not out["missingScopes"] and bool(out.get("channel"))
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -632,8 +765,9 @@ Note: until your OAuth app is Google-verified, uploads are force-locked to priva
 
     parser.add_argument("--tags", help="Comma-separated tags (combined <= 500 chars)")
     parser.add_argument(
-        "--category", default="22",
-        help='Numeric category ID as a string (default "22" = People & Blogs; "28" = Science & Tech)',
+        "--category",
+        help='Numeric category ID as a string ("28" = Science & Tech, "27" = Education, "24" = Entertainment; '
+             'left out, it is "22" = People & Blogs, with a note)',
     )
     parser.add_argument(
         "--privacy", choices=VALID_PRIVACY, default="private",
@@ -665,6 +799,9 @@ Note: until your OAuth app is Google-verified, uploads are force-locked to priva
     parser.add_argument("--account", default="default", help="Channel/account name to namespace the cached token")
     parser.add_argument("--client-secrets", help="Path to the OAuth client_secret JSON (overrides env var)")
     parser.add_argument("--auth", action="store_true", help="Interactive login only: cache a token and exit")
+    parser.add_argument("--check", action="store_true",
+                        help="Check the setup and exit: login, channel, scopes, and whether the Data and Analytics "
+                             "APIs are on (read-only, ~1 quota unit)")
     parser.add_argument(
         "--login-if-needed", action="store_true",
         help="Allow an upload run to open a browser for first-time consent (default: fail with instructions)",
@@ -694,6 +831,23 @@ def main():
             emit_json({"success": True, "account": args.account, "action": "auth"})
         sys.exit(0)
 
+    # --- Setup check ---------------------------------------------------------------
+    if args.check:
+        r = check_setup(args.account, args.client_secrets)
+        ch = r.get("channel")
+        log(f"Account '{args.account}': " + (f"channel '{ch['title']}' ({ch['id']})" if ch else
+                                            r.get("auth") or "no channel"), "success" if ch else "error")
+        if "scopes" in r:
+            log(f"Scopes: {', '.join(x.rsplit('/', 1)[-1] for x in r['scopes'])}", "info")
+            log(f"Data API: {r.get('dataApi')}; Analytics API: {r.get('analyticsApi')}", "info")
+        for fix in r["fixes"]:
+            log(f"Fix: {fix}", "warn")
+        if r["ok"]:
+            log("Ready to upload.", "success")
+        if args.json_out:
+            emit_json({"success": r["ok"], "action": "check", **r})
+        sys.exit(0 if r["ok"] else 1)
+
     # --- Validate ----------------------------------------------------------------
     err = validate_args(args)
     if err:
@@ -703,6 +857,7 @@ def main():
         sys.exit(1)
 
     body = None
+    notes: list[str] = []
     if not args.video_id:  # adding to an uploaded video sends no title or description
         description = read_description(args)
         tags = parse_tags(args.tags)
@@ -720,6 +875,11 @@ def main():
                 if args.json_out:
                     emit_json({"success": False, "error": msg, "errorType": "copy", "findings": found})
                 sys.exit(1)
+        notes = metadata_notes(args.title, description, tags, args.category, probe_shape(args.video))
+        for note in notes:
+            log(f"Note: {note}", "warn")
+        if args.category is None:
+            args.category = DEFAULT_CATEGORY
         body = build_request_body(args, description, tags)
 
     # --- Dry run -----------------------------------------------------------------
@@ -746,6 +906,7 @@ def main():
             emit_json({
                 "success": True, "dryRun": True, "authOk": auth_ok, "authError": auth_msg,
                 "missingScopes": missing, "requestBody": body, "account": args.account,
+                "notes": notes,
             })
         sys.exit(0)
 
@@ -852,6 +1013,7 @@ def main():
             "captionsAdded": captions_added,
             "playlistId": args.playlist,
             "uploadStatus": "uploaded",
+            "notes": notes,
         })
 
     sys.exit(0)

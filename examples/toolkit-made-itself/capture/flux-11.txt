@@ -1,0 +1,16 @@
+$ uv run tools/flux2.py --cloud modal --width 1280 --height 720 --seed 11 --prompt 'Quiet home desk by a window at dawn, an open laptop with a softly glowing blank screen, one plain ceramic mug with a single handle and a thin wisp of steam rising from the mug, a small plant, soft cool daylight, light grey walls, navy and white tones, calm, photographic, shallow depth of field, no text, no words, no letters, no logos' --output projects/toolkit-made-itself/public/img/desk-11.png
+[94m-> Generating image via Modal...[0m
+[92mOK Completed in 4.9s[0m
+[90m   Est. cost: $0.0015 (5s on modal)[0m
+
+[94m-> FLUX.2 klein[0m
+[90m   ========================================[0m
+[94m-> Prompt: Quiet home desk by a window at dawn, an open laptop with a softly glowing blank screen, one plain ceramic mug with a single handle and a thin wisp of steam rising from the mug, a small plant, soft cool daylight, light grey walls, navy and white tones, calm, photographic, shallow depth of field, no text, no words, no letters, no logos[0m
+[90m   Size: 1280x720[0m
+[90m   Downloading from R2...[0m
+[92mOK Saved: projects/toolkit-made-itself/public/img/desk-11.png[0m
+[90m   Model: black-forest-labs/FLUX.2-klein-4B[0m
+[90m   Time: 4.9s total, 3.4s inference[0m
+[90m   Output: 1280x720[0m
+[90m   Seed: 11[0m
+# elapsed 6s, exit 0

@@ -1,0 +1,19 @@
+$ uv run tools/qc.py --project projects/toolkit-made-itself --render projects/toolkit-made-itself/out/draft.mp4 --layout
+QC — /Users/conalmullan/work/video/projects/toolkit-made-itself (unknown)
+  assets checked: 0 | scenes timed: 0 | pacing measured: 0 | loudness measured: 0
+  render: -25.9 LUFS, -8.3 dBTP
+
+render:
+  ! draft.mp4: -25.9 LUFS — quieter than the -14 target, and YouTube won't raise it
+frames:
+  ! 0:31.0-0:34.8: 3.8s with nothing on screen changing. Give the hold a next action (the cursor moving on, the camera's next move) or cut it shorter
+  ! 0:57.2-1:00.5: 3.2s with nothing on screen changing. Give the hold a next action (the cursor moving on, the camera's next move) or cut it shorter
+  · first frame is background only (fine with a custom thumbnail; it is what autoplay shows first)
+layout:
+  · package.json renders "Sample", which doesn't exist; audited "MadeWithItself"
+  ! 11 of 43 texts never reach 28px (2.6% of the short side, the phone floor): "Captions" 24px, "Music" 24px, "Stills" 24px, "Video" 24px, "Voice" 24px +6
+  · product UI: contrast 2.81:1 (needs 3.0) #cacdd3 on #707789: "uv ru", from 0:25.5. #d3d6da would pass
+  · product UI: 42 of 75 texts never reach 28px (2.6% of the short side, the phone floor): "claude-code-video-toolkit" 17px, "const render = run('render');" 24px, "export const composeLines = (c" 24px, "return [" 24px, "src/compose.tsx" 24px +37
+
+PASS with warnings: 0 error(s), 4 warning(s)
+# elapsed 19s, exit 0

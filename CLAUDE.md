@@ -90,6 +90,54 @@ replace `src/scenes/` and the voice phrases. Method in the `synthetic-ui-demo` s
 ### concept-explainer-short
 9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts). **Python/moviepy, not Remotion** — the whole video derives from `scenes.json` (per-scene narration + visual asset). Pipeline: `gen_vo.py` (per-scene TTS via voiceover.py, clone or built-in, `--max-wpm` pacing clamp) → `gen_captions.py` (whisper word timing force-aligned to script text, needs `uv sync --extra whisper`) → `build.py` (audio-anchored composite: Ken Burns on stills, boomerang-looped clips, burned karaoke caption pills, ducked music). Renders at every stage — placeholder cards before assets, silent before audio. Visuals follow the FLUX/Ideogram/LTX split: Ideogram cards at `1440x2560` for anything text-bearing, LTX b-roll at `576x1024` for motion.
 
+## Blender shot specs (optional)
+
+Optional, and limited by the machine more than by the tool: it needs Blender and renders in minutes with a GPU
+(`doctor` times a frame). The clay cast, the desk sets, the studio stage and clips in Remotion are the settled
+part. Characters fitted from a generated 3D model, the kitchen and the lecture hall are experimental. Before
+proposing a character film, tell the person it is hours of rendering over a few sessions.
+
+A general 3D tool, not a template: 3D scenes, character acting and product shots from a JSON spec: `tools/blender_render.py check|render spec.json`,
+built by `lib/blender/` (a rigged cartoon cast, a set, shots by type, acting beats in seconds or on narration words
+with `cue:`). `check` (about 5 s) verifies every camera by geometry (subject in frame, nothing in the way, a moving
+lens clear of the cast; failing cameras are moved by a solver) and writes a labelled contact sheet to read before
+rendering; sound is placed on the frames the motion was keyed on. `doctor` finds Blender and times a frame on
+this machine (about 1.6 s at 1080p on an M4).
+
+One spec gives a whole film, clips for another build, or both; the uses below mix freely:
+- `render spec.json` is the whole film with sound (`examples/blender-disk-panic`).
+- `render --clips` is one MP4 per shot for any build: a moviepy timeline, a `file` scene in a video job, an editor
+  (`--prores`), or `cutdown.py` for a vertical cut.
+- `render --clips --alpha --to <project>/public/blender` is one clip per shot with a transparent background and a
+  `clips.json` manifest; `BlenderClip` and `blenderClip()` (`lib/components`) play them over a scene's own field,
+  with type behind the character. Set the spec's `fps` to 30.
+- `set.screen.video` puts a Remotion render on the laptop in the scene, and a `pull_out` shot starts with it
+  covering the frame, so a flat scene hard-cuts to itself in 3D and the camera pulls back (`push_in` returns).
+  Render that video at the spec's `fps`; another rate is a spec error.
+- Set kind `studio` is a product stage with no character: a `phone` or a floating `card` showing a picture or a
+  video, and an imported `model` (glTF, OBJ, FBX, STL), filmed with `product`, `orbit` and `reveal` shots that take
+  their distance from the prop's size (`examples/blender-product-shot`).
+
+**Cast:** a character is a JSON description (`body`, `face`, `hair`, `clothes`, `accessories`, each a named choice
+or a hex colour, and a `seed` that fills what is left out), so an agent writes one from a sentence or a photo. Keep
+a standing character in `kits/<name>/cast/<id>.json` and name it with `"from"`; fields beside `from` re-costume
+it. All characters share one rig, so every verb works on each. They are caricatures in one cartoon style, not
+likenesses. For a fitted character of a real person, `uv run tools/reference_capture.py --out <folder>` opens a
+local page that talks them through eight poses at a webcam and keeps the sharpest frame of each; the photos stay
+on the machine and out of the repo. A mistake in a spec (an unknown face, pose, shot type or hair style) is a named error listing the
+choices, before anything renders.
+
+Use it when a video needs a consistent, directable character, a 3D reveal, a product or device shot, or acting
+timing that LTX clips can't hold. **Suggest it while planning a video when it is installed**
+(`uv run tools/blender_render.py doctor --no-bench` exits 0); without Blender nothing else changes, so don't
+propose it unless the user asks for 3D. Blender runs headless through its own Python; a Blender MCP server is for trying a look in an open window,
+and what it finds goes back into the spec. Needs Blender 4.2+ (optional): run on 5.3 on macOS and 4.2 LTS on Linux
+(Cycles on a server with no GPU; EEVEE works there on software GL, slowly); Windows is not yet run. Format, verbs
+and the shot grammar are in the `blender` skill, setup and timings in `docs/blender.md`, and there is an example
+of each use: `examples/blender-disk-panic` (a film), `blender-product-shot` (a studio stage),
+`blender-in-remotion` (clips in a Remotion video) and `blender-kitchen` (experimental: a character fitted from a
+generated 3D model, on her feet in a kitchen with a mug).
+
 ## Brand Profiles
 
 Brands live in `brands/`. Each defines visual identity:
@@ -180,6 +228,7 @@ This is especially critical for background commands where the working directory 
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark, cutdown | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
 | **Publishing** | youtube_upload, youtube_stats | Upload a finished render to YouTube (use `/publish` for the guided workflow); see how it does |
+| **3D (optional)** | blender_render, reference_capture | Character acting, 3D reveals and product shots from a shot spec; needs Blender installed. reference_capture takes the reference photos of a person for a fitted character, from a webcam |
 
 Utility tools work on any video file without requiring a project structure.
 
@@ -300,6 +349,16 @@ skip):
 - **Audio:** a missing or silent audio track is an error. `--allow-silent` makes it info, for a deliverable that is
   silent on purpose; the picture checks still run.
 
+**On a short vertical or square render it also measures the opening** (3 minutes or less, the length YouTube
+treats as a Short), because a viewer in a feed stays or swipes on the first seconds. One line of numbers, and a
+warning when:
+- nothing on screen moves in the first 2 s;
+- the first shot runs over 5 s before the picture changes (a move inside the shot or new text is not counted);
+- the first sound comes later than 1 s, or the first 2 s are 10 dB or more under the video as a whole.
+
+`--layout` adds a warning when a vertical composition has no text on screen in its first 2 s. A slow, quiet
+opening can be the point; the check makes it a choice. Speech is not detected: it hears sound, not words.
+
 Still stretches are warnings, not defects: a hold the narration needs is fine, but give it a next action
 (see `.claude/skills/remotion/motion-craft.md`).
 
@@ -331,7 +390,9 @@ uv run tools/sync_check.py --video out/video.mp4 --cues sync-cues.json
 
 `--kind peak` (default) puts the sound on the biggest movement: a sneeze, a laugh. `--kind impact` puts it where a
 movement stops: a landing, a stamp. `--kind onset` puts it where a sustained movement starts (a badge lifted
-slowly), which has no single spike for `peak` to find. Give a `--window` around the action: an extended clip's seam
+slowly), which has no single spike for `peak` to find. Something picked up (chalk off a table, a cup raised) is
+`onset` too: measured as `impact`, a chalk tap read 0.37 s early, because the check found the hand settling
+after the lift. Give a `--window` around the action: an extended clip's seam
 or a later gesture can be bigger than the one the sound is for. Keep the cues in the project's `sync-cues.json`
 (`{name, sfx, at, region, kind, window}`, times in the render, regions as `w:h:x:y`; sound paths relative to the
 cue file or the toolkit root) so the check re-runs on every render. Keep the window clear of the shot's dissolve and
@@ -597,6 +658,11 @@ is required. Reruns overwrite outputs via temporary files and `os.replace`; `--d
   nothing is cut: right for slides and screen recordings. `crop` fills the frame by cutting the
   sides: right for talking heads and single-subject shots; `--focus 0-1` (or `@FOCUS` per
   segment) picks what to keep. `pad` is `blur` over a solid colour (`--brand` uses `bgDark`).
+- **A subject that crosses the frame.** Try `--mode track` first: it follows a face that is in frame when the
+  segment starts. When the thing to keep is not the face (a mug set down, a laptop lid), or the subject walks in
+  after the start, give the segment several focus values and the crop moves through them, evenly spaced in time:
+  `--segment 6.5-14.1@0.57,0.7,0.4`. On a sit-down shot, track held the face and let the mug leave the frame as
+  it was put down; the focus values kept both.
 - **Fitted modes shrink text.** In 9:16 a 1080p source shows at 56% scale, so burned captions
   get small. `--zoom 1.3` trades a little of each side for size. For a vertical cut of a
   captioned Remotion video, consider re-rendering it with larger captions first.
@@ -768,7 +834,22 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
 
 # Validate everything without uploading (also reports auth readiness)
 uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
+
+# Setup check: channel, scopes, Data/Analytics API on or off, with the fix for each (read-only)
+uv run tools/youtube_upload.py --check --account personal
+
+# Subtitles and chapters from the render: one SRT for --captions, chapter lines for the description
+uv run tools/publish_kit.py --project projects/my-video --video out/video.mp4
 ```
+
+Before uploading, and in a dry run, the tool prints notes on the metadata (`notes` in the JSON): no hashtags, no
+link, no tag in the title, no `--category`, and a Short that may need its related video set by hand in Studio.
+They are advice and never stop an upload.
+
+The publish kit transcribes the render once (Scribe, about $0.01 for 90 s, or `--engine whisper`) and aligns it to
+the scene scripts, so the subtitles are spelled as written and timed to the render, with no scene offsets to add
+up. Chapters sit at each scene's cut, titled from `project.json` `scenes[].title` or the file names, under
+YouTube's rules (first at 0:00, three or more, 10 s each). Re-runs reuse the saved transcript.
 
 **Setup is OAuth, not an API key** (uploads act on behalf of a channel). See
 `docs/youtube-upload.md` for the one-time Google Cloud Console walkthrough and

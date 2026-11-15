@@ -1,0 +1,86 @@
+{
+  "title": "Disk Panic",
+  "fps": 24,
+  "resolution": "1920x1080",
+  "engine": "eevee",
+  "look": {"exposure": -0.9, "look": "AgX - Punchy"},
+
+  "set": {
+    "kind": "desk_room",
+    "screen": {
+      "title": "Storage", "subtitle": "Main disk  -  460 GB",
+      "before": "20 GB free", "after": "92 GB free",
+      "fill_before": 0.957, "fill_after": 0.80,
+      "alert": ["Your disk is almost full", "Free up space now!"],
+      "working": "Cleaning up..."
+    }
+  },
+
+  "cast": [
+    {"id": "dev", "kind": "clay_person",
+     "colors": {"top": "#F26B1F", "pants": "#252B45", "hair": "#3A2513", "skin": "#E2A98A"}}
+  ],
+
+  "shots": [
+    {"id": "S1_wide",   "dur": 3.0,   "type": "wide"},
+    {"id": "S2_alert",  "dur": 2.5,   "type": "over_shoulder", "subject": "screen"},
+    {"id": "S3_face",   "dur": 3.5,   "type": "closeup", "az": 4},
+    {"id": "S4_panic",  "dur": 3.5,   "type": "medium"},
+    {"id": "S5_side",   "dur": 1.5,   "type": "side", "shake": 0.012},
+    {"id": "S5_bar",    "dur": 1.833, "type": "insert", "subject": "screen"},
+    {"id": "S6_relief", "dur": 2.667, "type": "closeup", "az": -8},
+    {"id": "S7_wide",   "dur": 4.0,   "type": "front_wide"}
+  ],
+
+  "beats": [
+    {"at": "S1_wide",        "do": "type", "speed": "calm", "until": "S2_alert+0.45"},
+    {"at": "S1_wide",        "do": "head_bob", "until": "S2_alert"},
+    {"at": "S1_wide+1.6",    "do": "blink"},
+
+    {"at": "S2_alert+0.5",   "do": "alert"},
+    {"at": "S2_alert+0.6",   "do": "look", "target": "ahead", "dur": 0.35},
+    {"at": "S2_alert+0.6",   "do": "lean", "amount": "recoil", "dur": 0.4},
+    {"at": "S2_alert+1.0",   "do": "hold_arms"},
+
+    {"at": "S3_face+0.1",    "do": "expression", "face": "shocked", "dur": 0.25},
+    {"at": "S3_face+0.6",    "do": "tremble", "until": "S3_face.end-0.1"},
+    {"at": "S3_face+1.15",   "do": "sweat", "until": "S3_face+3.0"},
+    {"at": "S3_face+2.1",    "do": "gulp"},
+
+    {"at": "S4_panic+0.05",  "do": "pose", "pose": "hands_on_head", "dur": 0.6},
+    {"at": "S4_panic+0.45",  "do": "expression", "face": "worried", "dur": 0.2},
+    {"at": "S4_panic+0.8",   "do": "shake_head", "until": "S4_panic+3.2"},
+
+    {"at": "S5_side-0.1",    "do": "pose", "pose": "type", "dur": 0.5},
+    {"at": "S5_side",        "do": "lean", "amount": "forward", "dur": 0.4},
+    {"at": "S5_side",        "do": "look", "target": "down", "dur": 0.4},
+    {"at": "S5_side+0.05",   "do": "expression", "face": "determined", "dur": 0.25},
+    {"at": "S5_side+0.45",   "do": "type", "speed": "frantic", "until": "S5_bar.end-0.35"},
+
+    {"at": "S5_bar+0.33",    "do": "work", "until": "S5_bar.end-0.35"},
+    {"at": "S5_bar.end-0.25","do": "done"},
+    {"at": "S5_bar.end-0.25","do": "tap"},
+
+    {"at": "S6_relief+0.12", "do": "lean", "amount": "back", "dur": 1.1},
+    {"at": "S6_relief+0.12", "do": "look", "target": 2, "dur": 0.7},
+    {"at": "S6_relief+0.2",  "do": "expression", "face": "relieved", "dur": 0.4},
+    {"at": "S6_relief+1.05", "do": "blink", "frames": 4},
+
+    {"at": "S7_wide+0.05",   "do": "celebrate", "until": "S7_wide+2.4"},
+    {"at": "S7_wide+0.05",   "do": "lean", "amount": "far_back", "dur": 0.5},
+    {"at": "S7_wide+0.05",   "do": "look", "target": "up", "dur": 0.5},
+    {"at": "S7_wide+0.2",    "do": "expression", "face": "grin", "dur": 0.25},
+    {"at": "S7_wide+0.9",    "do": "confetti"},
+    {"at": "S7_wide+1.0",    "do": "title", "text": "92 GB FREE"},
+    {"at": "S7_wide+2.45",   "do": "pose", "pose": "hands_behind_head", "dur": 0.65},
+    {"at": "S7_wide+2.45",   "do": "look", "target": -4, "dur": 0.65},
+    {"at": "S7_wide+2.55",   "do": "expression", "face": "content", "dur": 0.25},
+    {"at": "S7_wide+3.55",   "do": "blink"}
+  ],
+
+  "score": [
+    {"from": 0,         "to": "S2_alert+0.5", "mood": "calm"},
+    {"from": "S3_face", "to": "S4_panic.end", "mood": "tension"},
+    {"from": "S7_wide+1.0", "to": "end",      "mood": "resolve"}
+  ]
+}

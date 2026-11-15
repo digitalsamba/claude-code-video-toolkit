@@ -52,7 +52,8 @@ def motion_peak(video: Path, region: str, t0: float, t1: float, kind: str = "pea
     kind 'peak': the biggest frame-to-frame change (a sneeze, a laugh, a jingle while a badge is lifted).
     kind 'impact': where the movement stops hardest (a jacket landing, a stamp), the sharpest fall after a peak.
     kind 'onset': where a sustained movement starts (a badge lifted slowly, a door swinging open): the first frame
-    at half the window's biggest change. 'peak' picks noise on a movement with no single spike."""
+    at half the window's biggest change. 'peak' picks noise on a movement with no single spike. Something picked
+    up (chalk, a cup) is an onset: as an impact, the hand settling after the lift is what gets found."""
     t0 = max(0.0, t0)
     s = 64
     raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t0:.3f}", "-t", f"{t1 - t0:.3f}", "-i", str(video),
@@ -105,8 +106,8 @@ def main() -> int:
     p.add_argument("--region", help="ffmpeg crop w:h:x:y of the movement the sound belongs to")
     p.add_argument("--name")
     p.add_argument("--kind", default="peak", choices=["peak", "impact", "onset"],
-                   help="peak: the sound goes on the biggest movement; impact: where the movement stops; "
-                        "onset: where a sustained movement starts")
+                   help="peak: the sound goes on the biggest movement; impact: where the movement stops (a "
+                        "landing, a stamp); onset: where a sustained movement starts, or something is picked up")
     p.add_argument("--cues", type=Path, help="JSON list of {name, sfx, at, region}")
     p.add_argument("--tolerance", type=float, default=0.1)
     p.add_argument("--json", action="store_true")

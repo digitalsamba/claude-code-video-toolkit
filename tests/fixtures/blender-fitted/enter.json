@@ -1,0 +1,131 @@
+{
+ "title": "Mara comes in",
+ "fps": 24,
+ "resolution": "1920x1080",
+ "engine": "eevee",
+ "set": {
+  "kind": "desk_room",
+  "door": {},
+  "chair_out": 0.75
+ },
+ "cast": [
+  {
+   "id": "mara",
+   "from": "mara.json",
+   "posture": "stand",
+   "at": [
+    2.6,
+    3.32
+   ],
+   "facing": 0
+  }
+ ],
+ "shots": [
+  {
+   "id": "S1_feet",
+   "dur": 3.2,
+   "type": "feet",
+   "reveal": true
+  },
+  {
+   "id": "S2_tilt",
+   "dur": 3.0,
+   "type": "tilt_up"
+  },
+  {
+   "id": "S3_walk",
+   "dur": 5.0,
+   "type": "full",
+   "follow": true
+  },
+  {
+   "id": "S4_sit",
+   "dur": 6.0,
+   "type": "wide"
+  },
+  {
+   "id": "S5_wink",
+   "dur": 3.5,
+   "type": "closeup"
+  }
+ ],
+ "beats": [
+  {
+   "at": "S1_feet+0.45",
+   "do": "open_door",
+   "dur": 0.8,
+   "by": "mara"
+  },
+  {
+   "at": "S1_feet+1.2",
+   "do": "walk",
+   "to": [
+    2.6,
+    2.0
+   ],
+   "until": "S1_feet.end-0.1"
+  },
+  {
+   "at": "S2_tilt+1.6",
+   "do": "expression",
+   "face": "happy",
+   "dur": 0.3
+  },
+  {
+   "at": "S3_walk+0.2",
+   "do": "walk",
+   "to": [
+    0,
+    0.41
+   ],
+   "facing": 0,
+   "curve": true,
+   "heading": -90,
+   "until": "S3_walk+4.6"
+  },
+  {
+   "at": "S4_sit+0.2",
+   "do": "sit_down",
+   "dur": 1.8
+  },
+  {
+   "at": "S4_sit+2.3",
+   "do": "pull_in",
+   "dur": 1.5
+  },
+  {
+   "at": "S4_sit+4.0",
+   "do": "pose",
+   "pose": "type",
+   "dur": 0.6
+  },
+  {
+   "at": "S4_sit+4.7",
+   "do": "type",
+   "speed": "calm",
+   "until": "S4_sit.end"
+  },
+  {
+   "at": "S5_wink+0.1",
+   "do": "pose",
+   "pose": "rest",
+   "dur": 0.3
+  },
+  {
+   "at": "S5_wink+0.3",
+   "do": "look_at",
+   "target": "camera",
+   "dur": 0.5
+  },
+  {
+   "at": "S5_wink+0.7",
+   "do": "expression",
+   "face": "happy",
+   "dur": 0.3
+  },
+  {
+   "at": "S5_wink+1.7",
+   "do": "wink"
+  }
+ ]
+}

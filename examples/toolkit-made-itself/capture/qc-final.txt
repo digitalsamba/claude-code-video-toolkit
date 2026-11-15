@@ -1,0 +1,10 @@
+$ uv run tools/qc.py --render projects/toolkit-made-itself/out/v2.loudnorm.mp4
+QC — /Users/conalmullan/work/video (unknown)
+  assets checked: 0 | scenes timed: 0 | pacing measured: 0 | loudness measured: 0
+  render: -14.5 LUFS, -1.4 dBTP
+
+frames:
+  · first frame is background only (fine with a custom thumbnail; it is what autoplay shows first)
+
+PASS: 0 error(s), 0 warning(s)
+# elapsed 3s, exit 0

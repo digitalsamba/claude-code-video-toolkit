@@ -1,0 +1,10 @@
+$ uv run tools/pick_music.py projects/toolkit-made-itself/public/audio/music/bg_1.mp3 projects/toolkit-made-itself/public/audio/music/bg_2.mp3 projects/toolkit-made-itself/public/audio/music/bg_3.mp3 projects/toolkit-made-itself/public/audio/music/bg_4.mp3 --target 93 --cuts 10.7,25.3,37.7,51.5,63.1,82.7 --under voice --fade-out 2
+take                            dur   LUFS  notes/s  spread     arc  ending              cuts  score
+bg_3.mp3                      100.0  -17.5     3.72    8.3dB   holds  quiet at the end     6/6   1.39
+bg_4.mp3                      100.0  -14.6     3.17    4.9dB   holds  playing at the end   5/6   1.33
+bg_1.mp3                      100.0  -16.6     4.07    3.6dB   holds  playing at the end   6/6   1.21
+bg_2.mp3                      100.0  -15.1     2.88    3.5dB   holds  playing at the end   6/6   1.81  OUT: clips (0.02% of samples at full scale)
+
+Recommended: bg_3.mp3 (something lands on 6 of 6 cuts; moves (8.3 dB, holds); quiet by 93.0s, the video's end; bg_4.mp3: busy under voice (3.17 notes/s))
+Measured, not heard: listen before you use it.
+# elapsed 2s, exit 0

@@ -1,0 +1,30 @@
+$ uv run tools/voiceover.py --brand video-toolkit --max-wpm 165 --scene-dir projects/toolkit-made-itself/public/audio/s4 --json
+{
+  "success": true,
+  "mode": "per_scene",
+  "provider": "elevenlabs",
+  "scene_dir": "projects/toolkit-made-itself/public/audio/s4",
+  "total_chars": 158,
+  "total_duration_seconds": 11.27,
+  "total_duration_frames_30fps": 338,
+  "scenes": [
+    {
+      "success": true,
+      "output": "projects/toolkit-made-itself/public/audio/s4/04_generate.mp3",
+      "script_chars": 158,
+      "duration_seconds": 11.27,
+      "duration_frames_30fps": 338,
+      "pace_adjusted": {
+        "original_wpm": 168.5,
+        "atempo": 0.9792,
+        "floored": false
+      },
+      "wpm": 165.0,
+      "pacing": "ok",
+      "script": "projects/toolkit-made-itself/public/audio/s4/04_generate.txt"
+    }
+  ],
+  "voice_id": "CyuaHFjYAn74u3mOqDX6",
+  "model": "eleven_v4"
+}
+# elapsed 4s, exit 0

@@ -8,13 +8,25 @@ Upload a rendered project to YouTube, auto-filling the metadata from `project.js
 Wraps `tools/youtube_upload.py` (OAuth 2.0 + Data API v3, resumable upload).
 
 ```
-project.json + rendered MP4 → metadata draft → dry-run → upload → write back videoId/URL
+check setup → project.json + rendered MP4 → publish kit (subtitles, chapters) → metadata draft → dry-run
+→ upload → write back videoId/URL
 ```
 
 > **One-time setup required.** YouTube uploads need OAuth (not an API key). If the user
 > hasn't set this up, point them at `docs/youtube-upload.md` and stop until
 > `YOUTUBE_CLIENT_SECRETS_FILE` is in `.env` and `uv run tools/youtube_upload.py --auth`
 > has been run once. Don't attempt an upload without a cached token.
+
+### Step 0: Check the setup
+
+```bash
+cd /path/to/claude-code-video-toolkit && uv run --extra youtube tools/youtube_upload.py --check --account NAME --json-out
+```
+
+Read-only, about 1 quota unit. It reports the channel the login belongs to (say it to the user: `personal` and
+`default` are different channels), the scopes, and whether the Data and Analytics APIs are switched on. Each
+problem comes with a `fixes` line: a login command for the user to run with `!`, or the exact Cloud Console page
+that switches an API on. Stop until `success` is true. Analytics being off doesn't block an upload; mention it.
 
 ## Entry Point
 
@@ -34,6 +46,20 @@ and `publish` blocks beyond the `lib/project/types.ts` schema. Resolve the video
 
 If the project's `phase` isn't `complete`, warn the user and confirm they still want to publish.
 
+### Step 1b: Publish kit (optional; on by default when the project has scene scripts)
+
+```bash
+cd /path/to/claude-code-video-toolkit && uv run tools/publish_kit.py --project projects/NAME --video out/FILE.mp4
+```
+
+Transcribes the render once (Scribe, $0.40 an audio hour, about $0.01 for 90 s; `--engine whisper` is free) and
+aligns it to the scene scripts, so it writes `out/publish/video.srt` for the whole video, spelled as the scripts
+spell it, and `out/publish/chapters.txt`, a chapter at each scene's cut. Show the chapters: titles come from
+`project.json` scenes or the scene file names ("Narrate"), so offer to rename them; put the names in
+`project.json` `scenes[].title` and re-run (it reuses the saved transcript, free). Notes say when a scene was too
+short for its own chapter or the scripts don't match the render. Skip the kit when the user doesn't want
+subtitles or chapters, or the video has no narration.
+
 ### Step 2: Assemble metadata (into a `publish` block)
 
 Build a `publish` object and write it back into `project.json` so it's reviewable,
@@ -41,13 +67,15 @@ editable, and re-runnable. If a `publish` block already exists, use it as defaul
 
 | Field | How to derive |
 |-------|---------------|
-| `title` | Existing `publish.title`, else the hook/title scene's `title`, else the project `name` (humanized). Keep ≤100 chars. |
-| `description` | Existing `publish.description`, else auto-draft: a 1–2 line summary from the scene narration/titles + a channel footer (links, hashtags). Keep ≤5000 chars. |
+| `title` | Existing `publish.title`, else the hook/title scene's `title`, else the project `name` (humanized). Keep ≤100 chars. Name the subject in the words people would type: a film's own name alone is not searched for. |
+| `description` | Existing `publish.description`, else auto-draft: a 1–2 line summary from the scene narration/titles, then the links (where the video should send people, in the first lines), and two or three hashtags on the last line (YouTube shows the first three above the title). Keep ≤5000 chars. |
 | `tags` | Existing `publish.tags`, else derive 5–12 topical tags from scene titles + the brand. Comma-joined when passed to the tool. |
-| `category` | Default `"22"` (People & Blogs). Override per channel/topic — e.g. `"28"` (Science & Tech), `"27"` (Education), `"24"` (Entertainment). |
+| `category` | Choose one by topic: `"28"` (Science & Tech), `"27"` (Education), `"24"` (Entertainment), `"26"` (Howto & Style). Left out, the tool uploads as `"22"` (People & Blogs) and says so. |
 | `thumbnail` | Existing `publish.thumbnail`, else `out/thumbnail.*` or `public/thumbnail.*`. If none and the user wants one, run `/thumbnail` first. |
 | `privacy` | Default **`private`** (safe — the video uploads but stays hidden until you flip it). Offer `unlisted`, `public`, or a scheduled go-live (`--publish-at`, e.g. next morning ~09:00 local in UTC) if the user asks. |
 | `playlist` | Optional; only if the user has one. |
+| `chapters` | From the kit's `chapters.txt`: put the lines in the description (YouTube reads them there), unless it already has a `0:00` line. |
+| `captions` | The kit's `out/publish/video.srt`, passed as `--captions`. |
 | `synthetic` | **On** (`--synthetic-media`) when the video shows realistic people who were generated or animated by AI (an LTX-animated cast, FLUX portraits, a SoulX presenter) or a cloned voice saying new lines. YouTube requires the disclosure; it shows a label, it doesn't limit reach. Off for UI rebuilds, charts and stylised cartoons. |
 
 **Show the assembled metadata to the user and let them edit before uploading.**
@@ -63,12 +91,15 @@ cd /path/to/claude-code-video-toolkit && uv run tools/youtube_upload.py \
   --category "28" \
   --publish-at "2026-06-10T09:00:00Z" \
   --thumbnail "projects/NAME/out/thumbnail.png" \
+  --captions "projects/NAME/out/publish/video.srt" \
   --dry-run --json-out
 ```
 
 Write the description to a temp file (`--description-file`) rather than passing a long
 `--description` on the command line. Parse the JSON: confirm `requestBody` looks right and
-`authOk` is `true`. If `authOk` is `false`, surface the auth error and have the user run
+`authOk` is `true`. Read `notes` too: advice on the metadata (no hashtags, no link, no tag in the title, no
+category, a Short that may need its related video). Fix what applies and show the user the rest; a note never
+stops the upload. If `authOk` is `false`, surface the auth error and have the user run
 `uv run tools/youtube_upload.py --auth` first — do not proceed.
 
 ### Step 4: Upload
@@ -103,6 +134,13 @@ Schedule: <publishAt or "—">
 user plainly: this is the unverified-app lock — the video uploaded but won't go public
 until their Google Cloud OAuth app is verified. They can publish manually in YouTube Studio.
 
+**If the upload is a Short cut from a longer video** (the `notes` say it is a Short), tell the user to link the
+two by hand: Studio, Content, Shorts, the Short's Details, Related video. The API can't set it, and the field
+only appears once the channel's advanced features are on (a one-time verification in Studio's channel settings).
+Put the long video's link in the Short's description as well, which works at once.
+
+Then offer once, in one line: "Want to share it in the toolkit's Show and tell? `/contribute` option 6 drafts the post for you to check." Don't post anything from here.
+
 ---
 
 ## Quick Mode
@@ -125,7 +163,7 @@ run a dry-run before the real upload.
 | `--title` | Title (≤100 chars) |
 | `--description` / `--description-file` | Description text, or a file (`-` = stdin) |
 | `--tags` | Comma-separated tags (combined ≤500 chars) |
-| `--category` | Numeric category ID string (default `22`; `28` = Science & Tech) |
+| `--category` | Numeric category ID string (`28` = Science & Tech; left out it is `22`, with a note) |
 | `--privacy` | `private` (default) / `unlisted` / `public` |
 | `--synthetic-media` | Disclose realistic AI-generated or altered people, places or voices |
 | `--publish-at` | ISO8601 UTC schedule, e.g. `2026-06-10T09:00:00Z` (forces private at insert) |
@@ -135,6 +173,7 @@ run a dry-run before the real upload.
 | `--video-id` | Add captions, a thumbnail or a playlist to an uploaded video, without uploading |
 | `--account` | Channel name namespacing the cached token (default `default`) |
 | `--auth` | Interactive login only — cache a token and exit |
+| `--check` | Login, channel, scopes, Data/Analytics API on or off, with fixes; read-only |
 | `--dry-run` | Validate + print the request body without uploading |
 | `--json-out` | Single machine-readable JSON line on stdout |
 

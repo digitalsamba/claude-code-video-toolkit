@@ -112,6 +112,13 @@ uv run tools/youtube_upload.py \
 uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
   --publish-at 2026-06-10T09:00:00Z --thumbnail out/thumb.png
 
+# Is everything set up? (channel, scopes, APIs; read-only)
+uv run tools/youtube_upload.py --check --account personal
+
+# Subtitles and chapters from the render (one transcription, ~$0.01 for 90 s)
+uv run tools/publish_kit.py --project projects/my-video --video out/video.mp4
+#   -> out/publish/video.srt for --captions, out/publish/chapters.txt for the description
+
 # Captions for a video that's already up
 uv run tools/youtube_upload.py --video-id VIDEO_ID --captions out/video.srt --json-out
 
@@ -130,7 +137,7 @@ Prefer **`/publish`** for finished projects — it derives the title/description
 | `--title` | Required, ≤100 chars |
 | `--description` / `--description-file` | Inline text, or a file (`-` = stdin); ≤5000 chars |
 | `--tags` | Comma-separated; combined length ≤500 chars (overflow is dropped with a warning) |
-| `--category` | Numeric ID string. `22` = People & Blogs, `28` = Science & Tech |
+| `--category` | Numeric ID string. `28` = Science & Tech, `27` = Education, `24` = Entertainment. Left out, it is `22` = People & Blogs, with a note |
 | `--privacy` | `private` (default) / `unlisted` / `public` |
 | `--publish-at` | ISO8601 UTC, e.g. `2026-06-10T09:00:00Z`. Forces `private` at insert, flips public at the time. |
 | `--thumbnail` | Custom thumbnail (≤2MB, 1280×720). Requires a phone-verified channel. |
@@ -140,8 +147,26 @@ Prefer **`/publish`** for finished projects — it derives the title/description
 | `--synthetic-media` | YouTube's "altered or synthetic content" disclosure (`status.containsSyntheticMedia`). Required for realistic AI-generated or animated people, or a cloned voice; it adds a label, not a reach penalty |
 | `--account` | Namespaces the cached token — use for multiple channels (e.g. `--account work`) |
 | `--auth` | Interactive login only; caches a token and exits |
+| `--check` | Read-only setup check: the channel the login belongs to, its scopes, and whether the Data and Analytics APIs are on. Prints the fix for each problem, including the Cloud Console page that switches an API on. ~1 quota unit |
 | `--dry-run` | Builds + prints the request body and checks auth, but uploads nothing |
 | `--json-out` | Emits one machine-readable JSON line on stdout |
+
+### Notes on the metadata
+
+Before it uploads (and in a dry run), the tool reads the title, description, tags and category and prints a note
+for each thing a viewer or YouTube would miss. A note is advice: it never stops the upload. With `--json-out`
+they are in `notes`.
+
+| Note | Why |
+|------|-----|
+| No hashtags in the description | YouTube shows the first three above the title and links each to a topic page |
+| No link in the description | Nothing sends the viewer on to the repository, the site or the full video |
+| None of the tags appears in the title | The title counts for more than the tags in search |
+| No `--category` | The upload falls back to People & Blogs |
+| The file is vertical or square and 3 minutes or less | It becomes a Short. If it is a cut of a longer video, set that as its **Related video** by hand (Studio, Content, Shorts, Details): the API can't, and the field needs the channel's advanced features on |
+
+The notes read the request, not the audience. Whether a video reached anyone is in `youtube_stats.py`
+(see the `youtube-stats` skill): a Short is placed by the feed on how people watch it, not on its tags.
 
 ### JSON output (`--json-out`)
 
@@ -206,6 +231,7 @@ Compare `requestedPrivacy` vs `privacyStatus` to detect the unverified-app force
 | `OAuth client secrets file not found` | Set `YOUTUBE_CLIENT_SECRETS_FILE` in `.env` (absolute path) or pass `--client-secrets` |
 | `No cached credentials` | Run `uv run tools/youtube_upload.py --auth` once |
 | `Refresh token ... is invalid` | Re-run `--auth` (7-day Testing expiry or revoked token) |
+| `accessNotConfigured` | An API isn't switched on in the Cloud project. `--check` prints the page to switch it on; wait a minute or two after |
 | `can't add captions (it lacks ...force-ssl)` | The token predates the captions scope: re-run `--auth`, then attach them with `--video-id` |
 | `errorType: "quota"` | Daily quota hit — wait or request more quota |
 | Video uploaded but stays `private` | Unverified-app lock — verify your OAuth app, or publish manually |

@@ -24,6 +24,12 @@ Apps that pull gated Hugging Face weights (ltx2 always, flux2 with
 FLUX2_MODEL=klein-9b) read the Modal secret named by HF_SECRET_NAME, default
 `huggingface-token`. Modal's Hugging Face template names it `huggingface-secret`;
 when only that one exists, it is picked up automatically.
+
+A new Modal workspace (seen 2026-11-10) builds images with builder version 2026.10,
+which the Modal client in uv.lock refuses before building anything. When a
+deploy fails that way and MODAL_IMAGE_BUILDER_VERSION isn't set, it is retried with
+2025.06, and the rest of the run uses it too. A workspace whose version the client
+accepts keeps it, so its cached images aren't rebuilt.
 """
 
 from __future__ import annotations
@@ -32,6 +38,7 @@ import argparse
 import collections
 import json
 import os
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -47,6 +54,16 @@ ROOT = find_workspace_root()
 DEFAULT_HF_SECRET = "huggingface-token"
 # What Modal's "Hugging Face" secret template fills in as the name.
 TEMPLATE_HF_SECRET = "huggingface-secret"
+
+# Image builder version for a workspace whose default the Modal client refuses.
+# qwen3_tts, flux2 and music_gen were deployed on 2025.06 from a new workspace
+# (2026-11-10). A client that accepts 2026.10 (modal 1.6 does) never falls back, and
+# 2026.10 drops Python 3.10, which sadtalker and dewatermark build on: bump modal in
+# uv.lock only together with a pin here or a move of those two apps to 3.11.
+BUILDER_VAR = "MODAL_IMAGE_BUILDER_VERSION"
+FALLBACK_BUILDER_VERSION = "2025.06"
+# The start of the client's error when it refuses the workspace's builder version.
+_BUILDER_REFUSED = "supports the following image builder versions"
 
 
 @dataclass(frozen=True)
@@ -110,6 +127,10 @@ _HF_ACCESS = ("Hugging Face refused the token. Accept the gated repo's terms wit
               "hand) or Lightricks/LTX-2.5 with LTX2_VERSION=2.5; flux2 klein-9b needs "
               "black-forest-labs/FLUX.2-klein-9B.")
 DEPLOY_HINTS = [
+    ((_BUILDER_REFUSED,),
+     f"The Modal client refused the image builder version. Set {BUILDER_VAR} to one it "
+     f"lists ({FALLBACK_BUILDER_VERSION} is tested), in the shell or in .env, or remove "
+     "image_builder_version from ~/.modal.toml, then re-run."),
     (("payment method",),
      "Add a payment method at https://modal.com/settings/billing. The Starter plan's "
      "$30/month of included compute still covers typical use, and the image is already "
@@ -201,12 +222,33 @@ def _run_streamed(cmd: list[str], env: dict) -> tuple[int, str]:
     return proc.wait(), "".join(tail)
 
 
+def _flat(output: str) -> str:
+    """Output as one lowercase line of words.
+
+    The Modal CLI prints an error inside a rich panel wrapped at the console width
+    (80 columns when piped), so a phrase can be split across lines with a border
+    character on each side. Box-drawing characters and `|` are dropped first.
+    """
+    return " ".join(re.sub(r"[─-╿|]", " ", output).split()).lower()
+
+
 def _hint(output: str) -> str | None:
-    low = output.lower()
+    low = _flat(output)
     for needles, hint in DEPLOY_HINTS:
         if any(n in low for n in needles):
             return hint
     return None
+
+
+def _builder_fallback(output: str, env: dict) -> bool:
+    """True when the client refused the workspace's default builder version.
+
+    Not when the version came from MODAL_IMAGE_BUILDER_VERSION or ~/.modal.toml (the
+    error then says "based on your ..."): that choice is the user's, so the hint
+    reports it instead.
+    """
+    flat = _flat(output)
+    return _BUILDER_REFUSED in flat and BUILDER_VAR not in env and "based on your" not in flat
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +294,8 @@ def deploy(app: ModalApp, hf_secret: str | None = None, recreate: bool = False,
     env = dict(os.environ)
     if app.variant_var and env.get(app.variant_var):
         result["variant"] = f"{app.variant_var}={env[app.variant_var]}"
+    if env.get(BUILDER_VAR):
+        result["image_builder_version"] = env[BUILDER_VAR]
 
     if app.needs_hf_secret(env):
         secret, err = resolve_hf_secret(hf_secret or env.get("HF_SECRET_NAME"))
@@ -269,7 +313,7 @@ def deploy(app: ModalApp, hf_secret: str | None = None, recreate: bool = False,
     steps.append(_modal_cmd("deploy", *strategy, str(app.app_file.relative_to(ROOT))))
 
     if dry_run:
-        prefix = f"HF_SECRET_NAME={env['HF_SECRET_NAME']} " if "HF_SECRET_NAME" in env else ""
+        prefix = "".join(f"{k}={env[k]} " for k in ("HF_SECRET_NAME", BUILDER_VAR) if k in env)
         result["commands"] = [prefix + " ".join(["modal", *c[3:]]) for c in steps]
         result["success"] = True
         return result
@@ -277,6 +321,15 @@ def deploy(app: ModalApp, hf_secret: str | None = None, recreate: bool = False,
     for cmd in steps:
         _log(f"[{app.tool}] modal {' '.join(cmd[3:])}")
         code, output = _run_streamed(cmd, env)
+        if code != 0 and _builder_fallback(output, env):
+            _log(f"[{app.tool}] The Modal client refused this workspace's image builder "
+                 f"version, which is newer than it knows. Retrying with "
+                 f"{BUILDER_VAR}={FALLBACK_BUILDER_VERSION}; set it in your shell to "
+                 f"run `modal deploy` by hand (docs/modal-setup.md).", "warn")
+            # Later apps in this run start with it, so only the first one fails.
+            os.environ[BUILDER_VAR] = env[BUILDER_VAR] = FALLBACK_BUILDER_VERSION
+            result["image_builder_version"] = FALLBACK_BUILDER_VERSION
+            code, output = _run_streamed(cmd, env)
         if code != 0:
             result["error"] = f"`modal {cmd[3]}` exited {code}"
             hint = _hint(output)

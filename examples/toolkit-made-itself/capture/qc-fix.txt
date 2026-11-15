@@ -1,0 +1,17 @@
+$ uv run tools/qc.py --project projects/toolkit-made-itself --render projects/toolkit-made-itself/out/v2.mp4 --layout --fix
+QC — /Users/conalmullan/work/video/projects/toolkit-made-itself (unknown)
+  assets checked: 0 | scenes timed: 0 | pacing measured: 0 | loudness measured: 0
+  render: -25.4 LUFS, -6.6 dBTP
+
+render:
+  ! v2.mp4: -25.4 LUFS — quieter than the -14 target, and YouTube won't raise it
+frames:
+  · first frame is background only (fine with a custom thumbnail; it is what autoplay shows first)
+layout:
+  · product UI: contrast 2.81:1 (needs 3.0) #cacdd3 on #707789: "uv ru", from 0:25.5. #d3d6da would pass
+  · product UI: 53 of 86 texts never reach 28px (2.6% of the short side, the phone floor): "claude-code-video-toolkit" 17px, "const render = run('render');" 24px, "export const composeLines = (c" 24px, "return [" 24px, "src/compose.tsx" 24px +48
+fix:
+  · wrote v2.loudnorm.mp4 (-25.4 → -14 LUFS); v2.mp4 is unchanged — re-run with --render v2.loudnorm.mp4 to confirm
+
+PASS with warnings: 0 error(s), 1 warning(s)
+# elapsed 16s, exit 0

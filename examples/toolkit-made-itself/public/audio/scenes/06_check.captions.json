@@ -1,0 +1,289 @@
+[
+ {
+  "text": "Before",
+  "startMs": 100,
+  "endMs": 420,
+  "timestampMs": 260,
+  "confidence": null
+ },
+ {
+  "text": " you",
+  "startMs": 460,
+  "endMs": 580,
+  "timestampMs": 520,
+  "confidence": null
+ },
+ {
+  "text": " saw",
+  "startMs": 620,
+  "endMs": 920,
+  "timestampMs": 770,
+  "confidence": null
+ },
+ {
+  "text": " any",
+  "startMs": 920,
+  "endMs": 1180,
+  "timestampMs": 1050,
+  "confidence": null
+ },
+ {
+  "text": " of",
+  "startMs": 1240,
+  "endMs": 1340,
+  "timestampMs": 1290,
+  "confidence": null
+ },
+ {
+  "text": " it,",
+  "startMs": 1400,
+  "endMs": 1620,
+  "timestampMs": 1510,
+  "confidence": null
+ },
+ {
+  "text": " it",
+  "startMs": 1920,
+  "endMs": 2020,
+  "timestampMs": 1970,
+  "confidence": null
+ },
+ {
+  "text": " checked",
+  "startMs": 2080,
+  "endMs": 2320,
+  "timestampMs": 2200,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 2380,
+  "endMs": 2480,
+  "timestampMs": 2430,
+  "confidence": null
+ },
+ {
+  "text": " draft",
+  "startMs": 2520,
+  "endMs": 2880,
+  "timestampMs": 2700,
+  "confidence": null
+ },
+ {
+  "text": " render:",
+  "startMs": 2960,
+  "endMs": 3360,
+  "timestampMs": 3160,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 3820,
+  "endMs": 3900,
+  "timestampMs": 3860,
+  "confidence": null
+ },
+ {
+  "text": " loudness,",
+  "startMs": 3940,
+  "endMs": 4560,
+  "timestampMs": 4250,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 4740,
+  "endMs": 4840,
+  "timestampMs": 4790,
+  "confidence": null
+ },
+ {
+  "text": " text,",
+  "startMs": 4900,
+  "endMs": 5380,
+  "timestampMs": 5140,
+  "confidence": null
+ },
+ {
+  "text": " any",
+  "startMs": 5680,
+  "endMs": 5820,
+  "timestampMs": 5750,
+  "confidence": null
+ },
+ {
+  "text": " stretch",
+  "startMs": 6020,
+  "endMs": 6420,
+  "timestampMs": 6220,
+  "confidence": null
+ },
+ {
+  "text": " where",
+  "startMs": 6460,
+  "endMs": 6640,
+  "timestampMs": 6550,
+  "confidence": null
+ },
+ {
+  "text": " nothing",
+  "startMs": 6680,
+  "endMs": 6960,
+  "timestampMs": 6820,
+  "confidence": null
+ },
+ {
+  "text": " moves.",
+  "startMs": 7060,
+  "endMs": 7500,
+  "timestampMs": 7280,
+  "confidence": null
+ },
+ {
+  "text": " It",
+  "startMs": 8060,
+  "endMs": 8160,
+  "timestampMs": 8110,
+  "confidence": null
+ },
+ {
+  "text": " found",
+  "startMs": 8220,
+  "endMs": 8540,
+  "timestampMs": 8380,
+  "confidence": null
+ },
+ {
+  "text": " two",
+  "startMs": 8600,
+  "endMs": 8800,
+  "timestampMs": 8700,
+  "confidence": null
+ },
+ {
+  "text": " still",
+  "startMs": 8960,
+  "endMs": 9180,
+  "timestampMs": 9070,
+  "confidence": null
+ },
+ {
+  "text": " holds,",
+  "startMs": 9300,
+  "endMs": 9760,
+  "timestampMs": 9530,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 9880,
+  "endMs": 9980,
+  "timestampMs": 9930,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 10020,
+  "endMs": 10060,
+  "timestampMs": 10040,
+  "confidence": null
+ },
+ {
+  "text": " mix",
+  "startMs": 10120,
+  "endMs": 10400,
+  "timestampMs": 10260,
+  "confidence": null
+ },
+ {
+  "text": " twelve",
+  "startMs": 10400,
+  "endMs": 10860,
+  "timestampMs": 10630,
+  "confidence": null
+ },
+ {
+  "text": " decibels",
+  "startMs": 10860,
+  "endMs": 11480,
+  "timestampMs": 11170,
+  "confidence": null
+ },
+ {
+  "text": " too",
+  "startMs": 11540,
+  "endMs": 11760,
+  "timestampMs": 11650,
+  "confidence": null
+ },
+ {
+  "text": " quiet",
+  "startMs": 11840,
+  "endMs": 12200,
+  "timestampMs": 12020,
+  "confidence": null
+ },
+ {
+  "text": " for",
+  "startMs": 12260,
+  "endMs": 12380,
+  "timestampMs": 12320,
+  "confidence": null
+ },
+ {
+  "text": " YouTube.",
+  "startMs": 12440,
+  "endMs": 12940,
+  "timestampMs": 12690,
+  "confidence": null
+ },
+ {
+  "text": " Both",
+  "startMs": 13460,
+  "endMs": 13680,
+  "timestampMs": 13570,
+  "confidence": null
+ },
+ {
+  "text": " are",
+  "startMs": 13720,
+  "endMs": 13840,
+  "timestampMs": 13780,
+  "confidence": null
+ },
+ {
+  "text": " fixed",
+  "startMs": 13900,
+  "endMs": 14300,
+  "timestampMs": 14100,
+  "confidence": null
+ },
+ {
+  "text": " in",
+  "startMs": 14360,
+  "endMs": 14440,
+  "timestampMs": 14400,
+  "confidence": null
+ },
+ {
+  "text": " what",
+  "startMs": 14480,
+  "endMs": 14620,
+  "timestampMs": 14550,
+  "confidence": null
+ },
+ {
+  "text": " you're",
+  "startMs": 14660,
+  "endMs": 14760,
+  "timestampMs": 14710,
+  "confidence": null
+ },
+ {
+  "text": " watching.",
+  "startMs": 14800,
+  "endMs": 15260,
+  "timestampMs": 15030,
+  "confidence": null
+ }
+]

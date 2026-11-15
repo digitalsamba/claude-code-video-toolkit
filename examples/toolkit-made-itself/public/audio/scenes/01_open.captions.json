@@ -1,0 +1,128 @@
+[
+ {
+  "text": "This",
+  "startMs": 120,
+  "endMs": 280,
+  "timestampMs": 200,
+  "confidence": null
+ },
+ {
+  "text": " video",
+  "startMs": 360,
+  "endMs": 720,
+  "timestampMs": 540,
+  "confidence": null
+ },
+ {
+  "text": " started",
+  "startMs": 880,
+  "endMs": 1360,
+  "timestampMs": 1120,
+  "confidence": null
+ },
+ {
+  "text": " as",
+  "startMs": 1400,
+  "endMs": 1600,
+  "timestampMs": 1500,
+  "confidence": null
+ },
+ {
+  "text": " one",
+  "startMs": 1660,
+  "endMs": 1860,
+  "timestampMs": 1760,
+  "confidence": null
+ },
+ {
+  "text": " sentence,",
+  "startMs": 2000,
+  "endMs": 2580,
+  "timestampMs": 2290,
+  "confidence": null
+ },
+ {
+  "text": " typed",
+  "startMs": 2880,
+  "endMs": 3160,
+  "timestampMs": 3020,
+  "confidence": null
+ },
+ {
+  "text": " into",
+  "startMs": 3220,
+  "endMs": 3440,
+  "timestampMs": 3330,
+  "confidence": null
+ },
+ {
+  "text": " Claude",
+  "startMs": 3480,
+  "endMs": 3740,
+  "timestampMs": 3610,
+  "confidence": null
+ },
+ {
+  "text": " Code.",
+  "startMs": 3840,
+  "endMs": 4180,
+  "timestampMs": 4010,
+  "confidence": null
+ },
+ {
+  "text": " Everything",
+  "startMs": 4720,
+  "endMs": 5060,
+  "timestampMs": 4890,
+  "confidence": null
+ },
+ {
+  "text": " after",
+  "startMs": 5160,
+  "endMs": 5420,
+  "timestampMs": 5290,
+  "confidence": null
+ },
+ {
+  "text": " it",
+  "startMs": 5500,
+  "endMs": 5700,
+  "timestampMs": 5600,
+  "confidence": null
+ },
+ {
+  "text": " was",
+  "startMs": 5760,
+  "endMs": 5900,
+  "timestampMs": 5830,
+  "confidence": null
+ },
+ {
+  "text": " made",
+  "startMs": 5960,
+  "endMs": 6220,
+  "timestampMs": 6090,
+  "confidence": null
+ },
+ {
+  "text": " in",
+  "startMs": 6260,
+  "endMs": 6340,
+  "timestampMs": 6300,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 6380,
+  "endMs": 6480,
+  "timestampMs": 6430,
+  "confidence": null
+ },
+ {
+  "text": " toolkit.",
+  "startMs": 6520,
+  "endMs": 7080,
+  "timestampMs": 6800,
+  "confidence": null
+ }
+]

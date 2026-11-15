@@ -1,0 +1,23 @@
+{
+  "note": "What tools/blender_render.py printed when this example was built (the output folder's absolute path shortened to public/blender).",
+  "check": {
+    "command": "uv run tools/blender_render.py check blender/room.json",
+    "lines": [
+      "room.json: 6.5s, 2 shots, 195 frames at 30 fps, built in 1.8s",
+      "  PASS  A1_reveal    pull_out       luma 0.31",
+      "  PASS  A2_face      closeup        luma 0.43",
+      "  IK reach error: 0.0 mm (limit 10 mm)",
+      "PASSED"
+    ]
+  },
+  "render": {
+    "command": "uv run tools/blender_render.py render blender/room.json --clips --to public/blender",
+    "lines": [
+      "  63/195 frames, 0.96 s/frame, about 2.1 min left",
+      "  123/195 frames, 1.24 s/frame, about 1.5 min left",
+      "  192/195 frames, 1.44 s/frame, about 0.1 min left",
+      "rendered 2 clip(s) to public/blender (195 frames in 282.3s, 1.45 s/frame)",
+      "  A1_reveal.mp4            135 frames, 4.5s, sound A1_reveal.wav"
+    ]
+  }
+}

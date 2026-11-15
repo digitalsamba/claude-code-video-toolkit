@@ -1,0 +1,4 @@
+$ uv run tools/captions.py projects/toolkit-made-itself/public/audio/s6
+engine: scribe
+  06_check.captions.json: 41 words, aligned to 06_check.txt (98% matched)
+# elapsed 2s, exit 0

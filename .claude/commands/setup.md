@@ -25,6 +25,7 @@ On invocation, assess current state and adapt:
 1. Check .env exists — if not, create from .env.example
 2. Read current .env values (which keys are set vs placeholder)
 3. Check prerequisites: node --version, uv --version, ffmpeg -version
+   (verify_setup.py also reports optional components: Blender)
 4. Check Python deps: uv run python -c "import dotenv; import requests"
 5. Check Modal CLI: uv run modal --version (if installed)
 6. Check for existing Modal apps: uv run modal app list (if authenticated)
@@ -48,6 +49,7 @@ Cloud GPU:      Not configured
 File transfer:  Not configured (using free fallback services)
 Voice:          Not configured
 ElevenLabs:     Not configured (optional, paid)
+3D (Blender):   Not installed (optional)
 
 Let's get you set up! We'll go through each feature one at a time.
 You can skip any step and come back later with /setup.
@@ -82,6 +84,14 @@ Check and report. Don't install anything automatically — just tell the user wh
 - **uv**: `uv --version`. If missing: "Install with `curl -LsSf https://astral.sh/uv/install.sh | sh` (macOS/Linux) or `powershell -c \"irm https://astral.sh/uv/install.ps1 | iex\"` (Windows) — manages Python and all toolkit dependencies; needed for AI voiceover, image editing, and all cloud GPU tools"
 - **Python deps**: `uv run python -c "import dotenv; import requests"`. If missing: run `uv sync` from the toolkit root (uv installs a compatible Python automatically if needed)
 - **FFmpeg**: `ffmpeg -version`. If missing: "Install with `brew install ffmpeg` (macOS) or see https://ffmpeg.org/ — needed for media conversion"
+
+### Optional
+
+- **Blender 4.2+**: reported by `verify_setup.py` under "Optional" (or `uv run tools/blender_render.py doctor
+  --no-bench`). Only `tools/blender_render.py` uses it (3D character shots, reveals and product shots from a shot
+  spec), and it is experimental. If it's found, say so in the status and that `/video` will suggest 3D shots where
+  they fit. If it isn't, show one line ("3D (Blender): not installed, optional") and move on: don't count it as
+  missing, and install nothing. `docs/blender.md` has the install command per platform.
 
 ### Windows only
 
@@ -330,8 +340,15 @@ the Hugging Face secret and their Gemma 3 access (see `docs/modal-setup.md`).
 
 Deploys stream their logs and can take 5-15 minutes each on a first build, so run the
 command in the background and report each app's `OK`/`!!` line as it lands. A failed app
-prints a hint (payment method, rate limit, Hugging Face access); fix it and re-run with
-just that app's name.
+prints a hint (payment method, rate limit, Hugging Face access, image builder version);
+fix it and re-run with just that app's name.
+
+On a new Modal workspace the first deploy fails at once with `This version of the modal
+client supports the following image builder versions ... You are using '2026.10'`, and
+the tool retries it with `MODAL_IMAGE_BUILDER_VERSION=2025.06`, which the rest of the run
+keeps. That is expected: the workspace defaults to a builder version newer than the
+toolkit's Modal client knows. Don't stop the run or upgrade `modal`. Only a deploy by
+hand needs the variable exported first (see `docs/modal-setup.md`).
 
 If the user already deployed some apps by hand, `uv run tools/modal_setup.py --sync-env`
 writes the live URLs to `.env` without redeploying anything. `--list` shows what's
@@ -466,6 +483,8 @@ Voice: Qwen3-TTS (Ryan)
 
 ElevenLabs: Not configured (optional)
 
+3D: Blender 5.3 found (optional, experimental) — /video will suggest 3D shots
+
 Cost summary:
   - Modal: $30/mo free compute (you'll use ~$1-2/mo typical)
   - R2: Free (10GB storage, zero egress)
@@ -515,6 +534,9 @@ lines = Path('.env').read_text().splitlines()
 ## Error Handling
 
 - If `modal deploy` fails: show the error, suggest checking `uv run modal app logs`, offer to retry
+- If a deploy by hand says `You are using '2026.10'` after a list of image builder versions:
+  export `MODAL_IMAGE_BUILDER_VERSION=2025.06` in that shell and re-run (`modal_setup.py`
+  does this on its own)
 - If R2 test fails: re-check credentials, common issue is wrong bucket name or region
 - If RunPod setup fails: check API key, check account has billing enabled
 - If any step fails, don't block subsequent steps — mark as failed and continue

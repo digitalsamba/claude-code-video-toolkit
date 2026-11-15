@@ -79,6 +79,9 @@ def lint_file(path: Path) -> list[dict]:
 
 
 PROSE = (".md", ".markdown", ".html", ".htm", ".txt")
+# Folders of saved command output (an example's capture/): what a tool printed, kept verbatim so the video can
+# show it, not words anyone wrote. Linting them would ask for the record to be edited.
+VERBATIM_DIRS = {"capture"}
 
 
 def added_lines(ref: str, path: Path) -> set[int]:
@@ -94,7 +97,8 @@ def added_lines(ref: str, path: Path) -> set[int]:
 def changed_files(ref: str, paths: list[Path]) -> list[Path]:
     cmd = ["git", "diff", "--name-only", "--diff-filter=AM", ref, "--"] + [str(p) for p in paths]
     names = subprocess.run(cmd, capture_output=True, text=True).stdout.split()
-    return [Path(n) for n in names if Path(n).suffix.lower() in PROSE and Path(n).exists()]
+    return [Path(n) for n in names if Path(n).suffix.lower() in PROSE and Path(n).exists()
+            and not VERBATIM_DIRS.intersection(Path(n).parts[:-1])]
 
 
 def commit_subjects(ref: str) -> list[str]:

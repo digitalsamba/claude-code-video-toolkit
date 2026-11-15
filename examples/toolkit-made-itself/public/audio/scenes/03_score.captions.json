@@ -1,0 +1,177 @@
+[
+ {
+  "text": "Then",
+  "startMs": 120,
+  "endMs": 280,
+  "timestampMs": 200,
+  "confidence": null
+ },
+ {
+  "text": " it",
+  "startMs": 320,
+  "endMs": 400,
+  "timestampMs": 360,
+  "confidence": null
+ },
+ {
+  "text": " wrote",
+  "startMs": 480,
+  "endMs": 740,
+  "timestampMs": 610,
+  "confidence": null
+ },
+ {
+  "text": " four",
+  "startMs": 960,
+  "endMs": 1180,
+  "timestampMs": 1070,
+  "confidence": null
+ },
+ {
+  "text": " pieces",
+  "startMs": 1300,
+  "endMs": 1680,
+  "timestampMs": 1490,
+  "confidence": null
+ },
+ {
+  "text": " of",
+  "startMs": 1740,
+  "endMs": 1880,
+  "timestampMs": 1810,
+  "confidence": null
+ },
+ {
+  "text": " music",
+  "startMs": 1940,
+  "endMs": 2520,
+  "timestampMs": 2230,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 2680,
+  "endMs": 2800,
+  "timestampMs": 2740,
+  "confidence": null
+ },
+ {
+  "text": " picked",
+  "startMs": 2940,
+  "endMs": 3160,
+  "timestampMs": 3050,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 3220,
+  "endMs": 3280,
+  "timestampMs": 3250,
+  "confidence": null
+ },
+ {
+  "text": " one",
+  "startMs": 3400,
+  "endMs": 3600,
+  "timestampMs": 3500,
+  "confidence": null
+ },
+ {
+  "text": " that",
+  "startMs": 3660,
+  "endMs": 3820,
+  "timestampMs": 3740,
+  "confidence": null
+ },
+ {
+  "text": " sits",
+  "startMs": 3880,
+  "endMs": 4140,
+  "timestampMs": 4010,
+  "confidence": null
+ },
+ {
+  "text": " under",
+  "startMs": 4220,
+  "endMs": 4460,
+  "timestampMs": 4340,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 4540,
+  "endMs": 4560,
+  "timestampMs": 4550,
+  "confidence": null
+ },
+ {
+  "text": " voice",
+  "startMs": 4660,
+  "endMs": 5120,
+  "timestampMs": 4890,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 5280,
+  "endMs": 5420,
+  "timestampMs": 5350,
+  "confidence": null
+ },
+ {
+  "text": " moves",
+  "startMs": 5540,
+  "endMs": 5900,
+  "timestampMs": 5720,
+  "confidence": null
+ },
+ {
+  "text": " on",
+  "startMs": 5960,
+  "endMs": 6180,
+  "timestampMs": 6070,
+  "confidence": null
+ },
+ {
+  "text": " every",
+  "startMs": 6280,
+  "endMs": 6540,
+  "timestampMs": 6410,
+  "confidence": null
+ },
+ {
+  "text": " cut.",
+  "startMs": 6680,
+  "endMs": 7060,
+  "timestampMs": 6870,
+  "confidence": null
+ },
+ {
+  "text": " You're",
+  "startMs": 7700,
+  "endMs": 7820,
+  "timestampMs": 7760,
+  "confidence": null
+ },
+ {
+  "text": " hearing",
+  "startMs": 7880,
+  "endMs": 8220,
+  "timestampMs": 8050,
+  "confidence": null
+ },
+ {
+  "text": " it",
+  "startMs": 8280,
+  "endMs": 8400,
+  "timestampMs": 8340,
+  "confidence": null
+ },
+ {
+  "text": " now.",
+  "startMs": 8460,
+  "endMs": 8780,
+  "timestampMs": 8620,
+  "confidence": null
+ }
+]

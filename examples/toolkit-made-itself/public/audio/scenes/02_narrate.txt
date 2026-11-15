@@ -1,0 +1,1 @@
+First it wrote a script, one file for each scene, and voiced it. That's me. I'm a voice from the ElevenLabs library, paced to about a hundred and sixty words a minute.

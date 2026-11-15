@@ -1,0 +1,21 @@
+{
+  "title": "Product stage: a picture on a card and a phone, and an imported model",
+  "fps": 30,
+  "resolution": "1920x1080",
+  "look": {"view": "Standard", "exposure": -0.9},
+  "set": {
+    "kind": "studio",
+    "palette": {"backdrop": "#DCE2EE"},
+    "props": [
+      {"id": "ui", "kind": "card", "width": 0.5, "screen": {"image": "assets/card.png"}},
+      {"id": "app", "kind": "phone", "screen": {"image": "assets/phone.png"}, "at": [0.42, -0.12], "turn": -18},
+      {"id": "mug", "kind": "model", "file": "assets/mug.glb", "size": 0.1, "at": [-0.36, -0.1]}
+    ]
+  },
+  "shots": [
+    {"id": "P1_reveal", "dur": 4, "type": "reveal", "subject": "ui"},
+    {"id": "P2_phone", "dur": 3, "type": "orbit", "subject": "app", "az": -35, "az_to": 35},
+    {"id": "P3_mug", "dur": 2, "type": "product", "subject": "mug"},
+    {"id": "P4_spin", "dur": 3, "type": "orbit", "subject": "ui", "az": -40, "az_to": 40, "elev": 8}
+  ]
+}

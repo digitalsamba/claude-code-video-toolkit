@@ -1,0 +1,60 @@
+{
+  "title": "The element: a character at a desk on a transparent background",
+  "fps": 30,
+  "resolution": "1920x1080",
+  "engine": "eevee",
+  "transparent": true,
+  "look": {"exposure": -0.9, "look": "AgX - Punchy"},
+
+  "set": {"kind": "desk", "palette": {"desk": "#B08A68"}},
+
+  "cast": [
+    {"id": "dev", "kind": "clay_person", "colors": {"top": "#3771E0", "pants": "#232D49", "hair": "#2B211B"}}
+  ],
+
+  "shots": [
+    {"id": "B1_act",   "dur": 8.5, "type": "wide"},
+    {"id": "B2_cheer", "dur": 3.5, "type": "front_wide"}
+  ],
+
+  "beats": [
+    {"at": "B1_act",          "do": "type", "speed": "calm", "until": "B1_act+1.6"},
+    {"at": "B1_act",          "do": "head_bob", "until": "B1_act+1.6"},
+    {"at": "B1_act+0.9",      "do": "blink"},
+
+    {"at": "B1_act+1.7",      "do": "alert"},
+    {"at": "B1_act+1.8",      "do": "look", "target": "ahead", "dur": 0.3},
+    {"at": "B1_act+1.8",      "do": "lean", "amount": "recoil", "dur": 0.35},
+    {"at": "B1_act+2.0",      "do": "expression", "face": "shocked", "dur": 0.25},
+    {"at": "B1_act+2.1",      "do": "hold_arms"},
+    {"at": "B1_act+2.3",      "do": "tremble", "until": "B1_act+3.4"},
+    {"at": "B1_act+2.6",      "do": "sweat", "until": "B1_act+3.8"},
+
+    {"at": "B1_act+3.5",      "do": "pose", "pose": "hands_on_head", "dur": 0.5},
+    {"at": "B1_act+3.7",      "do": "expression", "face": "worried", "dur": 0.2},
+    {"at": "B1_act+3.9",      "do": "shake_head", "until": "B1_act+5.2"},
+
+    {"at": "B1_act+5.3",      "do": "pose", "pose": "type", "dur": 0.4},
+    {"at": "B1_act+5.3",      "do": "lean", "amount": "forward", "dur": 0.4},
+    {"at": "B1_act+5.3",      "do": "look", "target": "down", "dur": 0.4},
+    {"at": "B1_act+5.4",      "do": "expression", "face": "determined", "dur": 0.25},
+    {"at": "B1_act+5.7",      "do": "type", "speed": "frantic", "until": "B1_act+7.2"},
+    {"at": "B1_act+5.8",      "do": "work", "until": "B1_act+7.2"},
+    {"at": "B1_act+7.3",      "do": "done"},
+    {"at": "B1_act+7.3",      "do": "tap"},
+    {"at": "B1_act+7.5",      "do": "lean", "amount": "back", "dur": 0.6},
+    {"at": "B1_act+7.5",      "do": "look", "target": 2, "dur": 0.5},
+    {"at": "B1_act+7.55",     "do": "expression", "face": "relieved", "dur": 0.3},
+    {"at": "B1_act+8.1",      "do": "blink", "frames": 4},
+
+    {"at": "B2_cheer+0.05",   "do": "celebrate", "until": "B2_cheer+2.2"},
+    {"at": "B2_cheer+0.05",   "do": "lean", "amount": "far_back", "dur": 0.5},
+    {"at": "B2_cheer+0.05",   "do": "look", "target": "up", "dur": 0.5},
+    {"at": "B2_cheer+0.2",    "do": "expression", "face": "grin", "dur": 0.25},
+    {"at": "B2_cheer+0.6",    "do": "confetti", "count": 90, "colors": ["#FFFFFF", "#93B4F2", "#232D49", "#DFE7FB"]},
+    {"at": "B2_cheer+2.3",    "do": "pose", "pose": "hands_behind_head", "dur": 0.6},
+    {"at": "B2_cheer+2.3",    "do": "look", "target": -4, "dur": 0.6},
+    {"at": "B2_cheer+2.4",    "do": "expression", "face": "content", "dur": 0.25},
+    {"at": "B2_cheer+3.0",    "do": "blink"}
+  ]
+}

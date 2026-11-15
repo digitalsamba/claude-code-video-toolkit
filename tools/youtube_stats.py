@@ -310,8 +310,11 @@ def main() -> int:
             report["analytics"] = analytics(creds, [v["id"] for v in report["videos"]], parse_since(a.since),
                                             dt.date.today())
         except HttpError as e:
-            report["analyticsNote"] = f"Analytics failed: {yu.extract_api_reason(e) or e}. Is the YouTube " \
-                                      "Analytics API enabled in the Cloud project?"
+            reason = yu.extract_api_reason(e)
+            report["analyticsNote"] = (
+                f"Analytics is off in the Cloud project. Switch it on (then wait a minute or two): "
+                f"{yu.enable_url('analytics', yu.cloud_project_number(a.client_secrets))}" if reason == "accessNotConfigured"
+                else f"Analytics failed: {reason or e}")
     else:
         report["analyticsNote"] = ("No Analytics scope on this token, so no watch time, retention or traffic "
                                    f"sources. Enable the API, then: uv run tools/youtube_stats.py --auth "

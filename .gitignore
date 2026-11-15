@@ -44,6 +44,8 @@ out/
 # And the two ds-crt-stinger reference assets: the LTX-2 boot clip costs ~$0.30
 # + 4 min to regenerate, and the GIF is the example's README preview.
 !examples/ds-crt-stinger/ds_boot_astro.mp4
+# the LTX clip in Made with itself's Generate scene (0.5 MB), so the example renders as published
+!examples/toolkit-made-itself/public/video/desk.mp4
 !examples/ds-crt-stinger/ds_stinger_astro.gif
 
 # Remotion
