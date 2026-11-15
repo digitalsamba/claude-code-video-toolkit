@@ -58,6 +58,8 @@ export type { CursorProps, CursorPoint } from './Cursor';
 
 export { Terminal, terminalTheme, typedUntil } from './Terminal';
 export type { TerminalProps, TerminalLine, TerminalTheme, TerminalKind } from './Terminal';
+export { TerminalSession, sessionSkins, parseMarkup, loadMonoFont, userTypedUntil, submittedAt } from './TerminalSession';
+export type { TerminalSessionProps, SessionLine, SessionSkin, SessionTheme, SessionFocus, SessionHighlight, Tone } from './TerminalSession';
 
 export { voice, cueWords } from './cues';
 export type { Voice, VoicePhrase, CaptionWord, CueOptions } from './cues';

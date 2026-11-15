@@ -23,6 +23,6 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha || 'origin/main' }}
         run: |
-          # synced from upstream Remotion: not our words
+          # synced from upstream Remotion, and font licences (OFL.txt): not our words
           python3 tools/copy_lint.py --diff "$BASE" --commits "$BASE" \
-            . ':(exclude).claude/skills/remotion-official'
+            . ':(exclude).claude/skills/remotion-official' ':(exclude,glob)**/OFL.txt'
