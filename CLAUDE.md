@@ -87,6 +87,14 @@ from source as static React, driven by the `Stage` cursor and camera, with sente
 pace and pitch. Ships as the finished release 650 build, so it renders as is; for a new release keep the kits and
 replace `src/scenes/` and the voice phrases. Method in the `synthetic-ui-demo` skill.
 
+### howto
+Tutorial episodes about a tool, in chapters, with a 9:16 Short cut from each. One mark carries the series: a
+terminal prompt whose chevron fills into a play triangle and whose caret becomes the playhead on a track with a
+stop per chapter (the opening draws it, chapter cards move the playhead, the close rolls it back into a blinking
+prompt). Scenes are `ledger`, `figure`, `bars`, `statement`, `session` (`TerminalSession` filling the frame) and
+`command`, and every prop is a function of `cue`, so nothing is timed by hand. Numbers live in `facts.json` with
+their source and the day they were checked. Ships as the toolkit's own Getting started 1, "What it costs".
+
 ### concept-explainer-short
 9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts). **Python/moviepy, not Remotion** — the whole video derives from `scenes.json` (per-scene narration + visual asset). Pipeline: `gen_vo.py` (per-scene TTS via voiceover.py, clone or built-in, `--max-wpm` pacing clamp) → `gen_captions.py` (whisper word timing force-aligned to script text, needs `uv sync --extra whisper`) → `build.py` (audio-anchored composite: Ken Burns on stills, boomerang-looped clips, burned karaoke caption pills, ducked music). Renders at every stage — placeholder cards before assets, silent before audio. Visuals follow the FLUX/Ideogram/LTX split: Ideogram cards at `1440x2560` for anything text-bearing, LTX b-roll at `576x1024` for motion.
 

@@ -1,0 +1,86 @@
+[
+ {
+  "text": "And",
+  "startMs": 60,
+  "endMs": 140,
+  "timestampMs": 100,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 180,
+  "endMs": 280,
+  "timestampMs": 230,
+  "confidence": null
+ },
+ {
+  "text": " first",
+  "startMs": 340,
+  "endMs": 600,
+  "timestampMs": 470,
+  "confidence": null
+ },
+ {
+  "text": " half",
+  "startMs": 660,
+  "endMs": 860,
+  "timestampMs": 760,
+  "confidence": null
+ },
+ {
+  "text": " of",
+  "startMs": 920,
+  "endMs": 1020,
+  "timestampMs": 970,
+  "confidence": null
+ },
+ {
+  "text": " November,",
+  "startMs": 1060,
+  "endMs": 1500,
+  "timestampMs": 1280,
+  "confidence": null
+ },
+ {
+  "text": " twenty",
+  "startMs": 1500,
+  "endMs": 2150,
+  "timestampMs": 1825,
+  "confidence": null
+ },
+ {
+  "text": " two,",
+  "startMs": 2150,
+  "endMs": 2800,
+  "timestampMs": 2475,
+  "confidence": null
+ },
+ {
+  "text": " across",
+  "startMs": 2800,
+  "endMs": 3100,
+  "timestampMs": 2950,
+  "confidence": null
+ },
+ {
+  "text": " fifteen",
+  "startMs": 3100,
+  "endMs": 4019,
+  "timestampMs": 3559,
+  "confidence": null
+ },
+ {
+  "text": " video",
+  "startMs": 4019,
+  "endMs": 4320,
+  "timestampMs": 4169,
+  "confidence": null
+ },
+ {
+  "text": " projects.",
+  "startMs": 4420,
+  "endMs": 5020,
+  "timestampMs": 4720,
+  "confidence": null
+ }
+]

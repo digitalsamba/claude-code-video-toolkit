@@ -1,0 +1,37 @@
+[
+ {
+  "text": "Making",
+  "startMs": 100,
+  "endMs": 440,
+  "timestampMs": 270,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 460,
+  "endMs": 560,
+  "timestampMs": 510,
+  "confidence": null
+ },
+ {
+  "text": " video",
+  "startMs": 620,
+  "endMs": 1060,
+  "timestampMs": 840,
+  "confidence": null
+ },
+ {
+  "text": " costs",
+  "startMs": 1220,
+  "endMs": 1640,
+  "timestampMs": 1430,
+  "confidence": null
+ },
+ {
+  "text": " nothing.",
+  "startMs": 1780,
+  "endMs": 2220,
+  "timestampMs": 2000,
+  "confidence": null
+ }
+]

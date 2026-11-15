@@ -1,0 +1,30 @@
+[
+ {
+  "text": "Or",
+  "startMs": 100,
+  "endMs": 280,
+  "timestampMs": 190,
+  "confidence": null
+ },
+ {
+  "text": " four",
+  "startMs": 520,
+  "endMs": 740,
+  "timestampMs": 630,
+  "confidence": null
+ },
+ {
+  "text": " thousand",
+  "startMs": 900,
+  "endMs": 1500,
+  "timestampMs": 1200,
+  "confidence": null
+ },
+ {
+  "text": " images.",
+  "startMs": 1640,
+  "endMs": 2220,
+  "timestampMs": 1930,
+  "confidence": null
+ }
+]

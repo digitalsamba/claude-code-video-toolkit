@@ -1,0 +1,1 @@
+The one thing you do need is a Claude plan, to run Claude Code.

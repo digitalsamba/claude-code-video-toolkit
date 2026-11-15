@@ -1,0 +1,86 @@
+[
+ {
+  "text": "Then",
+  "startMs": 100,
+  "endMs": 420,
+  "timestampMs": 260,
+  "confidence": null
+ },
+ {
+  "text": " every",
+  "startMs": 720,
+  "endMs": 960,
+  "timestampMs": 840,
+  "confidence": null
+ },
+ {
+  "text": " model",
+  "startMs": 1060,
+  "endMs": 1300,
+  "timestampMs": 1180,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 1360,
+  "endMs": 1500,
+  "timestampMs": 1430,
+  "confidence": null
+ },
+ {
+  "text": " ready,",
+  "startMs": 1560,
+  "endMs": 1920,
+  "timestampMs": 1740,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 2160,
+  "endMs": 2300,
+  "timestampMs": 2230,
+  "confidence": null
+ },
+ {
+  "text": " costs",
+  "startMs": 2340,
+  "endMs": 2700,
+  "timestampMs": 2520,
+  "confidence": null
+ },
+ {
+  "text": " nothing",
+  "startMs": 2920,
+  "endMs": 3360,
+  "timestampMs": 3140,
+  "confidence": null
+ },
+ {
+  "text": " until",
+  "startMs": 3480,
+  "endMs": 3800,
+  "timestampMs": 3640,
+  "confidence": null
+ },
+ {
+  "text": " you",
+  "startMs": 3860,
+  "endMs": 3980,
+  "timestampMs": 3920,
+  "confidence": null
+ },
+ {
+  "text": " use",
+  "startMs": 4100,
+  "endMs": 4280,
+  "timestampMs": 4190,
+  "confidence": null
+ },
+ {
+  "text": " it.",
+  "startMs": 4360,
+  "endMs": 4560,
+  "timestampMs": 4460,
+  "confidence": null
+ }
+]

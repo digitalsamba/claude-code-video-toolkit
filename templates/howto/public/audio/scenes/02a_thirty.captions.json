@@ -1,0 +1,86 @@
+[
+ {
+  "text": "The",
+  "startMs": 120,
+  "endMs": 180,
+  "timestampMs": 150,
+  "confidence": null
+ },
+ {
+  "text": " AI",
+  "startMs": 320,
+  "endMs": 640,
+  "timestampMs": 480,
+  "confidence": null
+ },
+ {
+  "text": " models",
+  "startMs": 700,
+  "endMs": 1140,
+  "timestampMs": 920,
+  "confidence": null
+ },
+ {
+  "text": " run",
+  "startMs": 1280,
+  "endMs": 1460,
+  "timestampMs": 1370,
+  "confidence": null
+ },
+ {
+  "text": " on",
+  "startMs": 1540,
+  "endMs": 1640,
+  "timestampMs": 1590,
+  "confidence": null
+ },
+ {
+  "text": " cloud",
+  "startMs": 1780,
+  "endMs": 2120,
+  "timestampMs": 1950,
+  "confidence": null
+ },
+ {
+  "text": " GPUs,",
+  "startMs": 2240,
+  "endMs": 3000,
+  "timestampMs": 2620,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 3360,
+  "endMs": 3480,
+  "timestampMs": 3420,
+  "confidence": null
+ },
+ {
+  "text": " that's",
+  "startMs": 3640,
+  "endMs": 3980,
+  "timestampMs": 3810,
+  "confidence": null
+ },
+ {
+  "text": " where",
+  "startMs": 4019,
+  "endMs": 4180,
+  "timestampMs": 4099,
+  "confidence": null
+ },
+ {
+  "text": " people",
+  "startMs": 4220,
+  "endMs": 4500,
+  "timestampMs": 4360,
+  "confidence": null
+ },
+ {
+  "text": " worry.",
+  "startMs": 4620,
+  "endMs": 4960,
+  "timestampMs": 4790,
+  "confidence": null
+ }
+]

@@ -1,0 +1,31 @@
+{
+  "_about": "Every number this episode shows or says, with its source and the day it was checked. Re-check each before a render that will be published; the narration in public/audio/phrases says these numbers too, so a change here means a re-voiced line.",
+  "toolkitVersion": {
+    "value": "v0.29.1",
+    "source": "git tag, latest release",
+    "checked": "2026-11-15"
+  },
+  "modalStarterCredit": {
+    "value": 30,
+    "note": "modal.com/pricing: Starter plan, $0 + compute, $30 a month free credits; a payment method must be on file (modal.com/docs/guide/billing)",
+    "source": "https://modal.com/pricing and https://modal.com/docs/guide/billing",
+    "checked": "15 Nov 2026"
+  },
+  "prices": {
+    "ltxClip": 0.1,
+    "voiceLine": 0.01,
+    "fluxImage": 0.0075,
+    "ideogram": "about 3 to 10 cents an image",
+    "note": "Unit costs from the toolkit's PRICES table, measured on Modal receipts (tools/video_job.py, 2026-11-01)",
+    "source": "tools/video_job.py PRICES (version 2026-11-01): ltx_clip 0.10, voiceover.qwen3 0.01, flux_image 0.0075, ideogram_image 0.03 to 0.10",
+    "checked": "2026-11-15"
+  },
+  "bill": {
+    "months": { "Aug": 10.87, "Sep": 25.96, "Oct": 14.43, "Nov": 21.96 },
+    "note": "The toolkit author's Modal workspace, every app including research spikes; modal billing report",
+    "source": "uv run --extra modal modal billing report --start <month> --end <month> --resolution d --json, summed",
+    "checked": "15 Nov 2026",
+    "projectsInNovember": 15,
+    "projectsSource": "projects/ with an out/*.mp4 rendered 2026-11-01 to 2026-11-15, prototypes excluded"
+  }
+}

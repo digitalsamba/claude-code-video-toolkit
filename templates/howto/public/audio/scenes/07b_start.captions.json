@@ -1,0 +1,72 @@
+[
+ {
+  "text": "It",
+  "startMs": 120,
+  "endMs": 220,
+  "timestampMs": 170,
+  "confidence": null
+ },
+ {
+  "text": " tells",
+  "startMs": 280,
+  "endMs": 540,
+  "timestampMs": 410,
+  "confidence": null
+ },
+ {
+  "text": " you",
+  "startMs": 580,
+  "endMs": 680,
+  "timestampMs": 630,
+  "confidence": null
+ },
+ {
+  "text": " what's",
+  "startMs": 720,
+  "endMs": 1060,
+  "timestampMs": 890,
+  "confidence": null
+ },
+ {
+  "text": " free",
+  "startMs": 1100,
+  "endMs": 1540,
+  "timestampMs": 1320,
+  "confidence": null
+ },
+ {
+  "text": " before",
+  "startMs": 1580,
+  "endMs": 2040,
+  "timestampMs": 1810,
+  "confidence": null
+ },
+ {
+  "text": " it",
+  "startMs": 2080,
+  "endMs": 2180,
+  "timestampMs": 2130,
+  "confidence": null
+ },
+ {
+  "text": " spends",
+  "startMs": 2280,
+  "endMs": 2540,
+  "timestampMs": 2410,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 2600,
+  "endMs": 2700,
+  "timestampMs": 2650,
+  "confidence": null
+ },
+ {
+  "text": " cent.",
+  "startMs": 2780,
+  "endMs": 3180,
+  "timestampMs": 2980,
+  "confidence": null
+ }
+]

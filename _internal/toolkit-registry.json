@@ -1469,6 +1469,14 @@
       "updated": "2026-10-28",
       "skill": "synthetic-ui-demo",
       "agentSupport": "session"
+    },
+    "howto": {
+      "path": "templates/howto/",
+      "description": "How-to and tutorial episodes about a tool: one mark (a terminal prompt whose chevron fills into play and whose caret becomes the playhead) carries the opening, the chapter cards and the close; scenes are ledgers, figures, bars, statements, agent CLI sessions and commands, each landing on its narration word via cue(); colour by act, every figure from a facts file; a 9:16 Short per chapter with captions. Ships as Getting started 1, What it costs",
+      "status": "beta",
+      "created": "2026-11-15",
+      "skill": "video-design",
+      "agentSupport": "session"
     }
   },
   "transitions": {

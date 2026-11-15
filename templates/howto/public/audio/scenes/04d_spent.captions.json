@@ -1,0 +1,16 @@
+[
+ {
+  "text": "October,",
+  "startMs": 60,
+  "endMs": 700,
+  "timestampMs": 380,
+  "confidence": null
+ },
+ {
+  "text": " fourteen.",
+  "startMs": 700,
+  "endMs": 1660,
+  "timestampMs": 1180,
+  "confidence": null
+ }
+]

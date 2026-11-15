@@ -1,0 +1,51 @@
+[
+ {
+  "text": "Next:",
+  "startMs": 100,
+  "endMs": 540,
+  "timestampMs": 320,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 960,
+  "endMs": 1100,
+  "timestampMs": 1030,
+  "confidence": null
+ },
+ {
+  "text": " whole",
+  "startMs": 1160,
+  "endMs": 1380,
+  "timestampMs": 1270,
+  "confidence": null
+ },
+ {
+  "text": " setup,",
+  "startMs": 1500,
+  "endMs": 2040,
+  "timestampMs": 1770,
+  "confidence": null
+ },
+ {
+  "text": " in",
+  "startMs": 2340,
+  "endMs": 2480,
+  "timestampMs": 2410,
+  "confidence": null
+ },
+ {
+  "text": " one",
+  "startMs": 2540,
+  "endMs": 2680,
+  "timestampMs": 2610,
+  "confidence": null
+ },
+ {
+  "text": " conversation.",
+  "startMs": 2800,
+  "endMs": 3580,
+  "timestampMs": 3190,
+  "confidence": null
+ }
+]

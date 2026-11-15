@@ -1,0 +1,79 @@
+[
+ {
+  "text": "Here's",
+  "startMs": 100,
+  "endMs": 340,
+  "timestampMs": 220,
+  "confidence": null
+ },
+ {
+  "text": " our",
+  "startMs": 380,
+  "endMs": 520,
+  "timestampMs": 450,
+  "confidence": null
+ },
+ {
+  "text": " own",
+  "startMs": 560,
+  "endMs": 740,
+  "timestampMs": 650,
+  "confidence": null
+ },
+ {
+  "text": " bill:",
+  "startMs": 840,
+  "endMs": 1080,
+  "timestampMs": 960,
+  "confidence": null
+ },
+ {
+  "text": " everything",
+  "startMs": 1700,
+  "endMs": 2120,
+  "timestampMs": 1910,
+  "confidence": null
+ },
+ {
+  "text": " we",
+  "startMs": 2180,
+  "endMs": 2300,
+  "timestampMs": 2240,
+  "confidence": null
+ },
+ {
+  "text": " ran",
+  "startMs": 2340,
+  "endMs": 2520,
+  "timestampMs": 2430,
+  "confidence": null
+ },
+ {
+  "text": " on",
+  "startMs": 2560,
+  "endMs": 2660,
+  "timestampMs": 2610,
+  "confidence": null
+ },
+ {
+  "text": " Modal,",
+  "startMs": 2740,
+  "endMs": 3100,
+  "timestampMs": 2920,
+  "confidence": null
+ },
+ {
+  "text": " research",
+  "startMs": 3480,
+  "endMs": 3940,
+  "timestampMs": 3710,
+  "confidence": null
+ },
+ {
+  "text": " included.",
+  "startMs": 4000,
+  "endMs": 4600,
+  "timestampMs": 4300,
+  "confidence": null
+ }
+]

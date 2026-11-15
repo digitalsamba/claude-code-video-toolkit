@@ -1,0 +1,86 @@
+[
+ {
+  "text": "Mostly,",
+  "startMs": 120,
+  "endMs": 660,
+  "timestampMs": 390,
+  "confidence": null
+ },
+ {
+  "text": " no.",
+  "startMs": 1060,
+  "endMs": 1320,
+  "timestampMs": 1190,
+  "confidence": null
+ },
+ {
+  "text": " Here's",
+  "startMs": 1920,
+  "endMs": 2140,
+  "timestampMs": 2030,
+  "confidence": null
+ },
+ {
+  "text": " what's",
+  "startMs": 2180,
+  "endMs": 2440,
+  "timestampMs": 2310,
+  "confidence": null
+ },
+ {
+  "text": " free,",
+  "startMs": 2480,
+  "endMs": 2820,
+  "timestampMs": 2650,
+  "confidence": null
+ },
+ {
+  "text": " what",
+  "startMs": 3140,
+  "endMs": 3280,
+  "timestampMs": 3210,
+  "confidence": null
+ },
+ {
+  "text": " isn't,",
+  "startMs": 3420,
+  "endMs": 3820,
+  "timestampMs": 3620,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 4100,
+  "endMs": 4340,
+  "timestampMs": 4220,
+  "confidence": null
+ },
+ {
+  "text": " what",
+  "startMs": 4400,
+  "endMs": 4520,
+  "timestampMs": 4460,
+  "confidence": null
+ },
+ {
+  "text": " we",
+  "startMs": 4560,
+  "endMs": 4640,
+  "timestampMs": 4600,
+  "confidence": null
+ },
+ {
+  "text": " really",
+  "startMs": 4820,
+  "endMs": 5120,
+  "timestampMs": 4970,
+  "confidence": null
+ },
+ {
+  "text": " spend.",
+  "startMs": 5280,
+  "endMs": 5660,
+  "timestampMs": 5470,
+  "confidence": null
+ }
+]

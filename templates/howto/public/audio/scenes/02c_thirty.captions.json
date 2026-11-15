@@ -1,0 +1,114 @@
+[
+ {
+  "text": "Idle",
+  "startMs": 120,
+  "endMs": 340,
+  "timestampMs": 230,
+  "confidence": null
+ },
+ {
+  "text": " apps",
+  "startMs": 480,
+  "endMs": 700,
+  "timestampMs": 590,
+  "confidence": null
+ },
+ {
+  "text": " scale",
+  "startMs": 780,
+  "endMs": 1100,
+  "timestampMs": 940,
+  "confidence": null
+ },
+ {
+  "text": " to",
+  "startMs": 1140,
+  "endMs": 1260,
+  "timestampMs": 1200,
+  "confidence": null
+ },
+ {
+  "text": " zero,",
+  "startMs": 1340,
+  "endMs": 1800,
+  "timestampMs": 1570,
+  "confidence": null
+ },
+ {
+  "text": " so",
+  "startMs": 2160,
+  "endMs": 2280,
+  "timestampMs": 2220,
+  "confidence": null
+ },
+ {
+  "text": " you",
+  "startMs": 2320,
+  "endMs": 2500,
+  "timestampMs": 2410,
+  "confidence": null
+ },
+ {
+  "text": " only",
+  "startMs": 2600,
+  "endMs": 2900,
+  "timestampMs": 2750,
+  "confidence": null
+ },
+ {
+  "text": " pay",
+  "startMs": 2940,
+  "endMs": 3160,
+  "timestampMs": 3050,
+  "confidence": null
+ },
+ {
+  "text": " for",
+  "startMs": 3240,
+  "endMs": 3340,
+  "timestampMs": 3290,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 3380,
+  "endMs": 3500,
+  "timestampMs": 3440,
+  "confidence": null
+ },
+ {
+  "text": " seconds",
+  "startMs": 3560,
+  "endMs": 4040,
+  "timestampMs": 3800,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 4160,
+  "endMs": 4240,
+  "timestampMs": 4200,
+  "confidence": null
+ },
+ {
+  "text": " GPU",
+  "startMs": 4280,
+  "endMs": 4840,
+  "timestampMs": 4560,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 4880,
+  "endMs": 5000,
+  "timestampMs": 4940,
+  "confidence": null
+ },
+ {
+  "text": " working.",
+  "startMs": 5060,
+  "endMs": 5520,
+  "timestampMs": 5290,
+  "confidence": null
+ }
+]

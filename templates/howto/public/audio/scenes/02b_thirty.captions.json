@@ -1,0 +1,135 @@
+[
+ {
+  "text": "Modal's",
+  "startMs": 120,
+  "endMs": 480,
+  "timestampMs": 300,
+  "confidence": null
+ },
+ {
+  "text": " free",
+  "startMs": 620,
+  "endMs": 820,
+  "timestampMs": 720,
+  "confidence": null
+ },
+ {
+  "text": " Starter",
+  "startMs": 980,
+  "endMs": 1260,
+  "timestampMs": 1120,
+  "confidence": null
+ },
+ {
+  "text": " plan",
+  "startMs": 1360,
+  "endMs": 1680,
+  "timestampMs": 1520,
+  "confidence": null
+ },
+ {
+  "text": " gives",
+  "startMs": 1780,
+  "endMs": 1960,
+  "timestampMs": 1870,
+  "confidence": null
+ },
+ {
+  "text": " you",
+  "startMs": 2000,
+  "endMs": 2180,
+  "timestampMs": 2090,
+  "confidence": null
+ },
+ {
+  "text": " thirty",
+  "startMs": 2240,
+  "endMs": 2500,
+  "timestampMs": 2370,
+  "confidence": null
+ },
+ {
+  "text": " dollars",
+  "startMs": 2580,
+  "endMs": 2920,
+  "timestampMs": 2750,
+  "confidence": null
+ },
+ {
+  "text": " of",
+  "startMs": 2960,
+  "endMs": 3060,
+  "timestampMs": 3010,
+  "confidence": null
+ },
+ {
+  "text": " compute",
+  "startMs": 3100,
+  "endMs": 3540,
+  "timestampMs": 3320,
+  "confidence": null
+ },
+ {
+  "text": " every",
+  "startMs": 3740,
+  "endMs": 3980,
+  "timestampMs": 3860,
+  "confidence": null
+ },
+ {
+  "text": " month,",
+  "startMs": 4100,
+  "endMs": 4420,
+  "timestampMs": 4260,
+  "confidence": null
+ },
+ {
+  "text": " once",
+  "startMs": 4780,
+  "endMs": 4960,
+  "timestampMs": 4870,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 5000,
+  "endMs": 5060,
+  "timestampMs": 5030,
+  "confidence": null
+ },
+ {
+  "text": " card",
+  "startMs": 5120,
+  "endMs": 5360,
+  "timestampMs": 5240,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 5400,
+  "endMs": 5500,
+  "timestampMs": 5450,
+  "confidence": null
+ },
+ {
+  "text": " on",
+  "startMs": 5540,
+  "endMs": 5620,
+  "timestampMs": 5580,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 5660,
+  "endMs": 5740,
+  "timestampMs": 5700,
+  "confidence": null
+ },
+ {
+  "text": " account.",
+  "startMs": 5780,
+  "endMs": 6280,
+  "timestampMs": 6030,
+  "confidence": null
+ }
+]

@@ -1,0 +1,23 @@
+[
+ {
+  "text": "August,",
+  "startMs": 80,
+  "endMs": 600,
+  "timestampMs": 340,
+  "confidence": null
+ },
+ {
+  "text": " eleven",
+  "startMs": 1100,
+  "endMs": 1480,
+  "timestampMs": 1290,
+  "confidence": null
+ },
+ {
+  "text": " dollars.",
+  "startMs": 1560,
+  "endMs": 2080,
+  "timestampMs": 1820,
+  "confidence": null
+ }
+]
