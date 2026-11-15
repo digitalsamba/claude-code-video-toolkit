@@ -429,7 +429,10 @@ To keep a model in a repository use the same reduction:
 150,000 by default for a body): a body that passed every check at that size failed the sleeve check at 60,000
 faces, because the measure reads the mesh's edges and coarser cloth has longer ones. A character fitted at
 60,000 from the start (Mara, Nell) is measured at that size. A model already reduced across its seams keeps its
-shards: reduce it again from the original.
+shards: reduce it again from the original. The printed share reads high on a body far coarser than that: at
+20,000 faces Mara reads 0.22% with every seam vertex held in place, because a large face's nearest point on the
+model can land in the next island (a lid, a lip) without its colour changing. Held against the same reduction
+across the seams (2.48% there, 1.08% at 30,000) the method still works; the number is a guide at the sizes above.
 
 What it does not do: without a `hands` model the hands are whatever the model has (usually fists), on one
 bone; generated hands are thick and cupped, so they read as mitts with finger grooves. A typing hand slopes down
