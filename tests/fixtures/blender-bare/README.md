@@ -14,12 +14,16 @@ hide the join, and a face painted nearer to life (eyes with a lid over the iris)
   full-length picture gave four fingers. Only the arms are kept. It came back 1.8 times the body's size, sized as
   if the half figure were a whole one: the fit scales a hands model to the body's arm span before looking for the
   hands.
-- `fit.json`: her joints, clothes line and face, read off gridded stills and slices of the mesh.
+- `fit.json`: her joints, clothes line and face, read off gridded stills and slices of the mesh. Her right arm
+  hangs 3 cm nearer her body at the elbow than her left, so the right elbow is in `joints_right`: mirrored from
+  the left it stood outside the arm, the inside of the arm went with her spine, and a sheet of skin hung from
+  her right forearm to her hip (the fit fails that now; a test fits her without it to prove the check).
 - `spec.json`, `nell.json`: the short scene the test checks her with (hand shapes, a point, expressions, a blink,
   a glance, a wink).
-- `enter.json`: the walk-in every fitted character should pass. She does not pass it yet: her fingers go 3.2 cm
-  into the front edge of the laptop as her hands come down to type (limit 3), and her skin stretches 4.2x while
-  typing (limit 4). Both are open.
+- `enter.json`: the walk-in every fitted character should pass. She passes all of it but one check: as she
+  reaches back for the chair to sit, the back of her right armpit stretches 4.1x (limit 4). It is the shoulder's
+  skinning when the arm swings back, the move where Conal's and Mara's own worst stretch is too (3.8x and 3.6x).
+  Open.
 
 To fit her by hand: `uv run tools/blender_render.py fit --model tests/fixtures/blender-bare/nell.glb
 --fit tests/fixtures/blender-bare/fit.json --out nell-fitted.blend`, with `nell-fitted.blend` next to `nell.json`.

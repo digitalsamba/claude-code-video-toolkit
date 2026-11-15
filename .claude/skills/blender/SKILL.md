@@ -185,8 +185,10 @@ her painted face kept is `tests/fixtures/blender-bare`. To make a generated mode
 `uv run tools/blender_render.py reduce --model in.glb --out out.glb --faces 60000`, never Decimate by hand: it
 thins the mesh inside the islands of its texture, and a face collapsed across a seam is painted from the wrong
 place (shards by an eye). Make the open-hands picture from a hips-up crop so the fingers come out apart. Read the
-fit's output: any line with FAIL (a torn thumb web, faces painted from the wrong place) is a fault that will
-show in a close shot. The steps and their costs are in `docs/blender.md`.
+fit's output: any line with FAIL (a torn thumb web, faces painted from the wrong place, the inside of a forearm
+moving with the body) is a fault that will show in a close shot. The joints are written for the left and mirrored:
+slice both arms of the mesh, and where the right differs give it in `"joints_right"` (a right elbow mirrored 3 cm
+outside the arm left a sheet of skin hanging from it to the hip). The steps and their costs are in `docs/blender.md`.
 For a character of a real person, the reference photos come from `uv run tools/reference_capture.py --out <folder>`:
 a local page that talks the sitter through eight poses at a webcam. It needs the person at a browser, so ask
 them to run it; never commit their photos. Two things to settle on the character sheet, before any 3D spend: the

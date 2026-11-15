@@ -373,7 +373,11 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    narrowest slice above the shoulders, the chin is where the slice's front jumps forward, an arm is the run that
    splits off the trunk, and its centre slice by slice draws the arm's line down to the hand. In a side still
    seen from +x, the character's front (-y) is on the left. Legs hidden in wide trousers or a long skirt have no
-   slice of their own: put the knee on the line from hip to ankle.
+   slice of their own: put the knee on the line from hip to ankle. Slice both arms: a generated model is seldom
+   symmetrical, and the joints are written once for the left and mirrored. Where the right side differs by a
+   centimetre or more, give it in `"joints_right"`, written the same way (x positive): Nell's right arm hung 3 cm
+   nearer her body at the elbow than her left, the mirrored elbow stood outside it, and the inside of the arm
+   went to the spine (the fit fails that, below).
 4. **Name it.** A character file with `"model": "lead.blend"` beside it, and `"accessories": ["glasses"]` if they
    wear them. Keep the folder in a kit (`kits/<name>/cast/`).
 5. **Look at it** before writing beats: a `check` of any spec with the cast entry swapped, and read the contact
@@ -387,7 +391,11 @@ What the fit does for you: legs that touch in the model (shoes generated as one 
 joining one leg to the other tears across the gap on the first step; weights come from a clean stand-in body on
 the same joints, copied only between
 surfaces that face the same way (so a sleeve does not take the chest's weights), and kept inside the sleeve, whose
-thickness is measured round the upper arm and round the forearm on the side away from the body; bends
+thickness is measured round the upper arm and round the forearm on the side away from the body; the other way
+round, from half way down the upper arm to the wrist a vertex that is half arm or more and far nearer the arm than
+the middle of the body keeps none of the body's weight (a forearm hanging by the hips takes some of the hip's, and
+typing it sagged 3 cm into the desk), and the fit fails a forearm whose inside moves with the body, counted as
+edges running straight from forearm to body (none on a free arm); bends
 keep their volume; the seat is as high as the character's knees and the desk comes to its hands, so nobody is
 stretched to fit furniture.
 
@@ -523,8 +531,23 @@ Things that cost time in Blender itself, worth knowing before building on this:
   white of an eye is shaded pink at its corners and a hazel iris is no darker than a shadow.
 
 A fourth character (Nell, bare arms, in the repo) was fitted in the same session that fixed these, and she
-found two more on the walk-in the other three pass (fingers 3 cm into the front edge of the laptop as the hands
-come down to type, skin stretched 4.2x while typing): both are open.
+failed the walk-in the other three pass. The next session found three causes, and what finding them taught:
+- **A hand on its way to the keys was aimed at the pose, not at the keys.** The midpoint of the move was half
+  way to where the pose puts the wrist, before it is raised onto the keys; a desk raised over long thighs (8 to
+  10 cm on Mara, Orla and Nell) has its keys well above that, and the fingers went into the laptop on the way.
+- **A forearm hanging by the hips takes the hip's weight**, and the fit now clears it (above). Mara's
+  desk contact halved with it; Conal's and Orla's did not move.
+- **A fault on one side only is a joint.** Nell's typing forearm sagged through the desk and a sheet of skin
+  hung from her right arm to her hip; the left was clean. Her right elbow, mirrored from the left, stood 3 cm
+  outside the arm. Compare the two sides (edges from forearm straight to body: 29 on her right, none on any
+  other arm of four bodies) before reaching for the rig.
+- **When a fix moves the number both ways, stop tuning and look.** Seven variations of a weight threshold moved
+  her stretch between 4.3x and 5.0x without fixing it; one close still of the elbow, before and after, showed
+  the arm's inside going with the hip, and slices of the mesh then showed the arm was not joined to the body
+  at all.
+- **A fix that removes geometry is measured for what it removes, on every body.** A cut of the faces between
+  arm and body helped Nell and took 114 cm² out of the inside of Conal's upper arm and 54 cm² out of Mara's
+  chest, with every check still passing: no check sees a hole. It was dropped.
 
 What could be better: the proof scripts (tiled stills, close cameras on a hand or a face, per-frame traces) live
 in a project folder and are not yet tools in the toolkit; the fit still wants its joints read off a still by hand;
