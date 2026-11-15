@@ -936,6 +936,39 @@ class BlenderCheckTests(unittest.TestCase):
         for kind in ('hand_in_body_m', 'through_m'):
             self.assertLessEqual(checks[kind], 0.03, kind)
 
+    def test_an_arm_off_its_mirrored_elbow_is_failed_and_its_own_joint_frees_it(self):
+        """Nell's right arm hangs 3 cm nearer her body than her left. With the elbow mirrored from the left, the
+        inside of her right forearm moved with her spine: skin hung from the arm to the hip, and typing, the
+        forearm sagged 3.2 cm into the desk. The fit fails that by counting edges from forearm straight to body
+        (none on a free arm). With `joints_right` the arm is free; the forearm keeps none of the hip's weight,
+        and it stays out of the desk through the walk-in's typing."""
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            fit = json.loads((self.NELL / 'fit.json').read_text())
+            mirrored = {k: v for k, v in fit.items() if k != 'joints_right'}
+            (tmp / 'mirrored.json').write_text(json.dumps(mirrored))
+            shutil.copy(self.NELL / 'nell_hands.glb', tmp / 'nell_hands.glb')
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                blender_render.fit(mock.Mock(model=str(self.NELL / 'nell.glb'), fit=str(tmp / 'mirrored.json'),
+                                             out=str(tmp / 'mirrored.blend'), preview=None))
+            self.assertIn('the inside of the right forearm moves with the body', said.getvalue())
+            self.assertNotIn('the inside of the left forearm', said.getvalue())
+            for name in ('enter.json', 'nell.json'):
+                shutil.copy(self.NELL / name, tmp / name)
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(mock.Mock(model=str(self.NELL / 'nell.glb'), fit=str(self.NELL / 'fit.json'),
+                                                    out=str(tmp / 'nell-fitted.blend'), preview=None))
+            self.assertEqual(code, 0, said.getvalue())
+            self.assertNotIn(' FAIL ', said.getvalue())
+            enter = blender_render.run_compiler(tmp / 'enter.json', tmp / 'enter', 'check', '480x270', None)
+        self.assertFalse([p for p in enter.get('body_problems', []) if 'desk' in p or 'lap_base' in p], enter.get('body_problems'))
+        self.assertLessEqual(enter['through_m'], 0.03)
+        self.assertLessEqual(enter['typing']['into_m'], 0.003)
+
     def test_a_model_is_made_smaller_without_painting_faces_from_the_wrong_place(self):
         """`reduce` thins a model inside the islands of its texture: half of Mara's faces, with next to none of
         them left reading the texture from across a seam (0.04%; reduced across the seams it is 1.08%). Not a

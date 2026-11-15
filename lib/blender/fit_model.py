@@ -23,7 +23,8 @@ fit.json (metres, in the model's own space; side joints once, for the character'
      "face": {"eyes": [[x, z], [x, z]], "eye_size": [w, h], "brows": [[x, z], [x, z]], "brow_size": [w, h],
               "mouth": [x, z], "mouth_width": w, "half_width": w, "moustache": true, "chin": z}}
 Eyes and brows are the character's right, then left, as seen from the front.
-Optional: "hands": {"model": "open_hands.glb", "scale": 0.7, "smooth": [[along, out_of_palm, across, radius]]}
+Optional: "joints_right": {"el": [x, y, z], ...}, a right-side joint where the model is not symmetrical, written
+as the left is (x positive). And "hands": {"model": "open_hands.glb", "scale": 0.7, "smooth": [[along, out_of_palm, across, radius]]}
 (hands.py: the donor's hands are sized to the body's own unless `scale` says, the wrist joint moves to the cuff
 whatever `wr` says, and `smooth` flattens a lump on both hands, in cm from the middle of the knuckle row), and in
 "face", "brows_hidden": [0] for a brow under a fringe.
@@ -354,9 +355,14 @@ def source_joints(fit: dict) -> dict:
     out = {"pelvis": j["pelvis"], "neckb": j["neckb"], "necktop": j["necktop"]}
     for name, t in (("waist", 0.28), ("chest", 0.59), ("upch", 0.82)):
         out[name] = j["pelvis"].lerp(j["neckb"], t)
+    # (the joints are written for the character's left and mirrored; `joints_right` gives a joint of the right
+    # side where the model is not symmetrical, written the same way, x positive. A right elbow mirrored 3 cm
+    # outside the arm puts the inside of the arm out of its sleeve, and that skin then hangs from the hip)
+    right = {k: Vector(v) for k, v in fit.get("joints_right", {}).items()}
     for s, sd in ((1, "L"), (-1, "R")):
         for k in ("sh", "el", "wr", "tip", "hip", "kn", "an", "toe"):
-            out[k + sd] = Vector((j[k].x * s, j[k].y, j[k].z))
+            at = right.get(k, j[k]) if sd == "R" else j[k]
+            out[k + sd] = Vector((at.x * s, at.y, at.z))
         out["th" + sd] = out["wr" + sd].lerp(out["tip" + sd], 0.5) + Vector((0, -0.03, 0))
     return out
 
@@ -567,6 +573,33 @@ def part_legs(body) -> int:
     return len(cut)
 
 
+ARM_JOINED_LIMIT = 5  # edges running straight from a forearm or hand to the body before the fit fails it
+
+
+def arm_joined(body) -> dict:
+    """How many edges of the mesh run straight from each forearm or hand to the body (spine, hips or a thigh),
+    each end by the bone that moves it most. On a free arm there are none: between them is the upper arm. Where
+    the inside of a forearm is left moving with the body, a sheet of skin hangs from the arm to the hip and bags
+    whenever the arm moves. Seen on a model whose right arm hung 3 cm nearer the body than its left: the elbow,
+    mirrored from the left, stood outside the arm and its inside went to the spine (29 edges; every other arm
+    measured has none). The fix is the joint: `joints_right` in the fit file."""
+    names = [g.name for g in body.vertex_groups]
+    part = []
+    for v in body.data.vertices:
+        if not v.groups:
+            part.append(None)
+            continue
+        top = names[max(v.groups, key=lambda g: g.weight).group]
+        kind = top.split(".")[0]
+        part.append(top[-1] if kind in ("fore", "hand") else ("body" if kind in ("spine", "hips", "thigh") else None))
+    out = {"L": 0, "R": 0}
+    for e in body.data.edges:
+        a, b = part[e.vertices[0]], part[e.vertices[1]]
+        if {a, b} in ({"L", "body"}, {"R", "body"}):
+            out[a if a != "body" else b] += 1
+    return out
+
+
 def preview(body, folder: Path):
     """Three stills of the fitted body (Workbench, textured), to look at before a spec is run against it."""
     sc = bpy.context.scene
@@ -626,6 +659,12 @@ def main():
     parted = part_legs(body)
     if parted:
         print(f"fit: the legs touched in the model: {parted} faces joining one to the other were cut")
+    for sd, joined in arm_joined(body).items():
+        if joined > ARM_JOINED_LIMIT:
+            print(f"fit: FAIL weights, the inside of the {'left' if sd == 'L' else 'right'} forearm moves with the body: "
+                  f"{joined} edges run from it straight to the body (limit {ARM_JOINED_LIMIT}), and the skin will hang "
+                  "from the arm to the hip as it moves. The elbow or wrist is likely off the arm: measure that side's "
+                  "arm by slices and give its joints in `joints_right` (or correct `joints`)")
     if pieces:
         for before, after in hand_graft.seal(body, pieces):
             print(f"fit: hands, a bare arm's end drawn in onto the hand: the ring stood {1000 * before:.1f} mm off "
