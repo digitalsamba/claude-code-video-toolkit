@@ -482,6 +482,26 @@ def copy_weights(proxy, body, src, reach=0.25, smooth=14):
         np.add.at(count, edges[:, 0], 1)
         np.add.at(count, edges[:, 1], 1)
         w = total / count[:, None]
+    # The other way round from the sleeve: a forearm that hangs beside the hips in the A-pose takes some of the
+    # hip's weights (the hip's surface faces the same way as the forearm's, and smoothing spreads it along the
+    # arm). Such a vertex is held back toward the hip when the arm comes up, so the forearm's underside sags, and
+    # on a desk it goes through the top. So the arm from half way down the upper arm to the wrist is arm only,
+    # where a vertex is half arm or more already and far nearer the arm than the middle of the body (a chest or hip
+    # vertex near the arm is not half arm, and keeps its weights; the shoulder end of the upper arm keeps the
+    # spine's share a shoulder needs). Not by a tube the forearm's thickness, which is measured on the outer side:
+    # the inside of an arm can stand further off its bone (5.6 cm on a forearm measured 3.2 cm thick).
+    arm = np.array([name.split(".")[0] in ("upper", "fore", "hand") for name in names])
+    middle = np.hypot(co[:, 0], co[:, 1] - src["pelvis"].y)  # how far out from the body's middle
+    freed = 0
+    for sd in "LR":
+        half = (src["sh" + sd] + src["el" + sd]) / 2
+        d = np.minimum(to_segment(src["el" + sd], src["wr" + sd]), to_segment(half, src["el" + sd]))
+        share = w[:, arm].sum(axis=1) / np.maximum(w.sum(axis=1), 1e-6)
+        mine = np.clip((0.6 - d / np.maximum(middle, 1e-6)) / 0.25, 0, 1) * np.clip((share - 0.3) / 0.2, 0, 1)
+        freed += int(((mine > 0) & (share < 0.999)).sum())
+        w[:, ~arm] *= (1 - mine)[:, None]
+    w /= np.maximum(w.sum(axis=1), 1e-6)[:, None]
+    print(f"fit: arms, {freed} vertices from the elbow down had some of the body's weight, now the arm's")
     for sd in "LR":  # a shoe is stiff: everything below the ankle goes with the foot, blending in just above it
         foot, ankle = names.index("foot." + sd), src["an" + sd]
         side = (co[:, 0] > 0) == (ankle.x > 0)
