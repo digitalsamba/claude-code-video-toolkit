@@ -1678,6 +1678,12 @@
       "created": "2026-11-09",
       "updated": "2026-11-09"
     },
+    "TerminalSession": {
+      "path": "lib/components/TerminalSession.tsx",
+      "description": "An agent CLI session drawn the way viewers know it: your prompt typed into the input box and sent, prose streaming in by word, tool calls with their results, a spinner, a question picker or permission prompt in place of the input, a todo list that ticks, a diff. Each on a narration cue. The harness is a skin ('claude-code', 'codex', 'shell', or your own object for Kiro or another CLI). Text wraps with hanging indents; markup colours only what matters (**bold**, `code`, {ok|...}); focus keyframes zoom onto a line by id and highlight lays a band behind it; loadMonoFont() loads a bundled mono font so renders match on every OS. Status lines under the input. Terminal stays for a plain shell",
+      "status": "beta",
+      "created": "2026-11-15"
+    },
     "BlenderClip": {
       "path": "lib/components/BlenderClip.tsx",
       "description": "Plays a Blender render as an element of a Remotion scene: one clip per shot from tools/blender_render.py --clips (transparent with --alpha), played once then held, with the shot's own sound effects. blenderClip(manifest, id) reads clips.json and gives the clip's length and event('alert') frames, so captions and cuts land on the acting. crop shows one part of a clip scaled to fill its box, with an optional background picture behind it, for an inset. Throws if the spec's fps isn't the composition's",
