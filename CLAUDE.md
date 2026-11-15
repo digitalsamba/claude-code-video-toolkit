@@ -94,7 +94,8 @@ replace `src/scenes/` and the voice phrases. Method in the `synthetic-ui-demo` s
 
 Optional, and limited by the machine more than by the tool: it needs Blender and renders in minutes with a GPU
 (`doctor` times a frame). The clay cast, the desk sets, the studio stage and clips in Remotion are the settled
-part. Characters fitted from a generated 3D model, the kitchen and the lecture hall are experimental. Before
+part. Characters fitted from a generated 3D model, the kitchen, the lecture hall, the living room and the pub
+(two ends of a video call: a phone in the hand, a finger wag, a pint) are experimental. Before
 proposing a character film, tell the person it is hours of rendering over a few sessions.
 
 A general 3D tool, not a template: 3D scenes, character acting and product shots from a JSON spec: `tools/blender_render.py check|render spec.json`,

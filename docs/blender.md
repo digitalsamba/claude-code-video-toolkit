@@ -620,6 +620,75 @@ What the first viewing taught ("I seem to be carrying a candle", and "some of th
 - **Changing one beat moves the numbers of the next.** The same sip passed at one height in one shot and failed
   in another, because a `look` before it turned the chest. Run `check` after every edit, not after a batch.
 
+### A living room, a pub and a video call
+
+Two more sets, made for a short in which a wife on a sofa calls her husband in a pub. One character to a set
+still holds: each end of the call is its own spec, and the two are cut together afterwards.
+
+- `living_room`: a sofa where the chair stands, no desk, hands in the lap, a bright afternoon.
+- `pub`: the kitchen's table and chair places dressed as a snug, with a pint of stout to hold in place of the mug.
+- `phone`, `wag`, `lap`, `let_go` and `pick_up` with `"lift": false` are the verbs they needed; a `fixed` camera
+  takes `"cam": "phone"` to look back at the face from the phone. Fields are in the skill.
+
+What building them taught, each now in the code, a check or a rule:
+
+- **A cartoon arm is short and a cartoon hand is big.** A phone asked for 36 cm from the eyes was out of reach
+  of an arm 38 cm long from shoulder to wrist; the first build raised an error, the second put the phone beside
+  the ear. `phone` now holds it as far out as the arm goes along the line asked for and reports the distance. A
+  phone and a pint at their real sizes looked like a matchbox and an egg cup in a hand made for a cartoon, so
+  both are sized to the breadth of the hand that holds them, never under their real size.
+- **A camera at the phone is very close to a big head.** At 20 cm a 20 mm lens showed one eye and a nose. Hold
+  the phone out as far as the arm goes (`"dist": 0.6` is clamped to the reach), use a 17 mm lens, and set
+  `"clip"` so the fingers round the phone are not drawn across the frame.
+- **Give a spec a shot that is never used.** A beat at 0 that puts a hand on a glass leans the chest and looks
+  at the glass, then puts the head back where it was: the `look_at` before it was undone, and the first frame
+  of the film had the hand still on its way. A one second shot at the head of each spec (`P0`) takes all of
+  that; the film is cut from the shots after it.
+- **A set with no desk needs somewhere for the hands.** Every character starts with its hands where a keyboard
+  would be. A set says where its sitters' hands rest (`rest_pose = "lap"`) and the compiler lays them there on
+  the first frame. Keyed on two frames, that start overwrote the phone hand on frame 2, so it is keyed on one.
+- **A hand round a glass is on its side on purpose.** The check for a hand rolled off a table top (96 degrees)
+  fired on the hand holding the pint. A hand's stretches on a glass are recorded (`side_spans`) and left out,
+  as a hand on a mug's handle already was.
+- **Look at a generated hand before writing a beat for one finger.** The open-hands model had its fingers
+  joined by skin from knuckle to tip. Flat, and round a phone, they read as fingers. With the index raised and
+  the rest curled, the skin between them stretched into a lobe the size of the palm. Look at the hands the fit
+  made (a still of each, flat and in a `point`) before a finger wag or a count is written into a storyboard;
+  if they are joined, make the open-hands picture again with gaps between the fingers, or act the beat with
+  the whole hand (`wag` with `"shape": "open"`).
+- **Hands asked for with gaps between the fingers come back fanned.** The second open-hands picture (an A-pose,
+  hips up, "clear gaps of background between every finger") gave five separate fingers on each hand and a
+  clean raised index, with one generation. At rest the same hands lay like a starfish: the little finger 20
+  degrees off the hand's line. The rig now measures that and swings the fingers of a fanned hand back in, in
+  every shape, to 9 degrees (`FAN`); hands made with their fingers nearly side by side (14 degrees on the
+  other two bodies) are left alone, so their films render as before. A hand's breadth measured across fanned
+  fingers is wide, and a phone sized by it came out the size of a tablet: give such a hand's phone a `scale`.
+- **A `fixed` camera's lens is across the frame's width.** The shot types fit the lens to the longer side, so
+  in 9:16 a `medium` at 45 mm and a `fixed` at 45 mm are different pictures: the fixed one is 1.78 times as
+  wide. To copy a `medium`'s framing into a `fixed` shot in a vertical film, multiply the lens by 16/9.
+- **A new pair of hands is a side job.** The body, its joints and its face do not change, so a second agent
+  made the picture, the model and the fit into a new file (`fit-hands2.json`, a new `.blend`, a new cast file)
+  while the film's sets were being built, and the film changed one line to use it. Never fit over the file a
+  proven character is in.
+- **A lamp inside its own shade makes the ceiling shimmer.** The pub's wide shots failed the flicker check on
+  the ceiling, the beams, the shelves and the mantel at once. Four guesses were wrong, each a render: more
+  samples (96 changed nothing), the camera's drift, the depth of field, and screen-space ray tracing (off, the
+  picture looked the same and one test passed by chance). A metal disc for a mirror did flicker on its own (48
+  levels, nothing to reflect), and making it glow set the shelves beside it going. What found the cause was
+  the difference between two neighbouring frames, multiplied by eight: it was all on the ceiling over the
+  pendants and round the fire. A point light 6 cm under a shade, with a soft shadow, has that shadow drawn from
+  a different handful of rays on every frame. Lights that sit inside a shade or a hearth now cast no shadow
+  (`use_shadow = False`); the key and the window still do. When many still objects fail the flicker check on
+  the same frames: measure one region's mean brightness frame by frame at full size (a half-size draft hides
+  it), then look at an amplified difference of two frames before changing anything. `"look": {"raytracing":
+  false}` is there for a room that still shimmers.
+- **When a hand looks wrong, print the angles before reading more pictures.** Four rounds of stills were spent
+  on a wrist that looked bent double. The wrist was 42 degrees from the forearm, as asked: the picture was an
+  upright hand with a lobe of stretched skin over it.
+- **Frame the prop clear of the captions.** A pint that matters to the joke stood in the lower third of a 9:16
+  frame, where burned captions go. Decide the caption band first (above the Shorts interface, below the faces)
+  and aim the camera so the prop and the hands sit above it.
+
 ## A film over several sessions
 
 A film with a character in it is not finished in one sitting, and no session should try. What has worked, on two
@@ -701,8 +770,8 @@ film from a brief to a cut its author would publish.
 puts a camera depends on the shape of the frame.
 
 One character per set; the clay cast's hands are one bone; a walk goes through furniture unless it is bent
-round it; the sets are `desk_room`, `desk` (no room, for transparent renders), `lecture_hall`, `kitchen` and
-`studio` (props and no character); a `lean` carries hands resting on a table down through it; a standing arm
+round it; the sets are `desk_room`, `desk` (no room, for transparent renders), `lecture_hall`, `kitchen`,
+`living_room`, `pub` and `studio` (props and no character); a `lean` carries hands resting on a table down through it; a standing arm
 does not reach a low table (sit first); a cartoon style; acting keyed from verbs, with no motion
 capture; studio props stand still while the camera moves. EEVEE cannot render a shadow onto a transparent
 background, so a transparent character or prop has no cast shadow on the Remotion scene. The room's light is dim

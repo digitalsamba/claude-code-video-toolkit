@@ -94,6 +94,10 @@ in 9:16. Never hand-edit `scene.blend` as the source of truth; it is rebuilt fro
 }
 ```
 
+Also in `look`: `"raytracing": false` turns off EEVEE's screen-space ray tracing, for a room whose still surfaces shimmer
+from frame to frame (the flicker check says so). First look for a light that sits inside a shade or beside what it
+lights with a soft shadow: that is the usual cause, and the fix is `use_shadow = False` on that light in the set.
+
 Also at the top level: `"transparent": true` (the same as `--alpha`) and `"voice"` (below), and `"clock"` (seconds): where
 this spec starts on a longer film's timeline, so clips made from several specs breathe in step and join without a
 jump. Start and end each such clip in the same pose, looking at the same thing.
@@ -206,12 +210,12 @@ a bare arm the fit cuts the hand at the wrist, and the join can show).
 | `full` | character, on their feet | head to toe; `"follow": true` travels with a walk |
 | `feet` | character, on their feet | a low insert on the feet, travelling with them: an entrance before the face |
 | `tilt_up` | character, on their feet | starts on the feet, holds, tilts up to the face (`hold` seconds at each end) |
-| `fixed` | none: the camera is put where the spec says | `"cam"` and `"aim"` are points in the room, `"lens"` is for the whole frame, `"push"` moves it that share of the way to the aim over the shot. `"window": [x0, y0, x1, y1]` (from the left and the bottom) renders only that share of the frame, by lens shift, so a clip of the window lies exactly where it would in the whole frame: set the spec's `resolution` to the window's shape |
+| `fixed` | none: the camera is put where the spec says | `"cam"` and `"aim"` are points in the room (or `"phone"` and `"face"`: see `phone` below), `"dof"` an f-stop and `"shake"` a hand's drift in metres; `"lens"` is for the whole frame, `"push"` moves it that share of the way to the aim over the shot. `"window": [x0, y0, x1, y1]` (from the left and the bottom) renders only that share of the frame, by lens shift, so a clip of the window lies exactly where it would in the whole frame: set the spec's `resolution` to the window's shape |
 | `product` | a studio prop | a three-quarter view of the prop, pushing in a little |
 | `orbit` | a studio prop | the camera travels round the prop from `az` to `az_to` |
 | `reveal` | a studio `phone` or `card` | starts on its screen edge to edge, holds, then pulls back to the `product` view |
 
-Overrides per shot: `az` (degrees round the subject; 0 = straight in front, + = the subject's left), `dist` (m),
+Overrides per shot: `dof` (an f-stop: the subject sharp, the room behind soft), `az` (degrees round the subject; 0 = straight in front, + = the subject's left), `dist` (m),
 `h` (camera height above the target, m), `lens` (mm), `push` (fraction of the distance closed during the shot),
 `shake` (handheld jitter, m; ~0.012 for urgency), `side` (`"left"`/`"right"` flips `az`).
 
@@ -284,6 +288,21 @@ the mug):
 | `open_lid`, `close_lid` | `dur`; `by`: a cast id; `hand` | the laptop's lid swings open or shut (0.6 s unless timed). With `"by"`, that person's fingertips are on its top edge for the move: the hand sets out 0.4 s before the beat, comes to the edge from above, goes with it and rests on it a moment. The chest turns that shoulder to the lid and leans as far as the table's edge lets it, worked out from the reach on each frame: do not add a `lean`. Shutting, a hand on the keys goes to the table beside the laptop first, and both hands end flat there. Events `lid_open` (as it starts) and `lid_close` (as it lands) |
 | `claude_type` | `until`/`dur`; `speed`: `frantic` or `calm` | Claude's hands go up and down on his keyboard, with a `key_click` event for each key (ten a second when frantic) |
 | `claude_turn` | `facing`: degrees; `dur` | he turns on his foot to face that way (0 faces -Y), swinging a little past and back |
+
+On a call, at a table or on a sofa (any set; the pint is the `pub` set's):
+
+| verb | fields | |
+|---|---|---|
+| `phone` | `hand`; `dist`, `drop`, `side` (m); `scale`; `image`; `dur` | that hand holds a phone up in front of the face, its screen to the face, and keeps it there (the arm is out of every later pose). `dist` is how far in front of the eyes, `drop` how far below them (negative is above eye level), `side` how far out toward the holding hand. A short-armed character holds it as far out as the arm goes on that line, and the `phone` event says how far that is (`from_face_m`). The phone is sized to the hand (`scale` sets it by hand: 1 is a real phone). `image` puts a picture on its screen. With no `dur` it is up from the beat's frame |
+| `wag` | `hand`; `dur`; `rate` (a second), `swing` (degrees); `toward`: a point or `phone`; `seen_from`: a point; `shape`; `lift`, `out` | a wagged finger: the forearm comes up, the index up, and swings from the elbow like a metronome, dying down over the last third; then the hand goes back. `toward` is who is being told. `seen_from` (the camera's place) turns the hand so its thumb and index side faces the viewer. `shape` is the hand's shape (`point` unless given; `open` wags the whole hand, for a model whose fingers are joined). `lift` and `out` put the wrist above and outside the shoulder, in arm lengths (0.3 and 0.3 is up beside the face, clear of the chest) |
+| `lap` | `dur` | both hands to the thighs (a hand that holds something stays). A set with no desk starts everyone like this |
+| `pick_up` with `"lift": false` | `prop`: `pint`; `hand`; `dur` | the hand goes to the glass and lies round it where it stands, and stays. A later `pick_up` lifts it from there |
+| `let_go` | `hand`; `dur`; `away` (m) | a hand that lies round a glass comes off it and lies flat on the table beside it, `away` further toward its own side |
+
+`look_at` also takes `"target": "phone"` and `"pint"`. A `fixed` shot takes `"cam": "phone"` and `"aim": "face"`:
+the camera looks back from the phone at the face, which is what the other end of the call sees. Give it a wide
+`lens` (17 to 20), `"clip"` (m: nearer than this is the hand that holds the phone, and is not drawn), `"near"`
+(m toward the face from the phone), `"aim_drop"` (m below the eyes) and `"shake"` (m: a hand is not a tripod).
 
 Poses also has `down` (arms at the sides), which a standing character starts in; arms swing on a walk only from
 `down`. A posture verb used in the wrong state is a named error ("dev is sitting: walk needs them standing
@@ -360,6 +379,8 @@ of the handle), `open_door` with `"by"`, `walk` in, `walk` to a thigh's length i
 | `desk` | the desk, chair and laptop with no room, for `--alpha`: the character sits on whatever the Remotion scene puts behind it |
 | `lecture_hall` | a wall with a board that shows a picture (`"board": {"image": ..., "x0", "x1", "z0", "z1"}`: the rectangle of the wall it covers, the same one a `fixed` camera can frame square on), a `"door"`, and a small table (`"table": {"at", "size", "height", "cup", "chalk"}`) with a takeaway cup and a stick of chalk. `"walls": false` leaves the room out for `--alpha`; `"table": {"hidden": true}` keeps the table to reach for and does not draw it; `"cup_on": true` starts with the cup already on it. The cast stands |
 | `kitchen` | a home kitchen at night, built round the desk room's table, chair and laptop (so `door`, `chair_out`, `pull_in` and the screen work as they do there): a run of units with a sink under a window, a kettle and a hob, a fridge, a second run on the left wall, a pendant lamp over the table, a clock. `"lid": "closed"` starts the laptop shut. `"mug": {"at": [x, y], "on_table": true, "color", "inside"}` places the mug of tea (`on_table` for a clip that starts after it was put down): 12 cm tall with a handle a hand fits, in the room's accent colour unless given one. `"claude": {"at": [x, y], "facing", "screen": {"video" or "image", "at", "brightness"}, "hat": false}` stands Claude on the worktop: a beige CRT with a face on its screen (bars until you give it a picture or a video at the spec's `fps`), a tinfoil hat and two arms at a keyboard. `palette` adds `units`, `worktop`, `night`, `lamp` |
+| `living_room` | a sofa on a bright afternoon, with no desk and no laptop: whoever sits there has their hands in their lap. A wall of pictures close behind, a floor lamp, a side table, a rug and a low table, a sunny window in the side wall. `"sofa": {"x", "width", "color"}` moves the sofa's middle along from the sitter and sizes it; `palette` takes `wall`, `wall2`, `floor`, `sofa`, `cushion`, `rug`, `wood`, `lamp`, `window` |
+| `pub` | a snug in the afternoon round the kitchen's table and chair places: a dark table on an iron pedestal, timber panelling, a bar with taps and bottles, a fire, brass pendants, a window, and two other customers at the back as plain shapes (give the shot a `dof` so they stay soft). No laptop. The thing to hold is a pint of stout in a glass with no handle, on a beer mat, sized to the hand: `"pint": {"at": [x, y], "side": "left", "scale": 1}`. `pick_up`, `sip` and `put_down` take `"prop": "pint"`; `palette` takes `wall`, `panel`, `floor`, `desk`, `bar`, `accent1`, `lamp`, `window` |
 | `studio` | a product stage: a backdrop curving from floor to wall, soft lights sized to the props, no character and no beats. `palette.backdrop` colours it; with `--alpha` the backdrop is left out |
 
 An evening at the kitchen table, from the door to the screen (the character starts in the hall, a forearm
