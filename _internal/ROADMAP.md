@@ -88,6 +88,10 @@ Ordered roughly by priority. Each is sized to one session or one PR.
           cold start with OptiX kernels cached in a volume; no cost figure goes in the docs until it is
           measured. If it holds, frames fan out across containers (about the same GPU time, plus a cold start
           each, so the fan-out is capped), and item 7 can run on hosts without a GPU.
+      13. *Later: a self-hosted image-to-3D generator on Modal,* so a fitted character needs no paid vendor key, as
+          FLUX.2 and Qwen-Image-Edit already do for images. Read each model's licence first (TRELLIS is said to be
+          MIT; Hunyuan3D's community licence may exclude the EU and UK). Generation stays a one-off session step:
+          a cloud render takes the finished files and never holds a key.
 - [ ] **Chaptered long-form template.** 10–30 min YouTube videos: render chapter by chapter with a cache,
       one continuous ducked music bed, -14 LUFS, chapter timestamps and an `.srt`. Probably built on
       concept-explainer-short's 16:9 path. A contributor attempt (#127) had the right design.
