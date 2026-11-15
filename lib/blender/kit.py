@@ -273,7 +273,7 @@ def cycles_gpu():
 
 
 def setup_render(fps, res, engine="eevee", exposure=-0.9, look="AgX - Punchy", samples=32, world=(0.05, 0.055, 0.07),
-                 view="AgX", transparent=False):
+                 view="AgX", transparent=False, raytracing=True):
     global FPS
     FPS = fps
     sc = scene()
@@ -291,7 +291,7 @@ def setup_render(fps, res, engine="eevee", exposure=-0.9, look="AgX - Punchy", s
     else:
         names = bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items.keys()
         sc.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in names else "BLENDER_EEVEE"
-        for a, v in (("taa_render_samples", samples), ("use_raytracing", True)):
+        for a, v in (("taa_render_samples", samples), ("use_raytracing", bool(raytracing))):
             if hasattr(sc.eevee, a):
                 setattr(sc.eevee, a, v)
     try:

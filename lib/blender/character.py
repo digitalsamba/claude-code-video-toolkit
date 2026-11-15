@@ -138,6 +138,7 @@ class ClayPerson:
         self.palm_off = []  # each time a hand was laid on something: how far its palm was from facing it (degrees)
         self.hold_at, self.holding = {}, {1: False, -1: False}  # where a hand holds a bar (the hand bone's space)
         self.carry_spans = {}  # each arm's stretches of carrying something (first frame, last)
+        self.side_spans = {}   # each hand's stretches on its side on purpose: reaching for a glass, lying round it
         self.busy = set()   # arms that carry something: a walk leaves them where they are
         self.carrying = {}  # what each of those arms carries: the thing, the wrist, the elbow, how the hand lies
         self.carried_all = []  # everything that was carried at some point in the film (the checks follow each)
@@ -383,6 +384,8 @@ class ClayPerson:
         "point":   ((84, 86), (40, 50), True, 0.3),
         "hold":    ((30, 36), (10, 16), False, 0.0),   # round a cup
         "chalk":   ((66, 70), (30, 30), True, 0.15),   # a stick of chalk along the index finger, the thumb on it
+        "tell":    ((40, 46), (30, 40), True, 0.3),    # a raised index for a telling-off: the others curled less than a point's
+        "phone":   ((10, 8), (4, 10), False, 0.75),    # behind a phone held up: fingers nearly straight, thumb beside it
     }
 
     def _finger_setup(self):
@@ -431,7 +434,30 @@ class ClayPerson:
                     b = pb[f"{f['name']}.{part}.{sd}"]
                     b.rotation_mode = "QUATERNION"
                     f["axes"].append((b, self.rig.data.bones[b.name].matrix_local.to_3x3().transposed() @ axis))
+            # a generated hand can come with its fingers fanned wide apart (it was asked for, so the fingers
+            # would be separate): on such a hand each finger is swung back in about the palm's normal, in
+            # every shape, until the outermost is FAN degrees off the hand's line, so the hand rests like a
+            # hand and not a starfish. Hands made with their fingers nearly side by side are left as they are
+            fans = {}
+            for f in fingers:
+                if f["name"] == "thumb":
+                    continue
+                flat = f["way"] - self.palm[s] * f["way"].dot(self.palm[s])
+                if flat.length < 1e-4:
+                    continue
+                flat.normalize()
+                fans[f["name"]] = math.atan2(along.cross(flat).dot(self.palm[s]), along.dot(flat))
+            worst = max((abs(a) for a in fans.values()), default=0.0)
+            if worst > R(self.FAN_WIDE):
+                for f in fingers:
+                    if f["name"] in fans:
+                        bone = self.rig.data.bones[f"{f['name']}.a.{sd}"]
+                        f["fan"] = (bone.matrix_local.to_3x3().transposed() @ self.palm[s],
+                                    fans[f["name"]] * (1 - R(self.FAN) / worst))
             self._fingers_key(s, 1, "relaxed")
+
+    FAN = 9.0  # degrees the outermost finger may point off the hand's line at rest, on a hand that is brought in
+    FAN_WIDE = 18.0  # a hand whose outermost finger is further off than this was made fanned, and is brought in
 
     def _fingers_set(self, s, shape, lift=None):
         """Pose hand `s`'s fingers in a shape; `lift` is {finger: degrees} that finger is raised from it (typing)."""
@@ -450,6 +476,8 @@ class ClayPerson:
                 q = Quaternion(axis, R(deg))
                 if i == 0 and "out" in finger:
                     q = Quaternion(finger["out"][0], finger["out"][1] * out) @ q
+                if i == 0 and "fan" in finger:
+                    q = Quaternion(*finger["fan"]) @ q
                 bone.rotation_quaternion = q
                 bones.append(bone)
         return bones
@@ -2075,6 +2103,24 @@ class ClayPerson:
         bpy.context.scene.frame_set(f)
         return {s: (self.hand_t[s].location.copy(), self._pole_dir(s)) for s in (1, -1)}
 
+    def lap(self, f0: int, f1: int | None = None):
+        """Both hands to the thighs by f1 (or there from f0, with no f1): how someone sits with no desk in
+        front of them. A hand that holds something stays where it is."""
+        lap, stages = self._lap(), {}
+        for s in (1, -1):
+            if s in self.busy:
+                continue
+            spot = self._on_thigh(s, min(0.9, lap + (0.0 if s > 0 else 0.06)), 20)
+            if f1 is None or f1 <= f0:
+                stages[s] = [(f0, spot, self.LAP, 0), (f0, spot, self.LAP, 0)]
+            else:
+                start, pole = self._hands_now(f0)[s]
+                stages[s] = [(f0, start, pole, 0), (f1, spot, self.LAP, 0.03)]
+            self.hand_shape(f0, f0 if f1 is None else f1, "relaxed", "left" if s > 0 else "right")
+        if stages:
+            self._hands_path(stages)
+        self.arm_pose = "lap"
+
     LAP = (1, 0.55, -0.35)   # elbows out and a little back: hands on the thighs
     HANG = (0.4, 1, 0.1)     # elbows back: arms at the sides
 
@@ -3253,7 +3299,7 @@ class ClayPerson:
                     was_at[sd] = wrist.copy()
                     if not still:  # (a hand on its way somewhere is still turning)
                         continue
-                    if any(a <= f <= b + n(6) for a, b in self.carry_spans.get(s, [])):
+                    if any(a <= f <= b + n(6) for a, b in self.carry_spans.get(s, []) + self.side_spans.get(s, [])):
                         continue  # (a hand round a mug's handle is on its side on purpose, until it lets go)
                     H = W[hands[sd]]
                     for ob, give, lo, hi in boxes:

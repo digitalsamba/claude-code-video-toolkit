@@ -680,6 +680,65 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertLessEqual(checks['hand_in_body_m'], 0.03)
         self.assertLessEqual(checks['snap_m'], 0.02)
 
+    def test_a_pint_is_held_where_it_stands_let_go_of_taken_up_and_drunk_from_on_a_call(self):
+        """Someone at a pub table holds a phone up for a video call in one hand; the other lies round a pint
+        that stands on the table (no handle: the hand goes round the glass), comes off it, takes it up and
+        drinks. The phone and the glass are sized to the hand that holds them, a hand round a glass is on its
+        side on purpose (not a hand rolled off the table), the glass stays level in the hand, and a camera can
+        look back from the phone at the face."""
+        cast = self.conal() / 'conal.json'
+        spec = {'fps': 30, 'resolution': '1080x1920', 'set': {'kind': 'pub'}, 'cast': [{'id': 'conal', 'from': str(cast)}],
+                'shots': [{'id': 'P0', 'dur': 1.0, 'type': 'medium', 'az': 30},
+                          {'id': 'A', 'dur': 2.0, 'type': 'fixed', 'cam': 'phone', 'aim': 'face', 'lens': 17, 'clip': 0.08},
+                          {'id': 'B', 'dur': 4.5, 'type': 'medium', 'az': 30, 'dof': 2.8}],
+                'beats': [{'at': 0, 'do': 'pose', 'pose': 'rest', 'dur': 0.0},
+                          {'at': 0, 'do': 'phone', 'hand': 'right', 'dist': 0.6, 'drop': 0.0},
+                          {'at': 0.05, 'do': 'pick_up', 'prop': 'pint', 'hand': 'left', 'lift': False, 'dur': 0.3},
+                          {'at': 0.7, 'do': 'look_at', 'target': 'phone', 'dur': 0.2},
+                          {'at': 'A+0.5', 'do': 'let_go', 'hand': 'left', 'dur': 0.7},
+                          {'at': 'B+0.2', 'do': 'look_at', 'target': 'pint', 'dur': 0.3},
+                          {'at': 'B+0.3', 'do': 'pick_up', 'prop': 'pint', 'hand': 'left', 'dur': 0.7},
+                          {'at': 'B+1.9', 'do': 'sip', 'hand': 'left', 'dur': 2.0}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'spec.json').write_text(json.dumps(spec))
+            checks = blender_render.run_compiler(Path(tmp) / 'spec.json', Path(tmp) / 'out', 'check', '270x480', None)
+            events = json.loads((Path(tmp) / 'out' / 'events.json').read_text())
+        kinds = [e['kind'] for e in events['events']]
+        self.assertEqual([k for k in kinds if k in ('phone', 'touch', 'pick_up', 'sip')], ['phone', 'touch', 'pick_up', 'sip'])
+        held = next(e for e in events['events'] if e['kind'] == 'phone')
+        self.assertGreater(held['from_face_m'], 0.15)                  # as far out as a short arm holds it
+        self.assertTrue(all(s['passed'] for s in checks['shots']), checks['shots'])
+        self.assertLessEqual(checks['carried_tilt_deg'], 12.0)
+        self.assertLessEqual(checks.get('carried_through_m', 0.0), 0.006)
+        self.assertLessEqual(checks['palm_tilt_deg'], 35)              # the hand round the glass is not counted
+        self.assertLessEqual(checks['hand_in_body_m'], 0.03)
+        self.assertLessEqual(checks['through_m'], 0.03)
+        self.assertLessEqual(checks['snap_m'], 0.02)
+
+    def test_someone_on_a_sofa_holds_a_phone_and_wags_a_finger_with_hands_that_start_in_the_lap(self):
+        """A living room has no desk: the hands start on the thighs. One lifts a phone for a call and the other
+        wags a finger at it; a hand that holds something can't be the one that wags, and the error says so."""
+        cast = self.conal() / 'conal.json'
+        spec = {'fps': 30, 'resolution': '1080x1920', 'set': {'kind': 'living_room'}, 'cast': [{'id': 'conal', 'from': str(cast)}],
+                'shots': [{'id': 'A', 'dur': 4.0, 'type': 'medium', 'az': -24, 'dof': 2.2}],
+                'beats': [{'at': 0.3, 'do': 'phone', 'hand': 'left', 'dur': 0.6},
+                          {'at': 1.0, 'do': 'look_at', 'target': 'phone', 'dur': 0.3},
+                          {'at': 1.6, 'do': 'wag', 'hand': 'right', 'dur': 1.6, 'toward': 'phone'}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'spec.json').write_text(json.dumps(spec))
+            checks = blender_render.run_compiler(Path(tmp) / 'spec.json', Path(tmp) / 'out', 'check', '270x480', None)
+            events = json.loads((Path(tmp) / 'out' / 'events.json').read_text())
+            self.assertTrue(all(s['passed'] for s in checks['shots']), checks['shots'])
+            self.assertIn('phone', [e['kind'] for e in events['events']])
+            self.assertLessEqual(checks['hand_in_body_m'], 0.03)       # the lap hands lie on the legs, not in them
+            self.assertLessEqual(checks['through_m'], 0.03)            # and the body is on the sofa, not in it
+            self.assertLessEqual(checks['snap_m'], 0.02)
+            spec['beats'][2]['hand'] = 'left'
+            (Path(tmp) / 'spec.json').write_text(json.dumps(spec))
+            with self.assertRaises(RuntimeError) as ctx:
+                blender_render.run_compiler(Path(tmp) / 'spec.json', Path(tmp) / 'out2', 'check', '270x480', None)
+            self.assertIn('holding something', str(ctx.exception))
+
     MARA = ROOT / 'tests' / 'fixtures' / 'blender-fitted'
 
     def test_an_invented_model_is_fitted_with_a_face_and_fingers_and_acts(self):

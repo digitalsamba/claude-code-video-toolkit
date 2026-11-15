@@ -383,13 +383,23 @@ def _solve_fixed(shot, spec, f0, f1):
     if push:  # a slow move toward what it looks at, by this share of the distance over the shot
         key(cam, "location", f0, Vector(shot["cam"]))
         key(cam, "location", f1, Vector(shot["cam"]).lerp(Vector(shot["aim"]), push))
+    if shot.get("clip"):  # (a camera in a hand: nearer than this is the hand itself)
+        cd.clip_start = float(shot["clip"])
+    if shot.get("dof"):  # sharp at what it looks at, soft behind: an f-stop
+        cd.dof.use_dof, cd.dof.focus_object, cd.dof.aperture_fstop = True, aim, float(shot["dof"])
+    shake = float(shot.get("shake", 0.0))
+    if shake:  # held in a hand: it drifts a little, slowly (m)
+        rng = random.Random(f0)
+        here = lambda f: Vector(shot["cam"]).lerp(Vector(shot["aim"]), push * (f - f0) / max(1, f1 - f0))  # noqa: E731
+        for f in [f0, *ticks(f0 + n(8), f1, 9), f1]:
+            key(cam, "location", f, here(f) + Vector([rng.uniform(-shake, shake) for _ in range(3)]))
     return cam, report
 
 
 def solve(shot, sub, f0, f1, seed=0, fps=24, avoid=()):
     """Create the shot's camera, choose a placement that passes the checks, key its move. Returns (cam, report)."""
     spec = {**SHOT_TYPES[shot["type"]],
-            **{k: shot[k] for k in ("dist", "az", "az_to", "h", "lens", "push", "elev", "hold", "fill") if k in shot}}
+            **{k: shot[k] for k in ("dist", "az", "az_to", "h", "lens", "push", "elev", "hold", "fill", "dof") if k in shot}}
     if spec.get("prop"):
         return _solve_prop(shot, spec, sub, f0, f1)
     if spec.get("fixed"):

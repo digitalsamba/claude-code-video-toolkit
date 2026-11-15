@@ -24,6 +24,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import bpy  # noqa: E402
+from mathutils import Vector  # noqa: E402
 
 import acting  # noqa: E402
 import cameras  # noqa: E402
@@ -34,17 +35,19 @@ from character import FACES, LEANS, LOOKS, POSES, POSTURES, TYPING, ClayPerson  
 HAND_SHAPES = tuple(ClayPerson.HAND_SHAPES)
 from hall import LectureHall  # noqa: E402
 from kitchen import Kitchen  # noqa: E402
+from lounge import LivingRoom  # noqa: E402
+from pub import Pub  # noqa: E402
 from sets import DeskRoom, confetti, title3d  # noqa: E402
 from studio import PROP_KINDS, Studio  # noqa: E402
 from timeline import SpecError, Timeline  # noqa: E402
 
-SET_KINDS = ("desk_room", "desk", "studio", "lecture_hall", "kitchen")
+SET_KINDS = ("desk_room", "desk", "studio", "lecture_hall", "kitchen", "living_room", "pub")
 PROPS = ("cup", "chalk")  # what a lecture hall has to carry and put down
 SCORE_MOODS = ("calm", "tension", "resolve")
 CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_head", "gulp", "blink", "sweat",
               "tremble", "tap", "celebrate", "hold_arms", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
               "look_at", "reach", "hand", "point", "talk", "blinks", "gesture", "dust_hands", "carry", "put_down",
-              "pick_up", "hold", "present", "whistle", "sip"}
+              "pick_up", "hold", "present", "whistle", "sip", "phone", "wag", "lap", "let_go"}
 # how far (m) each kind of contact may be out before the check fails and says where (see ClayPerson.contacts)
 CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03, "snap": 0.02}
 HANDS_APART = 0.005  # nearer than this the two hands are into each other (m)
@@ -59,7 +62,7 @@ SKIN_LIMITS = {"leg_above_hips": 50, "stretch": 4.0}  # a fitted model's weights
 SET_VERBS = {"alert", "work", "done", "open_door", "close_door", "pull_in", "open_lid", "close_lid", "claude_type",
              "claude_turn"}
 KITCHEN_VERBS = ("open_lid", "close_lid", "claude_type", "claude_turn")  # verbs only a kitchen has
-LOOK_AT = ("camera", "screen")  # things a look_at or a reach can name in place of a point
+LOOK_AT = ("camera", "screen", "phone", "pint")  # things a look_at or a reach can name in place of a point
 FX_VERBS = {"confetti", "title"}
 
 
@@ -161,10 +164,10 @@ def validate(spec):
         if verb in CHAR_VERBS and b.get("who", ids[0]) not in ids:
             raise SpecError(f'beat at {b["at"]!r}: nobody in the cast is called {b["who"]!r} (have: {", ".join(ids)})')
         if verb in ("carry", "put_down", "pick_up", "hold", "dust_hands", "talk", "blinks", "gesture"):
-            if kind not in ("lecture_hall", "kitchen") and verb in ("carry", "put_down", "pick_up", "hold"):
-                raise SpecError(f'beat at {b["at"]!r}: {verb} needs a set with things to hold (set kind lecture_hall '
-                                f'or kitchen)')
-            have = ("cup",) if kind == "kitchen" else PROPS
+            if kind not in ("lecture_hall", "kitchen", "pub") and verb in ("carry", "put_down", "pick_up", "hold"):
+                raise SpecError(f'beat at {b["at"]!r}: {verb} needs a set with things to hold (set kind lecture_hall, '
+                                f'kitchen or pub)')
+            have = ("cup",) if kind == "kitchen" else ("pint", "cup") if kind == "pub" else PROPS
             if verb in ("carry", "put_down", "pick_up", "hold") and b.get("prop") not in have:
                 raise SpecError(f'beat at {b["at"]!r}: {verb} needs "prop", one of {", ".join(have)}')
             if b.get("hand", "left") not in ("left", "right"):
@@ -254,7 +257,8 @@ def build(spec, args):
     kit.setup_render(fps, res, engine=args.engine or spec.get("engine", "eevee"),
                      exposure=exposure, look=look.get("look", "AgX - Punchy"), view=look.get("view", "AgX"),
                      samples=16 if args.mode == "check" else int(spec.get("samples", 32)),
-                     transparent=bool(args.alpha or spec.get("transparent")))
+                     transparent=bool(args.alpha or spec.get("transparent")),
+                     raytracing=look.get("raytracing", True))
     sc = kit.scene()
     sc.frame_start, sc.frame_end = 1, tl.frames - 1
 
@@ -298,6 +302,12 @@ def build(spec, args):
         room = LectureHall(st.get("palette"), walls=bool(st.get("walls", True)), door=door, board=st.get("board"),
                            image=picture, strength=float((st.get("board") or {}).get("brightness", 1.0)) * 2 ** -exposure,
                            table=st.get("table"))
+    elif kind == "pub":
+        who = next(iter(cast.values()))
+        room = Pub(st.get("palette"), fit=who.furniture(), pint=st.get("pint"),
+                   hand=who._breadth() if who.fingers.get(1) else 0.085)
+    elif kind == "living_room":
+        room = LivingRoom(st.get("palette"), fit=next(iter(cast.values())).furniture(), sofa=st.get("sofa"))
     elif kind == "kitchen":
         cl = st.get("claude")
         cl_media = cl_start = None
@@ -334,6 +344,8 @@ def build(spec, args):
     for p in cast.values():  # (hands with fingers are put on the keys where they are in the room)
         p.keys = bpy.data.objects.get("lap_keys")
         p.table = getattr(room, "desk_top", None)  # (a lean stops at its edge; a hand on it stays on it)
+        if getattr(room, "rest_pose", None) == "lap" and p.posture == "sit" and p.foot_t:
+            p.lap(1)  # (a set with no desk: the hands start on the thighs)
     default_who = next(iter(cast))
 
     fx_events, at_camera, point_camera = [], [], []
@@ -383,6 +395,31 @@ def build(spec, args):
                 t1 = tl.time(b["until"]) if "until" in b else tl.duration
                 said = [w for w in tl.words if t0 - 0.01 <= w[1] < t1]
                 acting.talk(p, said, F, fps, float(b.get("amount", 1.5)), seed=f0)
+            elif verb in ("phone", "wag", "lap", "let_go"):
+                try:
+                    if verb == "phone":
+                        img = b.get("image")
+                        if img:
+                            img = Path(img) if Path(img).is_absolute() else base / img
+                            if not img.exists():
+                                raise SpecError(f"phone image not found: {img}")
+                        acting.phone(p, f0, f1 if "until" in b or "dur" in b else f0, b.get("hand", "left"),
+                                     float(b.get("dist", 0.36)), float(b.get("drop", 0.07)), float(b.get("side", 0.06)),
+                                     img, float(b.get("brightness", 1.0)) * 2 ** -exposure, b.get("scale"))
+                    elif verb == "wag":
+                        toward = b.get("toward")
+                        if toward == "phone":
+                            toward = acting.phone_point(p, f0)
+                        acting.wag(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(36), b.get("hand", "right"),
+                                   float(b.get("rate", 3.0)), float(b.get("swing", 16.0)), toward, b.get("seen_from"),
+                                   b.get("shape", "point"), float(b.get("lift", -0.08)), float(b.get("out", -0.04)))
+                    elif verb == "let_go":
+                        acting.let_go(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(14), b.get("hand", "left"),
+                                      getattr(room, "beside_laptop", None), float(b.get("away", 0.0)))
+                    else:
+                        p.lap(f0, f1)
+                except ValueError as e:
+                    raise SpecError(f'beat at {b["at"]!r}: {e}')
             elif verb == "whistle":
                 acting.whistle(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(60), seed=f0)
             elif verb == "blinks":
@@ -413,6 +450,8 @@ def build(spec, args):
                         elif verb == "hold":
                             on_table.scale = (0, 0, 0)
                             acting.hold_small(p, in_hand, f0, hand or "right")
+                        elif verb == "pick_up" and not small and kind == "pub":
+                            acting.take_up(p, in_hand, on_table, f0, end, hand or "left", lift=bool(b.get("lift", True)))
                         elif verb == "pick_up":
                             acting.pick_up(p, in_hand, on_table, f0, end, hand or ("right" if small else "left"))
                         elif small:
@@ -435,6 +474,10 @@ def build(spec, args):
                         p.point(f0, f1 if timed else f0 + kit.n(36), point, b.get("hand"), b.get("back", True))
                     elif verb in ("look_at", "reach"):
                         point = room.screen_center() if b["target"] == "screen" else b["target"]
+                        if point == "phone":
+                            point = acting.phone_point(p, f1)
+                        elif point == "pint":
+                            point = list(room.prop("pint")[2])
                         if verb == "look_at":
                             p.look_at(f0, f1, point)
                         else:
@@ -508,6 +551,19 @@ def build(spec, args):
         subj = s.get("subject", default_who)
         sub = cameras.screen_subject(room) if subj == "screen" else cameras.character_subject(cast[subj])
         f0, f1 = F(tl.shots[s["id"]][0]), F(tl.shots[s["id"]][1]) - 1
+        if s["type"] == "fixed" and (s.get("cam") == "phone" or s.get("aim") == "face"):
+            # a camera that looks back from the phone at the face: what the other end of the call sees
+            who, mid = cast[subj], (f0 + f1) // 2
+            s = dict(s)
+            try:
+                if s.get("cam") == "phone":
+                    s["cam"] = list(acting.phone_point(who, mid, float(s.get("near", 0.03))))
+            except ValueError as e:
+                raise SpecError(f'shot {s["id"]!r}: {e}')
+            if s.get("aim") == "face":
+                sc.frame_set(mid)
+                bpy.context.view_layer.update()
+                s["aim"] = list(who.head.matrix_world @ Vector((0, -0.3, float(s.get("aim_drop", 0.0)))))
         try:
             cam, rep = cameras.solve(s, sub, f0, f1, seed=i, fps=fps, avoid=people)
         except ValueError as e:

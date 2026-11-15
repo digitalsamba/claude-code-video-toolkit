@@ -687,7 +687,7 @@ def leave_small(p, ob_hand, ob_table, spot, f0: int, f1: int, hand: str = "right
     p.swung = {}
 
 
-def take_up(p, ob_hand, ob_table, f0: int, f1: int, hand: str = "left"):
+def take_up(p, ob_hand, ob_table, f0: int, f1: int, hand: str = "left", lift: bool = True):
     """A hand goes to the mug that stands on the table (`ob_table`), closes on its handle by f1 and lifts it to
     where a cup is carried, in front of the chest: from f1 `ob_hand` is in the hand and the arm is carrying
     (so `put_down` and `sip` follow). The hand comes at the handle along the line from the shoulder, so a mug
@@ -697,19 +697,27 @@ def take_up(p, ob_hand, ob_table, f0: int, f1: int, hand: str = "left"):
     s = _side(hand)
     sc = bpy.context.scene
     handle = ob_hand.get("handle")
-    if not handle:
-        raise ValueError("only something with a handle is taken up this way (a mug)")
     sc.frame_set(f0)
     bpy.context.view_layer.update()
     spot = ob_table.matrix_world.translation.copy()
     sh = p.spine.matrix_world @ Vector(p.SH[s])
-    if ob_table.animation_data is None or not any(fc.data_path == "scale" for fc in kit.fcurves(ob_table)):
+    if handle:
+        if ob_table.animation_data is None or not any(fc.data_path == "scale" for fc in kit.fcurves(ob_table)):
+            to = spot - sh
+            ob_table.rotation_euler = (0, 0, math.atan2(-to.y, -to.x) - math.radians(18 * s))  # (a little off the line: a wrist is not a rod)
+            bpy.context.view_layer.update()
+        way = -(ob_table.matrix_world.to_3x3() @ Vector((1, 0, 0)))
+        way = Vector((way.x, way.y, 0.0)).normalized()
+        bar = spot - way * handle + Vector((0, 0, ob_hand.get("hold_drop", 0.0)))
+    else:
+        # a glass with no handle: the hand comes at it along the line from the shoulder and lies round it from
+        # its own side, the palm to the glass and the fingers past it (how `_in_hand` holds a cup, turned round)
         to = spot - sh
-        ob_table.rotation_euler = (0, 0, math.atan2(-to.y, -to.x) - math.radians(18 * s))  # (a little off the line: a wrist is not a rod)
-        bpy.context.view_layer.update()
-    way = -(ob_table.matrix_world.to_3x3() @ Vector((1, 0, 0)))
-    way = Vector((way.x, way.y, 0.0)).normalized()
-    bar = spot - way * handle + Vector((0, 0, ob_hand.get("hold_drop", 0.0)))
+        way = Vector((to.x, to.y, 0.0)).normalized()
+        palm = s * way.cross(Vector((0, 0, 1)))
+        radius = ob_hand.get("wide", 0.04)
+        bar = spot - palm * (radius - 0.012) - way * 0.005 + Vector((0, 0, ob_hand.get("hold_drop", 0.028)))
+    held = getattr(p, "on_glass", {}).get(s)
     local = p.root.matrix_world.inverted() @ spot
     side = math.degrees(math.atan2(local.x, -local.y))
     start, pole = p.hand_t[s].location.copy(), p._mirror((0.6, 1, -0.5), s)
@@ -718,7 +726,8 @@ def take_up(p, ob_hand, ob_table, f0: int, f1: int, hand: str = "left"):
         p.hand_t[side_].keyframe_insert("location", frame=f0)
         p.pole_t[side_].keyframe_insert("location", frame=f0)
     p.rig.pose.bones["hand." + ("L" if s > 0 else "R")].keyframe_insert("rotation_quaternion", frame=f0)
-    lag, lean = n(p.LAG["chest"]), 8.0
+    lag, lean = n(p.LAG["chest"]), 8.0 if handle else 3.0
+    p.side_spans.setdefault(s, []).append([f0, f1 if lift else 10 ** 9])
     seated = p.posture == "sit" and p.table is not None and p.fingers.get(s)
     if seated:
         sc.frame_set(f1)
@@ -754,13 +763,13 @@ def take_up(p, ob_hand, ob_table, f0: int, f1: int, hand: str = "left"):
         if (at - Vector(p.SH[s])).length > reach:
             p.holding[s] = False
             raise ValueError(f"{p.id}'s {hand} hand is {(at - Vector(p.SH[s])).length - reach:.2f} m short of the mug's "
-                             f"handle: move the mug nearer (the set's `mug.at`), or sit them closer")
+                             f"{'handle' if handle else 'side'}: move it nearer (the set's `mug.at` or `pint.at`), or sit them closer")
     p.holding[s] = False
     # to the handle: up off the table and round to it from the handle's side, the hand opening, then closing on it
     back = inv @ (-way * 0.07 + Vector((0, 0, 0.035)))
     for f in range(f0 + 1, f1):
         u = _ease((f - f0) / (f1 - f0))
-        off = back * math.sin(math.pi * u) * (1 - u) * 2.0   # (most of it early: up, then round to the handle)
+        off = back * math.sin(math.pi * u) * (1 - u) * (0.0 if held else 2.0)   # (most of it early: up, then round to the handle)
         p._arm_key(s, f, start.lerp(at, u) + off, pole, reach_lay)
     p._arm_key(s, f1, at, pole, reach_lay)
     bone = p.rig.pose.bones["hand." + ("L" if s > 0 else "R")]
@@ -771,8 +780,19 @@ def take_up(p, ob_hand, ob_table, f0: int, f1: int, hand: str = "left"):
         q = was_lay.slerp(bone.rotation_quaternion, u)
         bone.rotation_quaternion = q
         bone.keyframe_insert("rotation_quaternion", frame=f)
-    p.hand_shape(f0, f0 + max(1, (f1 - f0) // 2), "open", hand)
-    p.hand_shape(f1 - n(3), f1 + n(1), "grip", hand)
+    if not held:
+        p.hand_shape(f0, f0 + max(1, (f1 - f0) // 2), "open", hand)
+    p.hand_shape(f1 - n(3), f1 + n(1), "grip" if handle else "hold", hand)
+    if not lift:
+        # the hand lies round it where it stands, and stays: the other hand is left as it is
+        p.on_glass = {**getattr(p, "on_glass", {}), s: {"at": Vector(at), "pole": pole, "lay": reach_lay}}
+        p._torso(f1 + n(8))
+        p._wrist_continuous(s)
+        p.arm_pose = "glass"
+        p.swung = {}
+        p.events.append({"frame": f1, "kind": "touch"})
+        return
+    getattr(p, "on_glass", {}).pop(s, None)
     # the swap
     sc.frame_set(f1)
     bpy.context.view_layer.update()
@@ -814,8 +834,8 @@ def sip(p, f0: int, f1: int, hand: str = "left", part: float = 1.0, stay: bool =
     it that share of the way up (a sip that is interrupted); with `stay` it is still up there at f1."""
     s = _side(hand)
     c = p.carrying.get(s)
-    if not c or not c["ob"].get("handle"):
-        raise ValueError(f"{p.id} has no mug in their {hand} hand to drink from: `carry` or `pick_up` it first")
+    if not c:
+        raise ValueError(f"{p.id} has no mug or glass in their {hand} hand to drink from: `carry` or `pick_up` it first")
     sc = bpy.context.scene
     ob, pole = c["ob"], c["pole"]
     rim, tall = ob.get("rim", 0.05), ob.get("tall", 0.1)
@@ -872,3 +892,203 @@ def sip(p, f0: int, f1: int, hand: str = "left", part: float = 1.0, stay: bool =
     p._wrist_continuous(s)
     p.events.append({"frame": top, "kind": "sip"})
 
+
+
+# ---------------------------------------------------------------- a phone held up for a video call
+PHONE = (0.072, 0.0085, 0.15)  # wide, thick, tall (m)
+
+
+def _phone_prop(name, image=None, strength=1.0, tint=(0.62, 0.74, 0.95)):
+    """A phone: its middle at the object's origin, the screen on its +Y face, tall along Z. The screen shows a
+    picture (`image`) or a plain glow, and lights the face a little."""
+    from kit import box, empty, glow, mat, media
+    w, t, h = PHONE
+    root = empty(name)
+    box(name + "_body", (w, t, h), mat(name + "_body", (0.03, 0.03, 0.035), 0.3, 0.6), root, bevel=0.003)
+    face = media(name + "_screen", image, strength) if image else glow(name + "_screen", tint, 1.6)
+    box(name + "_screen", (w - 0.006, 0.0006, h - 0.008), face, root, (0, t / 2 + 0.0002, 0))
+    box(name + "_lens", (0.022, 0.002, 0.022), mat(name + "_lens", (0.01, 0.01, 0.012), 0.15, 0.8), root,
+        (w / 2 - 0.018, -t / 2 - 0.0008, h / 2 - 0.02), bevel=0.003)
+    sl = bpy.data.lights.new(name + "_glow", "AREA")
+    sl.size, sl.energy, sl.color = 0.1, 1.2, tint
+    o = kit.link(bpy.data.objects.new(name + "_glow", sl))
+    o.parent, o.location, o.rotation_euler = root, (0, t / 2 + 0.01, 0), (R(-90), 0, 0)
+    root.scale = (0, 0, 0)
+    return root
+
+
+def phone(p, f0: int, f1: int, hand: str = "left", dist: float = 0.36, drop: float = 0.07, side: float = 0.06,
+          image=None, strength: float = 1.0, scale: float | None = None):
+    """Hand `hand` holds a phone up in front of the face by f1, as for a video call, and stays there (that arm
+    is out of every later pose and gesture until `phone_down`). The phone's middle is `dist` in front of the
+    eyes, `drop` below them (negative is above eye level) and `side` out toward the hand that holds it; its
+    screen faces the face, and the palm lies behind it with the fingers up. `p.phone` keeps the object, for a
+    `look_at` with target "phone" and for a camera that looks back from it."""
+    s = _side(hand)
+    sd = "L" if s > 0 else "R"
+    if not p.fingers.get(s):
+        raise ValueError(f"{p.id} has no fingers to hold a phone with (a fitted model with hands does)")
+    sc = bpy.context.scene
+    f1 = max(f1, f0)
+    bone = p.rig.pose.bones["hand." + sd]
+    sc.frame_set(f0)
+    bpy.context.view_layer.update()
+    start, was_q = p.hand_t[s].location.copy(), bone.rotation_quaternion.copy()
+    if f1 > f0:
+        for side_ in (1, -1):
+            p.hand_t[side_].keyframe_insert("location", frame=f0)
+            p.pole_t[side_].keyframe_insert("location", frame=f0)
+        bone.keyframe_insert("rotation_quaternion", frame=f0)
+    sc.frame_set(f1)
+    bpy.context.view_layer.update()
+    own = _own(p)
+    eyes = p.head.matrix_world @ Vector((0, -0.3, 0.05))
+    spot = eyes + own @ Vector((s * side, -dist, -drop))
+    # (the palm faces back at the face and a little up, turned in toward the body's middle; the fingers up)
+    back = (own @ Vector((-0.3 * s, 1.0, 0.3 + 1.2 * drop))).normalized()
+    up = (own @ Vector((-0.12 * s, 0.1, 1.0))).normalized()
+    lay = lambda f: (back, up)  # noqa: E731
+    pole = p._mirror((0.45, 0.5, -1.0), s)  # (the elbow down and a little out: not a wing)
+    inv = p.spine.matrix_world.inverted()
+    at = inv @ spot - Vector((0, 0, 0.05))
+    reach = 0.985 * 0.7122 * p.arm
+    ob = _phone_prop(p.id + "_phone", image, strength)
+    # (a cartoon hand is big: the phone is sized to the hand that holds it, by its breadth, up to 1.7 times a
+    # real phone. A hand whose fingers rest fanned apart measures broad: give that one a `scale`)
+    k = scale or max(1.0, min(1.7, p._breadth() / 0.08))
+    p.hand_shape(f0, f1, "phone", hand)
+    p._arm_key(s, f1, at, pole, lay)
+    bpy.context.view_layer.update()
+    palm, way = _palm_now(p, s)
+    knuckles = p.rig.matrix_world @ bone.tail
+    _bone_parent(ob, p, "hand." + sd)
+    x = way.cross(palm).normalized()
+    m = Matrix((x, palm, way)).transposed().to_4x4()
+    m.translation = knuckles + palm * (k * PHONE[1] / 2 + 0.012) + way * 0.035 * k
+    ob.matrix_world = m @ Matrix.Scale(k, 4)
+    key(ob, "scale", max(1, f0))
+    miss = Vector((1, 0, 0))
+    for _ in range(24):
+        bpy.context.view_layer.update()
+        miss = inv.to_3x3() @ (spot - ob.matrix_world.translation)
+        if miss.length < 0.002:
+            break
+        at = at + miss * 0.8
+        arm = at - Vector(p.SH[s])
+        if arm.length > reach:
+            at = Vector(p.SH[s]) + arm.normalized() * reach
+        p._arm_key(s, f1, at, pole, lay)
+    # (a short-armed character holds it as far out as the arm goes: nearer than asked, on the same line)
+    got = (ob.matrix_world.translation - eyes).length
+    if got < 0.15:
+        raise ValueError(f"{p.id}'s {hand} arm only gets a phone {got:.2f} m from the face: lower it (`drop`)")
+    for f in range(f0 + 1, f1):
+        u = _ease((f - f0) / (f1 - f0))
+        p._arm_key(s, f, start.lerp(at, u) + Vector((0, -0.05, 0.02)) * math.sin(math.pi * u), pole, lay, was_q, u)
+    p._arm_key(s, f1, at, pole, lay)
+    p._wrist_continuous(s)
+    p.busy.add(s)
+    p.phone = {"ob": ob, "hand": s, "wrist": Vector(at), "pole": pole, "lay": lay}
+    p.events.append({"frame": f1, "kind": "phone", "hand": hand, "from_face_m": round(got, 3)})
+    p.arm_pose = "phone"
+    p.swung = {}
+
+
+def phone_point(p, f, toward=0.0) -> Vector:
+    """Where the phone's lens is on frame f (the room), `toward` metres nearer the face: where a camera goes
+    to see what the call sees."""
+    if not getattr(p, "phone", None):
+        raise ValueError(f"{p.id} holds no phone: give them a `phone` beat first")
+    bpy.context.scene.frame_set(f)
+    bpy.context.view_layer.update()
+    mw = p.phone["ob"].matrix_world
+    return mw.translation + (mw.to_3x3() @ Vector((0, 1, 0))).normalized() * toward
+
+
+def wag(p, f0: int, f1: int, hand: str = "right", rate: float = 3.0, swing: float = 16.0, toward=None, seen_from=None,
+        shape: str = "point", lift: float = -0.08, out: float = -0.04):
+    """A wagged finger, from f0 to f1 and then back where the hand was: the forearm comes up in front of the
+    shoulder, the index up and the palm to whoever is being told (`toward`, a point in the room: the phone
+    they hold, a camera; straight ahead without one), and swings from the elbow like a metronome, `rate` times
+    a second and `swing` degrees each way, dying down over the last third. The head tips a little with it.
+    `seen_from` (a point: the camera) turns the hand so its thumb and index side faces the viewer and the finger
+    swings across their view: the index is then in front of the curled fingers, which matters on a generated
+    hand whose fingers are joined by skin (a raised index seen from the little finger's side is a lobe)."""
+    s = _side(hand)
+    if s in p.busy:
+        raise ValueError(f"{p.id}'s {hand} hand is holding something: wag the other one")
+    sc = bpy.context.scene
+    sc.frame_set(f0)
+    bpy.context.view_layer.update()
+    fps = sc.render.fps
+    state = _hand_state(p, s, f0)
+    up = f0 + max(2, min(n(8), (f1 - f0) // 3))
+    L = 0.7122 * p.arm
+    own = _own(p)
+    # (`lift` and `out` place the wrist above and outside the shoulder, in arm lengths: up beside the face, a
+    # wagging finger has the wall behind it and not the chest)
+    base = Vector(p.SH[s]) + Vector((s * out * L, -(0.6 - 0.3 * max(0.0, lift)) * L, lift * L))
+    ahead = own @ Vector((0, -1, 0))
+    if toward is not None:
+        d = Vector(toward) - p.spine.matrix_world @ base
+        d.z = 0.0
+        if d.length > 0.05:
+            ahead = d.normalized()
+    across = ahead.cross(Vector((0, 0, 1))).normalized()  # (the way the finger swings: across the line to them)
+    palm_way = ahead
+    if seen_from is not None:
+        v = Vector(seen_from) - p.spine.matrix_world @ base
+        v.z = 0.0
+        if v.length > 0.05:
+            v.normalize()
+            palm_way = -s * Vector((0, 0, 1)).cross(v)  # (the thumb's side to the viewer)
+            across = v.cross(Vector((0, 0, 1))).normalized()
+    to_chest = p.spine.matrix_world.to_3x3().inverted()
+    pole = p._mirror((0.7, 0.5, -1.0), s)
+    name = "left" if s > 0 else "right"
+    p.hand_shape(f0, up, shape, name)
+
+    def at(f):
+        t = (f - up) / fps
+        fade = 1.0 if f < f1 - (f1 - up) / 3 else max(0.0, (f1 - f) / max(1.0, (f1 - up) / 3))
+        a = math.radians(swing) * math.sin(2 * math.pi * rate * t) * fade if f >= up else 0.0
+        way = across * math.sin(a) + ahead * 0.18 + Vector((0, 0, math.cos(a)))
+        return base + to_chest @ (across * 0.16 * L * math.sin(a)), (lambda _f, w=way: (palm_way + Vector((0, 0, 0.15)), w))
+
+    w0, lay0 = at(up)
+    p._arm_key(s, up, w0, pole, lay0)
+    for f in range(up + 1, f1 + 1):
+        w, lay = at(f)
+        p._arm_key(s, f, w, pole, lay)
+    if p.fingers.get(s):
+        p._fingers_key(s, f1, shape)
+    _hand_home(p, s, f1 + n(11), state)
+    p._wrist_continuous(s)
+    d = p.neck.delta_rotation_euler.copy()
+    p.neck.keyframe_insert("delta_rotation_euler", frame=f0)
+    key(p.neck, "delta_rotation_euler", up + n(2), (d.x + R(3), d.y - R(4 * s), d.z))
+    key(p.neck, "delta_rotation_euler", f1, (d.x + R(3), d.y - R(4 * s), d.z))
+    key(p.neck, "delta_rotation_euler", f1 + n(10), d)
+    p.events.append({"frame": up, "kind": "rustle"})
+
+
+def let_go(p, f0: int, f1: int, hand: str = "left", rest=None, away: float = 0.0):
+    """A hand that lies round a glass on the table (`pick_up` with `"lift": false`) opens and comes off it by
+    f1, to lie flat on the table: at `rest(side)` if the set gives a place, moved `away` metres further toward
+    the hand's own side."""
+    s = _side(hand)
+    if s not in getattr(p, "on_glass", {}):
+        raise ValueError(f"{p.id}'s {hand} hand is not on a glass: `pick_up` with \"lift\": false puts it there")
+    p.on_glass.pop(s)
+    if p.side_spans.get(s):
+        p.side_spans[s][-1][1] = f0 + max(1, (f1 - f0) // 2)
+    now, was = p._hands_now(f0)[s]
+    spot = Vector(rest(s)) if rest else p.spine.matrix_world @ (Vector(now) + Vector((s * 0.08, 0.06, 0)))
+    spot = spot + _own(p) @ Vector((s * away, 0, 0))
+    lie = p._flat_on(s, spot)
+    p.hand_shape(f0, f0 + max(1, (f1 - f0) // 2), "flat", hand)
+    p._hands_path({s: [(f0, now, was, 0), (f1, lie, (1, 0.3, -0.8), 0.035)]})
+    p._wrist_continuous(s)
+    p.arm_pose = "table"
+    p.swung = {}
+    p.events.append({"frame": f0, "kind": "rustle"})
