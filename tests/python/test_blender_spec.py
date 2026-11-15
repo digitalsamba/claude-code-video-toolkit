@@ -824,6 +824,74 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertNotEqual(code, 0)
         self.assertIn('needs a painted eye', refused.getvalue())
 
+    NELL = ROOT / 'tests' / 'fixtures' / 'blender-bare'
+
+    def test_a_bare_armed_model_is_cut_at_the_wrist_sealed_and_keeps_its_painted_face(self):
+        """Nell (tests/fixtures/blender-bare, made up) has no cuffs: each hand is found by the wrist's own
+        narrowing, the arm's end is drawn onto the hand's ring and the two share their normals there, the hands'
+        texture is cleared of the picture's background, and a hands model made from a closer picture is brought
+        to the body's size first. Her face is painted nearer to life, so it is kept: both painted eyes are read
+        (one has a liner whose outer edge is a sharper step than the iris's), and she pulls faces, blinks,
+        glances and winks with them."""
+        import contextlib
+        import io
+        import re
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            for name in ('spec.json', 'nell.json'):
+                shutil.copy(self.NELL / name, tmp / name)
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(mock.Mock(model=str(self.NELL / 'nell.glb'), fit=str(self.NELL / 'fit.json'),
+                                                    out=str(tmp / 'nell-fitted.blend'), preview=None))
+            said = said.getvalue()
+            self.assertEqual(code, 0, said)
+            checks = blender_render.run_compiler(tmp / 'spec.json', tmp / 'out', 'check', '480x270', None)
+        self.assertEqual(len(re.findall(r'fit: hands, [LR] 5 fingers \(thumb, index, middle, ring, little\)', said)), 2, said)
+        sealed = re.findall(r"a bare arm's end drawn in onto the hand: the ring stood ([\d.]+) mm off the hand's "
+                            r"skin, now ([\d.]+) mm", said)
+        self.assertEqual(len(sealed), 2, said)                             # both arms, with no cuff over the join
+        for before, after in sealed:
+            self.assertGreater(float(before), 1.0)
+            self.assertLessEqual(float(after), 0.1)
+        self.assertRegex(said, r'\d+ vertices on the ring where a bare arm meets its hand share their normals')
+        self.assertRegex(said, r"the hands model is 1\.\d+x the body's arm span")
+        grey = re.search(r"([\d.]+)% of their texture was not skin's colour", said)
+        self.assertIsNotNone(grey, said)
+        self.assertLess(float(grey.group(1)), 2.0)
+        stretch = re.search(r'edges stretched ([\d.]+)x', said)
+        self.assertLessEqual(float(stretch.group(1)), 3.0, said)           # the thumb's web is not torn
+        eyes = re.findall(r'(?:right|left) eye opens ([\d.]+) x ([\d.]+) mm, iris ([\d.]+) mm', said)
+        self.assertEqual(len(eyes), 2, said)
+        for wide, tall, iris in eyes:                                      # (misread, the left iris came out 42 mm)
+            self.assertLess(float(iris), 25.0, said)
+            self.assertLess(float(tall), 0.6 * float(wide), said)          # a lidded eye, wider than it is tall
+        self.assertNotIn(' FAIL ', said)
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        self.assertTrue(checks['face']['paint_kept'])
+        self.assertGreaterEqual(checks['face']['brow_squeeze'], 0.5)       # the brows do not crease the skin
+        for kind in ('hand_in_body_m', 'through_m'):
+            self.assertLessEqual(checks[kind], 0.03, kind)
+
+    def test_a_model_is_made_smaller_without_painting_faces_from_the_wrong_place(self):
+        """`reduce` thins a model inside the islands of its texture: a third of Mara's faces, with next to none
+        of them left reading the texture from across a seam (reduced across the seams it is about 1%)."""
+        import contextlib
+        import io
+        import re
+        with tempfile.TemporaryDirectory() as tmp:
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.reduce(mock.Mock(model=str(self.MARA / 'mara.glb'), out=str(Path(tmp) / 'small.glb'),
+                                                       faces=20000, texture=512))
+            self.assertEqual(code, 0, said.getvalue())
+            self.assertTrue((Path(tmp) / 'small.glb').exists())
+        got = re.search(r'REDUCED (\d+) to (\d+) faces, (\d+) vertices .* ([\d.]+)% of the faces painted', said.getvalue())
+        self.assertIsNotNone(got, said.getvalue())
+        self.assertLess(int(got.group(2)), 0.5 * int(got.group(1)))
+        self.assertGreater(int(got.group(3)), 100)
+        self.assertLess(float(got.group(4)), 0.2)
+
     def test_a_deep_chest_reaches_from_its_own_shoulder_and_a_hand_on_the_lap_stays_on_the_leg(self):
         """Mara fitted again with her shoulder joints 4.5 cm behind the chest (a deep chest, as a third body
         had): a reach is measured from the joint where it is, so sitting down her hands come to her thighs

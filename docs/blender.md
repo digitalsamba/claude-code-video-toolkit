@@ -324,7 +324,13 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    What it cannot do: the eyes open no wider than they were painted (`shocked` is brows and mouth); the shut
    lid is one flat skin colour, right for a blink and plain in a held close-up; a soft painted brow cannot be
    lifted off its skin as a part of its own (cut out by colour it took the lid's crease with it on one face
-   and half the brow on another), so a brow moves a few millimetres with its skin, not across it. Keep the rig's
+   and half the brow on another), so a brow moves a few millimetres with its skin, not across it. Each brow's
+   skin is its own half of the forehead: where the two reached across the middle they added up and the skin
+   between the brows moved further than either brow. `face` in `checks.json` has `brow_squeeze`, the shortest
+   the brows' furthest tilt makes an edge of the forehead against its length at rest (0.75 on one face; under
+   0.5 fails as a crease). The iris is found by the first strong step in brightness going out from its middle,
+   not the sharpest: a black liner's outer edge against skin is a sharper step than a brown iris against the
+   white, and read by the sharpest an iris came out twice its size. Keep the rig's
    face for cartoon eyes with long painted lashes: the lid line is read between the lashes and a blink comes
    out ragged. The fit refuses `keep` when it finds no painted eye (white beside an iris) where `eyes` says.
    **Hands with fingers** are optional: `"hands": {"model": "lead_open.glb"}` names a second model made from
@@ -336,8 +342,20 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    thumb's root is 8% of the hand's length out: the wedge thins evenly, the cuff ring and the fingers do not
    move. The fit prints the depth before and after and how far any edge was stretched, and fails if the root
    still stands over 20% out (a hand like that rests on its thumb), or if an edge was stretched over 3x (two
-   bodies came in at 1.2x and 1.6x; a third at 5.2x had the web fold over itself, a torn patch at the thumb's
-   root in a close shot: make the open-hands model again with the thumb nearer the palm).
+   bodies came in at 1.2x and 1.6x). A thumb that was made near the palm already (16% out) has a thin web and
+   no wedge to thin: moved whole, with the skin beside its root hardly moving, it stretched the edges between
+   them 5.2x and the web folded over itself, a torn patch at the thumb's root in a close shot. So when any edge
+   passes 2x the move is spread over the skin round the thumb, each vertex taking the mean of its neighbours,
+   until none does (one round took that hand to 1.5x; the fit prints the rounds). The fingers are listed thumb,
+   index, middle, ring, little on either hand.
+   **Make the open-hands picture close.** In a full-length picture a hand is about 60 pixels long, and the model
+   comes back with fingers joined (one came back with four). Crop the front view to the hips up before the edit
+   that opens the hands, and ask for the fingers pointing along the arm with the thumb beside the palm: a thumb
+   that sticks out sideways is the furthest point of the arm, and the hand is then measured from it. A model
+   made from a half figure comes back sized as if it were a whole one (1.8 times the body), so the fit scales a
+   hands model to the body's arm span before it looks for the hands, and says so. Keep only the arms of it in a
+   repository, cut well above the elbow: a cut inside the forearm is the narrowest slice of the arm, and is
+   taken for the wrist.
    A model made from a picture of open hands has the picture's background baked into the sides of the fingers
    and the webbing between them, grey streaks down every finger once the hand is on an arm. The fit paints
    every texel of the hands that is nearer grey than skin's hue as skin, as light or dark as it was, and prints
@@ -383,15 +401,35 @@ front to back as well as across and up: on a deep chest the joint is some centim
 body, and measured from in front of it every reach asked for more arm than there was (a wrist 14 mm short of its
 target sitting down, and a hand that strained at the door from a start spot found that way). Pulling in to the desk, a hand takes the desk's edge only if it
 can lie flat there in front of the shoulder; otherwise the hands lift off the lap while the desk is still far off
-and wait over the keys. Until it lifts, a hand on the lap rides the leg: the chest leans into the pull, and a hand
-held to the chest went 2 to 3 cm down into the thigh with it.
+and wait over the keys, held level with the palms down and the fingers out, as they will lie on them (left to
+follow the forearm they pointed up off a low elbow, curled, like fists held at the chest; sloped as on the keys
+they drooped). Until it lifts, a hand on the lap rides the leg: the chest leans into the pull, and a hand
+held to the chest went 2 to 3 cm down into the thigh with it. A hand on its way to or from its own leg is kept
+clear of it on every frame: the two ends of the path are each clear, the straight line between them is not
+(sitting down, the thigh comes up under a hand that hung beside it, and wide trousers stand further out at the
+fingertips than at the wrist), so each fingertip is measured against the leg's skin beside it and the wrist is
+moved out by what is short. That took one body's fingertips from 1.4 cm inside the thigh to outside it.
 
-To keep a model in a repository, reduce it no further than the fit's own size (`"faces"` in the fit file, 150,000
-by default for a body): a body that passed every check at that size failed the sleeve check at 60,000 faces,
-because the measure reads the mesh's edges and coarser cloth has longer ones. A character fitted at 60,000 from
-the start (Mara) is measured at that size and is fine. Weld its UV seams before reducing it (the importer splits the vertices along
-every seam, and a split mesh decimated opens into cracks along all of them, which show as torn cloth and shards
-round the eyes). In Blender: merge by distance at 0.00001, then Decimate.
+**Reducing a model, in the fit and for a repository.** A generated model's texture is an atlas of hundreds of
+small islands. Blender's Decimate collapses edges wherever it likes, and an edge collapsed across the border of
+two islands leaves a face with corners in both, painted with whatever lies between them in the atlas: a shard
+of the wrong colour by an eye, a notch at the end of a brow, grey down the side of a finger. Welding the seams
+first (merge by distance at 0.00001) stops the mesh opening into cracks, but not this. So the vertices on a
+seam (those whose face corners do not all carry one UV) are held out of the reduction with a vertex group, and
+the faces come off the insides of the islands. The fit does this itself and prints the share of faces left
+painted from the wrong place: each face's middle is looked up in the texture where its own corners put it and
+where the nearest point of the model as it was had it. Reduced across the seams that share was 1.13% and 0.80%
+on two bodies, and seam-safe 0.02% and 0.01%; over 0.2% fails. Before it reduces, the fit also takes off the
+stray triangles a generator leaves standing on the surface (an edge shared by three faces) and closes pinholes,
+and prints both counts.
+
+To keep a model in a repository use the same reduction:
+`uv run tools/blender_render.py reduce --model lead_gen.glb --out lead.glb --faces 60000 --texture 1024`
+(`--faces 0` only shrinks the texture). Reduce it no further than the fit's own size (`"faces"` in the fit file,
+150,000 by default for a body): a body that passed every check at that size failed the sleeve check at 60,000
+faces, because the measure reads the mesh's edges and coarser cloth has longer ones. A character fitted at
+60,000 from the start (Mara, Nell) is measured at that size. A model already reduced across its seams keeps its
+shards: reduce it again from the original.
 
 What it does not do: without a `hands` model the hands are whatever the model has (usually fists), on one
 bone; generated hands are thick and cupped, so they read as mitts with finger grooves. A typing hand slopes down
@@ -405,7 +443,13 @@ triangles ended at the wrist, and shows as shards round it). The hand gets a rin
 the arm's end is drawn onto that ring and takes the hand's weights there, so the join stays shut when the wrist
 bends, and the hand's stub is pulled inside the arm. The skin colour the hand is tinted to is read at the wrist
 on both models, not at the fingertips, which are paler. The fit prints how far the two rings stood apart (up to a
-centimetre between two generations of one character). A likeness
+centimetre between two generations of one character). Matched in colour, the join still showed as a line: the
+arm and the hand are two surfaces there and each shades by its own normals, so the light breaks along the ring.
+The vertices of both on the ring are given one normal between them. A forearm can be as narrow for several
+centimetres above the wrist as at it, and which slice of that stretch measures narrowest changes with the mesh
+(one body's cut moved 4 cm up the arm when its mesh was reduced another way, and its hands came out 18% bigger):
+the wrist is the narrow slice nearest the hand. `tests/fixtures/blender-bare` is a worked example with an
+invented bare-armed character whose painted face is kept. A likeness
 of a real person belongs in your own project folder, not in a repository. `tests/fixtures/blender-fitted` is a worked
 example with an invented character: both models, the `fit.json` read off gridded stills, and a README saying how
 each was made (her generated hands had the fingers joined, so the hands came from a second model).
@@ -445,7 +489,9 @@ Claude Opus 5.5.
    both characters. Find out which mesh and which frame a fault belongs to before fixing it: a hand said to go
    "into the chest" was going into the thigh six frames earlier (print each fingertip's nearest body part per
    frame), and a ragged wrist blamed on the arm was the grafted hand's edge (render with one of the two
-   materials painted green).
+   materials painted green). A shard beside an eye was first taken for a hole in the mesh, then for a stray
+   face, then for stretched texture; rendering the model flat as generated, welded and reduced, side by side,
+   showed in one picture that only the reduced one had it.
 3. **Turn what was seen into a check.** Each fault becomes a number in `checks.json` with a limit and a test, so
    it cannot come back unseen. Prove a new check on the code as it was (it should fail there). The checks are
    the memory of the work; a note that says "watch the hands" is not.
@@ -472,6 +518,10 @@ Things that cost time in Blender itself, worth knowing before building on this:
   do not take the larger, or the paint underneath shows through as a line.
 - Read a painted feature's edge by the step in brightness along a line, not by a threshold against skin: the
   white of an eye is shaded pink at its corners and a hazel iris is no darker than a shadow.
+
+A fourth character (Nell, bare arms, in the repo) was fitted in the same session that fixed these, and she
+found two more on the walk-in the other three pass (fingers 3 cm into the front edge of the laptop as the hands
+come down to type, skin stretched 4.2x while typing): both are open.
 
 What could be better: the proof scripts (tiled stills, close cameras on a hand or a face, per-frame traces) live
 in a project folder and are not yet tools in the toolkit; the fit still wants its joints read off a still by hand;

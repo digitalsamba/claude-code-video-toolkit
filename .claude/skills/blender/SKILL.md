@@ -176,7 +176,13 @@ the palm (it stands off it on a thick wedge), so the hands type at a typist's sl
 is put at the cuff, and the desk, the keys and how far apart the hands lie come from the body's measures, so one spec
 runs on characters of different builds (run a spec on two to find a number tuned on one; `docs/blender.md` has the
 method). Head shots aim at a fitted character's own head, whatever its
-proportions. A worked example with an invented character is `tests/fixtures/blender-fitted`. The steps and their costs are in `docs/blender.md`.
+proportions. A worked example with an invented character is `tests/fixtures/blender-fitted`, and one with bare arms and
+her painted face kept is `tests/fixtures/blender-bare`. To make a generated model smaller, use
+`uv run tools/blender_render.py reduce --model in.glb --out out.glb --faces 60000`, never Decimate by hand: it
+thins the mesh inside the islands of its texture, and a face collapsed across a seam is painted from the wrong
+place (shards by an eye). Make the open-hands picture from a hips-up crop so the fingers come out apart. Read the
+fit's output: any line with FAIL (a torn thumb web, faces painted from the wrong place) is a fault that will
+show in a close shot. The steps and their costs are in `docs/blender.md`.
 For a character of a real person, the reference photos come from `uv run tools/reference_capture.py --out <folder>`:
 a local page that talks the sitter through eight poses at a webcam. It needs the person at a browser, so ask
 them to run it; never commit their photos. Two things to settle on the character sheet, before any 3D spend: the
