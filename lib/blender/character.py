@@ -1148,13 +1148,15 @@ class ClayPerson:
         def arrive(hand):
             for s in (1, -1):
                 lift = Vector((0, 0, self._desk_lift(s, shape))) if self._lay(name) else Vector()
-                if self._lay(name) and self.fingers.get(s) and f1 - f0 >= 4:
-                    # (lifted on the way: a hand slid along a desk goes through whatever lies on it)
-                    mid = starts[s].lerp(self._mirror(hand, s) + lift, 0.5) + Vector((0, 0, 0.035))
-                    self._arm_key(s, (f0 + f1) // 2, mid, self._mirror(pole, s), self._lay(name))
                 end = self._mirror(hand, s) + lift
                 if self._lay(name):
                     end = self._on_keys(s, f1, end, shape)
+                if self._lay(name) and self.fingers.get(s) and f1 - f0 >= 4:
+                    # (lifted on the way: a hand slid along a desk goes through whatever lies on it. Half way to
+                    # where it lands on the keys, not to where the pose puts it: a desk raised over long thighs
+                    # has its keys well above the pose's wrist, and a hand aimed at the pose went into the laptop)
+                    mid = starts[s].lerp(end, 0.5) + Vector((0, 0, 0.035))
+                    self._arm_key(s, (f0 + f1) // 2, mid, self._mirror(pole, s), self._lay(name))
                 self._arm_key(s, f1, end, self._mirror(pole, s), self._lay(name))
 
         arrive(hand)
