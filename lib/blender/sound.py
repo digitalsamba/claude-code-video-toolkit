@@ -6,6 +6,11 @@ Every effect is placed at the frame Blender keyed it on, so nothing needs syncin
 three moods the spec places in time ({"from": 0, "to": 3.6, "mood": "calm"}): calm (a soft maj7 pad), tension
 (a detuned low drone) and resolve (a bright pad). It is synthesis, not a produced track; for a real bed, use
 tools/music_gen.py at the same length and mix with tools/addmusic.py.
+
+A spec can name its own sounds ("sounds": {"clap": [{"file": "sfx/slate.mp3"}, {"tones": [98, 147]}]}): an event
+of that kind plays those layers, each recording placed so its loudest moment is on the event's frame. Recordings
+are read through ffmpeg. Such a mix is written at one fixed gain ("mix": {"gain": 0.8}), not normalised, so the
+same sound is the same level in every clip.
 """
 from __future__ import annotations
 
@@ -13,8 +18,10 @@ import json
 import math
 import random
 import struct
+import subprocess
 import sys
 import wave
+from array import array
 
 SR = 44100
 CLIP_GAIN = 2.5  # effects-only clips: about the level the film's mix puts the same effects at
@@ -45,6 +52,104 @@ class Mix:
             w.writeframes(b"".join(struct.pack("<h", int(32000 * max(-1.0, min(1.0, x / peak)) * 0.9)) for x in self.buf[: int(seconds * SR)]))
 
 
+    def add_samples(self, start, xs, gain=1.0):
+        i0 = int(round(start * SR))
+        for k in range(max(0, -i0), min(len(xs), self.n - i0)):
+            self.buf[i0 + k] += gain * xs[k]
+
+    def write_fixed(self, path, seconds, gain=0.8, ceiling=0.89, fade=0.03):
+        """One fixed gain, so a sound is the same level wherever it is used; only a mix that would clip is turned
+        down (and that is said). Returns the peak written, 0-1."""
+        n = int(seconds * SR)
+        peak = max((abs(x) for x in self.buf[:n]), default=0.0) * gain
+        if peak > ceiling:
+            print(f"  note  the sound peaks at {20 * math.log10(peak):+.1f} dBFS at this gain: turned down to "
+                  f"{20 * math.log10(ceiling):.1f} (lower the layers' gains or the mix's)")
+            gain *= ceiling / peak
+        k = int(fade * SR)
+        with wave.open(str(path), "w") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(SR)
+            w.writeframes(b"".join(struct.pack("<h", int(32767 * max(-1.0, min(1.0, x * gain * min(1.0, (n - i) / max(1, k))))))
+                                   for i, x in enumerate(self.buf[:n])))
+        return min(peak, ceiling)
+
+
+def decode(path) -> list:
+    """A recording as mono samples at the mix's rate (through ffmpeg)."""
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-f", "f32le", "-ac", "1", "-ar", str(SR), "-"],
+                         capture_output=True, check=True).stdout
+    xs = array("f")
+    xs.frombytes(raw[: len(raw) // 4 * 4])
+    return list(xs)
+
+
+def loudest(xs, window=0.05) -> int:
+    """The sample a recording is placed by: the middle of the energy in its loudest 50 ms. That is the moment
+    that goes on the event's frame (tools/sync_check.py finds the same 50 ms, to the nearest window)."""
+    w = max(1, int(window * SR))
+    if len(xs) <= w:
+        at, w = 0, len(xs)
+    else:
+        acc = sum(x * x for x in xs[:w])
+        best, at = acc, 0
+        for i in range(w, len(xs)):
+            acc += xs[i] * xs[i] - xs[i - w] * xs[i - w]
+            if acc > best * (1 + 1e-9):
+                best, at = acc, i - w + 1
+    energy = sum(x * x for x in xs[at:at + w])
+    if energy <= 0:
+        return at + w // 2
+    return int(round(sum(i * x * x for i, x in enumerate(xs[at:at + w], at)) / energy))
+
+
+def lowpass(xs, hz):
+    a = math.exp(-2 * math.pi * hz / SR)
+    out, acc = [], 0.0
+    for v in xs:
+        acc = (1 - a) * v + a * acc
+        out.append(acc)
+    return out
+
+
+def tones(freqs, length, attack=0.005, decay=0.5, hold=0.0, beat=0.0, cut=None, cut_decay=0.08):
+    """A chord of sines under one envelope: attack, an optional hold, then a decay, or a quick cut at `cut` s.
+    `beat` adds a second copy that much sharp (1.004), so the chord moves a little instead of sitting flat."""
+    out = []
+    voices = [(f, 0.6 / (1 + 0.6 * i)) for i, f in enumerate(freqs)] + \
+             [(f * beat, 0.4 / (1 + 0.6 * i)) for i, f in enumerate(freqs)] if beat else \
+             [(f, 1 / (1 + 0.6 * i)) for i, f in enumerate(freqs)]
+    for k in range(int(length * SR)):
+        t = k / SR
+        env = min(t / max(attack, 1e-4), 1.0) * (math.exp(-(t - attack - hold) / decay) if t > attack + hold else 1.0)
+        if cut is not None and t > cut:
+            env *= math.exp(-(t - cut) / cut_decay)
+        if env < 1e-4 and t > attack:
+            break
+        out.append(env * sum(g * math.sin(2 * math.pi * f * t) for f, g in voices))
+    return out
+
+
+def play_layers(mix, layers, t, until=None, cache={}):
+    """One named sound at time t: each recording with its loudest moment on t, each chord starting on t."""
+    for layer in layers:
+        gain = float(layer.get("gain", 1.0 if "file" in layer else 0.2))
+        if "file" in layer:
+            key = (layer["file"], layer.get("lowpass"))
+            if key not in cache:
+                xs = decode(layer["file"])
+                cache[key] = (lowpass(xs, float(layer["lowpass"])) if layer.get("lowpass") else xs, loudest(xs))
+            xs, peak = cache[key]
+            mix.add_samples(t - peak / SR, xs, gain)
+        else:
+            length = mix.n / SR - t
+            xs = tones(layer["tones"], length, float(layer.get("attack", 0.005)), float(layer.get("decay", 0.5)),
+                       float(layer.get("hold", 0.0)), float(layer.get("beat", 0.0)),
+                       None if until is None else until - t)
+            mix.add_samples(t, xs, gain)
+
+
 def tone(freq, decay=6.0, harm=(1, 0.3, 0.1)):
     return lambda t: math.exp(-decay * t) * sum(a * math.sin(2 * math.pi * freq * (k + 1) * t) for k, a in enumerate(harm))
 
@@ -65,6 +170,9 @@ def render(events_path, out_path, seed=3, start=0.0, end=None, score=True, room=
     ev = {**ev, "events": [{**e, "t": e["t"] - start} for e in ev["events"] if start - 0.02 <= e["t"] < end],
           "score": [{**s, "from": max(0.0, s["from"] - start), "to": min(dur, s["to"] - start)}
                     for s in ev.get("score", []) if s["to"] > start and s["from"] < end] if score else []}
+    named = ev.get("sounds") or {}
+    if named and not (ev.get("mix") or {}).get("room"):
+        room = False  # a spec with its own sounds is not sitting in a room unless it says so
     mix = Mix(dur)
     b = 0.0
     for i in range(mix.n if room else 0):  # room tone
@@ -87,7 +195,9 @@ def render(events_path, out_path, seed=3, start=0.0, end=None, score=True, room=
     for e in ev["events"]:
         t, k = e["t"], e["kind"]
         g = level.get(k, 1.0)
-        if k == "key_click":
+        if k in named:
+            play_layers(mix, named[k], t, None if e.get("until") is None else e["until"] - start)
+        elif k == "key_click":
             mix.add(t + rng.uniform(0, 0.01), 0.06,
                     lambda t: math.exp(-90 * t) * (rng.uniform(-1, 1) * 0.7 + 0.5 * math.sin(2 * math.pi * 190 * t)),
                     rng.uniform(0.18, 0.28))
@@ -130,7 +240,10 @@ def render(events_path, out_path, seed=3, start=0.0, end=None, score=True, room=
             mix.add(t, 0.5, lambda t: math.sin(math.pi * t / 0.5) * rng.uniform(-1, 1), g * (0.05 if k == "rustle" else 0.09))
         elif k == "title":
             mix.add(t, 0.1, lambda t: math.exp(-40 * t) * math.sin(2 * math.pi * (600 + 2000 * t) * t), 0.3)
-    mix.write(out_path, dur, normalise=score or room)
+    if named:
+        mix.write_fixed(out_path, dur, float((ev.get("mix") or {}).get("gain", 0.8)))
+    else:
+        mix.write(out_path, dur, normalise=score or room)
     return out_path
 
 
