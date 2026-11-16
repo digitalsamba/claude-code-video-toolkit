@@ -40,6 +40,24 @@ So a note on a film is one of two kinds. "Hold that look a second longer" is the
 the shot again. "The mug goes through the table" is the rig: fix it in `lib/blender`, prove it on two bodies,
 add a check, and then render. Rig work is slower the first time and free ever after.
 
+**The other words, in the order a film uses them.**
+
+- **The shot spec** is one JSON file that describes the film: who is in it, where, what they do and when, and
+  how it is filmed. Everything below is named in it, which is why an agent can direct a film and why the same spec
+  gives the same film every time.
+- **The cast** is the characters. A clay character is a JSON description (build, face, hair, clothes, a seed) and
+  needs nothing else; a fitted one starts as a generated model, as above. Both share the one rig.
+- **A set** is the place: a desk, a kitchen, a lecture hall, or the studio stage for products. It brings its
+  room, furniture and lights, and where people sit or stand.
+- **A prop** is a thing in the scene that a character or the camera deals with: a mug, a phone, a floating card
+  showing a picture or a video, an imported model.
+- **Acting beats** are the verbs on a timeline, in seconds or on a word of the narration (`cue:`).
+- **A shot** is a camera by type (`over_shoulder`, `orbit`, `reveal` and more) that takes its framing from the
+  people and props in it. `check` proves every shot by geometry before anything is rendered.
+- **The engine** draws the frames. EEVEE, the default, is fast and is what the specs are tuned on; Cycles
+  (`--engine cycles`) traces light and is about ten times slower (see
+  [How long a render takes](#how-long-a-render-takes)).
+
 **What is saved.** Every `check` and `render` writes `scene.blend` in the spec's `out/` folder: the built scene
 with its keyed acting, to open and scrub in Blender when a number does not explain what a frame shows. It is
 written again on each run, so copy one aside to keep it. A fitted character's `.blend` holds only its body
