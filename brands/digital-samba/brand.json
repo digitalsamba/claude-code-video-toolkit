@@ -81,5 +81,22 @@
     "mark": "assets/mark.svg",
     "markWhite": "assets/mark-white.svg",
     "note": "ds-logo.svg is the app's own (react-account-center/public/logo.svg). On navy use logoOnDark (wordmark white, coral kept); on blue use logoWhite; the coral mark never sits on blue."
+  },
+  "fields": {
+    "note": "For templates that colour by act (howto): the dark field is the logo's navy, secondary text is the site's grey, and the grounds are flat (no rows).",
+    "explain": {
+      "ink2": "#5d606a",
+      "hair": "transparent",
+      "other": "#d5dae4"
+    },
+    "work": {
+      "ground": "#323E66",
+      "other": "#4b5884",
+      "hair": "transparent",
+      "accent": "#9db9f0"
+    },
+    "identity": {
+      "hair": "transparent"
+    }
   }
 }
