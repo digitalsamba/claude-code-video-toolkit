@@ -29,13 +29,17 @@ import acting  # noqa: E402
 import cameras  # noqa: E402
 import cast as casting  # noqa: E402
 import kit  # noqa: E402
+import logo  # noqa: E402
+import motion  # noqa: E402
+import svg  # noqa: E402
 from character import FACES, LEANS, LOOKS, POSES, POSTURES, TYPING, ClayPerson  # noqa: E402
 
 HAND_SHAPES = tuple(ClayPerson.HAND_SHAPES)
 from hall import LectureHall  # noqa: E402
 from kitchen import Kitchen  # noqa: E402
 from sets import DeskRoom, confetti, title3d  # noqa: E402
-from studio import PROP_KINDS, Studio  # noqa: E402
+import studio as studio_set  # noqa: E402
+from studio import PROP_KINDS, STAGES, Studio  # noqa: E402
 from timeline import SpecError, Timeline  # noqa: E402
 
 SET_KINDS = ("desk_room", "desk", "studio", "lecture_hall", "kitchen")
@@ -80,8 +84,9 @@ def _point(v):
     return isinstance(v, (list, tuple)) and len(v) == 2 and all(_number(x) for x in v)
 
 
-def validate(spec):
+def validate(spec, base=None):
     """Everything about a spec that can be wrong without Blender: a clear SpecError now, not a traceback later."""
+    base = Path(base or ".")
     fps = spec.get("fps", 24)
     if isinstance(fps, bool) or not isinstance(fps, (int, float)) or fps != int(fps) or fps < 1:
         raise SpecError(f'"fps" is a whole number ({fps!r} given): use 24 or 30, and render any screen video at it')
@@ -117,8 +122,60 @@ def validate(spec):
             raise SpecError(f'a prop needs an "id" and a "kind" from {", ".join(PROP_KINDS)}: {p}')
         if p["kind"] == "model" and not p.get("file"):
             raise SpecError(f'prop {p["id"]!r}: a model needs "file"')
+        if p["kind"] == "logo":
+            if not p.get("file"):
+                raise SpecError(f'prop {p["id"]!r}: a logo needs "file", an SVG')
+            for k in ("size", "depth", "bevel", "lift"):
+                if k in p and (not _number(p[k]) or p[k] < 0 or (k in ("size", "depth") and p[k] == 0)):
+                    raise SpecError(f'prop {p["id"]!r}: "{k}" is a length in metres ({p[k]!r} given)')
+            mats = [p.get("material", "satin")] + [o.get("material", "satin") for o in (p.get("parts") or {}).values()
+                                                    if isinstance(o, dict)]
+            for m in mats:
+                if m not in logo.MATERIALS:
+                    raise SpecError(f'prop {p["id"]!r}: no material called {m!r} (have: {", ".join(logo.MATERIALS)})')
+            if p.get("base") is not None and (not isinstance(p["base"], dict) or p["base"].get("kind", "key") not in logo.BASES):
+                raise SpecError(f'prop {p["id"]!r}: "base" is an object with a "kind" from {", ".join(logo.BASES)}')
     if studio and not props:
         raise SpecError('a studio set needs "props"')
+    if studio and st.get("stage", "sweep") not in STAGES:
+        raise SpecError(f'"stage" is one of {", ".join(STAGES)}, not {st["stage"]!r}')
+    if studio and st.get("floor") is not None and not (isinstance(st["floor"], dict) and _number(st["floor"].get("rough", 0.22))
+                                                      and 0 <= st["floor"].get("rough", 0.22) <= 1):
+        raise SpecError('"floor" is how matt the dark stage\'s floor is: {"rough": 0.6}, from 0 (a mirror) to 1')
+    for name, share in (st.get("lights") or {}).items() if studio else ():
+        if name not in motion.LIGHTS or not _number(share) or share < 0:
+            raise SpecError(f'"lights" scales the stage\'s own lights: {{"key": 1, "fill": 0.5}} with names from '
+                            f'{", ".join(motion.LIGHTS)}')
+    sounds = spec.get("sounds") or {}
+    if not isinstance(sounds, dict):
+        raise SpecError('"sounds" maps a name to the layers that make it: {"clap": [{"file": "sfx/slate.mp3"}]}')
+    for name, layers in sounds.items():
+        if not isinstance(layers, list) or not layers:
+            raise SpecError(f'sound {name!r} is a list of layers, each a recording ({{"file": ...}}) or tones ({{"tones": [hz, ...]}})')
+        for layer in layers:
+            if not isinstance(layer, dict) or ("file" in layer) == ("tones" in layer):
+                raise SpecError(f'sound {name!r}: a layer has "file" (a recording) or "tones" (frequencies in Hz), one of them')
+            if "file" in layer:
+                f = Path(layer["file"])
+                if not (f if f.is_absolute() else base / f).exists():
+                    raise SpecError(f'sound {name!r}: recording not found: {layer["file"]}')
+            elif not (isinstance(layer["tones"], list) and layer["tones"] and all(_number(x) and x > 0 for x in layer["tones"])):
+                raise SpecError(f'sound {name!r}: "tones" is a list of frequencies in Hz')
+            for k in ("gain", "lowpass", "attack", "decay", "hold", "beat"):
+                if k in layer and (not _number(layer[k]) or layer[k] < 0):
+                    raise SpecError(f'sound {name!r}: "{k}" is a number, 0 or more')
+    parts_of = {}
+    for p in props:
+        parts_of[p["id"]] = None
+        if p["kind"] == "logo":
+            f = Path(p["file"])
+            f = f if f.is_absolute() else base / f
+            if not f.exists():
+                raise SpecError(f'prop {p["id"]!r}: logo file not found: {f}')
+            try:
+                parts_of[p["id"]] = [q.id for q in svg.read(f)[0]]
+            except svg.SvgError as e:
+                raise SpecError(f'prop {p["id"]!r}: {e}')
     ids += [p["id"] for p in props]
     if not all(isinstance(i, str) and i for i in ids) or len(set(ids)) != len(ids) or "screen" in ids:
         raise SpecError(f'each cast member and prop needs its own "id" (and not "screen"): {ids}')
@@ -136,17 +193,32 @@ def validate(spec):
             raise SpecError(f'shot {s.get("id")!r}: unknown subject {subject!r} (have: screen, {", ".join(ids)})')
         if s.get("side") not in (None, "left", "right"):
             raise SpecError(f'shot {s.get("id")!r}: "side" is "left" or "right"')
+        if "mark" in s or s["type"] == "ident":
+            if s.get("mark", "end") not in ("start", "end", "none"):
+                raise SpecError(f'shot {s.get("id")!r}: "mark" is where the finished logo is checked against its SVG: '
+                                f'"start", "end" or "none"')
+            if s.get("mark", "end") != "none" and parts_of.get(subject) is None:
+                if "mark" in s:
+                    raise SpecError(f'shot {s.get("id")!r}: "mark" needs a logo as the subject, and {subject!r} is not one')
+            for k in ("from", "to"):
+                if k in s and not (isinstance(s[k], dict) and all(_number(v) for v in s[k].values())
+                                   and set(s[k]) <= {"az", "elev", "back"}):
+                    raise SpecError(f'shot {s.get("id")!r}: "{k}" is where the camera is at that end of the move: '
+                                    f'{{"az": degrees, "elev": degrees, "back": 1.2}}')
+            if "offset" in s and not _point(s["offset"]):
+                raise SpecError(f'shot {s.get("id")!r}: "offset" is [right, up] as shares of the frame')
     for b in spec.get("beats", []):
         if "at" not in b or "do" not in b:
             raise SpecError(f'a beat needs "at" and "do": {b}')
         verb = b["do"]
         if "dur" in b and (isinstance(b["dur"], bool) or not isinstance(b["dur"], (int, float))):
             raise SpecError(f'beat at {b["at"]!r}: "dur" is a number of seconds ({b["dur"]!r} given)')
+        if studio:  # a stage has no cast: its beats move props and their parts, light them and place sounds
+            motion.check_beat(b, parts_of, tuple(sounds))
+            continue
         if verb not in CHAR_VERBS | SET_VERBS | FX_VERBS:
             raise SpecError(f"unknown beat verb {verb!r} at {b['at']} (have: "
                             f"{', '.join(sorted(CHAR_VERBS | SET_VERBS | FX_VERBS))})")
-        if studio:
-            raise SpecError(f"beat at {b['at']!r}: a studio set has no verbs yet (the camera does the moving)")
         if verb in KITCHEN_VERBS and kind != "kitchen":
             raise SpecError(f'beat at {b["at"]!r}: {verb} is a kitchen verb (set kind kitchen)')
         if verb == "claude_type" and b.get("speed", "frantic") not in TYPING:
@@ -219,8 +291,13 @@ def build_studio(spec, st, tl, base, fps, exposure, sc):
         raise SpecError(str(e))
     # the stage is lit from all round by its own backdrop colour, as a light tent is
     tint = kit.color(room.palette["backdrop"])
-    sc.world.node_tree.nodes["Background"].inputs[0].default_value = (*[c * 0.55 for c in tint], 1)
+    sc.world.node_tree.nodes["Background"].inputs[0].default_value = (*[c * studio_set.WORLD for c in tint], 1)
     first = next(iter(room.props))
+    try:
+        heard, shakes, notes = logo.perform(room, spec.get("beats", []), tl)
+    except ValueError as e:
+        raise SpecError(str(e))
+    notes += [f"{p.id}: {n}" for p in room.props.values() for n in getattr(p, "notes", [])]
     reports, cams = [], []
     for i, s in enumerate(spec["shots"]):
         name = s.get("subject", first)
@@ -232,22 +309,34 @@ def build_studio(spec, st, tl, base, fps, exposure, sc):
         sub = cameras.prop_screen_subject(prop) if s["type"] == "reveal" else cameras.prop_subject(prop)
         f0, f1 = tl.frame(tl.shots[s["id"]][0]), tl.frame(tl.shots[s["id"]][1]) - 1
         try:
-            cam, rep = cameras.solve(s, sub, f0, f1, seed=i, fps=fps)
+            cam, rep = cameras.solve(s, sub, f0, f1, seed=i, fps=fps, shakes=[x for x in shakes if f0 <= x[0] <= f1])
         except ValueError as e:
             raise SpecError(str(e))
         sc.timeline_markers.new(s["id"], frame=f0).camera = cam
         cams.append((f0, f1, cam))
+        where = s.get("mark", "end" if s["type"] == "ident" else "none")
+        if where != "none" and getattr(prop, "kind", "") == "logo":
+            # the frame a viewer is left with is the avatar: is it the flat mark?
+            rep["mark"] = logo.mark_report(prop, cam, f0 if where == "start" else f1)
+            rep["issues"] = rep["issues"] + rep["mark"].pop("issues")
+            rep["passed"] = not rep["issues"]
         reports.append(rep)
     sc.camera = cams[0][2]
-    return tl, cams, reports, 0.0, []
+    kit.notes = getattr(kit, "notes", []) + notes
+    events = [{"t": round((e["frame"] - 1) / fps, 3), "shot": tl.shot_at((e["frame"] - 1) / fps), **e}
+              for e in sorted(heard, key=lambda e: e["frame"])]
+    return tl, cams, reports, 0.0, events
 
 
 def build(spec, args):
-    validate(spec)
+    base = Path(args.spec).resolve().parent
+    validate(spec, base)
     fps = int(spec.get("fps", 24))
     res = tuple(int(x) for x in (args.res or spec.get("resolution", "1920x1080")).split("x"))
     look = spec.get("look", {})
-    base = Path(args.spec).resolve().parent
+    if any(p.get("kind") == "logo" for p in (spec.get("set") or {}).get("props") or []):
+        # a logo's colours are the brand's: the Standard view at no exposure shows them as they were given
+        look = {"view": "Standard", "exposure": 0.0, **look}
     tl = Timeline(spec["shots"], fps, spec.get("voice"), base)  # before Blender work: a bad spec fails fast
     bpy.ops.wm.read_factory_settings(use_empty=True)
     exposure = look.get("exposure", -0.9)
@@ -256,6 +345,11 @@ def build(spec, args):
                      samples=16 if args.mode == "check" else int(spec.get("samples", 32)),
                      transparent=bool(args.alpha or spec.get("transparent")))
     sc = kit.scene()
+    kit.notes = []
+    if look.get("bloom"):
+        said = kit.bloom(look["bloom"])
+        if said:
+            kit.notes.append(said)
     sc.frame_start, sc.frame_end = 1, tl.frames - 1
 
     st = spec.get("set", {"kind": "desk_room"})
@@ -723,8 +817,17 @@ def main():
     if worst and ik >= 0.01:  # which limb could not reach, and when
         checks["ik_worst"] = {**worst, "t": round((worst["frame"] - 1) / tl.fps, 2)}
     (out / "checks.json").write_text(json.dumps(checks, indent=2))
-    (out / "events.json").write_text(json.dumps({"fps": tl.fps, "duration": tl.duration, "events": events,
-                                                 "score": score}, indent=2))
+    base = Path(args.spec).resolve().parent
+    sounds = {name: [{**layer, "file": str(Path(layer["file"]) if Path(layer["file"]).is_absolute() else base / layer["file"])}
+                     if "file" in layer else layer for layer in layers]
+              for name, layers in (spec.get("sounds") or {}).items()}
+    heard = {"fps": tl.fps, "duration": tl.duration, "events": events, "score": score}
+    if sounds:  # recordings and tones the spec names for its events (sound.py places each on its frame)
+        heard["sounds"], heard["mix"] = sounds, spec.get("mix") or {}
+    (out / "events.json").write_text(json.dumps(heard, indent=2))
+    if getattr(kit, "notes", None):
+        checks["notes"] = kit.notes
+        (out / "checks.json").write_text(json.dumps(checks, indent=2))
     if os.environ.get("BLENDER_CONTACT_TRACE"):  # every frame's contact numbers, to look into a failure
         (out / "contacts.json").write_text(json.dumps(getattr(kit, "contact_trace", [])))
     bpy.ops.wm.save_as_mainfile(filepath=str(out / "scene.blend"))
@@ -756,6 +859,7 @@ def main():
             move = cameras.SHOT_TYPES[next(s["type"] for s in spec["shots"] if s["id"] == cam.name)].get("move")
             tilt = cameras.SHOT_TYPES[next(s["type"] for s in spec["shots"] if s["id"] == cam.name)].get("tilt")
             f = f1 if move == "out" or tilt else f0 if move == "in" else (f0 + f1) // 2
+            f = next((r["mark"]["frame"] for r in reports if r["id"] == cam.name and r.get("mark")), f)
             sc.frame_set(f)
             sc.camera = cam
             kit.set_output(out / "stills" / f"{cam.name}.png", video=False, alpha=alpha)

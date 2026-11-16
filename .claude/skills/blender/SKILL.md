@@ -1,6 +1,6 @@
 ---
 name: blender
-description: 3D scenes, character acting and product shots from a shot spec, rendered in Blender, as a finished film, as clips for any other build (moviepy, a video job, an editor), or as elements of a Remotion video (transparent characters over a scene, a Remotion render on a 3D laptop, phone or floating card that the camera pulls back from, an imported 3D model on a studio stage). A rigged cartoon cast described in JSON (build, face, hair, clothes, a seed), sets, shots by type, acting beats in seconds or on narration words, every camera checked by geometry, sound placed on the motion. Use when a video needs a consistent directable character (parody, explainer gag, reaction shot), a 3D reveal or element in a Remotion video, a device or product shot of an app or a model, or exact acting timing that AI video clips can't hold. Triggers include Blender, 3D, character animation, rigged character, cast, shot spec, acting, camera angles, transparent clip, alpha, pull out from the screen, phone mockup, device mockup, product shot, turntable, orbit, glTF, GLB, BlenderClip.
+description: 3D scenes, character acting and product shots from a shot spec, rendered in Blender, as a finished film, as clips for any other build (moviepy, a video job, an editor), or as elements of a Remotion video (transparent characters over a scene, a Remotion render on a 3D laptop, phone or floating card that the camera pulls back from, an imported 3D model on a studio stage), or a brand's opening and closing ident built from its SVG logo. A rigged cartoon cast described in JSON (build, face, hair, clothes, a seed), sets, shots by type, acting beats in seconds or on narration words, every camera checked by geometry, sound placed on the motion. Use when a video needs a consistent directable character (parody, explainer gag, reaction shot), a 3D reveal or element in a Remotion video, a device or product shot of an app or a model, or exact acting timing that AI video clips can't hold. Triggers include Blender, 3D, character animation, rigged character, cast, shot spec, acting, camera angles, transparent clip, alpha, pull out from the screen, phone mockup, device mockup, product shot, turntable, orbit, glTF, GLB, BlenderClip, logo animation, ident, logo reveal, sting, SVG in 3D.
 ---
 
 # Blender shot specs
@@ -206,6 +206,7 @@ them to run it; never commit their photos.
 | `product` | a studio prop | a three-quarter view of the prop, pushing in a little |
 | `orbit` | a studio prop | the camera travels round the prop from `az` to `az_to` |
 | `reveal` | a studio `phone` or `card` | starts on its screen edge to edge, holds, then pulls back to the `product` view |
+| `ident` | a studio prop, usually a `logo` | square on, in the prop's own directions; `"from"` / `"to"` are where the camera comes from and leaves for; its last frame (or first, `"mark": "start"`) is tested against the flat SVG |
 
 Overrides per shot: `az` (degrees round the subject; 0 = straight in front, + = the subject's left), `dist` (m),
 `h` (camera height above the target, m), `lens` (mm), `push` (fraction of the distance closed during the shot),
@@ -406,6 +407,45 @@ reason.
 
 An imported model keeps its own materials. Check its licence before it goes in a video, as with any asset.
 
+**A logo and its ident.** Prop kind `logo` builds an SVG in 3D, each filled shape its own part, and a studio set's
+beats move parts and whole props. Use it for a brand's opening and closing ident, a logo reveal, or a mark that
+assembles; `examples/blender-ident` has two.
+
+```json
+"set": {"kind": "studio", "stage": "dark", "palette": {"backdrop": "#0c111f"},
+        "props": [{"id": "mark", "kind": "logo", "file": "assets/mark-parts.svg", "extras": ["caret"]}]},
+"shots": [{"id": "open", "dur": 2.0, "type": "ident", "from": {"az": 14, "back": 1.035}, "offset": [0, 0.04]}],
+"beats": [{"at": 0, "do": "grow", "part": "mark.play", "to": 0, "from": "bottom_left"},
+          {"at": "open+0.667", "do": "hit", "part": "mark.slash", "shake": 0.014, "flash": 0.7, "sound": "clap"},
+          {"at": "open+0.667", "dur": 0.4, "do": "grow", "part": "mark.play", "to": 1, "ease": "spring"}],
+"sounds": {"clap": [{"file": "sfx/slate.mp3", "gain": 0.9}, {"tones": [98, 147, 196], "decay": 0.55, "beat": 1.004}]},
+"mix": {"gain": 0.65}
+```
+
+- **Prop fields:** `file`, `size` (m, the longest side; 0.3), `depth`, `bevel`, `material` (`satin`, `matte`,
+  `gloss`, `metal`, `flat`), `extras` (parts the film needs and the finished mark lacks), `parts` (per part:
+  `color`, `material`, `glow`, `depth`), `lay` (on its back), `base` (`{"kind": "key"}`: on a keycap).
+- **Part ids** are the SVG shapes' `id`s, else `p1`, `p2`. Strokes, text and gradients are not read, and the
+  check's notes say so.
+- **Verbs** (each takes `part`, `to`, `dur` or `until`, `ease`: `linear`, `in`, `out`, `in_out`, `spring`):
+  `turn` (`hinge`, `axis`), `shear` (`foot`), `grow` (`from`), `move`, `sink`, `press` (`depth`, `back`), `show`,
+  `hide`, `blink` (`every`, `off`), `glow`, `light` (`light`: key, fill or rim), `flash`, `sweep` (`from`), `hit`
+  (`shake`, `flash`), `sound`. A beat with no `dur` is a jump; beats at 0 set the opening pose.
+- **Sound:** any beat takes `"sound": "name"` (and `"sound_at"`); `sounds` maps a name to layers, a recording
+  (`file`, `gain`, `lowpass`) or `tones` (Hz, with `attack`, `decay`, `hold`, `beat`). A recording's loudest
+  moment goes on the event's frame. The mix has one fixed gain, so levels match from clip to clip.
+- **Colour:** a logo spec defaults to the Standard view at exposure 0. Keep `glow` at 1 or under (past it a
+  saturated colour clips toward white); get more from `flash`, `sweep` or `"look": {"bloom": {...}}`.
+- **Stage:** `"stage": "dark"` is a glossy dark floor with no wall; `"floor": {"rough": 0.6}` for a prop seen
+  from above; `"lights": {"key": 1.2}` scales the stage's lights.
+- **Checks:** the mark frame of an `ident` shot is tested against the flat SVG (parts in place, extras gone, lens
+  square on, each face its own colour to within 10 Delta E), and after a render each `hit` is tested against the
+  clip (the picture's biggest change is on the hit's frame). Read both before showing anyone.
+- **Clips:** `--clips --with-sound` puts each clip's sound in its file; `--clips --alpha` leaves the stage out;
+  `--res 1080x1920` gives the vertical ident from the same spec.
+- Test the flat mark first with `tools/mark_sheet.py`; what makes an ident work is in the `video-design` skill
+  ("Idents").
+
 **A Remotion render on the laptop.** `set.screen.video` (or `image`) replaces the storage UI with a picture, 16:9
 and unlit so its colours survive:
 
@@ -572,7 +612,7 @@ its front wall (use `medium` or a `fixed` camera); the clay cast's hands are one
 but does not close round it (a fitted model can have fingers); nothing stops a walk going through furniture (walk
 round it, or bend the walk with `curve`); the clay cast's hoodie hem is ragged when it stands, because its
 body is made seated; a studio set has props and no character; cartoon "clay" style;
-hand-keyed acting (no motion capture); no cast shadow on a transparent background; studio props don't move (the
-camera does). Next on the roadmap: props that move and a tablet prop, cast shadows on transparent clips, two
+hand-keyed acting (no motion capture); no cast shadow on a transparent background; a logo reads flat filled
+shapes only (no strokes, text or gradients) and has one base, a keycap. Next on the roadmap: a tablet prop, cast shadows on transparent clips, two
 characters in a set, hand shapes and props in the hand, your own `.blend` as a set, a `script` hook in the spec, imported rigs,
 and a `blender` visual kind in `video_job.py`.

@@ -27,7 +27,7 @@ import random
 import bpy
 import numpy as np
 from bpy_extras.object_utils import world_to_camera_view
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 from kit import empty, key, link, n, ticks
 
@@ -64,6 +64,10 @@ SHOT_TYPES = {
     "orbit":         dict(prop=True, az=-55, az_to=55, elev=12, lens=60, fill=0.7, push=0.0, check="prop"),
     # starts on a prop's screen edge to edge (as screen_fill), holds, then pulls back to the `product` view
     "reveal":        dict(move="out", lens=50, az=-28, elev=14, hold=0.4, fill=0.85, check="screen"),
+    # a prop seen square on, in its own directions (a logo lying on its back is filmed from above): `az` and
+    # `elev` are the resting view, `"from"` and `"to"` ({"az", "elev", "back"}) where the camera comes from by
+    # `settle` seconds and leaves for after `leave` seconds; `offset` moves the prop in the frame, as shares of it
+    "ident":         dict(prop=True, ident=True, az=0, elev=3, lens=50, fill=0.5, check="prop"),
 }
 READABLE_DEG = 60  # a screen turned further than this from the lens is not being read
 # tried in order until one passes: (swing degrees, extra height m, distance factor)
@@ -116,9 +120,12 @@ def screen_subject(room):
 
 
 def prop_subject(prop):
-    centre, radius = prop.bounds()
-    inner = lambda: [centre + (c - centre) * 0.9 for c in prop.corners()]  # noqa: E731  (rays aim inside the box)
-    sub = Subject("prop", centre, (0, -1, 0), inner, prop.corners, prop.objects(), prop.root, size=radius)
+    # a logo is framed as the finished mark stands, whatever its parts are doing at the time
+    corners = (lambda: prop.rest) if getattr(prop, "rest", None) else prop.corners
+    c = corners()
+    centre, radius = (c[0] + c[7]) / 2, (c[7] - c[0]).length / 2
+    inner = lambda: [centre + (q - centre) * 0.9 for q in corners()]  # noqa: E731  (rays aim inside the box)
+    sub = Subject("prop", centre, (0, -1, 0), inner, corners, prop.objects(), prop.root, size=radius)
     sub.prop = prop
     return sub
 
@@ -347,6 +354,91 @@ def _solve_prop(shot, spec, sub, f0, f1):
     return cam, report
 
 
+def _solve_ident(shot, spec, sub, f0, f1, fps, shakes=()):
+    """ident: a camera that ends (or starts) square on a prop, in the prop's own directions, with a move in or
+    out, a hit's shake, and room left in the frame if the shot asks for it."""
+    from logo import frame_of
+    sc = bpy.context.scene
+    aspect = sc.render.resolution_x / sc.render.resolution_y
+    prop = sub.prop
+    centre, right, up, out, _width = frame_of(prop)
+    cd = D.cameras.new(shot["id"])
+    cd.lens = spec["lens"]
+    cam = link(D.objects.new(shot["id"], cd))
+    cam.rotation_mode = "QUATERNION"
+    dx, dy = shot.get("offset", (0.0, 0.0))
+    cd.shift_x, cd.shift_y = (-dx, -dy / aspect) if aspect >= 1 else (-dx * aspect, -dy)
+    rest = (float(spec["az"]), float(spec["elev"]), 1.0)
+    span, dur = max(1, f1 - f0), (f1 - f0 + 1) / fps
+    come, go = shot.get("from"), shot.get("to")
+    settle, leave = float(shot.get("settle", dur)), float(shot.get("leave", 0.0))
+
+    def view(f):
+        t = (f - f0) / fps
+        az, el, back = rest
+        for end, u in ((come, 1 - _ease(min(1.0, t / max(settle, 1e-6))) if come else 0.0),
+                       (go, _ease(min(1.0, max(0.0, (t - leave) / max(dur - leave, 1e-6)))) if go else 0.0)):
+            if end:
+                az += (float(end.get("az", rest[0])) - rest[0]) * u
+                el += (float(end.get("elev", rest[1])) - rest[1]) * u
+                back *= 1 + (float(end.get("back", 1.0)) - 1) * u
+        return az, el, back
+
+    def aim_at(f, dist):
+        az, el, back = view(f)
+        a, e = math.radians(az), math.radians(el)
+        d = (out * math.cos(a) + right * math.sin(a)) * math.cos(e) + up * math.sin(e)
+        shake = Vector((0, 0, 0))
+        for fh, amp, sr, su in shakes:
+            if f >= fh:
+                k = (f - fh) * 30 / fps
+                shake += (sr + su * 0.6) * amp * math.exp(-k / 2.5) * math.sin(k * 2.4)
+        at = centre + d * dist * back + shake
+        z = d.normalized()
+        x = up.cross(z).normalized()
+        cam.location = at
+        cam.rotation_quaternion = Matrix((x, z.cross(x), z)).transposed().to_quaternion()
+        bpy.context.view_layer.update()
+
+    def extent(f, dist):
+        aim_at(f, dist)
+        mid = world_to_camera_view(sc, cam, centre)
+        pts = [world_to_camera_view(sc, cam, p) for p in sub.frame_fn()]
+        return (max(max(abs(v.x - mid.x), abs(v.y - mid.y)) * 2 for v in pts),
+                max(max(abs(v.x - 0.5), abs(v.y - 0.5)) * 2 for v in pts))
+
+    dist = spec.get("dist") or fit_distance(sub.size, spec["lens"], aspect, spec["fill"])
+    still = f1 if come or not go else f0  # the frame the camera is at rest on
+    if "dist" not in spec:
+        for _ in range(4):
+            dist *= extent(still, dist)[0] / spec["fill"]
+    cd.clip_start, cd.clip_end = max(0.01, dist * 0.02), max(100.0, dist * 50)
+    # where the move shows the prop from the side it can be wider than the frame: stand back for those frames
+    limit, backs = 1 - 2 * MARGIN, {}
+    for f in range(f0, f1 + 1):
+        b = 1.0
+        for _ in range(3):
+            edge = extent(f, dist * b)[1]
+            if edge <= limit:
+                break
+            b *= edge / limit * 1.01
+        backs[f] = b
+    issues = []
+    for f in sorted({f0 + round(span * i / 8) for i in range(9)}):
+        if extent(f, dist * backs[f])[1] > 1 - MARGIN:
+            issues.append(f"f{f}: the prop does not fit the frame")
+    moving = bool(come or go or shakes or any(b != 1.0 for b in backs.values()))
+    for f in range(f0, f1 + 1) if moving else (f0,):
+        aim_at(f, dist * backs[f])
+        key(cam, "location", f)
+        key(cam, "rotation_quaternion", f)
+    report = {"id": shot["id"], "type": shot["type"], "frames": [f0, f1], "distance_m": round(dist, 3),
+              "passed": not issues, "issues": issues, "adjusted": False, "swing": 0, "rise": 0, "back": 1.0}
+    if max(backs.values()) > 1.001:
+        report["stood_back"] = round(max(backs.values()), 2)
+    return cam, report
+
+
 def _solve_fixed(shot, spec, f0, f1):
     """A camera where the spec puts it, looking at "aim". With a "window" it sees only that share of the frame
     the lens would give at `frame` (16:9 unless said): the same lens from the same place, shifted and narrowed,
@@ -386,10 +478,12 @@ def _solve_fixed(shot, spec, f0, f1):
     return cam, report
 
 
-def solve(shot, sub, f0, f1, seed=0, fps=24, avoid=()):
+def solve(shot, sub, f0, f1, seed=0, fps=24, avoid=(), shakes=()):
     """Create the shot's camera, choose a placement that passes the checks, key its move. Returns (cam, report)."""
     spec = {**SHOT_TYPES[shot["type"]],
             **{k: shot[k] for k in ("dist", "az", "az_to", "h", "lens", "push", "elev", "hold", "fill") if k in shot}}
+    if spec.get("ident"):
+        return _solve_ident(shot, spec, sub, f0, f1, fps, shakes)
     if spec.get("prop"):
         return _solve_prop(shot, spec, sub, f0, f1)
     if spec.get("fixed"):
