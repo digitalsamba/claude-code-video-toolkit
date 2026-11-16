@@ -25,14 +25,14 @@
   ]
  },
  "episode": {
-  "name": "key",
+  "name": "clap",
   "open": {
-   "file": "ident/key-open-16x9.mp4",
-   "frames": 72,
-   "title_frame": 59
+   "file": "ident/clap-open-16x9.mp4",
+   "frames": 60,
+   "title_frame": 51
   },
   "close": {
-   "file": "ident/key-close-16x9.mp4",
+   "file": "ident/clap-close-16x9.mp4",
    "frames": 105
   }
  },

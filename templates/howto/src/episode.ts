@@ -18,7 +18,7 @@ export const EPISODE: Episode = {
   title: ['What it costs:', 'mostly nothing'],
   next: ['Next: the whole setup,', 'in one conversation'],
   link: 'github.com/digitalsamba/claude-code-video-toolkit',
-  music: { file: 'audio/music/bed_1.mp3', volume: 0.32 }, // under narration at -16 LUFS
+  music: { file: 'audio/music/bed_2.mp3', volume: 0.35 }, // under narration at -16 LUFS
   openTitle: (cue) => [cue('cost you money'), cue('mostly no')],
   openStops: (cue) => [cue("what's free"), cue("what isn't"), cue('what we really spend'), cue('spend', { edge: 'end' })],
   chapters: [

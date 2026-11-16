@@ -77,7 +77,7 @@ hand for the narrow frame).
 | `facts.json` | Every number the episode shows or says, with source and the date checked | Replace, check on render day |
 | `public/audio/scenes/` | One sentence per file: `<NN><letter>_<scene>.txt`, its `.mp3` and `.captions.json` | Replace |
 | `public/audio/layout.json` | Lead, gap and tail frames per scene, where the defaults don't suit | Adjust |
-| `public/audio/music/` | The bed (`bed_1.mp3`, ACE-Step, chosen by `pick_music.py`) | Keep or replace |
+| `public/audio/music/` | The bed (`bed_2.mp3`, ACE-Step, chosen by ear against the picture with `audition.py`) | Keep or replace |
 | `scripts/timing.py` | Lays the phrases on the timeline and puts their word times in `src/timing.json` | Keep |
 | `src/howto/` | Engine: timeline, scene kinds, the mark and track, theme | Keep |
 | `src/brand.ts` | The one place the brand is chosen | Keep, or point at your brand |
