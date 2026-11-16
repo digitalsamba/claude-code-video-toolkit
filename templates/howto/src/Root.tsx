@@ -1,7 +1,8 @@
 import React from 'react';
 import { Composition } from 'remotion';
 import { EPISODE } from './episode';
-import { duration, EpisodeVideo } from './howto/Episode';
+import { EpisodeVideo } from './howto/Episode';
+import { duration } from './howto/timeline';
 
 export const RemotionRoot: React.FC = () => (
   <>

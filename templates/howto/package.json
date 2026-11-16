@@ -5,7 +5,8 @@
   "scripts": {
     "studio": "npx remotion studio",
     "render": "npx remotion render src/index.ts Episode out/episode.mp4",
-    "render:shorts": "for i in $(seq 1 4); do npx remotion render src/index.ts Short-$i out/short-$i.mp4; done",
+    "render:shorts": "node scripts/render-shorts.mjs",
+    "chapters": "uv run scripts/chapters.py",
     "build": "npx remotion bundle src/index.ts"
   },
   "dependencies": {

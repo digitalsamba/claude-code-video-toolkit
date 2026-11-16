@@ -64,6 +64,7 @@ only one thing holds it. Nothing exits (the scene cuts). The entrance depends on
 | A row's leader, a bar | draws out from its start, long-tailed, 18 to 20 frames |
 | Detail lines, sources, lines under a figure | a 14 px rise, 10 frames: the quiet ones |
 | The playhead | eases both ways to its stop; the stop lands large and settles |
+| A split's row | word by word, like a row's label; its column's count lands large and settles each time it goes up |
 | A chapter's question | typed, a character a frame; the caret goes and the box takes the accent when it is sent, and it holds about a second more before the answer opens |
 
 The episode is one conversation with an agent. A chapter with `ask` opens on its question, typed at a prompt in
@@ -74,12 +75,12 @@ place.
 
 A pen marks what is being said: a loop round the value of the row or bar the narration is on, a stroke under the
 newest line beneath a figure. It is drawn in 9 frames, in the accent, and moves on with the narration, so there
-is one mark on screen at a time.
+is one mark on screen at a time. In a split the pen circles a column's count when the narration says the number.
 
 A number that carries a chapter stays on screen across the cut: a ledger's `hero` starts where the figure scene
 before it left the number and moves into place beside the rows.
 
-Sound: a tick as a row or a bar lands, a low note under a figure or a limit line, a soft pass as the playhead
+Sound: a tick as a row or a bar lands, a low note under a figure, a limit line or a split's count as it is said, a soft pass as the playhead
 moves (`public/audio/sfx`, synthesised by `scripts/sounds.py`). They sit well under the narration.
 
 ## Brand mark and ident

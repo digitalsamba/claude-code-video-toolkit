@@ -41,6 +41,11 @@ export type LedgerProps = {
    */
   hero?: { text: string; carry?: boolean; at?: number };
   rows: LedgerRow[];
+  /**
+   * Up to three rows fill the frame (the detail under the label, a number at figure size) and more are set
+   * compact. `big: true` keeps the large setting for a fourth row, which fits when the ledger has no title.
+   */
+  big?: boolean;
   /** Every value landed so far takes the accent ("all free") until the next row lands */
   allAt?: number;
   note?: string;
@@ -84,6 +89,36 @@ export type SessionProps = {
   highlight?: SessionHighlight[];
 };
 
+export type SplitRow = {
+  text: string;
+  /** Frame the row lands on (a cue); it holds the accent until the next row lands, in either column */
+  at: number;
+  /** How many things the row stands for in its column's count (default 1): "checks Node, uv and FFmpeg" is 3 */
+  count?: number;
+  /** A smaller line under the row, landing on its own words (a pointer, a condition) */
+  detail?: string;
+  detailAt?: number;
+};
+
+export type SplitSide = {
+  /** Who this column is: "You", "Claude Code" */
+  head: string;
+  /** Six rows at most beside a title in 16:9 (eight without one); in a Short the two columns stack */
+  rows: SplitRow[];
+  /** Beside the count: what is being counted ("things you do") */
+  unit?: string;
+  /** The frame the count is said: it takes the accent and the pen circles it */
+  countAt?: number;
+};
+
+/** Who does what: two columns, rows landing on their words, and a running count under each. */
+export type SplitProps = {
+  title?: Said;
+  left: SplitSide;
+  right: SplitSide;
+  note?: string;
+};
+
 export type CommandProps = { command: string; at: number; lines: { text: string; at: number }[]; note?: string };
 
 export type Kinds = {
@@ -93,6 +128,7 @@ export type Kinds = {
   bars: BarsProps;
   session: SessionProps;
   command: CommandProps;
+  split: SplitProps;
 };
 
 export type SceneSpec = {

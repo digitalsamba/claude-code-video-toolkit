@@ -77,6 +77,14 @@ of its Short as well as the episode's.
 | `statement` | Two or three lines | each line |
 | `session` | An agent CLI session filling the frame (`TerminalSession`, any skin): the field is the terminal | every prompt, tool call, permission prompt, zoom |
 | `command` | The one command to type, large, and what it does | typing starts on the word |
+| `split` | Who does what: two columns ("You", "Claude Code"), a running count under each | each row on its words; a column's count takes the accent and the pen when it is said (`countAt`) |
+
+A `split` row can stand for more than one thing (`count: 3` for "checks Node, uv and FFmpeg"), so the rows stay
+few and the counts stay true to what was counted. A column holds six rows beside a title in 16:9 and eight
+without one; in a Short the two columns stack, each count at the end of its head's line.
+
+A ledger row's `show` window sits under the `hero` when there is one, and in the hero's place when there isn't,
+so a ledger can show the thing without having a number to carry.
 
 Every scene's props are a function of `cue`, so no frame number is typed by hand: `at: cue('three hundred')` is
 the frame the narrator says it. `short` on a scene gives replacement props for the 9:16 Short (titles broken by
@@ -92,6 +100,11 @@ hand for the narrow frame).
 | `public/audio/layout.json` | Lead, gap and tail frames per scene, where the defaults don't suit | Adjust |
 | `public/audio/music/` | The bed (`bed_2.mp3`, ACE-Step, chosen by ear against the picture with `audition.py`) | Keep or replace |
 | `scripts/timing.py` | Lays the phrases on the timeline and puts their word times in `src/timing.json` | Keep |
+| `src/howto/timeline.ts` | The timeline itself (segments and their lengths), with no React in it, so scripts can read it | Keep |
+| `scripts/timeline.mjs` | Prints that timeline as JSON: every segment's start frame, every chapter's | Keep |
+| `scripts/chapters.py` | YouTube chapters from the timeline, to `out/publish/chapters.txt` | Keep |
+| `scripts/render-shorts.mjs` | Renders a Short per chapter (`npm run render:shorts`), stops on a failure | Keep |
+| `scripts/accent.py` | Screens the narration for words a British voice said with an American r | Keep |
 | `src/howto/` | Engine: timeline, scene kinds, the mark and track, theme | Keep |
 | `src/brand.ts` | The one place the brand is chosen | Keep, or point at your brand |
 | `scripts/ident.py` | Reads the brand's mark and ident into `src/ident.json` and `public/ident/` | Run again when the brand changes |
@@ -103,7 +116,8 @@ hand for the narrow frame).
 From the toolkit root:
 
 ```bash
-cp -r templates/howto projects/my-episode && cd projects/my-episode && npm install
+mkdir -p projects && cp -r templates/howto projects/my-episode && cd projects/my-episode
+rm -rf node_modules out public/audio/scenes/* && npm install  # not the pilot's renders, narration or packages
 # 1. write one sentence per file in public/audio/scenes/ (00a_open.txt, 01a_free.txt, ...), then lint it
 uv run ../../tools/copy_lint.py public/audio/scenes/*.txt
 # 2. voice it, word-time it, lay it out
@@ -116,7 +130,67 @@ npm run studio
 npm run render && npm run render:shorts
 uv run ../../tools/qc.py --render out/episode.mp4 --fix        # writes out/episode.loudnorm.mp4 at -14 LUFS
 uv run ../../tools/contact_sheet.py out/episode.loudnorm.mp4  # one frame per scene, for the critique
+# 5. for YouTube: subtitles from the render, chapters from the timeline
+uv run ../../tools/publish_kit.py --project . --video out/episode.loudnorm.mp4 --no-chapters
+uv run scripts/chapters.py --video out/episode.loudnorm.mp4    # out/publish/chapters.txt
 ```
+
+`npm run render:shorts` renders one Short per chapter, however many the episode has. Arguments after `--` go to
+every render (`npm run render:shorts -- --log error`), and `--only 2,4` renders just those chapters. It stops at
+the first render that fails and checks that each file was written by this run. Check that yourself after any
+render command that went wrong: a render that did not run leaves the last one's file in `out/`, and that file
+passes QC.
+
+Chapters come from `scripts/chapters.py`, not from `publish_kit.py`: the publish kit makes a chapter per narration
+file, and here a file is one sentence. The script reads the timeline the render plays, so a chapter starts where
+its card does; the stretch before the first card (hook, ident, title) is the 0:00 chapter, named by the hook's
+question. `--titles ask` names chapters by their typed questions. With `--video` it refuses to write chapters for
+a render whose length is not the timeline's.
+
+A copied `node_modules` has broken links (`remotion: MODULE_NOT_FOUND`), which is why the first line removes it
+before `npm install`. `npx remotion compositions src/index.ts` lists the lengths but does not look up a single
+cue: a cue is read when its scene draws. Render one still late in each scene
+(`npx remotion still src/index.ts Episode out/still.png --frame N`, frames from `node scripts/timeline.mjs`) and
+every cue in the scene is checked, in seconds, before a render that takes minutes. Do the same for each Short.
+
+### Voicing with takes, a tag and a check
+
+One take per line is step 2 above. For a narrator who drifts (pace, or accent on a word), make three and pick:
+
+```bash
+# text sent for voicing carries a direction the voice does not read aloud; the .txt in scenes/ never does
+for t in 1 2 3; do mkdir -p public/audio/takes/t$t; done      # write <name>.txt in each: "[crisp British English accent] The line."
+for t in 1 2 3; do uv run ../../tools/voiceover.py --brand video-toolkit --scene-dir public/audio/takes/t$t --json; done
+# put the spoken words back in every take's .txt, THEN pick: the picker counts the tag's words as speech, reads
+# every line as 30 to 60 wpm too fast and slows nearly all of them (31 of 33 lines on episode 2 before this)
+uv run --extra prosody ../../tools/pick_takes.py --takes-dir public/audio/takes --output public/audio/picked --json
+uv run --extra prosody scripts/accent.py                       # after captions.py: words said with an American r
+```
+
+Then level each picked file to the scene target with one gain and a limiter
+(`volume=<gain>dB,alimiter=limit=0.891:level=disabled`, the gain from `ffmpeg -af ebur128`), copy it to
+`public/audio/scenes/` with its spoken-words `.txt`, and run `captions.py` and `scripts/timing.py`. Any change to
+an MP3 needs its captions made again.
+
+A narration file does not have to be the narrator. Episode 2 opens on the voice line its own setup made
+(`00a_hook.mp3` is that file, levelled, with its words in the `.txt`), so the result is heard before it is
+explained, and `cue()` finds its words like any other line.
+
+### A session scene is a copy of a real run
+
+A `session` is drawn, so it can show anything, which is the reason it has to show only what happened:
+
+- Run the real commands first, in a fresh clone, and save each one's command line, output, exit code and time to
+  its own file in the project's `capture/` folder. Read build and call times off those files (a Modal deploy
+  prints `App deployed in 590.573s`), not off a clock.
+- `facts.json` lists each number with the capture file it came from, and marks every line that is **quoted**
+  instead of captured: a step that needs a person at a browser (a first login, adding a card) is quoted from the
+  tool's own source or docs, never invented. The agent's own sentences are quoted from the command file it
+  follows, and the description says its wording differs from run to run.
+- Count from the capture. If the video says "ten things you do", `facts.json` holds the ten, and a `split` scene's
+  row counts add up to the same number.
+- Nothing private on screen: no key values, account email, workspace name (it is in every Modal endpoint URL: cut
+  the URL short) or home path. Read every session frame for this before the render is shown to anyone.
 
 `open` and `close` are scene ids for the narration of the opening and the close. Both are optional: with no `open`
 lines the opening is the title for about three seconds, which is what an episode with a hook wants. Scene files sort by name, so
