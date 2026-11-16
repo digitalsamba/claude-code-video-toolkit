@@ -235,7 +235,7 @@ const Shown: React.FC<{ show: NonNullable<LedgerRow['show']>; at: number; box: {
         <Img
           src={staticFile(show.images[Math.floor(Math.max(0, k) / 10) % show.images.length])}
           // one picture is pushed in slowly, so the window is never a frozen frame; several are flicked through
-          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: show.images.length === 1 ? `scale(${1 + Math.min(0.16, Math.max(0, k) * 0.0007)})` : undefined }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: show.images.length === 1 ? `scale(${1 + Math.min(0.32, Math.max(0, k) * 0.0011)})` : undefined }}
         />
       )}
       {show.wave && (

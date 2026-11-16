@@ -80,11 +80,13 @@ of its Short as well as the episode's.
 | `split` | Who does what: two columns ("You", "Claude Code"), a running count under each | each row on its words; a column's count takes the accent and the pen when it is said (`countAt`) |
 
 A `split` row can stand for more than one thing (`count: 3` for "checks Node, uv and FFmpeg"), so the rows stay
-few and the counts stay true to what was counted. A column holds six rows beside a title in 16:9 and eight
+few and the counts stay true to what was counted. The count climbs to each row's share over a few frames, and a
+row can carry a `detail` line that lands on its own words (`detailAt`): a pointer, a condition, what the row is made of. A column holds six rows beside a title in 16:9 and eight
 without one; in a Short the two columns stack, each count at the end of its head's line.
 
 A ledger row's `show` window sits under the `hero` when there is one, and in the hero's place when there isn't,
-so a ledger can show the thing without having a number to carry.
+so a ledger can show the thing without having a number to carry. One picture in the window is pushed in slowly;
+a still that follows a moving waveform reads as a clip that froze (QC's "motion stops dead").
 
 Every scene's props are a function of `cue`, so no frame number is typed by hand: `at: cue('three hundred')` is
 the frame the narrator says it. `short` on a scene gives replacement props for the 9:16 Short (titles broken by
