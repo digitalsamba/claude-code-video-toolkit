@@ -223,6 +223,22 @@ Compare `requestedPrivacy` vs `privacyStatus` to detect the unverified-app force
 
 ---
 
+### Scheduling a video that is already uploaded
+
+`--publish-at` schedules at upload time. For a private video that is already up (uploaded for someone to watch
+first), set the time with `videos.update` on `part=status`, keeping `privacyStatus: private`:
+
+```python
+yt.videos().update(part="status", body={"id": VIDEO_ID, "status": {
+    "privacyStatus": "private", "publishAt": "2026-11-24T15:00:00Z",
+    "embeddable": True, "publicStatsViewable": True, "license": "youtube", "selfDeclaredMadeForKids": False,
+}}).execute()
+```
+
+Two things to know. Send every status field you want kept: an update that leaves out `embeddable` or
+`publicStatsViewable` sets them to false. And a `videos.list` straight after the update can still return the old
+status, so read the update's own response, or wait about 20 seconds before reading back.
+
 ## Troubleshooting
 
 | Symptom | Fix |
