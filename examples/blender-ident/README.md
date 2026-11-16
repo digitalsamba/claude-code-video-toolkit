@@ -41,6 +41,9 @@ What it shows:
 Colour: the hit is lit by a `flash` and the look's `bloom`, with `glow` kept under 1. Past 1 the blue clips
 toward cyan. Bloom is left out of `--alpha` clips, which have nothing for the glow to sit on.
 
+The transparent clips are for dark grounds: they keep the dark stage's colours, so the white triangle is faint
+over a light scene. `ident.json` says so as `"alpha_ground": "dark"`.
+
 Sounds (`sfx/`, each with its credit file, all CC0 from Freesound): a film slate clap, a clapperboard for body
 under it, and a mechanical key. Nobody had listened to the mixes in this folder when it was written; the levels
 and the sync are measured, and whether the sound is right is for a person to say.

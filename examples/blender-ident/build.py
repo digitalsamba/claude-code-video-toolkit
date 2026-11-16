@@ -57,6 +57,9 @@ def main() -> int:
             entry = idents.setdefault(spec, {}).setdefault(part, {"seconds": clip["seconds"], "frames": clip["frames"],
                                                                   "fps": clip["fps"], "files": {}})
             entry["files"][f"{shape}{'-alpha' if alpha else ''}"] = name
+            if alpha:  # a transparent clip keeps the colours of the stage it was lit on
+                stage = json.loads((HERE / f"{spec}.json").read_text()).get("set", {}).get("stage", "sweep")
+                entry["alpha_ground"] = "dark" if stage == "dark" else "light"
             if clip.get("sound") and not alpha:
                 shutil.copy(folder / clip["sound"], a.to / f"{spec}-{part}.wav")
                 entry["sound"] = f"{spec}-{part}.wav"

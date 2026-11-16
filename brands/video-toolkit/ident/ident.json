@@ -14,7 +14,8 @@
         },
         "sound": "clap-open.wav",
         "hit_frame": 20,
-        "hit_checked": true
+        "hit_checked": true,
+        "alpha_ground": "dark"
       },
       "close": {
         "seconds": 3.5,
@@ -26,7 +27,8 @@
           "16x9-alpha": "clap-close-16x9-alpha.webm",
           "9x16-alpha": "clap-close-9x16-alpha.webm"
         },
-        "sound": "clap-close.wav"
+        "sound": "clap-close.wav",
+        "alpha_ground": "dark"
       }
     },
     "key": {
