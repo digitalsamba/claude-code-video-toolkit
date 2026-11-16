@@ -346,6 +346,18 @@
     {
       "phrase": "one month",
       "why": "a Generate Link link works for 30 days (site code); say '30 days' (copy.md, Claims)"
+    },
+    {
+      "phrase": "mobile app",
+      "why": "Free is browser only; the store app is for Embedded (ds-support kb/ds-free/common-issues.md, Mobile / Desktop Apps)"
+    },
+    {
+      "phrase": "download the app",
+      "why": "Free is browser only (same source)"
+    },
+    {
+      "phrase": "Google Calendar integration",
+      "why": "Embedded only (common-issues.md)"
     }
   ],
   "names": [

@@ -132,6 +132,8 @@ noted in the project. If it can't be checked, leave it out. Settled on 2026-11-1
   whiteboards and recording don't work with it.
 - **"No sign-up"**: true for a call started from the website; scheduling, contacts, templates and
   recordings need an account. Say which.
+- **Dark mode**: the dashboard has one (**Switch to dark mode**); calls don't. Say which.
+- **Apps**: Free runs in the browser on any device; there is no app to download (the store app is Embedded's).
 - **Where data lives**: "hosted in Europe" and "GDPR" are safe. City names (Amsterdam, Frankfurt) are
   confirmed for Embedded only.
 
