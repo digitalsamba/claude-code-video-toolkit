@@ -40,6 +40,8 @@ out/
 # a brand's idents are small clips that templates play (brands/<name>/ident/)
 !brands/*/ident/*.mp4
 !brands/*/ident/*.webm
+# a template keeps the clips of the brand ident it plays (its scripts/ident.py copies them from the brand)
+!templates/*/public/ident/*.mp4
 
 # But DO track the README banner assets
 !assets/banner/**

@@ -95,7 +95,7 @@ export const ChapterCard: React.FC<Base & { index: number; of: number; text: Lin
  * The close: the playhead runs to the end, the track rolls back into the caret, the play triangle opens into a
  * prompt again and the caret blinks: your turn. "Next" rises on the narration; the link under the track.
  */
-export const Close: React.FC<Base & { chapters: number; next: Lines; link: string; nextAt: number; linkAt: number; endAt: number; runUntil?: number }> = ({
+export const Close: React.FC<Base & { chapters: number; next: Lines; link: string; nextAt: number; linkAt: number; endAt: number; runUntil?: number; hold?: boolean }> = ({
   L,
   f,
   chapters,
@@ -105,14 +105,15 @@ export const Close: React.FC<Base & { chapters: number; next: Lines; link: strin
   linkAt,
   endAt,
   runUntil,
+  hold,
 }) => {
   const frame = useCurrentFrame();
   const last = stopAt(chapters - 1, chapters);
   const run = ramp(frame, 6, Math.max(22, (runUntil ?? 28) - 6)); // to the end of the track, while "next" is said
-  const back = ramp(frame, endAt, 24); // and back into the caret
+  const back = hold ? 0 : ramp(frame, endAt, 24); // and back into the caret (with `hold` the brand's ident closes instead)
   const head = back > 0 ? 1 - back : last + (1 - last) * run;
-  const fill = 1 - ramp(frame, endAt + 22, 14);
-  const done = frame > endAt + 36;
+  const fill = hold ? 1 : 1 - ramp(frame, endAt + 22, 14);
+  const done = !hold && frame > endAt + 36;
   const blink = done ? Math.floor((frame - endAt - 36) / 15) % 2 === 0 : true;
   const g = railGeometry(L);
   return (

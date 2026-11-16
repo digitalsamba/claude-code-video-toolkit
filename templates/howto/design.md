@@ -55,6 +55,14 @@ size, bottom right, secondary ink, on every scene but the opening and close.
 Entrances 10 frames, spring damping 200, 14 px rise; nothing exits (the scene cuts). Every change lands on the
 word that names it (`cue()`). The data accent moves to whatever is being said, and only one thing holds it.
 
+## Brand mark and ident
+
+When the brand has a mark, it heads the track in place of the chevron: its own colours on `explain`, its
+on-dark colours on `work`, one colour on `identity`. When the brand has an ident, its open clip plays before the
+opening and its close clip after the close, each a hard cut on its own dark stage; the 2D opening then starts at
+the track, and the 2D close stops at the link. A Short ends on the close clip with the episode's name and the
+link at title and note size, on the title edge. The bed is silent under both clips.
+
 ## Rules turned off
 
 - none

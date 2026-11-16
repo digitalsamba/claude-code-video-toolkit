@@ -116,6 +116,8 @@ export type Episode = {
   openTitle?: (cue: Cue) => number[];
   /** Frames in the opening's narration that light the chapter stops ("what's free, what isn't...") */
   openStops?: (cue: Cue) => number[];
+  /** `false` keeps the template's 2D opening and close even when the brand has an ident (src/ident.json) */
+  ident?: boolean;
   /** Optional bed under the whole episode, from public/ */
   music?: { file: string; volume: number };
 };

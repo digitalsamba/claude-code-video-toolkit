@@ -2,11 +2,13 @@
  * The pieces every scene shares: the mark and its track (the episode's one recurring object), the ground, the
  * entrance, the episode badge.
  *
- * The mark is a prompt chevron with a caret. `fill` closes the chevron into a play triangle; the caret is the
+ * The mark is the brand's own (brands/<name>/assets/mark.svg, through scripts/ident.py) when it has one. Without
+ * one it is a prompt chevron with a caret. `fill` closes the chevron into a play triangle; the caret is the
  * playhead, `head` (0-1) along a track with a stop per chapter; `drawn` (0-1) is how much of the track exists.
  */
 import React from 'react';
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { MARK } from './ident';
 import { type Field, type Layout, note, SANS } from './theme';
 
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
@@ -60,7 +62,7 @@ export type RailState = {
 
 export const railGeometry = (L: Layout) => {
   const s = L.vertical ? 84 : 96; // chevron height
-  const w = s * 0.62;
+  const w = MARK ? (s * MARK.box[2]) / MARK.box[3] : s * 0.62; // the brand's mark at the chevron's height, or the chevron
   const gap = s * 0.24;
   const cw = s * 0.5; // caret width
   const ch = Math.max(10, s * 0.14); // caret height
@@ -96,7 +98,15 @@ export const Rail: React.FC<{ L: Layout; f: Field; n: number; state: RailState }
 
   return (
     <svg width={L.W} height={L.H} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
-      <polygon points={chevron} fill={f.ink} />
+      {MARK ? (
+        <g transform={`translate(${L.x} ${top}) scale(${s / MARK.box[3]}) translate(${-MARK.box[0]} ${-MARK.box[1]})`}>
+          {MARK.parts.map((p) => (
+            <path key={p.id} d={p.d} fill={p[f.mark] ?? f.ink} fillRule="evenodd" />
+          ))}
+        </g>
+      ) : (
+        <polygon points={chevron} fill={f.ink} />
+      )}
       {state.drawn > 0 && (
         <line x1={x0 + cw / 2} x2={drawnTo} y1={lineY} y2={lineY} stroke={f.ink} strokeOpacity={0.35} strokeWidth={3} strokeLinecap="round" />
       )}

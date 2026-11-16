@@ -20,14 +20,16 @@ export type Field = {
   ink2: string;
   /** Ground hairlines */
   hair: string;
+  /** Which of the brand mark's fills suits this ground */
+  mark: 'light' | 'dark' | 'mono';
 };
 
 const c = BRAND.colors as Record<string, string>;
 
 export const FIELDS: Record<FieldName, Field> = {
-  explain: { ground: c.bgAlt, ink: c.textDark, accent: c.primary, other: '#c9cfdc', ink2: '#4a5160', hair: 'rgba(18, 20, 24, 0.08)' },
-  work: { ground: c.navyDark, ink: '#ffffff', accent: c.primaryLight, other: '#3d4a70', ink2: c.textOnDarkMuted, hair: 'rgba(255, 255, 255, 0.07)' },
-  identity: { ground: c.primary, ink: '#ffffff', accent: '#ffffff', other: '#6d97e8', ink2: 'rgba(255, 255, 255, 0.85)', hair: 'rgba(255, 255, 255, 0.12)' },
+  explain: { ground: c.bgAlt, ink: c.textDark, accent: c.primary, other: '#c9cfdc', ink2: '#4a5160', hair: 'rgba(18, 20, 24, 0.08)', mark: 'light' },
+  work: { ground: c.navyDark, ink: '#ffffff', accent: c.primaryLight, other: '#3d4a70', ink2: c.textOnDarkMuted, hair: 'rgba(255, 255, 255, 0.07)', mark: 'dark' },
+  identity: { ground: c.primary, ink: '#ffffff', accent: '#ffffff', other: '#6d97e8', ink2: 'rgba(255, 255, 255, 0.85)', hair: 'rgba(255, 255, 255, 0.12)', mark: 'mono' },
 };
 
 export const SANS = `Inter, ${BRAND.fonts.primary}`;

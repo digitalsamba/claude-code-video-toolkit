@@ -2,7 +2,7 @@
 
 A Remotion template for how-to and tutorial videos about a tool: an episode in chapters, each scene drawn on the
 words of its narration, and a 9:16 Short cut from every chapter. It ships as the finished build of the toolkit's
-own **Getting started 1: What it costs** (2:34, four chapters), so `npm run render` works before you change
+own **Getting started 1: What it costs** (2:35, four chapters), so `npm run render` works before you change
 anything. For the next episode you replace `src/episode.ts`, `facts.json` and the narration; the opening, chapter
 cards, close and scene kinds stay.
 
@@ -19,6 +19,32 @@ One object carries the series: the **mark**. It is a terminal prompt, a chevron 
   the triangle opens into a prompt again and the caret blinks. The episode ends where it started: at a prompt.
 
 The geometry (`railGeometry` in `src/howto/parts.tsx`) is shared, so the track never moves between them.
+
+### With a brand's own mark and ident
+
+A brand can carry a flat mark (`brands/<name>/assets/mark.svg`) and an ident (`brands/<name>/ident/`, a short
+open and close with their sound; `docs/creating-brands.md`, "Mark and ident"). `scripts/ident.py` reads both for
+the brand `src/brand.ts` names, copies the clips to `public/ident/` and writes `src/ident.json`:
+
+```bash
+uv run scripts/ident.py                          # the brand's default ident
+uv run scripts/ident.py --episode key --short clap
+uv run scripts/ident.py --none                   # back to the prompt mark above
+```
+
+- **The mark** takes the chevron's place at the head of the track, in the colours for each field.
+- **An episode** opens with the ident's open clip, then the 2D opening from where its track draws. The close
+  holds on the link, then the ident's close clip ends the video.
+- **A Short** still opens on its chapter card (the cover and the hook) and ends on the ident's close clip, with
+  the episode's name and the link over it.
+- **Sound:** the ident plays its own, and the music bed starts after the open clip and is out before the close.
+- **Levels:** an ident is mixed to sit beside narration at the toolkit's scene target, -16 LUFS. Keep the
+  narration files there (measure with `ffmpeg -i file.mp3 -af ebur128 -f null -`): with a voice far under it the
+  ident lands much louder than the voice, and the final normalising pass pumps the quiet close up.
+
+The template ships filled from `brands/video-toolkit`. With `src/ident.json` as `{}`, or `ident: false` in
+`src/episode.ts`, everything above this heading plays instead; nothing needs Blender either way, because the
+clips are already rendered.
 
 ## Scene kinds
 
@@ -47,6 +73,7 @@ hand for the narrow frame).
 | `scripts/timing.py` | Lays the phrases on the timeline and puts their word times in `src/timing.json` | Keep |
 | `src/howto/` | Engine: timeline, scene kinds, the mark and track, theme | Keep |
 | `src/brand.ts` | The one place the brand is chosen | Keep, or point at your brand |
+| `scripts/ident.py` | Reads the brand's mark and ident into `src/ident.json` and `public/ident/` | Run again when the brand changes |
 | `design.md` | Acts, fields, type steps, ground, layout: the decisions the code follows | Keep |
 
 ## Making an episode

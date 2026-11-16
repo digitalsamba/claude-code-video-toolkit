@@ -4,15 +4,20 @@
  *
  * `short` renders one chapter as a 9:16 Short instead: its card (already settled on frame 0, the cover), its
  * scenes with burned captions, and a short end card.
+ *
+ * When the brand has an ident (src/ident.json, written by scripts/ident.py) an episode opens with its open clip
+ * and ends on its close clip, and a Short ends on the close clip. The 2D opening then starts at the track, and
+ * the 2D close stops at the link. With no ident, or `ident: false` in the episode, the 2D mark does both.
  */
 import React from 'react';
-import { AbsoluteFill, Audio, Sequence, staticFile, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, OffthreadVideo, Sequence, staticFile, useVideoConfig } from 'remotion';
 import { Captions, voice } from '../../../../lib/components';
 import { EPISODE } from '../episode';
 import timingJson from '../timing.json';
-import { Badge } from './parts';
+import { IDENT } from './ident';
+import { Badge, Rise } from './parts';
 import { ChapterCard, Close, Open, SCENES } from './scenes';
-import { FIELDS, type FieldName, layoutFor, loadFonts, SANS } from './theme';
+import { FIELDS, type FieldName, layoutFor, note, loadFonts, SANS, title } from './theme';
 import type { Cue, Episode, SceneSpec } from './types';
 
 loadFonts();
@@ -24,6 +29,9 @@ const TIMING = timingJson as Timing;
 export const CARD = 54; // a chapter card, in frames
 const OPEN_MIN = 150;
 const END_CARD = 75; // a Short's end card
+const OPEN_SKIP = 30; // after an ident the 2D opening starts where its track draws: the ident has shown the mark
+const LINK_HOLD = 75; // before an ident close, the link stays this long after the last word
+const STAGE = '#05070c'; // behind an ident clip while it loads
 
 const phrasesOf = (id: string) => TIMING.scenes[id]?.phrases ?? [];
 
@@ -41,21 +49,28 @@ type Segment =
   | { kind: 'open'; frames: number }
   | { kind: 'card'; chapter: number; frames: number; instant?: boolean }
   | { kind: 'scene'; spec: SceneSpec; frames: number }
-  | { kind: 'close'; frames: number }
+  | { kind: 'close'; frames: number; hold?: boolean }
+  /** A clip of the brand's ident; `over` lays the episode's name and link on it (a Short's end) */
+  | { kind: 'ident'; file: string; frames: number; over?: boolean }
   | { kind: 'end'; frames: number };
 
 const sceneFrames = (spec: SceneSpec) => Math.max(TIMING.scenes[spec.id]?.frames ?? 0, spec.minFrames ?? 0, 30);
 
 export const timeline = (ep: Episode, short?: number): Segment[] => {
+  const ident = ep.ident === false ? {} : IDENT;
   if (short !== undefined) {
     const scenes = ep.scenes.filter((s) => s.chapter === short);
+    const end = ident.short?.close;
     return [
       { kind: 'card', chapter: short, frames: CARD, instant: true },
       ...scenes.map((spec) => ({ kind: 'scene' as const, spec, frames: sceneFrames(spec) })),
-      { kind: 'end', frames: END_CARD },
+      end ? { kind: 'ident', file: end.file, frames: end.frames, over: true } : { kind: 'end', frames: END_CARD },
     ];
   }
-  const out: Segment[] = [{ kind: 'open', frames: Math.max(TIMING.scenes.open?.frames ?? 0, OPEN_MIN) }];
+  const out: Segment[] = [];
+  const opens = ident.episode?.open;
+  if (opens) out.push({ kind: 'ident', file: opens.file, frames: opens.frames });
+  out.push({ kind: 'open', frames: Math.max(TIMING.scenes.open?.frames ?? 0, OPEN_MIN) - (opens ? OPEN_SKIP : 0) });
   let chapter = -1;
   for (const spec of ep.scenes) {
     if (spec.chapter !== chapter) {
@@ -64,7 +79,15 @@ export const timeline = (ep: Episode, short?: number): Segment[] => {
     }
     out.push({ kind: 'scene', spec, frames: sceneFrames(spec) });
   }
-  out.push({ kind: 'close', frames: Math.max(TIMING.scenes.close?.frames ?? 0, 150) });
+  const closes = ident.episode?.close;
+  if (closes) {
+    const said = phrasesOf('close');
+    const last = said[said.length - 1];
+    out.push({ kind: 'close', frames: (last ? last.at + last.frames : 60) + LINK_HOLD, hold: true });
+    out.push({ kind: 'ident', file: closes.file, frames: closes.frames });
+  } else {
+    out.push({ kind: 'close', frames: Math.max(TIMING.scenes.close?.frames ?? 0, 150) });
+  }
   return out;
 };
 
@@ -104,27 +127,57 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
   const badge = `${ep.series} ${ep.number} · toolkit ${ep.version}`;
   const segs = timeline(ep, short);
   const total = segs.reduce((n, s) => n + s.frames, 0);
+  // an ident carries its own sound, so the bed starts after the open clip and is out before the close clip
+  const first = segs[0];
+  const lastSeg = segs[segs.length - 1];
+  const bedFrom = first.kind === 'ident' ? first.frames : 0;
+  const bed = total - bedFrom - (lastSeg.kind === 'ident' ? lastSeg.frames : 0);
+  const openSkip = first.kind === 'ident' ? OPEN_SKIP : 0;
   let from = 0;
 
   return (
     <AbsoluteFill style={{ background: FIELDS.work.ground }}>
       {ep.music && (
-        <Audio
-          src={staticFile(ep.music.file)}
-          volume={(t) => ep.music!.volume * Math.min(1, t / 20, Math.max(0, (total - t) / 60))}
-        />
+        <Sequence from={bedFrom} durationInFrames={bed}>
+          <Audio
+            src={staticFile(ep.music.file)}
+            volume={(t) => ep.music!.volume * Math.min(1, t / 20, Math.max(0, (bed - t) / 60))}
+          />
+        </Sequence>
       )}
       {segs.map((s, i) => {
         const start = from;
         from += s.frames;
         const fieldName: FieldName =
-          s.kind === 'open' ? 'work' : s.kind === 'close' || s.kind === 'end' ? 'identity' : ep.chapters[s.kind === 'card' ? s.chapter : s.spec.chapter].field;
-        const f = FIELDS[fieldName];
+          s.kind === 'open' || s.kind === 'ident'
+            ? 'work'
+            : s.kind === 'close' || s.kind === 'end'
+              ? 'identity'
+              : ep.chapters[s.kind === 'card' ? s.chapter : s.spec.chapter].field;
+        const f = s.kind === 'ident' ? { ...FIELDS.work, ground: STAGE } : FIELDS[fieldName];
         let body: React.ReactNode = null;
 
-        if (s.kind === 'open') {
+        if (s.kind === 'ident') {
           body = (
             <>
+              <OffthreadVideo src={staticFile(s.file)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+              {s.over && (
+                <div style={{ position: 'absolute', left: L.x, top: L.top, width: L.right - L.x }}>
+                  <Rise at={0} style={title(L, f)}>
+                    {ep.series} {ep.number}:
+                    <br />
+                    {ep.title.join(' ')}
+                  </Rise>
+                  <Rise at={6} style={{ ...note(L, f), color: f.ink, marginTop: 28, whiteSpace: 'nowrap' }}>
+                    {ep.link}
+                  </Rise>
+                </div>
+              )}
+            </>
+          );
+        } else if (s.kind === 'open') {
+          body = (
+            <Sequence from={-openSkip}>
               <Open
                 L={L}
                 f={f}
@@ -135,7 +188,7 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
                 stopCues={ep.openStops?.(cueFor('open'))}
               />
               <Voice id="open" />
-            </>
+            </Sequence>
           );
         } else if (s.kind === 'card') {
           body = <ChapterCard L={L} f={f} index={s.chapter} of={n} text={ep.chapters[s.chapter].title} instant={s.instant} />;
@@ -166,6 +219,7 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
                 linkAt={last ? last.at + last.frames - 6 : 40}
                 endAt={last ? last.at + last.frames + 14 : 80}
                 runUntil={last ? last.at + last.frames : undefined}
+                hold={s.hold}
               />
               <Voice id="close" />
             </>
