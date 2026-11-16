@@ -313,7 +313,7 @@ Receipts also append to `MEDIA_SPEND_LOG` (default `logs/media-spend.log` in the
 per paid call, so a runtime that keeps a spend ledger reads single assets and jobs from one file. If your runtime
 sets a workspace, export `VIDEO_JOB_WORKSPACE` to it: the ledger goes to its `logs/`, relative spec paths resolve
 there, and `submit` books the whole estimate at once so a daily cap counts it before the work starts. Prices (`presets`, checked
-against receipts on 2026-11-01): LTX clip ~$0.10, Ideogram image $0.03 to $0.10, FLUX image under a cent,
+against Modal's bill on 2026-11-16): LTX clip ~$0.12, Ideogram image $0.03 to $0.10, FLUX image about a cent,
 Qwen3 voice ~$0.01 a scene, captions ~$0.0001 a second. A 7-scene, 45 s video with two clips and two cards
 lands around $0.40 to $0.55; the first clip after idle pays a Modal cold start on top. Under `--progress json`
 every call prints one `cost` event, failures included ($0).

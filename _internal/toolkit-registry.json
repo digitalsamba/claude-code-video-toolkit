@@ -1125,7 +1125,7 @@
         "keep": "prune: newest jobs never pruned (default 10; submit auto-prunes with VIDEO_JOB_KEEP)",
         "older-than": "prune: only jobs finished at least this many days ago"
       },
-      "prices": "PRICES table in the module (presets --json prints it), checked against receipts 2026-11-01: ltx clip 0.10, ideogram image 0.03/0.06/0.10 by speed, flux image 0.0075, qwen3 voice 0.01/scene (actuals booked from the Modal cost event), elevenlabs 0.20/1k chars, scribe captions 0.40/audio hour",
+      "prices": "PRICES table in the module (presets --json prints it), checked against the Modal bill 2026-11-16: ltx clip 0.12, ideogram image 0.03/0.06/0.10 by speed, flux image 0.012, qwen3 voice 0.01/scene (actuals booked from the Modal cost event), elevenlabs 0.20/1k chars, scribe captions 0.40/audio hour",
       "env": [
         "VIDEO_JOB_EXPANDER",
         "VIDEO_JOB_MAX_USD",
