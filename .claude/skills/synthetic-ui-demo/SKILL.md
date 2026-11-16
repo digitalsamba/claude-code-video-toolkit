@@ -18,6 +18,10 @@ product changes.
   reusable shape of it (ships as release 650). `src/Release.tsx` sequences
   the scenes, `src/scenes/` has one file per release item, and `src/room/` and `src/ac/` are the screen kits.
 
+- `templates/howto` has a `screen` scene kind that does the staging for tutorial episodes: the window on the
+  chapter's field, clicks and camera from the scene's cues, a click sound, and a 9:16 crop that follows the cursor
+  (its README, "Screens"). You bring the kit.
+
 ## When to use this vs. Playwright
 
 | Synthetic (this skill) | Playwright recording (`/record-demo`) |
@@ -46,6 +50,12 @@ import { Stage, typed, cursorAt, near } from '../../../../lib/components';
 
 - `Stage` draws browser chrome around a fixed-size app canvas, applies the camera, and puts the cursor on top at
   zIndex 100. At zoom 1 the window is `fit` (0.8625) of the frame width. Keyframes repeat a value to hold it.
+- `url` can be a list by frame (`[{ at: 0, url: 'example.com' }, { at: 96, url: 'app.example.com/call' }]`), so
+  a click can lead from a website to the app in one scene. A website is rebuilt the same way as an app: fetch the
+  page, read its markup and CSS, and take a headless screenshot to lay it out against.
+- In a 9:16 frame the whole window is unreadable. Put the Stage in a box (a positioned parent with
+  `overflow: hidden`), pass the box's size as `viewWidth`/`viewHeight`, and use `followCamera(path, 3)`: it keeps
+  the cursor in view at one zoom and holds still for small moves.
 - `Cursor` and `cursorAt` work on their own for a non-browser scene; `near(cursor, target)` drives hover states.
 - Product-specific screen kits (theme, icons, layouts) stay in the project. They are not lib material.
 
@@ -135,6 +145,15 @@ lists the product UI's separately. `Stage` marks its window `data-qc="product"`;
 or tablet mockup you build outside it, or its UI text is judged as the video's.
 
 ## Gotchas
+
+- **An old kit lies.** A kit rebuilt a few weeks ago had invented details a product team would spot at once
+  (template descriptions, a role the default template doesn't have, a page the app doesn't go to after saving).
+  Before reusing a kit, have a subagent compare it with the app's default branch and list every difference, with
+  the string's locale key and the file and line. Ask where each action leads: the narration follows the app.
+- **Check the breakpoint.** A 1440 canvas is often below the app's widest breakpoint (MUI `xl` is 1536), where
+  header rows stack differently. Read the layout for the width you draw.
+- **Don't invent what the source doesn't show.** No tooltip text, no page you haven't read. If a step leads to a
+  page you can't rebuild from source, stop the scene before it and say so in the project's notes.
 
 - **Mono SVG logos render black.** A `logo_mono.svg` usually has black fills; on a dark background use
   `filter: brightness(0) invert(1)`.
