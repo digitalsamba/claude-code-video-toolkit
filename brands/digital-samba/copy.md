@@ -116,25 +116,24 @@ From tone-guidelines.md, 'Language rules':
 
 ## Claims we only make if checked
 
-Each needs a source (the live app, the current site, or a person at Digital Samba) at publish time, noted
-in the project. If it can't be checked, leave it out.
+Each needs a source (the live app, the current site, the code, or a person at Digital Samba) at publish time,
+noted in the project. If it can't be checked, leave it out. Settled on 2026-11-16 (Conal):
 
-- **Limits**: participants per call (README says 100 for Meeting and Classroom, 2,000 for Webinar, with
-  15 broadcasters), broadcasters, call length, recording storage, transcription minutes. Plans change;
-  the **Usage** page shows the viewer's own.
-- **"Unlimited"**: the pricing page says "Create unlimited, feature-rich video calls." Repeat it only
-  with that wording and a fresh check; never stretch it to participants, minutes or storage.
-- **"Beta"**: the site still says "now live in beta" and "Join the beta"; the app marks some features
-  **Beta**. Say a feature is in beta only if the screen shows it.
-- **End-to-end encryption scope**: the app says it covers audio, video, shared screens, usernames,
-  chat and whiteboards, and that Q&A, polls, transcription, shared notes and recording don't support
-  it (E2EE is suspended while recording; up to 100 participants). Quote the app, not a summary.
-- **Link lifetime**: the site says both "1 month" and "30 days". Pick one only after checking.
-- **"No sign-up"**: true for an instant call from the website; scheduling, templates and recordings
-  need an account. Say which.
+- **Limits**: Digital Samba Free has none today. "Free" and "no time limit" are fine; quote no numbers, and
+  don't promise it stays that way ("forever", "always free", "no catch").
+- **Beta**: never. No "beta", "early access" or "join the beta", even where the site still says it.
+- **Features**: Free has every feature in the 'Digital Samba features' list on digitalsamba.com/features.
+  Branding (logo, colours, CNAME white labelling), the API, SDK, webhooks and phone dial-in are Embedded:
+  don't show them as part of Free. Use the page's own feature names.
+- **Link lifetime**: a link made with **Generate Link** on the website works for 30 days (the site's own
+  code; its copy also says "1 month", so say 30 days). Links to calls scheduled in an account don't expire
+  unless you set an end.
+- **End-to-end encryption scope**: quote the app. Up to 100 participants; Q&A, polls, shared notes, saving
+  whiteboards and recording don't work with it.
+- **"No sign-up"**: true for a call started from the website; scheduling, contacts, templates and
+  recordings need an account. Say which.
 - **Where data lives**: "hosted in Europe" and "GDPR" are safe. City names (Amsterdam, Frankfurt) are
   confirmed for Embedded only.
-- **"Free"**: say it is free; don't promise it stays free or has "no catch".
 
 ## Words to avoid
 

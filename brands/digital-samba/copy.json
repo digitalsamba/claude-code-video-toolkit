@@ -288,13 +288,12 @@
     },
     {
       "phrase": "unlimited",
-      "why": "claim: only as the pricing page's 'Create unlimited, feature-rich video calls.', checked at publish time (copy.md, Claims)",
+      "why": "true today (no limits on Free, Conal 2026-11-16) but a promise about the future; check at publish time and quote no numbers",
       "level": "check"
     },
     {
       "phrase": "beta",
-      "why": "claim: only when the screen shows the Beta badge; the site's beta wording is out of date against 'now live' (copy.md, Claims)",
-      "level": "check"
+      "why": "no beta language in videos (Conal, 2026-11-16), even where the site still says it"
     },
     {
       "phrase": "Zoom",
@@ -327,6 +326,26 @@
     {
       "phrase": "let's dive in",
       "why": "copy.md tutorial filler; 'dive' family is banned-words.md"
+    },
+    {
+      "phrase": "forever",
+      "why": "don't promise Free stays free or unchanged (copy.md, Claims)"
+    },
+    {
+      "phrase": "no catch",
+      "why": "a promise about the future (copy.md, Claims)"
+    },
+    {
+      "phrase": "early access",
+      "why": "no beta language (Conal, 2026-11-16)"
+    },
+    {
+      "phrase": "1 month",
+      "why": "a Generate Link link works for 30 days (site code); say '30 days' (copy.md, Claims)"
+    },
+    {
+      "phrase": "one month",
+      "why": "a Generate Link link works for 30 days (site code); say '30 days' (copy.md, Claims)"
     }
   ],
   "names": [
