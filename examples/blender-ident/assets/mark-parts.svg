@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <polygon id="slash" points="105.5,370.8 156.4,370.8 240.0,141.2 189.2,141.2" fill="#3771e0"/>
+  <polygon id="play" points="181.0,370.8 264.6,141.2 406.5,256.0" fill="#ffffff"/>
+  <polygon id="caret" points="181.0,370.8 271.1,370.8 282.6,338.0 192.4,338.0" fill="#ffffff"/>
+</svg>

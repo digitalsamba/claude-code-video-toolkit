@@ -1,0 +1,286 @@
+{
+  "title": "Clap on a key: the long ident for full episodes",
+  "fps": 30,
+  "resolution": "1920x1080",
+  "look": {
+    "bloom": {
+      "strength": 0.6,
+      "threshold": 0.8,
+      "size": 0.5
+    }
+  },
+  "set": {
+    "kind": "studio",
+    "stage": "dark",
+    "palette": {
+      "backdrop": "#0c111f"
+    },
+    "props": [
+      {
+        "id": "mark",
+        "kind": "logo",
+        "file": "assets/mark-parts.svg",
+        "extras": [
+          "caret"
+        ],
+        "lay": true,
+        "base": {
+          "kind": "key",
+          "color": "#1b2440"
+        },
+        "depth": 0.012,
+        "parts": {
+          "play": {
+            "glow": 0.0
+          }
+        }
+      }
+    ],
+    "floor": {
+      "rough": 0.6
+    }
+  },
+  "shots": [
+    {
+      "id": "open",
+      "dur": 2.4,
+      "type": "ident",
+      "fill": 0.82,
+      "from": {
+        "az": -31,
+        "elev": -49
+      },
+      "settle": 2.07
+    },
+    {
+      "id": "close",
+      "dur": 3.5,
+      "type": "ident",
+      "fill": 0.82,
+      "mark": "start",
+      "to": {
+        "az": 31,
+        "elev": -49
+      },
+      "leave": 1.17
+    }
+  ],
+  "beats": [
+    {
+      "at": 0,
+      "do": "shear",
+      "part": "mark.slash",
+      "to": -20.02
+    },
+    {
+      "at": 0,
+      "do": "grow",
+      "part": "mark.play",
+      "to": 0,
+      "from": "bottom_left"
+    },
+    {
+      "at": "open+0.167",
+      "do": "hide",
+      "part": "mark.caret"
+    },
+    {
+      "at": "open+0.3",
+      "do": "show",
+      "part": "mark.caret"
+    },
+    {
+      "at": "open+0.333",
+      "dur": 0.267,
+      "do": "shear",
+      "part": "mark.slash",
+      "to": -25.34
+    },
+    {
+      "at": "open+0.467",
+      "dur": 0.133,
+      "do": "press",
+      "part": "mark",
+      "depth": 0.06,
+      "back": 0.4,
+      "sound": "click"
+    },
+    {
+      "at": "open+0.6",
+      "dur": 0.133,
+      "do": "shear",
+      "part": "mark.slash",
+      "to": 0,
+      "ease": "in"
+    },
+    {
+      "at": "open+0.733",
+      "do": "hit",
+      "part": "mark.play",
+      "shake": 0.01,
+      "flash": 0.2,
+      "sound": "clap"
+    },
+    {
+      "at": "open+0.733",
+      "do": "hide",
+      "part": "mark.caret"
+    },
+    {
+      "at": "open+0.733",
+      "dur": 0.4,
+      "do": "grow",
+      "part": "mark.play",
+      "to": 1,
+      "ease": "spring"
+    },
+    {
+      "at": "open+0.733",
+      "dur": 0.1,
+      "do": "glow",
+      "part": "mark.play",
+      "to": 0.45,
+      "ease": "out"
+    },
+    {
+      "at": "open+0.733",
+      "do": "glow",
+      "part": "mark.slash",
+      "to": 0.7
+    },
+    {
+      "at": "open+0.8",
+      "dur": 0.6,
+      "do": "glow",
+      "part": "mark.slash",
+      "to": 0.4,
+      "ease": "out"
+    },
+    {
+      "at": "close",
+      "do": "sound",
+      "sound": "hum",
+      "until": "close+1.8"
+    },
+    {
+      "at": "close+1.667",
+      "dur": 0.133,
+      "do": "press",
+      "part": "mark",
+      "depth": 0.06,
+      "back": 0.37,
+      "sound": "click"
+    },
+    {
+      "at": "close+1.8",
+      "dur": 0.2,
+      "do": "grow",
+      "part": "mark.play",
+      "to": 0,
+      "ease": "in"
+    },
+    {
+      "at": "close+1.8",
+      "dur": 0.27,
+      "do": "glow",
+      "part": "mark.play",
+      "to": 0.0,
+      "ease": "out"
+    },
+    {
+      "at": "close+1.8",
+      "dur": 0.27,
+      "do": "glow",
+      "part": "mark.slash",
+      "to": 0.2,
+      "ease": "out"
+    },
+    {
+      "at": "close+2.0",
+      "do": "show",
+      "part": "mark.caret"
+    },
+    {
+      "at": "close+1.933",
+      "dur": 0.2,
+      "do": "shear",
+      "part": "mark.slash",
+      "to": -22.5,
+      "ease": "out",
+      "sound": "stand",
+      "sound_at": "close+2.07"
+    },
+    {
+      "at": "close+2.133",
+      "dur": 0.133,
+      "do": "shear",
+      "part": "mark.slash",
+      "to": -20.02
+    },
+    {
+      "at": "close+2.5",
+      "until": "close.end",
+      "do": "blink",
+      "part": "mark.caret",
+      "every": 0.75,
+      "off": 0.25
+    }
+  ],
+  "sounds": {
+    "click": [
+      {
+        "file": "sfx/key.mp3",
+        "gain": 0.75
+      }
+    ],
+    "clap": [
+      {
+        "file": "sfx/slate.mp3",
+        "gain": 0.9
+      },
+      {
+        "file": "sfx/clapper.mp3",
+        "gain": 0.5,
+        "lowpass": 900
+      },
+      {
+        "tones": [
+          220.0,
+          329.6,
+          440.0,
+          554.4
+        ],
+        "gain": 0.17,
+        "attack": 0.15,
+        "decay": 0.6,
+        "beat": 1.004
+      }
+    ],
+    "hum": [
+      {
+        "tones": [
+          220.0,
+          329.6,
+          440.0,
+          554.4
+        ],
+        "gain": 0.28,
+        "attack": 0.5,
+        "decay": 0.6,
+        "hold": 3.0,
+        "beat": 1.004
+      }
+    ],
+    "stand": [
+      {
+        "file": "sfx/slate.mp3",
+        "gain": 1.0,
+        "lowpass": 1500
+      }
+    ]
+  },
+  "mix": {
+    "gain": 0.55
+  },
+  "samples": 64
+}
