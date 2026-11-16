@@ -319,7 +319,8 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
 | **Checks** | qc, sync_check, contact_sheet | Before showing a render: freezes and motion that stops dead, loudness, layout, sound effects on their movement |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
-| **3D (optional)** | blender_render | Character acting, 3D reveals and product shots from a shot spec; does nothing unless Blender is installed |
+| **3D (optional)** | blender_render | Character acting, 3D reveals, product shots and logo idents from a shot spec; does nothing unless Blender is installed |
+| **Brand** | mark_sheet | A logo at every size, on every ground, in a circle and as a watermark, with warnings, before it is used |
 
 ### Cloud GPU (Modal + RunPod)
 

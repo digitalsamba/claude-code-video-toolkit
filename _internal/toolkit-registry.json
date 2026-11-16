@@ -1175,7 +1175,7 @@
     },
     "blender_render": {
       "path": "tools/blender_render.py",
-      "description": "Shot spec in, Blender film or clips out: builds a 3D scene from a JSON spec (a rigged cartoon cast described as build, face, hair, clothes and a seed; a desk set, or a studio stage with a phone, a card or an imported model; shots by type; acting beats in seconds or on narration words), checks every camera by geometry (subject in frame, nothing blocking, a moving lens clear of the cast) with a solver that moves failing cameras, writes a labelled contact sheet, then renders the film with sound placed on the keyed motion, or one clip per shot (MP4, or transparent WebM if asked) with a clips.json manifest, for Remotion's BlenderClip, a moviepy build, a video job's file scene or an editor",
+      "description": "Shot spec in, Blender film or clips out: builds a 3D scene from a JSON spec (a rigged cartoon cast described as build, face, hair, clothes and a seed; a desk set, or a studio stage with a phone, a card, an imported model or a logo built from an SVG whose parts beats can move (turn, shear, grow, press, glow, flash, hit) for an ident; shots by type; acting beats in seconds or on narration words), checks every camera by geometry (subject in frame, nothing blocking, a moving lens clear of the cast) with a solver that moves failing cameras, writes a labelled contact sheet, then renders the film with sound placed on the keyed motion, or one clip per shot (MP4, or transparent WebM if asked) with a clips.json manifest, for Remotion's BlenderClip, a moviepy build, a video job's file scene or an editor. For a logo it also tests the frame an ident ends on against the flat SVG (parts in place, colours within 10 Delta E) and each hit against the rendered clip (the sound's frame is the picture's biggest change)",
       "usage": "uv run tools/blender_render.py check spec.json && uv run tools/blender_render.py render spec.json [--clips --alpha --to projects/NAME/public/blender]",
       "status": "beta",
       "options": {
@@ -1192,14 +1192,35 @@
         "--engine": "eevee (default) or cycles",
         "--no-sound": "Picture only",
         "--force": "Render even if a check failed",
-        "--json": "Machine-readable check report"
+        "--json": "Machine-readable check report",
+        "--with-sound": "With --clips: put each clip's sound in its file too, for an ident that plays by itself"
       },
       "env": {
         "BLENDER": "Path to the Blender binary if not on PATH or in the usual install folder"
       },
       "documentation": "docs/blender.md",
       "created": "2026-11-11",
-      "updated": "2026-11-11"
+      "updated": "2026-11-16"
+    },
+    "mark_sheet": {
+      "path": "tools/mark_sheet.py",
+      "description": "One PNG that shows whether a logo holds up: the SVG at 512 to 16 px with pixel zooms, on a brand's grounds, in a circle crop at 150 and 40 px, and as a one-colour watermark on a video frame. Warns about contrast under 3:1 on a ground, a part the circle cuts and a part lost at 16 px. Reads flat filled shapes with the reader the Blender logo prop uses",
+      "usage": "uv run tools/mark_sheet.py --svg brands/NAME/assets/mark.svg --brand NAME [--on-dark mark-on-dark.svg --mono mark-white.svg]",
+      "options": {
+        "--svg": "The mark, as flat filled shapes",
+        "--on-dark": "The version for dark grounds",
+        "--mono": "The one-colour version",
+        "--brand": "Take the grounds from brands/NAME/brand.json",
+        "--ground": "A ground colour as #rrggbb (repeatable)",
+        "--frame": "A video frame for the watermark (repeatable)",
+        "--output": "Where the sheet goes",
+        "--json": "Print the measurements as JSON",
+        "--strict": "Exit 1 on any warning"
+      },
+      "documentation": ".claude/skills/video-design/idents.md",
+      "status": "beta",
+      "created": "2026-11-16",
+      "updated": "2026-11-16"
     },
       "reference_capture": {
         "path": "tools/reference_capture.py",
@@ -1840,6 +1861,12 @@
       "description": "12s product stage from one shot spec, with no character: a picture on a floating card and on a phone, and an imported 3D model, filmed with reveal, orbit and product shots that take their distance from each prop's size",
       "complexity": "beginner",
       "created": "2026-11-11"
+    },
+    "blender-ident": {
+      "path": "examples/blender-ident/",
+      "description": "Opening and closing idents from an SVG logo (optional: needs Blender): the mark alone on a dark stage, and the same move on a keycap. A logo prop with parts moved by beats, an ident shot, named sounds on the hit, the last frame checked against the flat mark, 16:9 and 9:16 from one spec",
+      "complexity": "intermediate",
+      "created": "2026-11-16"
     },
     "blender-in-remotion": {
       "path": "examples/blender-in-remotion/",

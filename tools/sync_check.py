@@ -53,7 +53,9 @@ def motion_peak(video: Path, region: str, t0: float, t1: float, kind: str = "pea
     kind 'impact': where the movement stops hardest (a jacket landing, a stamp), the sharpest fall after a peak.
     kind 'onset': where a sustained movement starts (a badge lifted slowly, a door swinging open): the first frame
     at half the window's biggest change. 'peak' picks noise on a movement with no single spike. Something picked
-    up (chalk, a cup) is an onset: as an impact, the hand settling after the lift is what gets found."""
+    up (chalk, a cup) is an onset: as an impact, the hand settling after the lift is what gets found. A hit that
+    sets off something bigger (a clap that knocks a shape up, a light coming on) is a peak: as an impact it reads
+    late, on the end of what it set off (0.13 to 0.36 s late on a logo ident)."""
     t0 = max(0.0, t0)
     s = 64
     raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{t0:.3f}", "-t", f"{t1 - t0:.3f}", "-i", str(video),

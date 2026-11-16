@@ -309,6 +309,47 @@ def setup_render(fps, res, engine="eevee", exposure=-0.9, look="AgX - Punchy", s
     w.node_tree.nodes["Background"].inputs[0].default_value = (*world, 1)
 
 
+def bloom(cfg) -> str | None:
+    """Glow round what is bright, added after the render (the compositor's glare node), so a part can look lit
+    without its emission going past the point where a colour clips. cfg: true, or {"strength", "threshold",
+    "size"} (strength 0-1, threshold in scene light where 1 is white, size 0-1). Returns a note if it could not
+    be set up (the render goes on without it). The compositor's Python API changed in Blender 5: both are here."""
+    cfg = cfg if isinstance(cfg, dict) else {}
+    strength, threshold, size = float(cfg.get("strength", 0.5)), float(cfg.get("threshold", 0.9)), float(cfg.get("size", 0.5))
+    sc = scene()
+    if sc.render.film_transparent:
+        return "bloom is left out of a transparent clip (the glow has no alpha to sit on): add it in the video"
+    try:
+        if hasattr(sc, "compositing_node_group"):  # Blender 5: a node group with its own output socket
+            tree = D.node_groups.new("bloom", "CompositorNodeTree")
+            tree.interface.new_socket(name="Image", in_out="OUTPUT", socket_type="NodeSocketColor")
+            sc.compositing_node_group = tree
+            out = tree.nodes.new("NodeGroupOutput")
+        else:  # 4.2 to 4.5: the scene's own tree and a Composite node
+            sc.use_nodes = True
+            tree = sc.node_tree
+            tree.nodes.clear()
+            out = tree.nodes.new("CompositorNodeComposite")
+        layers, glare = tree.nodes.new("CompositorNodeRLayers"), tree.nodes.new("CompositorNodeGlare")
+        if "Type" in glare.inputs:  # 5: the node's settings are sockets
+            glare.inputs["Type"].default_value = "Bloom"
+            glare.inputs["Threshold"].default_value = threshold
+            glare.inputs["Strength"].default_value = strength
+            glare.inputs["Size"].default_value = size
+            if "Quality" in glare.inputs:
+                glare.inputs["Quality"].default_value = "High"
+        else:
+            glare.glare_type, glare.quality, glare.threshold = "BLOOM", "HIGH", threshold
+            glare.mix = strength - 1  # -1 is the picture alone, 0 the picture and its glare in equal parts
+            glare.size = max(1, min(9, round(1 + size * 8)))
+        tree.links.new(layers.outputs["Image"], glare.inputs["Image"])
+        tree.links.new(glare.outputs["Image"], out.inputs[0])
+        sc.render.use_compositing = True
+        return None
+    except Exception as e:  # noqa: BLE001 (an API that moved: say so, render without the glow)
+        return f"bloom could not be set up on this Blender ({type(e).__name__}: {e}): rendered without it"
+
+
 def set_output(path, video: bool, alpha: bool = False):
     """A video file, a still, or (a path ending in a name stem, rendered as an animation) a PNG sequence."""
     r = scene().render
