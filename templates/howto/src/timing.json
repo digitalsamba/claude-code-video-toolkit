@@ -431,78 +431,93 @@
    ]
   },
   "thirty": {
-   "frames": 591,
+   "frames": 603,
    "phrases": [
     {
      "file": "02a_thirty",
      "at": 18,
-     "frames": 156,
+     "frames": 168,
      "words": [
       {
        "text": "The",
        "startMs": 120,
-       "endMs": 180
+       "endMs": 200
       },
       {
        "text": " AI",
-       "startMs": 320,
+       "startMs": 340,
        "endMs": 640
       },
       {
        "text": " models",
        "startMs": 700,
-       "endMs": 1140
+       "endMs": 1120
       },
       {
        "text": " run",
-       "startMs": 1280,
-       "endMs": 1460
+       "startMs": 1220,
+       "endMs": 1360
       },
       {
        "text": " on",
-       "startMs": 1540,
-       "endMs": 1640
+       "startMs": 1400,
+       "endMs": 1480
       },
       {
        "text": " cloud",
-       "startMs": 1780,
-       "endMs": 2120
+       "startMs": 1620,
+       "endMs": 1960
       },
       {
        "text": " GPUs,",
-       "startMs": 2240,
-       "endMs": 3000
+       "startMs": 2020,
+       "endMs": 2900
       },
       {
        "text": " and",
-       "startMs": 3360,
-       "endMs": 3480
+       "startMs": 3240,
+       "endMs": 3460
       },
       {
        "text": " that's",
-       "startMs": 3640,
-       "endMs": 3980
+       "startMs": 3520,
+       "endMs": 3820
       },
       {
-       "text": " where",
-       "startMs": 4019,
-       "endMs": 4180
+       "text": " the",
+       "startMs": 3860,
+       "endMs": 3940
       },
       {
-       "text": " people",
-       "startMs": 4220,
-       "endMs": 4500
+       "text": " part",
+       "startMs": 4000,
+       "endMs": 4220
       },
       {
-       "text": " worry.",
-       "startMs": 4620,
-       "endMs": 4960
+       "text": " you",
+       "startMs": 4260,
+       "endMs": 4340
+      },
+      {
+       "text": " may",
+       "startMs": 4380,
+       "endMs": 4540
+      },
+      {
+       "text": " worry",
+       "startMs": 4600,
+       "endMs": 4820
+      },
+      {
+       "text": " about.",
+       "startMs": 4920,
+       "endMs": 5280
       }
      ]
     },
     {
      "file": "02b_thirty",
-     "at": 186,
+     "at": 198,
      "frames": 190,
      "words": [
       {
@@ -604,7 +619,7 @@
     },
     {
      "file": "02c_thirty",
-     "at": 388,
+     "at": 400,
      "frames": 173,
      "words": [
       {
@@ -1308,7 +1323,7 @@
    ]
   },
   "setup": {
-   "frames": 592,
+   "frames": 575,
    "phrases": [
     {
      "file": "06a_setup",
@@ -1479,67 +1494,67 @@
     {
      "file": "06d_setup",
      "at": 410,
-     "frames": 142,
+     "frames": 125,
      "words": [
       {
        "text": "Then",
-       "startMs": 100,
-       "endMs": 420
+       "startMs": 120,
+       "endMs": 380
       },
       {
-       "text": " every",
-       "startMs": 720,
-       "endMs": 960
+       "text": " the",
+       "startMs": 420,
+       "endMs": 500
       },
       {
-       "text": " model",
-       "startMs": 1060,
-       "endMs": 1300
+       "text": " models",
+       "startMs": 560,
+       "endMs": 840
       },
       {
-       "text": " is",
-       "startMs": 1360,
-       "endMs": 1500
+       "text": " are",
+       "startMs": 880,
+       "endMs": 980
       },
       {
        "text": " ready,",
-       "startMs": 1560,
-       "endMs": 1920
+       "startMs": 1020,
+       "endMs": 1340
       },
       {
        "text": " and",
-       "startMs": 2160,
-       "endMs": 2300
+       "startMs": 1640,
+       "endMs": 1740
       },
       {
-       "text": " costs",
-       "startMs": 2340,
-       "endMs": 2700
+       "text": " cost",
+       "startMs": 1840,
+       "endMs": 2100
       },
       {
        "text": " nothing",
-       "startMs": 2920,
-       "endMs": 3360
+       "startMs": 2280,
+       "endMs": 2740
       },
       {
        "text": " until",
-       "startMs": 3480,
-       "endMs": 3800
+       "startMs": 2800,
+       "endMs": 3100
       },
       {
        "text": " you",
-       "startMs": 3860,
-       "endMs": 3980
+       "startMs": 3160,
+       "endMs": 3280
       },
       {
        "text": " use",
-       "startMs": 4100,
-       "endMs": 4280
+       "startMs": 3380,
+       "endMs": 3580
       },
       {
-       "text": " it.",
-       "startMs": 4360,
-       "endMs": 4560
+       "text": " them.",
+       "startMs": 3620,
+       "endMs": 3820
       }
      ]
     }

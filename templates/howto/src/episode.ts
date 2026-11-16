@@ -64,7 +64,7 @@ export const EPISODE: Episode = {
       kind: 'figure',
       chapter: 1,
       props: (cue) => ({
-        title: { text: 'The AI models run on cloud GPUs,', at: cue('cloud gpus'), then: { text: 'where people worry', at: cue('people worry'), newLine: true } },
+        title: { text: 'The AI models run on cloud GPUs,', at: cue('cloud gpus'), then: { text: 'the part you may worry about', at: cue('the part'), newLine: true } },
         prefix: '$',
         value: F.modalStarterCredit.value,
         at: cue('thirty dollars'),
@@ -77,7 +77,7 @@ export const EPISODE: Episode = {
         note: `modal.com/pricing, checked ${F.modalStarterCredit.checked}. A card must be on file.`,
       }),
       short: (cue) => ({
-        title: { text: 'Models run on cloud GPUs,', at: cue('cloud gpus'), then: { text: 'where people worry', at: cue('people worry'), newLine: true } },
+        title: { text: 'Models run on cloud GPUs,', at: cue('cloud gpus'), then: { text: 'the part you may worry about', at: cue('the part'), newLine: true } },
         lines: [
           { text: ['of compute every', 'month, free'], at: cue('of compute') },
           { text: ['once a card', 'is on file'], at: cue('once a card'), add: true },
@@ -158,9 +158,9 @@ export const EPISODE: Episode = {
           { at: cue('checks'), tool: 'Bash', arg: 'uv run modal --version', result: ['modal client version 1.2.1'], resultAt: cue('installed') },
           { at: cue('logs you in'), permission: 'uv run modal setup', description: 'Log in to Modal in the browser', answer: cue('say yes') },
           { at: cue('say yes', { offset: 4 }), tool: 'Bash', arg: 'uv run modal setup', result: ['Opened modal.com in your browser', '{ok|✓} Token written to `~/.modal.toml`'], resultAt: cue('say yes', { offset: 30 }) },
-          { at: cue('deploys'), spinner: 'Deploying', until: cue('every model') },
-          { at: cue('every model'), tool: 'Bash', arg: 'uv run tools/modal_setup.py --all', result: ['{ok|✓} 8 apps deployed, endpoint URLs written to `.env`', '{dim|ltx2 (video clips) is one more command: it needs a Hugging Face token}'], resultAt: cue('ready'), id: 'deployed' },
-          { at: cue('costs nothing'), say: 'Done. Every app **scales to zero**, so nothing is billed until you use it.', wps: 7 },
+          { at: cue('deploys'), spinner: 'Deploying', until: cue('the models') },
+          { at: cue('the models'), tool: 'Bash', arg: 'uv run tools/modal_setup.py --all', result: ['{ok|✓} 8 apps deployed, endpoint URLs written to `.env`', '{dim|ltx2 (video clips) is one more command: it needs a Hugging Face token}'], resultAt: cue('ready'), id: 'deployed' },
+          { at: cue('cost nothing'), say: 'Done. Every app **scales to zero**, so nothing is billed until you use it.', wps: 7 },
         ];
         return {
           lines,
