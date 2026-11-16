@@ -354,7 +354,7 @@
    ]
   },
   "thirty": {
-   "frames": 593,
+   "frames": 591,
    "phrases": [
     {
      "file": "02a_thirty",
@@ -426,108 +426,108 @@
     {
      "file": "02b_thirty",
      "at": 186,
-     "frames": 192,
+     "frames": 190,
      "words": [
       {
        "text": "Modal's",
-       "startMs": 120,
-       "endMs": 480
+       "startMs": 200,
+       "endMs": 600
       },
       {
        "text": " free",
-       "startMs": 620,
-       "endMs": 820
+       "startMs": 700,
+       "endMs": 880
       },
       {
        "text": " Starter",
        "startMs": 980,
-       "endMs": 1260
+       "endMs": 1360
       },
       {
        "text": " plan",
-       "startMs": 1360,
-       "endMs": 1680
+       "startMs": 1440,
+       "endMs": 1720
       },
       {
        "text": " gives",
-       "startMs": 1780,
-       "endMs": 1960
+       "startMs": 1820,
+       "endMs": 1980
       },
       {
        "text": " you",
-       "startMs": 2000,
-       "endMs": 2180
+       "startMs": 2040,
+       "endMs": 2160
       },
       {
        "text": " thirty",
-       "startMs": 2240,
-       "endMs": 2500
+       "startMs": 2260,
+       "endMs": 2560
       },
       {
        "text": " dollars",
-       "startMs": 2580,
-       "endMs": 2920
+       "startMs": 2640,
+       "endMs": 2900
       },
       {
        "text": " of",
-       "startMs": 2960,
-       "endMs": 3060
+       "startMs": 2940,
+       "endMs": 3040
       },
       {
        "text": " compute",
-       "startMs": 3100,
-       "endMs": 3540
+       "startMs": 3060,
+       "endMs": 3480
       },
       {
        "text": " every",
-       "startMs": 3740,
-       "endMs": 3980
+       "startMs": 3660,
+       "endMs": 3860
       },
       {
        "text": " month,",
-       "startMs": 4100,
-       "endMs": 4420
+       "startMs": 3980,
+       "endMs": 4320
       },
       {
        "text": " once",
-       "startMs": 4780,
-       "endMs": 4960
+       "startMs": 4560,
+       "endMs": 4740
       },
       {
        "text": " a",
-       "startMs": 5000,
-       "endMs": 5060
+       "startMs": 4780,
+       "endMs": 4840
       },
       {
        "text": " card",
-       "startMs": 5120,
-       "endMs": 5360
+       "startMs": 4880,
+       "endMs": 5120
       },
       {
        "text": " is",
-       "startMs": 5400,
-       "endMs": 5500
+       "startMs": 5160,
+       "endMs": 5240
       },
       {
        "text": " on",
-       "startMs": 5540,
-       "endMs": 5620
+       "startMs": 5280,
+       "endMs": 5360
       },
       {
        "text": " the",
-       "startMs": 5660,
-       "endMs": 5740
+       "startMs": 5400,
+       "endMs": 5460
       },
       {
        "text": " account.",
-       "startMs": 5780,
-       "endMs": 6280
+       "startMs": 5520,
+       "endMs": 5980
       }
      ]
     },
     {
      "file": "02c_thirty",
-     "at": 390,
+     "at": 388,
      "frames": 173,
      "words": [
       {
@@ -615,48 +615,48 @@
    ]
   },
   "buys": {
-   "frames": 415,
+   "frames": 420,
    "phrases": [
     {
      "file": "03a_buys",
      "at": 18,
-     "frames": 72,
+     "frames": 77,
      "words": [
       {
        "text": "So",
-       "startMs": 140,
-       "endMs": 360
+       "startMs": 220,
+       "endMs": 440
       },
       {
        "text": " what",
-       "startMs": 560,
-       "endMs": 700
+       "startMs": 620,
+       "endMs": 760
       },
       {
        "text": " does",
-       "startMs": 740,
-       "endMs": 900
+       "startMs": 780,
+       "endMs": 940
       },
       {
        "text": " thirty",
-       "startMs": 900,
-       "endMs": 1400
+       "startMs": 940,
+       "endMs": 1430
       },
       {
        "text": " dollars",
-       "startMs": 1400,
-       "endMs": 1900
+       "startMs": 1430,
+       "endMs": 1920
       },
       {
        "text": " buy?",
-       "startMs": 1900,
-       "endMs": 2180
+       "startMs": 1920,
+       "endMs": 2220
       }
      ]
     },
     {
      "file": "03b_buys",
-     "at": 106,
+     "at": 111,
      "frames": 98,
      "words": [
       {
@@ -693,7 +693,7 @@
     },
     {
      "file": "03c_buys",
-     "at": 220,
+     "at": 225,
      "frames": 77,
      "words": [
       {
@@ -725,7 +725,7 @@
     },
     {
      "file": "03d_buys",
-     "at": 313,
+     "at": 318,
      "frames": 72,
      "words": [
       {
@@ -753,7 +753,7 @@
    ]
   },
   "spent": {
-   "frames": 728,
+   "frames": 725,
    "phrases": [
     {
      "file": "04a_spent",
@@ -820,28 +820,28 @@
     {
      "file": "04b_spent",
      "at": 172,
-     "frames": 70,
+     "frames": 67,
      "words": [
       {
        "text": "August,",
-       "startMs": 80,
-       "endMs": 600
+       "startMs": 120,
+       "endMs": 680
       },
       {
        "text": " eleven",
-       "startMs": 1100,
-       "endMs": 1480
+       "startMs": 680,
+       "endMs": 1080
       },
       {
        "text": " dollars.",
-       "startMs": 1560,
-       "endMs": 2080
+       "startMs": 1080,
+       "endMs": 1480
       }
      ]
     },
     {
      "file": "04c_spent",
-     "at": 252,
+     "at": 249,
      "frames": 113,
      "words": [
       {
@@ -878,7 +878,7 @@
     },
     {
      "file": "04d_spent",
-     "at": 375,
+     "at": 372,
      "frames": 58,
      "words": [
       {
@@ -895,7 +895,7 @@
     },
     {
      "file": "04e_spent",
-     "at": 443,
+     "at": 440,
      "frames": 156,
      "words": [
       {
@@ -962,7 +962,7 @@
     },
     {
      "file": "04f_spent",
-     "at": 609,
+     "at": 606,
      "frames": 79,
      "words": [
       {

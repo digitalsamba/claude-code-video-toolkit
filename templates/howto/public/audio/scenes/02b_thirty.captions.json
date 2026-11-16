@@ -1,135 +1,135 @@
 [
  {
   "text": "Modal's",
-  "startMs": 120,
-  "endMs": 480,
-  "timestampMs": 300,
+  "startMs": 200,
+  "endMs": 600,
+  "timestampMs": 400,
   "confidence": null
  },
  {
   "text": " free",
-  "startMs": 620,
-  "endMs": 820,
-  "timestampMs": 720,
+  "startMs": 700,
+  "endMs": 880,
+  "timestampMs": 790,
   "confidence": null
  },
  {
   "text": " Starter",
   "startMs": 980,
-  "endMs": 1260,
-  "timestampMs": 1120,
+  "endMs": 1360,
+  "timestampMs": 1170,
   "confidence": null
  },
  {
   "text": " plan",
-  "startMs": 1360,
-  "endMs": 1680,
-  "timestampMs": 1520,
+  "startMs": 1440,
+  "endMs": 1720,
+  "timestampMs": 1580,
   "confidence": null
  },
  {
   "text": " gives",
-  "startMs": 1780,
-  "endMs": 1960,
-  "timestampMs": 1870,
+  "startMs": 1820,
+  "endMs": 1980,
+  "timestampMs": 1900,
   "confidence": null
  },
  {
   "text": " you",
-  "startMs": 2000,
-  "endMs": 2180,
-  "timestampMs": 2090,
+  "startMs": 2040,
+  "endMs": 2160,
+  "timestampMs": 2100,
   "confidence": null
  },
  {
   "text": " thirty",
-  "startMs": 2240,
-  "endMs": 2500,
-  "timestampMs": 2370,
+  "startMs": 2260,
+  "endMs": 2560,
+  "timestampMs": 2410,
   "confidence": null
  },
  {
   "text": " dollars",
-  "startMs": 2580,
-  "endMs": 2920,
-  "timestampMs": 2750,
+  "startMs": 2640,
+  "endMs": 2900,
+  "timestampMs": 2770,
   "confidence": null
  },
  {
   "text": " of",
-  "startMs": 2960,
-  "endMs": 3060,
-  "timestampMs": 3010,
+  "startMs": 2940,
+  "endMs": 3040,
+  "timestampMs": 2990,
   "confidence": null
  },
  {
   "text": " compute",
-  "startMs": 3100,
-  "endMs": 3540,
-  "timestampMs": 3320,
+  "startMs": 3060,
+  "endMs": 3480,
+  "timestampMs": 3270,
   "confidence": null
  },
  {
   "text": " every",
-  "startMs": 3740,
-  "endMs": 3980,
-  "timestampMs": 3860,
+  "startMs": 3660,
+  "endMs": 3860,
+  "timestampMs": 3760,
   "confidence": null
  },
  {
   "text": " month,",
-  "startMs": 4100,
-  "endMs": 4420,
-  "timestampMs": 4260,
+  "startMs": 3980,
+  "endMs": 4320,
+  "timestampMs": 4150,
   "confidence": null
  },
  {
   "text": " once",
-  "startMs": 4780,
-  "endMs": 4960,
-  "timestampMs": 4870,
+  "startMs": 4560,
+  "endMs": 4740,
+  "timestampMs": 4650,
   "confidence": null
  },
  {
   "text": " a",
-  "startMs": 5000,
-  "endMs": 5060,
-  "timestampMs": 5030,
+  "startMs": 4780,
+  "endMs": 4840,
+  "timestampMs": 4810,
   "confidence": null
  },
  {
   "text": " card",
-  "startMs": 5120,
-  "endMs": 5360,
-  "timestampMs": 5240,
+  "startMs": 4880,
+  "endMs": 5120,
+  "timestampMs": 5000,
   "confidence": null
  },
  {
   "text": " is",
-  "startMs": 5400,
-  "endMs": 5500,
-  "timestampMs": 5450,
+  "startMs": 5160,
+  "endMs": 5240,
+  "timestampMs": 5200,
   "confidence": null
  },
  {
   "text": " on",
-  "startMs": 5540,
-  "endMs": 5620,
-  "timestampMs": 5580,
+  "startMs": 5280,
+  "endMs": 5360,
+  "timestampMs": 5320,
   "confidence": null
  },
  {
   "text": " the",
-  "startMs": 5660,
-  "endMs": 5740,
-  "timestampMs": 5700,
+  "startMs": 5400,
+  "endMs": 5460,
+  "timestampMs": 5430,
   "confidence": null
  },
  {
   "text": " account.",
-  "startMs": 5780,
-  "endMs": 6280,
-  "timestampMs": 6030,
+  "startMs": 5520,
+  "endMs": 5980,
+  "timestampMs": 5750,
   "confidence": null
  }
 ]

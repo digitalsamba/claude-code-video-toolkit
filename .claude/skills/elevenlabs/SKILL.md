@@ -62,6 +62,13 @@ save(audio, "voiceover.mp3")
 - `client.text_to_dialogue.convert_with_timestamps(...)` returns the same character alignment as TTS `convert_with_timestamps`, so `redub.py --sync` works with v4 and sends the same stability + similarity.
 - Pass `settings` as a dict: SDK versions before 2.69 type it with a stability-only model. The API reads `similarity` there since 2026-09-28 (it rejects an out-of-range value with a 422). Text to Dialogue needs `elevenlabs>=2.21`.
 - Direct delivery with audio tags (`[whispering]`, `[warm]`, `[sigh]`) and punctuation. Write tags that clearly describe the voice, because v4 can also read a tag as a sound effect.
+- **A voice can change accent on one word.** A British library voice read "thirty dollars" and "once a card is
+  on the account" with an American r, in every plain retake of those lines. A direction at the start of the line
+  held the accent in three takes of three: `[crisp British English accent] So what does thirty dollars buy?`. v4
+  doesn't read the tag aloud. Put it in the text sent for voicing only, and keep the `.txt` beside the MP3 as the
+  spoken words, since captions are spelled from it. It can be measured before anyone listens: with the word times
+  from `captions.py`, an American r pulls the third formant under about 2,200 Hz at the end of "dollars" or
+  "card" in a woman's voice, and a British ending leaves it near 2,700 (Praat, `uv sync --extra prosody`).
 - `eleven_v4_turbo` is the real-time variant, available only over the Text to Dialogue WebSocket. The toolkit doesn't use it, since offline renders don't benefit from low latency.
 
 ### Voice Settings by Style
