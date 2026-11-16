@@ -24,6 +24,26 @@ SHAPES = {"16x9": "1920x1080", "9x16": "1080x1920"}
 RUNS = [(spec, shape, False) for spec in ("clap", "key") for shape in SHAPES] + [("clap", shape, True) for shape in SHAPES]
 
 
+DEFAULT = "clap"  # the ident a template plays when it is not told which
+
+
+def rest_frame(clip: Path, after: int) -> int | None:
+    """The first frame after `after` from which the picture no longer changes: where a title may come in."""
+    import numpy as np
+    w, h = 96, 96
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(clip), "-vf", f"scale={w}:{h},format=gray", "-f", "rawvideo", "-"],
+                         capture_output=True).stdout
+    frames = np.frombuffer(raw, np.uint8).reshape(-1, h, w).astype(float)
+    if len(frames) < 2:
+        return None
+    change = np.abs(np.diff(frames, axis=0)).mean(axis=(1, 2))  # change[i]: frame i to i + 1
+    still = change < max(0.15, change.max() * 0.03)
+    for f in range(after, len(frames)):
+        if still[f:].all():
+            return f
+    return None
+
+
 def out_dir(spec, shape, alpha):
     return HERE / "out" / f"{spec}-{shape}{'-alpha' if alpha else ''}"
 
@@ -66,10 +86,17 @@ def main() -> int:
             hits = [e["frame"] for e in events["events"] if e.get("hit") and e["shot"] == part]
             if hits:  # as a frame of the clip, counting from 0
                 entry["hit_frame"] = hits[0] - shots[part]["frames"][0]
+                if not alpha and shape == "16x9":
+                    rest = rest_frame(a.to / name, entry["hit_frame"])
+                    if rest is not None:
+                        entry["title_frame"] = rest
             seen = [h for h in checks.get("hits", []) if h["shot"] == part]
             if seen and not alpha:
                 entry["hit_checked"] = all(h["passed"] for h in seen)
-    (a.to / "ident.json").write_text(json.dumps({"made_by": "examples/blender-ident/build.py", "idents": idents}, indent=2) + "\n")
+    if not idents:  # nothing rendered here: leave the manifest that is there alone
+        print("nothing to collect: render first (run without --collect-only)")
+        return 1
+    (a.to / "ident.json").write_text(json.dumps({"made_by": "examples/blender-ident/build.py", "default": DEFAULT, "idents": idents}, indent=2) + "\n")
     print(f"collected {sum(len(p['files']) for i in idents.values() for p in i.values())} clips in {a.to}")
     for f in failed:
         print(f"  FAILED its checks: {f}")

@@ -159,8 +159,14 @@ Brands live in `brands/`. Each defines visual identity:
 brands/my-brand/
 ├── brand.json    # Colors, fonts, typography
 ├── voice.json    # ElevenLabs voice settings
-└── assets/       # Logo, backgrounds
+├── assets/       # Logo, backgrounds; mark.svg is the flat mark (optional)
+└── ident/        # Optional: open and close clips with their sound, and ident.json
 ```
+
+A brand's **ident** is its mark in motion with one sound. Templates that read the slot (`templates/howto`, through
+its `scripts/ident.py`) play it and keep their own 2D opening when it is empty, so no video depends on it. The
+format is in `docs/creating-brands.md` ("Mark and ident"); `tools/mark_sheet.py` checks a mark, and
+`examples/blender-ident` makes an ident from the mark's SVG (Blender, optional).
 
 See `docs/creating-brands.md` for details.
 
