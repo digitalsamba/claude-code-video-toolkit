@@ -106,7 +106,7 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
   const { width, height } = useVideoConfig();
   const L = layoutFor(width, height);
   const n = ep.chapters.length;
-  const badge = `${ep.series} ${ep.number} · toolkit ${ep.version}`;
+  const badge = ep.badge ?? `${ep.series} ${ep.number} · toolkit ${ep.version}`;
   const sounds = ep.sounds !== false;
   const segs = timeline(ep, short);
   const total = segs.reduce((n, s) => n + s.frames, 0);

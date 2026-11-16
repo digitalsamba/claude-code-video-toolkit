@@ -161,6 +161,8 @@ export type Episode = {
   number: number;
   /** Shown in the badge, so a stale episode is easy to spot */
   version: string;
+  /** The badge's whole text, in place of "<series> <number> · toolkit <version>" (another product's series) */
+  badge?: string;
   title: Lines;
   chapters: Chapter[];
   scenes: SceneSpec[];

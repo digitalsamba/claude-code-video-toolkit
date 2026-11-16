@@ -3,7 +3,7 @@
  * frame's layout; it never picks a colour or a size of its own.
  */
 import type React from 'react';
-import { staticFile } from 'remotion';
+import { continueRender, delayRender, staticFile } from 'remotion';
 import { loadMonoFont } from '../../../../lib/components';
 import { BRAND } from '../brand';
 
@@ -33,11 +33,34 @@ export const FIELDS: Record<FieldName, Field> = {
 };
 
 export const SANS = `Inter, ${BRAND.fonts.primary}`;
+
+/**
+ * The brand's type: heading weight (the toolkit sets 700; a brand whose site sets headings at 600 says so in
+ * brand.json `fonts.weights.heading`) and tracking (`fonts.tracking.heading`, `fonts.tracking.display`).
+ */
+const fonts = BRAND.fonts as { weights?: { heading?: number; body?: number }; tracking?: { heading?: string; display?: string } };
+export const HEAD = fonts.weights?.heading ?? 700;
+export const BODY = fonts.weights?.body ?? 400;
+const TRACK_TITLE = fonts.tracking?.heading ?? '-0.02em';
+const TRACK_DISPLAY = fonts.tracking?.display ?? '-0.045em';
 export const MONO = `'JetBrains Mono', ${BRAND.fonts.mono}`;
+
+/** Register each face at its own weight, holding the render until they load. */
+const loadFaces = (family: string, faces: [number, string][]) => {
+  if (typeof document === 'undefined' || typeof FontFace === 'undefined') return;
+  const handle = delayRender(`Loading ${family}`);
+  Promise.all(faces.map(([w, url]) => new FontFace(family, `url(${url})`, { weight: String(w) }).load().then((f) => document.fonts.add(f))))
+    .catch((err) => console.warn(`${family} did not load, using the fallback`, err))
+    .finally(() => continueRender(handle));
+};
 
 /** Load the bundled fonts once, so a render looks the same on macOS, Linux and Windows. */
 export const loadFonts = () => {
-  loadMonoFont('Inter', staticFile('fonts/inter/Inter-Regular.woff2'), staticFile('fonts/inter/Inter-Bold.woff2'));
+  loadFaces('Inter', [
+    [400, staticFile('fonts/inter/Inter-Regular.woff2')],
+    [600, staticFile('fonts/inter/Inter-SemiBold.woff2')],
+    [700, staticFile('fonts/inter/Inter-Bold.woff2')],
+  ]);
   loadMonoFont(
     'JetBrains Mono',
     staticFile('fonts/jetbrains-mono/JetBrainsMono-Regular.woff2'),
@@ -85,16 +108,16 @@ export const layoutFor = (W: number, H: number): Layout => {
 
 export const display = (L: Layout, f: Field): React.CSSProperties => ({
   fontFamily: SANS,
-  fontWeight: 700,
+  fontWeight: HEAD,
   fontSize: L.size.display,
   lineHeight: 0.95,
-  letterSpacing: '-0.045em',
+  letterSpacing: TRACK_DISPLAY,
   color: f.ink,
 });
 
 export const figure = (L: Layout, f: Field): React.CSSProperties => ({
   fontFamily: SANS,
-  fontWeight: 700,
+  fontWeight: HEAD,
   fontSize: L.size.figure,
   lineHeight: 0.95,
   letterSpacing: '-0.035em',
@@ -104,16 +127,16 @@ export const figure = (L: Layout, f: Field): React.CSSProperties => ({
 
 export const title = (L: Layout, f: Field): React.CSSProperties => ({
   fontFamily: SANS,
-  fontWeight: 700,
+  fontWeight: HEAD,
   fontSize: L.size.title,
   lineHeight: 1.05,
-  letterSpacing: '-0.02em',
+  letterSpacing: TRACK_TITLE,
   color: f.ink,
 });
 
 export const label = (L: Layout, f: Field): React.CSSProperties => ({
   fontFamily: SANS,
-  fontWeight: 400,
+  fontWeight: BODY,
   fontSize: L.size.label,
   lineHeight: 1.3,
   color: f.ink2,
@@ -121,7 +144,7 @@ export const label = (L: Layout, f: Field): React.CSSProperties => ({
 
 export const note = (L: Layout, f: Field): React.CSSProperties => ({
   fontFamily: SANS,
-  fontWeight: 400,
+  fontWeight: BODY,
   fontSize: L.size.note,
   lineHeight: 1.3,
   color: f.ink2,
