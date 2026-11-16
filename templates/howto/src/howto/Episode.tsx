@@ -118,6 +118,29 @@ const Voice: React.FC<{ id: string; captions?: { color: string; accent: string; 
   </>
 );
 
+type Sound = { at: number; name: 'tick' | 'land' | 'move' };
+const LEVEL = { tick: 0.5, land: 0.6, move: 0.7 };
+
+/** Where a scene's things land, from its resolved props: a tick for a row or a bar, a low note under a figure or a limit. */
+const soundsOf = (kind: string, p: any): Sound[] => {
+  if (kind === 'ledger') return p.rows.map((r: { at: number }) => ({ at: r.at, name: 'tick' as const }));
+  if (kind === 'figure') return [{ at: p.at, name: 'land' }];
+  if (kind === 'bars') return [...p.bars.map((b: { at: number }) => ({ at: b.at, name: 'tick' as const })), ...(p.limit ? [{ at: p.limit.at, name: 'land' as const }] : [])];
+  return [];
+};
+
+const Sounds: React.FC<{ list: Sound[] }> = ({ list }) => (
+  <>
+    {list
+      .filter((s) => s.at >= 0)
+      .map((s, i) => (
+        <Sequence key={i} from={s.at} durationInFrames={30}>
+          <Audio src={staticFile(`audio/sfx/${s.name}.wav`)} volume={LEVEL[s.name]} />
+        </Sequence>
+      ))}
+  </>
+);
+
 /** The episode comes from src/episode.ts by import: composition props are JSON, and an episode holds functions. */
 export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
   const ep = EPISODE;
@@ -125,6 +148,7 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
   const L = layoutFor(width, height);
   const n = ep.chapters.length;
   const badge = `${ep.series} ${ep.number} · toolkit ${ep.version}`;
+  const sounds = ep.sounds !== false;
   const segs = timeline(ep, short);
   const total = segs.reduce((n, s) => n + s.frames, 0);
   // an ident carries its own sound, so the bed starts after the open clip and is out before the close clip
@@ -191,7 +215,12 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
             </Sequence>
           );
         } else if (s.kind === 'card') {
-          body = <ChapterCard L={L} f={f} index={s.chapter} of={n} text={ep.chapters[s.chapter].title} instant={s.instant} />;
+          body = (
+            <>
+              <ChapterCard L={L} f={f} index={s.chapter} of={n} text={ep.chapters[s.chapter].title} instant={s.instant} />
+              {sounds && !s.instant && <Sounds list={[{ at: 4, name: 'move' }, { at: 20, name: 'tick' }]} />}
+            </>
+          );
         } else if (s.kind === 'scene') {
           const Scene = SCENES[s.spec.kind] as React.FC<any>;
           const cue = cueFor(s.spec.id);
@@ -199,6 +228,7 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
           body = (
             <>
               <Scene L={L} f={f} {...props} />
+              {sounds && <Sounds list={soundsOf(s.spec.kind, props)} />}
               {s.spec.kind !== 'session' && short === undefined && <Badge L={L} f={f} text={badge} />}
               <Voice id={s.spec.id} captions={short !== undefined ? { color: f.ink, accent: f.accent, ground: f.ground, bottom: 330 } : undefined} />
             </>

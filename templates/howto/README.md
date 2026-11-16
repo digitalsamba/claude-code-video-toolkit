@@ -74,6 +74,7 @@ hand for the narrow frame).
 | `src/howto/` | Engine: timeline, scene kinds, the mark and track, theme | Keep |
 | `src/brand.ts` | The one place the brand is chosen | Keep, or point at your brand |
 | `scripts/ident.py` | Reads the brand's mark and ident into `src/ident.json` and `public/ident/` | Run again when the brand changes |
+| `scripts/sounds.py` | Synthesises the three sounds things land on into `public/audio/sfx/` | Keep, or replace the files; `sounds: false` in the episode turns them off |
 | `design.md` | Acts, fields, type steps, ground, layout: the decisions the code follows | Keep |
 
 ## Making an episode

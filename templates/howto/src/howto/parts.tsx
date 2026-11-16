@@ -7,7 +7,7 @@
  * playhead, `head` (0-1) along a track with a stop per chapter; `drawn` (0-1) is how much of the track exists.
  */
 import React from 'react';
-import { interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { MARK } from './ident';
 import { type Field, type Layout, note, SANS } from './theme';
 
@@ -29,6 +29,54 @@ export const useEnter = (at: number) => {
 export const Rise: React.FC<{ at: number; style?: React.CSSProperties; children: React.ReactNode }> = ({ at, style, children }) => {
   const t = useEnter(at);
   return <div style={{ ...style, opacity: t, transform: `translateY(${(1 - t) * 14}px)` }}>{children}</div>;
+};
+
+/** 0-1 from `at`: an arrival, fast off the mark with a long tail (motion-craft, "Ease by role"). */
+export const arrive = (frame: number, at: number, over = 14) => interpolate(frame, [at, at + over], [0, 1], { ...clamp, easing: Easing.out(Easing.exp) });
+
+/**
+ * A title's entrance: its words come in one after another, in place. With `blur` they sharpen as they come (the
+ * opening, a chapter card); without, they just appear (a scene's title, a row's label). Nothing moves, so the
+ * line can be read while it lands.
+ */
+export const Words: React.FC<{ text: string; at: number; gap?: number; blur?: number; inline?: boolean; style?: React.CSSProperties }> = ({
+  text,
+  at,
+  gap = 2,
+  blur = 0,
+  inline,
+  style,
+}) => {
+  const frame = useCurrentFrame();
+  const words = text.split(' ');
+  const Tag = inline ? 'span' : 'div';
+  return (
+    <Tag style={style}>
+      {words.map((w, i) => {
+        const t = interpolate(frame, [at + i * gap, at + i * gap + (blur ? 6 : 4)], [0, 1], clamp);
+        return (
+          <span key={i} style={{ display: 'inline-block', whiteSpace: 'pre', opacity: t, filter: blur && t < 1 ? `blur(${(1 - t) * blur}px)` : undefined }}>
+            {w}
+            {i < words.length - 1 ? ' ' : ''}
+          </span>
+        );
+      })}
+    </Tag>
+  );
+};
+
+/** A value's entrance: it lands a little large and settles, from the edge it is set against. */
+export const Punch: React.FC<{ at: number; origin?: string; from?: number; style?: React.CSSProperties; children: React.ReactNode }> = ({
+  at,
+  origin = 'left bottom',
+  from = 1.16,
+  style,
+  children,
+}) => {
+  const frame = useCurrentFrame();
+  const t = arrive(frame, at);
+  const o = interpolate(frame, [at, at + 3], [0, 1], clamp);
+  return <div style={{ ...style, opacity: o, transform: `scale(${from - (from - 1) * t})`, transformOrigin: origin }}>{children}</div>;
 };
 
 /** The terminal's rows as hairlines: the template's ground, for type scenes only. */
@@ -58,6 +106,8 @@ export type RailState = {
   caretOn: boolean;
   /** Stops lit ahead of the playhead (the opening names the chapters) */
   lit?: boolean[];
+  /** A stop the playhead has just reached, and how large it is drawn (it lands large and settles) */
+  pop?: { stop: number; scale: number };
 };
 
 export const railGeometry = (L: Layout) => {
@@ -121,7 +171,7 @@ export const Rail: React.FC<{ L: Layout; f: Field; n: number; state: RailState }
             key={i}
             cx={cx}
             cy={lineY}
-            r={(L.vertical ? 9 : 10) * pop}
+            r={(L.vertical ? 9 : 10) * pop * (state.pop?.stop === i ? state.pop.scale : 1)}
             fill={passed ? f.accent : f.ground}
             stroke={passed ? f.accent : f.ink}
             strokeOpacity={passed ? 1 : 0.5}

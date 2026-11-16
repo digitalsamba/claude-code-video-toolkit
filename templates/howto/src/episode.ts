@@ -77,7 +77,8 @@ export const EPISODE: Episode = {
       kind: 'ledger',
       chapter: 1,
       props: (cue) => ({
-        title: { text: 'What $30 buys', at: cue('what does') },
+        hero: { text: '$30' },
+        title: { text: 'What it buys', at: cue('what does') },
         rows: [
           { label: 'Video clips', detail: `LTX-2.3, about ${money(F.prices.ltxClip)} a clip`, value: Math.floor(30 / F.prices.ltxClip / 100) * 100, at: cue('three hundred') },
           { label: 'Voice lines', detail: `Qwen3-TTS, about ${money(F.prices.voiceLine)} a line`, value: Math.floor(30 / F.prices.voiceLine / 1000) * 1000, at: cue('three thousand') },

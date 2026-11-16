@@ -6,7 +6,7 @@ import React from 'react';
 import { spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Counter, terminalTheme, TerminalSession } from '../../../../lib/components';
 import { BRAND } from '../brand';
-import { Ground, Rail, ramp, Rise, stopAt, UnderTrack, useEnter, railGeometry } from './parts';
+import { arrive, Ground, Punch, Rail, ramp, Rise, stopAt, UnderTrack, useEnter, railGeometry, Words } from './parts';
 import { display, type Field, figure, label, type Layout, MONO, note, SANS, title } from './theme';
 import type { BarsProps, CommandProps, FigureProps, LedgerProps, Lines, Said, SessionProps, StatementProps } from './types';
 
@@ -28,6 +28,9 @@ const current = <T extends { at: number }>(items: T[], frame: number) => {
   });
   return k;
 };
+
+/** Where a figure scene sets its number: the next scene's `hero` starts from here. */
+const figureBox = (L: Layout) => ({ left: L.x - 8, top: L.vertical ? 640 : 300, size: L.vertical ? 260 : 300 });
 
 const Foot: React.FC<Base & { text?: string }> = ({ L, f, text }) =>
   text ? <div style={{ ...note(L, f), position: 'absolute', left: L.x, top: L.foot - L.size.note, maxWidth: L.vertical ? L.right - L.x : '62%' }}>{text}</div> : null;
@@ -58,9 +61,7 @@ export const Open: React.FC<Base & { text: Lines; chapters: number; titleAt: num
       <Rail L={L} f={f} n={chapters} state={state} />
       <div style={{ ...display(L, f), position: 'absolute', left: L.x, bottom: L.H - (L.trackY - g.s - (L.vertical ? 90 : 72)) }}>
         {text.map((line, i) => (
-          <Rise key={i} at={lineCues[i] ?? titleAt}>
-            {line}
-          </Rise>
+          <Words key={i} text={line} at={lineCues[i] ?? titleAt} blur={10} gap={3} />
         ))}
       </div>
     </>
@@ -77,13 +78,18 @@ export const ChapterCard: React.FC<Base & { index: number; of: number; text: Lin
   const to = stopAt(index, of);
   const head = instant ? to : from + (to - from) * ramp(frame, 4, 18);
   const g = railGeometry(L);
+  const landed = 20; // the playhead reaches the stop, which lands large and settles
+  const pop = instant || frame < landed ? undefined : { stop: index, scale: 1 + 0.9 * (1 - arrive(frame, landed, 12)) };
+  const big = L.vertical ? figure(L, f) : display(L, f);
   return (
     <>
       <Ground L={L} f={f} />
-      <Rail L={L} f={f} n={of} state={{ fill: 1, drawn: 1, head, caretOn: true }} />
-      <Rise at={instant ? -10 : 8} style={{ ...figure(L, f), position: 'absolute', left: L.x, bottom: L.H - (L.trackY - g.s - 64) }}>
-        {broken(text)}
-      </Rise>
+      <Rail L={L} f={f} n={of} state={{ fill: 1, drawn: 1, head, caretOn: true, pop }} />
+      <div style={{ ...big, position: 'absolute', left: L.x, bottom: L.H - (L.trackY - g.s - 64) }}>
+        {text.map((line, i) => (
+          <Words key={i} text={line} at={instant ? -20 : 6 + i * 5} blur={10} gap={3} />
+        ))}
+      </div>
       <UnderTrack L={L} f={f} at={instant ? -10 : 12}>
         {index + 1} of {of}
       </UnderTrack>
@@ -133,53 +139,69 @@ export const Close: React.FC<Base & { chapters: number; next: Lines; link: strin
 
 /** A line that can grow: `then` lands on later words, in the secondary ink */
 const SaidLine: React.FC<{ said: Said; style: React.CSSProperties; thenColor: string }> = ({ said, style, thenColor }) => (
-  <Rise at={said.at} style={style}>
-    {said.text}
-    {said.then && (
-      <Rise at={said.then.at} style={{ display: said.then.newLine ? 'block' : 'inline-block', color: thenColor }}>
-        {said.then.newLine ? '' : '\u00a0'}
-        {said.then.text}
-      </Rise>
-    )}
-  </Rise>
+  <div style={style}>
+    <Words inline text={said.text} at={said.at} />
+    {said.then && !said.then.newLine && ' '}
+    {said.then && <Words inline={!said.then.newLine} text={said.then.text} at={said.then.at} style={{ color: thenColor }} />}
+  </div>
 );
 
-export const Ledger: React.FC<Base & LedgerProps> = ({ L, f, title: head, rows, allAt, note: foot, after }) => {
+export const Ledger: React.FC<Base & LedgerProps> = ({ L, f, title: head, rows, allAt, note: foot, after, hero }) => {
   const frame = useCurrentFrame();
   const active = after && frame >= after.at ? -1 : current(rows, frame);
   const all = allAt !== undefined && frame >= allAt && current(rows, frame) === current(rows, allAt);
-  const rowGap = L.vertical ? (rows.length <= 3 ? 110 : 64) : rows.length <= 3 ? 72 : 44;
+  const big = rows.length <= 3; // a few rows fill the frame: the detail under the label, the value at figure size
+  const rowGap = L.vertical ? (big ? 96 : 64) : big ? 60 : 44;
+  const titleTop = L.top + (hero && L.vertical ? 190 : 0);
+  const rowsTop = titleTop + (head ? (L.vertical ? 220 : 170) : 20);
+  // the hero: the number this ledger is about. It starts where the figure scene before left it and moves into place
+  const from = figureBox(L);
+  const to = L.vertical ? { left: L.x - 4, top: L.top - 20, size: L.size.display } : { left: L.x - 6, top: rowsTop + 150, size: L.size.display };
+  const k = hero?.carry === false ? 1 : ramp(frame, 3, 20);
+  const mix = (p: number, q: number) => p + (q - p) * k;
+  const rowsLeft = hero && !L.vertical ? L.x + 560 : L.x;
   return (
     <>
-      {head && <SaidLine said={head} thenColor={f.ink2} style={{ ...title(L, f), position: 'absolute', left: L.x, top: L.top }} />}
-      <div style={{ position: 'absolute', left: L.x, right: L.W - L.right, top: L.top + (head ? (L.vertical ? 220 : 170) : 20), display: 'flex', flexDirection: 'column', gap: rowGap }}>
+      {head && <SaidLine said={head} thenColor={f.ink2} style={{ ...title(L, f), position: 'absolute', left: L.x, top: titleTop }} />}
+      {hero && (
+        <Punch
+          at={hero.carry === false ? (hero.at ?? 0) : -30}
+          style={{ ...display(L, f), fontSize: to.size, color: f.accent, position: 'absolute', left: mix(from.left, to.left), top: mix(from.top, to.top), whiteSpace: 'nowrap' }}
+        >
+          <div style={{ transform: `scale(${mix(from.size / to.size, 1)})`, transformOrigin: 'left top' }}>{hero.text}</div>
+        </Punch>
+      )}
+      <div style={{ position: 'absolute', left: rowsLeft, right: L.W - L.right, top: rowsTop, display: 'flex', flexDirection: 'column', gap: rowGap }}>
         {rows.map((r, i) => {
           const on = i === active || (all && i <= current(rows, frame));
           const vAt = r.valueAt ?? r.at;
-          const value =
-            frame < vAt ? null : typeof r.value === 'number' ? (
-              <Counter value={r.value} start={vAt} frames={22} format={r.format ?? ((n) => Math.round(n).toLocaleString('en-GB'))} />
-            ) : (
-              <Rise at={vAt} style={{ display: 'inline-block' }}>{r.value}</Rise>
-            );
-          return (
-            <Rise key={i} at={r.at}>
-              <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                <div style={{ ...title(L, f), whiteSpace: 'nowrap' }}>{r.label}</div>
-                {r.detail && !L.vertical && (
-                  <Rise at={r.detailAt ?? r.at} style={{ ...label(L, f), marginLeft: 28, whiteSpace: 'nowrap' }}>
-                    {r.detail}
-                  </Rise>
-                )}
-                <div style={{ flex: 1, margin: '0 24px', borderBottom: `4px dotted ${f.ink}`, opacity: 0.22, transform: 'translateY(-10px)' }} />
-                <div style={{ ...title(L, f), color: on ? f.accent : f.ink, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{value}</div>
-              </div>
-              {r.detail && L.vertical && (
-                <Rise at={r.detailAt ?? r.at} style={{ ...label(L, f), marginTop: 6 }}>
-                  {r.detail}
-                </Rise>
-              )}
+          const under = big || L.vertical; // the detail goes under the label
+          const value = frame < vAt ? null : typeof r.value === 'number' ? <Counter value={r.value} start={vAt} frames={22} format={r.format ?? ((n) => Math.round(n).toLocaleString('en-GB'))} /> : r.value;
+          const detail = r.detail && (
+            <Rise at={r.detailAt ?? r.at} style={{ ...label(L, f), marginLeft: under ? 0 : 28, marginTop: under ? 8 : 0, whiteSpace: under && L.vertical ? undefined : 'nowrap' }}>
+              {r.detail}
             </Rise>
+          );
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: under ? 'center' : 'baseline' }}>
+              <div style={under ? undefined : { display: 'flex', alignItems: 'baseline' }}>
+                <Words text={r.label} at={r.at} style={{ ...title(L, f), whiteSpace: 'nowrap' }} />
+                {detail}
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  margin: '0 24px',
+                  borderBottom: `4px dotted ${f.ink}`,
+                  opacity: 0.22,
+                  transform: `translateY(${under ? 0 : -10}px) scaleX(${arrive(frame, r.at, 18)})`,
+                  transformOrigin: 'left center',
+                }}
+              />
+              <Punch at={vAt} origin="right center" style={{ ...(big && typeof r.value === 'number' ? figure(L, f) : title(L, f)), color: on ? f.accent : f.ink, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                {value}
+              </Punch>
+            </div>
           );
         })}
       </div>
@@ -203,29 +225,17 @@ export const Figure: React.FC<Base & FigureProps> = ({ L, f, title: head, value,
   let first = k;
   while (first > 0 && lines[first].add) first--;
   const shown = k < 0 ? [] : lines.slice(first, k + 1);
-  const enter = useEnter(at);
-  const figTop = L.vertical ? 640 : 300;
+  const box = figureBox(L);
+  const figTop = box.top;
   return (
     <>
       <Ground L={L} f={f} />
       {head && <SaidLine said={head} thenColor={f.ink2} style={{ ...title(L, f), position: 'absolute', left: L.x, top: L.top }} />}
-      <div
-        style={{
-          ...display(L, f),
-          fontSize: L.vertical ? 260 : 300,
-          position: 'absolute',
-          left: L.x - 8,
-          top: figTop,
-          color: f.accent,
-          fontVariantNumeric: 'tabular-nums',
-          opacity: enter,
-          transform: `translateY(${(1 - enter) * 14}px)`,
-        }}
-      >
+      <Punch at={at} from={1.22} origin="left center" style={{ ...display(L, f), fontSize: box.size, position: 'absolute', left: box.left, top: figTop, color: f.accent, fontVariantNumeric: 'tabular-nums' }}>
         {prefix}
         <Counter value={value} start={at} frames={26} format={format ?? ((n) => String(Math.round(n)))} />
         {suffix}
-      </div>
+      </Punch>
       <div style={{ position: 'absolute', left: L.x, right: L.W - L.right, top: figTop + (L.vertical ? 300 : 330), display: 'flex', flexDirection: 'column', gap: 18 }}>
         {shown.map((l, i) => (
           <Rise key={`${first}-${i}`} at={l.at} style={{ ...title(L, f), color: i === shown.length - 1 ? f.ink : f.ink2 }}>
@@ -278,19 +288,19 @@ export const Bars: React.FC<Base & BarsProps> = ({ L, f, title: head, bars, limi
   return (
     <>
       {head && !summing && (
-        <Rise at={head.at} style={{ ...title(L, f), position: 'absolute', left: L.x, top: L.top }}>
-          {broken(head.text)}
-        </Rise>
+        <div style={{ ...title(L, f), position: 'absolute', left: L.x, top: L.top }}>
+          {head.text.map((line, i) => (
+            <Words key={i} text={line} at={head.at + i * 4} />
+          ))}
+        </div>
       )}
       {after && summing && (
-        <Rise at={after.at} style={{ ...title(L, f), position: 'absolute', left: L.x, top: L.top, color: f.accent }}>
-          {after.text}
-        </Rise>
+        <Words text={after.text} at={after.at} style={{ ...title(L, f), position: 'absolute', left: L.x, top: L.top, color: f.accent }} />
       )}
       <svg width={L.W} height={L.H} style={{ position: 'absolute', inset: 0 }}>
         <line x1={L.x} x2={L.right} y1={bottom} y2={bottom} stroke={f.ink} strokeOpacity={0.35} strokeWidth={2} />
         {bars.map((b, i) => {
-          const grow = frame < b.at ? 0 : Math.min(1, spring({ frame: frame - b.at, fps, config: { damping: 200 }, durationInFrames: 16 }));
+          const grow = arrive(frame, b.at, 20);
           const x = L.x + i * slot + (slot - bw) / 2;
           const yy = y(b.value * grow);
           return <rect key={i} x={x} y={yy} width={bw} height={bottom - yy} fill={i === k ? f.accent : f.other} />;
@@ -325,9 +335,9 @@ export const Bars: React.FC<Base & BarsProps> = ({ L, f, title: head, bars, limi
               </Rise>
             )}
             {shown && (
-              <Rise at={vAt} style={{ ...label(L, f), fontWeight: 700, position: 'absolute', left: x, width: slot, top: y(b.value) + 14, textAlign: 'center', color: i === k ? f.ground : f.ink, fontVariantNumeric: 'tabular-nums' }}>
+              <Punch at={vAt} origin="center top" from={1.3} style={{ ...label(L, f), fontWeight: 700, position: 'absolute', left: x, width: slot, top: y(b.value) + 14, textAlign: 'center', color: i === k ? f.ground : f.ink, fontVariantNumeric: 'tabular-nums' }}>
                 {format(b.value)}
-              </Rise>
+              </Punch>
             )}
           </React.Fragment>
         );

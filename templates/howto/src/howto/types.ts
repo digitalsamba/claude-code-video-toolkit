@@ -30,6 +30,11 @@ export type Said = { text: string; at: number; then?: { text: string; at: number
 
 export type LedgerProps = {
   title?: Said;
+  /**
+   * The number the ledger is about, large beside its rows. After a `figure` scene it starts where that scene left
+   * its number and moves into place, so the cut carries it across; `carry: false` lands it on `at` instead.
+   */
+  hero?: { text: string; carry?: boolean; at?: number };
   rows: LedgerRow[];
   /** Every value landed so far takes the accent ("all free") until the next row lands */
   allAt?: number;
@@ -118,6 +123,8 @@ export type Episode = {
   openStops?: (cue: Cue) => number[];
   /** `false` keeps the template's 2D opening and close even when the brand has an ident (src/ident.json) */
   ident?: boolean;
+  /** `false` turns off the sounds things land on (public/audio/sfx, made by scripts/sounds.py) */
+  sounds?: boolean;
   /** Optional bed under the whole episode, from public/ */
   music?: { file: string; volume: number };
 };

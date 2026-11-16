@@ -52,8 +52,23 @@ size, bottom right, secondary ink, on every scene but the opening and close.
 
 ## Motion
 
-Entrances 10 frames, spring damping 200, 14 px rise; nothing exits (the scene cuts). Every change lands on the
-word that names it (`cue()`). The data accent moves to whatever is being said, and only one thing holds it.
+Every change lands on the word that names it (`cue()`). The data accent moves to whatever is being said, and
+only one thing holds it. Nothing exits (the scene cuts). The entrance depends on what the thing is:
+
+| What | Entrance |
+| --- | --- |
+| The opening's title, a chapter card's title | word by word, each sharpening from a 10 px blur over 6 frames, 3 frames apart, in place |
+| A scene's title, a row's label | word by word, 4 frames each, 2 apart, in place |
+| A value, a figure, a bar's amount | lands 16 to 30% large and settles in 14 frames, long-tailed (`Easing.out(Easing.exp)`), from the edge it is set against |
+| A row's leader, a bar | draws out from its start, long-tailed, 18 to 20 frames |
+| Detail lines, sources, lines under a figure | a 14 px rise, 10 frames: the quiet ones |
+| The playhead | eases both ways to its stop; the stop lands large and settles |
+
+A number that carries a chapter stays on screen across the cut: a ledger's `hero` starts where the figure scene
+before it left the number and moves into place beside the rows.
+
+Sound: a tick as a row or a bar lands, a low note under a figure or a limit line, a soft pass as the playhead
+moves (`public/audio/sfx`, synthesised by `scripts/sounds.py`). They sit well under the narration.
 
 ## Brand mark and ident
 
