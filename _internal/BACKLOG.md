@@ -69,32 +69,9 @@ Playwright-based web app exploration and analysis:
   - JSON structure of pages, elements, and actions
   - Recording script templates for each discovered flow
 
-### Terminal Recording Skill
-- Asciinema recording and conversion
-- svg-term-cli usage
-- Typing effect animations in Remotion
-
-### Video Timing Skill
-- Scene duration guidelines
-- Voiceover pacing recommendations
-- Break tag usage patterns
-- Demo playback rate calculations
-
-### Video Accessibility Skill
-- Subtitle/caption generation
-- Transcript creation
-- Color contrast guidelines
-- Audio description patterns
-
 ---
 
 ## Templates
-
-### Tutorial Template
-- Chapter-based structure
-- Progress indicator
-- Step-by-step sections
-- Code highlighting
 
 ### Comparison Template
 - Before/After split screen
@@ -113,10 +90,6 @@ Playwright-based web app exploration and analysis:
 The NarratorPiP component has two different APIs:
 - **sprint-review**: Props-based (`videoFile`, `position`, `size` as direct props)
 - **product-demo**: Config-based (`config` object containing all settings)
-
-**Completed this session:**
-- [x] Added `objectPosition` prop for video framing control
-- [x] Changed default to `objectFit: contain` to show full video
 
 **Still needed:**
 - [ ] Unify into a single API
@@ -138,18 +111,6 @@ Document best practices for creating narrator PiP videos:
 ---
 
 ## Infrastructure
-
-### Multi-Format Output
-Render pipeline for (square and vertical cut-downs are done in `tools/cutdown.py`):
-- WebM (web fallback)
-- GIF (preview/social)
-
-### Python Compatibility
-The documentation uses `python` but macOS and some systems require `python3`:
-- Detect which command is available at runtime
-- Add wrapper script or shell function
-- Update CLAUDE.md examples to be cross-platform
-- Consider: `#!/usr/bin/env python3` shebangs for direct script execution
 
 ### Cost Tracking
 ElevenLabs usage monitoring:
@@ -176,22 +137,6 @@ Move GPU worker images from personal to org namespace:
 
 ## Improvements
 
-### Per-Scene Voiceover Generation ✅ IMPLEMENTED
-Tested in `android-screenshare-sprint` (Jan 2026). Now promoted to default workflow.
-
-**Implementation complete:**
-- [x] `voiceover.py` supports `--scene-dir` for processing .txt files in a directory
-- [x] `voiceover.py` supports `--concat` for ffmpeg concatenation (for SadTalker)
-- [x] `audioFile` field added to DemoConfig, info, overview, summary, credits configs
-- [x] SprintReview.tsx renders per-scene `<Audio>` within each `Series.Sequence`
-- [x] Backward compatibility: global voiceover track still works when no per-scene audio
-- [x] `/generate-voiceover` command updated to detect and prefer per-scene mode
-- [x] Documentation updated (CLAUDE.md, README.md, getting-started.md)
-
-**Remaining ideas (not blocking):**
-- [ ] Store concat list file in project for reproducibility
-- [ ] Auto-split VOICEOVER-SCRIPT.md into scene scripts
-
 ### Qwen3-TTS Generation Parameters (Partially Done)
 
 `temperature` and `top_p` are now supported end-to-end (handler.py, qwen3_tts.py, voiceover.py). Remaining parameters need a future Docker rebuild.
@@ -207,15 +152,14 @@ Tested in `android-screenshare-sprint` (Jan 2026). Now promoted to default workf
 
 | Parameter | Effect | Priority |
 |-----------|--------|----------|
-| `max_new_tokens` | Max audio length — needed for long texts | Medium |
-| `x_vector_only_mode` | Fast voice cloning — speaker embedding only, skips full prompt encoding. Faster but lower quality. Good for previews. | Medium |
+| `max_new_tokens` | Max audio length, needed for long texts | Medium |
+| `x_vector_only_mode` | Fast voice cloning: speaker embedding only, skips full prompt encoding. Faster but lower quality. Good for previews. | Medium |
 | `do_sample` | Toggle sampling vs greedy | Low |
 | `repetition_penalty` | Reduce repetitive audio patterns | Low |
 
 **Reference:** Qwen3-TTS models accept all `model.generate()` kwargs: https://github.com/QwenLM/Qwen3-TTS
 
 ### Voice Management
-- Support multiple voices per project
 - Voice settings presets (narrator, character, etc.)
 - Voice preview before generation
 
@@ -225,6 +169,9 @@ Tested in `android-screenshare-sprint` (Jan 2026). Now promoted to default workf
 - Slow typing simulation
 - Scroll smoothing
 
+### Voiceover Script
+- Auto-split VOICEOVER-SCRIPT.md into per-scene scripts
+
 ### Template Improvements
 - Additional color themes
 - Progress bar component
@@ -233,47 +180,6 @@ Tested in `android-screenshare-sprint` (Jan 2026). Now promoted to default workf
 - Brand inheritance (extend another brand)
 - Dark/light mode variants per brand
 - Brand preview command
-
----
-
-## SadTalker Refinements (In Progress)
-
-### Completed This Session
-- [x] `--retrieve JOB_ID` flag to download results from completed jobs
-- [x] Auto-timeout calculation based on audio duration (~4min/min + 2min buffer)
-- [x] Fixed `video_url` handling (was looking for `r2_url`)
-- [x] Updated docs with job recovery section
-
-### Still Needed
-- [ ] **Webhook support** (`--webhook URL`) - fire and forget, get notified when done
-- [ ] **Async mode** (`--async`) - submit and exit, retrieve later with job ID
-- [ ] **Job ID persistence** - save job ID to local file for crash recovery
-- [ ] **Progress streaming** - show chunk progress during long jobs
-- [ ] **R2 read permissions** - ensure credentials have Object Read & Write
-- [ ] **Image preprocessing** - auto-crop/center face for better framing
-- [ ] **Output reframing** - ffmpeg post-process to center face in output
-
-### Integration with NarratorPiP
-The current workflow has a framing issue:
-1. Source image has face positioned high in frame
-2. SadTalker preserves this framing
-3. NarratorPiP crops further, cutting off mouth
-
-**Solutions to explore:**
-- Pre-process source image to center face before SadTalker
-- Post-process SadTalker output to reframe/crop
-- Add face detection to auto-adjust NarratorPiP `objectPosition`
-- Document image requirements for good PiP framing
-
-### Current sadtalker.py Changes (uncommitted)
-```bash
-git diff tools/sadtalker.py  # ~150 lines of additions
-```
-- `get_audio_duration()` - ffprobe helper
-- `calculate_timeout()` - auto-timeout logic
-- `retrieve_job_result()` - download from job ID
-- `--retrieve` CLI flag
-- `--timeout` default changed to 0 (auto-calculate)
 
 ---
 
