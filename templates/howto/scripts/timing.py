@@ -11,6 +11,9 @@ after the underscore, and phrases play in file-name order. Within a scene, LEAD 
 first phrase, GAP between phrases and TAIL after the last. `public/audio/layout.json` can override them per
 scene, e.g. {"open": {"lead": 72}, "spent": {"gap": 6}}. The scene components never hold a frame number for
 narration; they look words up with cue(), so this file is the only place timing lives.
+
+A project with several episodes keeps each one's phrases in `public/audio/scenes/<id>/` (the episode's `id` in
+src/episode.ts); they are written under `episodes.<id>`, and layout.json takes them as {"<id>": {"open": {...}}}.
 """
 from __future__ import annotations
 
@@ -36,17 +39,17 @@ def frames(path: Path) -> int:
     return round(float(out) * FPS)
 
 
-def main() -> int:
-    layout = json.loads(LAYOUT.read_text()) if LAYOUT.exists() else {}
+def lay(scenes: Path, layout: dict) -> dict | None:
+    """The scenes of one folder of phrases, each phrase placed in its scene."""
     phrases: dict[str, list[Path]] = {}
-    for mp3 in sorted(SCENES.glob("*.mp3")):
+    for mp3 in sorted(scenes.glob("*.mp3")):
         m = NAME.match(mp3.stem)
         if not m:
             print(f"skipped {mp3.name}: not <NN><letter>_<scene>.mp3", file=sys.stderr)
             continue
         phrases.setdefault(m.group(3), []).append(mp3)
 
-    out: dict = {"fps": FPS, "scenes": {}}
+    out: dict = {}
     for scene, files in phrases.items():
         cfg = {**DEFAULTS, **layout.get(scene, {})}
         t = cfg["lead"]
@@ -54,8 +57,8 @@ def main() -> int:
         for mp3 in files:
             caps = mp3.with_suffix(".captions.json")
             if not caps.exists():
-                print(f"missing {caps.name}: run tools/captions.py on {SCENES}", file=sys.stderr)
-                return 1
+                print(f"missing {caps.name}: run tools/captions.py on {scenes}", file=sys.stderr)
+                return None
             words = [
                 {"text": w["text"], "startMs": w["startMs"], "endMs": w["endMs"]}
                 for w in json.loads(caps.read_text())
@@ -63,13 +66,35 @@ def main() -> int:
             n = frames(mp3)
             lines.append({"file": mp3.stem, "at": t, "frames": n, "words": words})
             t += n + cfg["gap"]
-        out["scenes"][scene] = {"frames": t - cfg["gap"] + cfg["tail"], "phrases": lines}
+        out[scene] = {"frames": t - cfg["gap"] + cfg["tail"], "phrases": lines}
+    return out
+
+
+def report(name: str, scenes: dict) -> None:
+    total = sum(s["frames"] for s in scenes.values())
+    print(f"{name}: {len(scenes)} scenes, {total / FPS:.1f} s of narrated scenes")
+    for scene, s in scenes.items():
+        print(f"  {scene:10} {s['frames'] / FPS:5.1f} s  {len(s['phrases'])} phrases")
+
+
+def main() -> int:
+    layout = json.loads(LAYOUT.read_text()) if LAYOUT.exists() else {}
+    top = lay(SCENES, layout)
+    if top is None:
+        return 1
+    out: dict = {"fps": FPS, "scenes": top}
+    # a project with several episodes keeps each one's phrases in a folder named by its id
+    for folder in sorted(d for d in SCENES.iterdir() if d.is_dir() and any(d.glob("*.mp3"))) if SCENES.exists() else []:
+        scenes = lay(folder, layout.get(folder.name, {}))
+        if scenes is None:
+            return 1
+        out.setdefault("episodes", {})[folder.name] = {"scenes": scenes}
 
     OUT.write_text(json.dumps(out, indent=1))
-    total = sum(s["frames"] for s in out["scenes"].values())
-    print(f"{OUT.relative_to(ROOT)}: {len(out['scenes'])} scenes, {total / FPS:.1f} s of narrated scenes")
-    for name, s in out["scenes"].items():
-        print(f"  {name:10} {s['frames'] / FPS:5.1f} s  {len(s['phrases'])} phrases")
+    if top or "episodes" not in out:
+        report(str(OUT.relative_to(ROOT)), top)
+    for name, ep in out.get("episodes", {}).items():
+        report(f"{OUT.relative_to(ROOT)} episode {name}", ep["scenes"])
     return 0
 
 

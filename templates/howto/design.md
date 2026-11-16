@@ -83,6 +83,15 @@ before it left the number and moves into place beside the rows.
 Sound: a tick as a row or a bar lands, a low note under a figure, a limit line or a split's count as it is said, a soft pass as the playhead
 moves (`public/audio/sfx`, synthesised by `scripts/sounds.py`). They sit well under the narration.
 
+## Screens
+
+A `screen` scene is the product itself, so it gets no ground and no badge. The window's edges sit on the title
+edge (x = 120 to 1800), with a hairline in the field's ink at 16% and no shadow. The product keeps its own
+typeface and colours inside the window; the video's type never enters it. In a Short the window is cropped to a
+box on the title edge (x = 80 to 1000, y = 300 to 1340, radius 12, the same hairline), above the captions. The
+camera moves on the words, eased both ways, and holds while a thing is read. A click is a ripple in the accent
+and a soft click sound.
+
 ## Brand mark and ident
 
 When the brand has a mark, it heads the track in place of the chevron: its own colours on `explain`, its

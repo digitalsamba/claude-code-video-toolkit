@@ -26,10 +26,16 @@ export type Field = {
 
 const c = BRAND.colors as Record<string, string>;
 
+/**
+ * A brand can set any value of a field in brand.json `fields` ({ "work": { "ground": "#323E66" } }): its own dark
+ * ground, or `"hair": "transparent"` for a flat ground with no rows.
+ */
+const own = (BRAND as unknown as { fields?: Partial<Record<FieldName, Partial<Field>>> }).fields ?? {};
+
 export const FIELDS: Record<FieldName, Field> = {
-  explain: { ground: c.bgAlt, ink: c.textDark, accent: c.primary, other: '#c9cfdc', ink2: '#4a5160', hair: 'rgba(18, 20, 24, 0.08)', mark: 'light' },
-  work: { ground: c.navyDark, ink: '#ffffff', accent: c.primaryLight, other: '#3d4a70', ink2: c.textOnDarkMuted, hair: 'rgba(255, 255, 255, 0.07)', mark: 'dark' },
-  identity: { ground: c.primary, ink: '#ffffff', accent: '#ffffff', other: '#6d97e8', ink2: 'rgba(255, 255, 255, 0.85)', hair: 'rgba(255, 255, 255, 0.12)', mark: 'mono' },
+  explain: { ground: c.bgAlt, ink: c.textDark, accent: c.primary, other: '#c9cfdc', ink2: '#4a5160', hair: 'rgba(18, 20, 24, 0.08)', mark: 'light', ...own.explain },
+  work: { ground: c.navyDark, ink: '#ffffff', accent: c.primaryLight, other: '#3d4a70', ink2: c.textOnDarkMuted, hair: 'rgba(255, 255, 255, 0.07)', mark: 'dark', ...own.work },
+  identity: { ground: c.primary, ink: '#ffffff', accent: '#ffffff', other: '#6d97e8', ink2: 'rgba(255, 255, 255, 0.85)', hair: 'rgba(255, 255, 255, 0.12)', mark: 'mono', ...own.identity },
 };
 
 export const SANS = `Inter, ${BRAND.fonts.primary}`;

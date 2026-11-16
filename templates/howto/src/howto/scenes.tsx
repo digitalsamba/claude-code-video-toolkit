@@ -4,12 +4,12 @@
  */
 import React from 'react';
 import { Loop, OffthreadVideo, Img, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
-import { Counter, terminalTheme, TerminalSession } from '../../../../lib/components';
+import { Counter, followCamera, Stage, terminalTheme, TerminalSession } from '../../../../lib/components';
 import { BRAND } from '../brand';
 import { arrive, Ground, Pen, Punch, Rail, ramp, Rise, stopAt, UnderTrack, useEnter, railGeometry, Words } from './parts';
 import { display, type Field, FIELDS, figure, label, type Layout, MONO, note, SANS, title } from './theme';
 import { ASK_SENT, ASK_START } from './timeline';
-import type { BarsProps, CommandProps, FigureProps, LedgerProps, LedgerRow, Lines, Said, SessionProps, SplitProps, SplitSide, StatementProps } from './types';
+import type { BarsProps, CommandProps, FigureProps, LedgerProps, LedgerRow, Lines, Said, ScreenProps, SessionProps, SplitProps, SplitSide, StatementProps } from './types';
 
 type Base = { L: Layout; f: Field };
 
@@ -42,10 +42,11 @@ const Foot: React.FC<Base & { text?: string }> = ({ L, f, text }) =>
  * The opening: a prompt and a caret; the chevron fills into play; the track draws out with a stop for each
  * chapter; the title rises over it. The narration starts on the title (layout.json `open.lead`).
  */
-export const Open: React.FC<Base & { text: Lines; chapters: number; titleAt: number; lineCues?: number[]; stopCues?: number[] }> = ({
+export const Open: React.FC<Base & { text: Lines; chapters: number; titleAt: number; lineCues?: number[]; stopCues?: number[]; size?: 'display' | 'figure' }> = ({
   L,
   f,
   text,
+  size = 'display',
   chapters,
   titleAt,
   lineCues = [],
@@ -60,7 +61,7 @@ export const Open: React.FC<Base & { text: Lines; chapters: number; titleAt: num
     <>
       <Ground L={L} f={f} />
       <Rail L={L} f={f} n={chapters} state={state} />
-      <div style={{ ...display(L, f), position: 'absolute', left: L.x, bottom: L.H - (L.trackY - g.s - (L.vertical ? 90 : 72)) }}>
+      <div style={{ ...(size === 'figure' ? { ...figure(L, f), lineHeight: 1.02 } : display(L, f)), position: 'absolute', left: L.x, bottom: L.H - (L.trackY - g.s - (L.vertical ? 90 : 72)) }}>
         {text.map((line, i) => (
           <Words key={i} text={line} at={lineCues[i] ?? titleAt} blur={10} gap={3} />
         ))}
@@ -605,5 +606,83 @@ export const Command: React.FC<Base & CommandProps> = ({ L, f, command, at, line
   );
 };
 
-export const SCENES = { ledger: Ledger, figure: Figure, statement: Statement, bars: Bars, session: Session, command: Command, split: Split };
+// ---------------------------------------------------------------- screen: the product, a cursor and a camera
+
+/** A field's ink at an opacity, for a hairline on any ground. */
+const inkAt = (f: Field, a: number) => {
+  const m = /^#([0-9a-f]{6})$/i.exec(f.ink);
+  if (!m) return f.ink;
+  const n = parseInt(m[1], 16);
+  return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+};
+
+/** Where a Short shows a screen: a box on the title edge, from the top of the layout to just above the captions. */
+export const screenBox = (L: Layout) => ({ left: L.x, top: L.top, width: L.right - L.x, height: CAPTION_TOP - 40 - L.top });
+
+/**
+ * The window sits on the chapter's field with a hairline round it, its edges on the title edge. In an episode
+ * the camera starts on the whole window; in a Short the window is cropped to a box above the captions and the
+ * camera stays on what is being talked about.
+ */
+export const Screen: React.FC<Base & ScreenProps> = ({ L, f, screen, url, path, clicks, camera, follow = 3, ahead = 60, canvas, chrome = 40, note: said }) => {
+  const frame = useCurrentFrame();
+  const foot = typeof said === 'string' ? said : said && frame < said.until ? said.text : undefined;
+  const cw = canvas?.width ?? 1440;
+  const ch = canvas?.height ?? 810;
+  const edge = `0 0 0 1px ${inkAt(f, 0.16)}`;
+  const whole = [{ f: 0, z: 1, x: cw / 2, y: ch / 2 }];
+  const pill: React.CSSProperties = { ...note(L, f), position: 'absolute', background: f.ground, padding: '6px 16px', borderRadius: 8, boxShadow: edge, whiteSpace: 'nowrap' };
+  if (L.vertical) {
+    const box = screenBox(L);
+    return (
+      <>
+        <div style={{ position: 'absolute', ...box, overflow: 'hidden', borderRadius: 12, boxShadow: edge, background: f.ground }}>
+          <Stage
+            url={url}
+            camera={camera ?? (path ? followCamera(path, follow, { ahead }) : [{ ...whole[0], z: follow }])}
+            path={path}
+            clicks={clicks}
+            canvasWidth={cw}
+            canvasHeight={ch}
+            chromeHeight={chrome}
+            fit={1}
+            viewWidth={box.width}
+            viewHeight={box.height}
+            background={f.ground}
+            windowShadow="none"
+            fontFamily={SANS}
+            rippleColor={f.accent}
+            fadeIn={false}
+          >
+            {screen}
+          </Stage>
+        </div>
+        <Foot L={L} f={f} text={foot} />
+      </>
+    );
+  }
+  return (
+    <>
+      <Stage
+        url={url}
+        camera={camera ?? whole}
+        path={path}
+        clicks={clicks}
+        canvasWidth={cw}
+        canvasHeight={ch}
+        chromeHeight={chrome}
+        fit={(L.right - L.x) / L.W}
+        background={f.ground}
+        windowShadow={edge}
+        fontFamily={SANS}
+        fadeIn={false}
+      >
+        {screen}
+      </Stage>
+      {foot && <div style={{ ...pill, right: L.W - L.right + 20, top: L.foot - L.size.note - 6 }}>{foot}</div>}
+    </>
+  );
+};
+
+export const SCENES = { ledger: Ledger, figure: Figure, statement: Statement, bars: Bars, session: Session, command: Command, split: Split, screen: Screen };
 

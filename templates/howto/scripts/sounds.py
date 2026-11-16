@@ -1,10 +1,10 @@
-"""Make the template's three sounds: public/audio/sfx/tick.wav, land.wav and move.wav.
+"""Make the template's sounds: public/audio/sfx/tick.wav, land.wav, move.wav and click.wav.
 
     uv run templates/howto/scripts/sounds.py
 
 They are synthesised here, so they are free to use and the same on every machine. An episode plays them where
 things land: a tick as a row or a bar arrives, a low note under a figure, a soft pass as the playhead moves to a
-chapter. `sounds: false` in src/episode.ts turns them off. To use other sounds, replace the files (keep the
+chapter, a soft click where the cursor clicks in a `screen` scene. `sounds: false` in src/episode.ts turns them off. To use other sounds, replace the files (keep the
 names, and keep each sound's loudest moment in its first 30 ms: it is placed on the frame the thing lands).
 """
 from __future__ import annotations
@@ -65,6 +65,25 @@ def move() -> np.ndarray:
     return 0.6 * bright * shape
 
 
+def click() -> np.ndarray:
+    """A soft mouse click: the button going down, and 55 ms later, quieter, coming back up."""
+    n = int(SR * 0.12)
+    t = np.arange(n) / SR
+    rng = np.random.default_rng(5)
+
+    def tap(at: float, level: float, hz: float) -> np.ndarray:
+        k = int(at * SR)
+        m = n - k
+        tt = np.arange(m) / SR
+        body = np.sin(2 * np.pi * hz * tt) * env(m, 0.0006, 0.005)
+        snap = lowpass(rng.standard_normal(m), 3800) * env(m, 0.0004, 0.0022)
+        out = np.zeros(n)
+        out[k:] = level * (0.55 * body + 0.6 * snap)
+        return out
+
+    return lowpass(tap(0.0, 1.0, 820) + tap(0.055, 0.5, 1040), 6000) + 0 * t
+
+
 def write(name: str, x: np.ndarray, peak_db: float) -> None:
     x = x / np.max(np.abs(x)) * 10 ** (peak_db / 20)
     fade = int(SR * 0.004)
@@ -82,6 +101,7 @@ def main() -> int:
     write("tick", tick(), -14)
     write("land", land(), -10)
     write("move", move(), -20)
+    write("click", click(), -15)
     return 0
 
 

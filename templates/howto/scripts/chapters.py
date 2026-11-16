@@ -34,13 +34,13 @@ MIN_CHAPTERS = 3
 INTO_CARD_S = 0.7
 
 
-def read_timeline() -> dict:
+def read_timeline(episode: str | None = None) -> dict:
     node = shutil.which("node")
     if not node:
         raise SystemExit("node not found: the timeline is read from the project's own TypeScript")
     if not (ROOT / "node_modules").exists():
         raise SystemExit(f"no node_modules in {ROOT}: run npm install there first")
-    run = subprocess.run([node, str(ROOT / "scripts" / "timeline.mjs")], capture_output=True, text=True, cwd=ROOT)
+    run = subprocess.run([node, str(ROOT / "scripts" / "timeline.mjs"), *([episode] if episode else [])], capture_output=True, text=True, cwd=ROOT)
     if run.returncode != 0:
         raise SystemExit(run.stderr.strip() or "scripts/timeline.mjs failed")
     return json.loads(run.stdout)
@@ -102,9 +102,10 @@ def main() -> int:
                     help="Name chapters by their title (default) or by the question typed on their card")
     ap.add_argument("--output", default=str(OUT), help="Where to write (default out/publish/chapters.txt)")
     ap.add_argument("--json", action="store_true", help="Print the chapters and notes as JSON")
+    ap.add_argument("--episode", help="In a project that keeps several episodes, the id of the one to write")
     args = ap.parse_args()
 
-    timeline = read_timeline()
+    timeline = read_timeline(args.episode)
     marks, notes = chapters_from(timeline, args.titles)
     total = timeline["frames"] / timeline["fps"]
     stale = False

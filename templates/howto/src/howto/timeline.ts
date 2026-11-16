@@ -16,8 +16,13 @@ export const ASK_HOLD = 32; // and the question stays this long before the answe
 export const askFrames = (text: string) => ASK_START + text.length + ASK_SENT + ASK_HOLD;
 
 type Phrase = { file: string; at: number; frames: number; words: { text: string; startMs: number; endMs: number }[] };
-type Timing = { fps: number; scenes: Record<string, { frames: number; phrases: Phrase[] }> };
+type SceneTimes = Record<string, { frames: number; phrases: Phrase[] }>;
+/** One episode's scenes at the top; a project with several has each under `episodes` by its id */
+type Timing = { fps: number; scenes: SceneTimes; episodes?: Record<string, { scenes: SceneTimes }> };
 const TIMING = timingJson as Timing;
+const scenesOf = (ep: Episode): SceneTimes => (ep.id ? TIMING.episodes?.[ep.id]?.scenes : TIMING.scenes) ?? {};
+/** Where an episode's narration is, under public/ */
+export const audioOf = (ep: Episode) => (ep.id ? `audio/scenes/${ep.id}/` : 'audio/scenes/');
 
 export const CARD = 54; // a chapter card, in frames
 const OPEN_MIN = 150;
@@ -26,7 +31,7 @@ const END_CARD = 75; // a Short's end card
 export const OPEN_SKIP = 30; // after an ident the 2D opening starts where its track draws: the ident has shown the mark
 const LINK_HOLD = 75; // before an ident close, the link stays this long after the last word
 
-export const phrasesOf = (id: string) => TIMING.scenes[id]?.phrases ?? [];
+export const phrasesOf = (ep: Episode, id: string) => scenesOf(ep)[id]?.phrases ?? [];
 
 export type Segment =
   | { kind: 'open'; frames: number }
@@ -39,7 +44,7 @@ export type Segment =
   | { kind: 'ident'; file: string; frames: number; over?: boolean }
   | { kind: 'end'; frames: number };
 
-const sceneFrames = (spec: SceneSpec) => Math.max(TIMING.scenes[spec.id]?.frames ?? 0, spec.minFrames ?? 0, 30);
+const sceneFrames = (ep: Episode, spec: SceneSpec) => Math.max(scenesOf(ep)[spec.id]?.frames ?? 0, spec.minFrames ?? 0, 30);
 
 export const timeline = (ep: Episode, short?: number): Segment[] => {
   const ident = ep.ident === false ? {} : IDENT;
@@ -48,18 +53,18 @@ export const timeline = (ep: Episode, short?: number): Segment[] => {
     const end = ident.short?.close;
     return [
       { kind: 'card', chapter: short, frames: CARD, instant: true },
-      ...scenes.map((spec, i) => ({ kind: 'scene' as const, spec, frames: sceneFrames(spec), first: i === 0 })),
+      ...scenes.map((spec, i) => ({ kind: 'scene' as const, spec, frames: sceneFrames(ep, spec), first: i === 0 })),
       end ? { kind: 'ident', file: end.file, frames: end.frames, over: true } : { kind: 'end', frames: END_CARD },
     ];
   }
   const out: Segment[] = [];
   if (ep.hook) {
     if (ep.hook.ask) out.push({ kind: 'ask', text: ep.hook.ask, frames: askFrames(ep.hook.ask) });
-    out.push({ kind: 'scene', spec: ep.hook.scene, frames: sceneFrames(ep.hook.scene), first: true, hook: true });
+    out.push({ kind: 'scene', spec: ep.hook.scene, frames: sceneFrames(ep, ep.hook.scene), first: true, hook: true });
   }
   const opens = ident.episode?.open;
   if (opens) out.push({ kind: 'ident', file: opens.file, frames: opens.frames });
-  const openFrames = TIMING.scenes.open?.frames;
+  const openFrames = scenesOf(ep).open?.frames;
   out.push({ kind: 'open', frames: (openFrames ? Math.max(openFrames, OPEN_MIN) : OPEN_TITLE) - (opens ? OPEN_SKIP : 0) });
   let chapter = -1;
   for (const spec of ep.scenes) {
@@ -67,19 +72,19 @@ export const timeline = (ep: Episode, short?: number): Segment[] => {
       chapter = spec.chapter;
       const ask = ep.chapters[chapter].ask;
       out.push({ kind: 'card', chapter, frames: ask ? Math.max(CARD, askFrames(ask)) : CARD });
-      out.push({ kind: 'scene', spec, frames: sceneFrames(spec), first: true });
+      out.push({ kind: 'scene', spec, frames: sceneFrames(ep, spec), first: true });
       continue;
     }
-    out.push({ kind: 'scene', spec, frames: sceneFrames(spec) });
+    out.push({ kind: 'scene', spec, frames: sceneFrames(ep, spec) });
   }
   const closes = ident.episode?.close;
   if (closes) {
-    const said = phrasesOf('close');
+    const said = phrasesOf(ep, 'close');
     const last = said[said.length - 1];
     out.push({ kind: 'close', frames: (last ? last.at + last.frames : 60) + LINK_HOLD, hold: true });
     out.push({ kind: 'ident', file: closes.file, frames: closes.frames });
   } else {
-    out.push({ kind: 'close', frames: Math.max(TIMING.scenes.close?.frames ?? 0, 150) });
+    out.push({ kind: 'close', frames: Math.max(scenesOf(ep).close?.frames ?? 0, 150) });
   }
   return out;
 };

@@ -2,7 +2,8 @@
  * An episode is config: what each scene shows, and the narration words that make it happen. A scene's props are a
  * function of `cue`, so every frame number comes from the voice: `at: cue('three hundred')`.
  */
-import type { SessionFocus, SessionHighlight, SessionLine, SessionSkin } from '../../../../lib/components';
+import type React from 'react';
+import type { CameraKeyframe, CursorPoint, SessionFocus, SessionHighlight, SessionLine, SessionSkin, StageUrl } from '../../../../lib/components';
 import type { FieldName } from './theme';
 
 export type Cue = (phrase: string, options?: { offset?: number; edge?: 'start' | 'end'; after?: number; nth?: number; in?: string }) => number;
@@ -121,6 +122,40 @@ export type SplitProps = {
 
 export type CommandProps = { command: string; at: number; lines: { text: string; at: number }[]; note?: string };
 
+/**
+ * A product's screen in a browser window, driven by a cursor and a camera (lib/components `Stage`; the method is
+ * the synthetic-ui-demo skill). The screen is the project's own: a kit of static React rebuilt from the product's
+ * source, kept in the project. Everything here is in the kit's canvas pixels, and every frame is a cue.
+ */
+export type ScreenProps = {
+  /**
+   * The screen, from the project's kit, laid out on the canvas. It reads the scene's frame with
+   * `useCurrentFrame()` and takes the frames it changes on as props: `<Form typeAt={cue('title')} />`.
+   */
+  screen: React.ReactNode;
+  /** The address bar: one address, or the address from each cue on (a click that leads to another page or site) */
+  url: StageUrl;
+  /** Cursor keyframes; repeat a point to hold it */
+  path?: CursorPoint[];
+  /** Frames the cursor clicks on; each plays the click sound */
+  clicks?: number[];
+  /** Camera keyframes: `x`, `y` the point to centre, `z` the zoom (1 is the whole window). Default: the whole window */
+  camera?: CameraKeyframe[];
+  /**
+   * In a Short the whole window is too small to read, so the camera crops to what is being talked about. With no
+   * `camera` in the scene's `short`, it follows the cursor at this zoom (default 3: 16 px text reads at about 30 px).
+   */
+  follow?: number;
+  /** In a Short, the cursor sits this many canvas pixels left of centre while the camera follows it (default 60) */
+  ahead?: number;
+  /** The kit's canvas (default 1440 x 810) */
+  canvas?: { width: number; height: number };
+  /** Browser chrome height on the canvas (default 40); 0 for a screen with no browser round it */
+  chrome?: number;
+  /** One line over the corner of the picture: "People shown are AI-generated"; `until` takes it away on a cue */
+  note?: string | { text: string; until: number };
+};
+
 export type Kinds = {
   ledger: LedgerProps;
   figure: FigureProps;
@@ -129,6 +164,7 @@ export type Kinds = {
   session: SessionProps;
   command: CommandProps;
   split: SplitProps;
+  screen: ScreenProps;
 };
 
 export type SceneSpec = {
@@ -157,6 +193,11 @@ export type Chapter = {
 };
 
 export type Episode = {
+  /**
+   * Only for a project that holds more than one episode (src/episode.ts `EPISODES`): its narration is then in
+   * public/audio/scenes/<id>/ and its compositions are Episode-<id> and Short-<id>-N. Letters and digits.
+   */
+  id?: string;
   series: string;
   number: number;
   /** Shown in the badge, so a stale episode is easy to spot */
@@ -164,6 +205,8 @@ export type Episode = {
   /** The badge's whole text, in place of "<series> <number> · toolkit <version>" (another product's series) */
   badge?: string;
   title: Lines;
+  /** The opening sets the title at display size; a title with a long line (over about 14 characters) takes `figure` */
+  titleSize?: 'display' | 'figure';
   chapters: Chapter[];
   scenes: SceneSpec[];
   next: Lines;
