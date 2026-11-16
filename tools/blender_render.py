@@ -561,6 +561,184 @@ def reduce(args) -> int:
     return 0
 
 
+SHEET_HEADS = (("front", 0), ("threeq-left", 40), ("threeq-right", -40), ("profile-left", 90), ("profile-right", -90),
+               ("back", 180))
+SHEET_FACES = (("rest", 0.5), ("smile", 1.7), ("blink", 2.9), ("glance", 3.8), ("wink", 4.6), ("grin", 5.8),
+               ("shocked", 6.6))
+SHEET_POSES = (("arms-up", 8.0, 0), ("arms-up-back", 8.0, 160), ("on-head", 9.2, 0), ("on-head-side", 9.2, 70),
+               ("behind-head", 10.4, 0), ("behind-head-back", 10.4, 150))
+SHEET_SEATED = (("sitting-down", 15.3, 100), ("sit", 16.9, 45), ("sit-side", 16.9, 90), ("type", 20.6, 45),
+                ("type-side", 20.6, 90), ("type-front", 20.6, 10))
+
+
+def sheet_spec(cast_file: Path, sit_at: float) -> dict:
+    """The film a review sheet is cut from: every face, the poses that stretch a body most, then down to a desk."""
+    return {
+        "title": "Review sheet", "fps": 24, "resolution": "1280x720", "engine": "eevee",
+        "set": {"kind": "desk", "chair_out": 0.75},
+        "cast": [{"id": "lead", "from": str(cast_file), "posture": "stand", "at": [1.9, sit_at], "facing": 0}],
+        "shots": [{"id": "A", "dur": 21.0, "type": "full", "follow": True}],
+        "beats": [
+            {"at": 1.0, "do": "expression", "face": "happy", "dur": 0.3},
+            {"at": 2.0, "do": "expression", "face": "neutral", "dur": 0.3},
+            {"at": 2.6, "do": "blink", "dur": 0.6},
+            {"at": 3.4, "do": "glance", "yaw": 22, "pitch": 0, "dur": 0.6},
+            {"at": 4.4, "do": "wink"},
+            {"at": 5.2, "do": "expression", "face": "grin", "dur": 0.3},
+            {"at": 6.0, "do": "expression", "face": "shocked", "dur": 0.3},
+            {"at": 6.8, "do": "expression", "face": "neutral", "dur": 0.3},
+            {"at": 7.0, "do": "pose", "pose": "arms_up", "dur": 0.5},
+            {"at": 8.2, "do": "pose", "pose": "hands_on_head", "dur": 0.5},
+            {"at": 9.4, "do": "pose", "pose": "hands_behind_head", "dur": 0.5},
+            {"at": 10.6, "do": "pose", "pose": "down", "dur": 0.5},
+            {"at": 11.4, "do": "walk", "to": [0, sit_at], "facing": 0, "until": 14.4},
+            {"at": 14.6, "do": "sit_down", "dur": 1.8},
+            {"at": 16.9, "do": "pull_in", "dur": 1.5},
+            {"at": 18.6, "do": "pose", "pose": "type", "dur": 0.6},
+            {"at": 19.3, "do": "type", "speed": "calm", "until": "end"},
+        ]}
+
+
+def sheet_views() -> list:
+    f = lambda s: int(round(s * 24)) + 1  # noqa: E731
+    views = []
+    for name, az in SHEET_HEADS:
+        views.append({"name": "head-" + name, "frame": f(0.5), "on": "head", "az": az, "dist": 3.0, "fill": 0.62,
+                      "res": [720, 720]})
+        views.append({"name": "body-" + name, "frame": f(0.5), "on": "body", "az": az, "dist": 1.7, "fill": 0.86,
+                      "res": [540, 900]})
+    views += [{"name": "face-" + name, "frame": f(t), "on": "head", "az": 0, "dist": 3.0, "fill": 0.7,
+               "res": [560, 560]} for name, t in SHEET_FACES]
+    views += [{"name": "pose-" + name, "frame": f(t), "on": "body", "az": az, "dist": 1.7, "fill": 0.8,
+               "res": [640, 800]} for name, t, az in SHEET_POSES]
+    views += [{"name": "pose-" + name, "frame": f(t), "on": "body", "az": az, "elev": 12, "dist": 2.2, "fill": 0.8,
+               "res": [640, 800], "alone": False} for name, t, az in SHEET_SEATED]
+    return views
+
+
+def sheet_rows(folder: Path, names: list, cell: int, title: str):
+    """One row of the sheet: the named stills side by side at one height, each with its name."""
+    from PIL import Image, ImageDraw
+    ims = []
+    for n in names:
+        im = Image.open(folder / f"{n}.png").convert("RGB")
+        im = im.resize((round(im.width * cell / im.height), cell), Image.LANCZOS)
+        ImageDraw.Draw(im).text((6, 4), n, fill=(20, 20, 20))
+        ims.append(im)
+    row = Image.new("RGB", (sum(i.width for i in ims), cell + 22), (245, 245, 242))
+    ImageDraw.Draw(row).text((6, 5), title, fill=(20, 20, 20))
+    x = 0
+    for im in ims:
+        row.paste(im, (x, 22))
+        x += im.width
+    return row
+
+
+def sheet_pairs(folder: Path, marks: dict, photos_file: Path) -> list:
+    """Each photo beside the still from its angle, and the two laid over each other, with the crown and the chin
+    of both on the same lines. `photos.json` names the photo for a view and where its crown, chin and eyes are,
+    in the photo's pixels (read off the photo with a grid over it)."""
+    from PIL import Image, ImageDraw
+    photos = json.loads(photos_file.read_text(encoding="utf-8"))
+    made = []
+    for view, ph in photos.items():
+        m = marks.get(view)
+        if not m or "chin" not in m:
+            print(f"  skipped {view}: no still of that name with a chin mark (names: head-front, head-threeq-left...)")
+            continue
+        still = Image.open(folder / f"{view}.png").convert("RGB")
+        photo = Image.open(photos_file.parent / ph["file"]).convert("RGB")
+        crown, chin = m["head"]["top"], m["chin"][1]
+        k = (chin - crown) / (ph["chin"] - ph["crown"])
+        photo = photo.resize((round(photo.width * k), round(photo.height * k)), Image.LANCZOS)
+        mid_still = sum(e[0] for e in m["eyes"]) / 2
+        mid_photo = k * (sum(e[0] for e in ph["eyes"]) / 2 if "eyes" in ph else ph["centre"])
+        placed = Image.new("RGB", still.size, (128, 128, 128))
+        placed.paste(photo, (round(mid_still - mid_photo), round(crown - k * ph["crown"])))
+        over = Image.blend(placed, still, 0.5)
+        pair = Image.new("RGB", (still.width * 3, still.height), (0, 0, 0))
+        for i, im in enumerate((placed, still, over)):
+            d = ImageDraw.Draw(im)
+            for y in (crown, chin):
+                d.line([(0, y), (im.width, y)], fill=(255, 220, 0), width=1)
+            pair.paste(im, (i * still.width, 0))
+        out = folder / f"pair-{view}.jpg"
+        pair.save(out, quality=90)
+        made.append(out)
+    return made
+
+
+def sheet(args) -> int:
+    """A review sheet of one character: every angle, every face, the poses that stretch it, and the numbers."""
+    cast_file = Path(args.cast).resolve()
+    if not cast_file.exists():
+        print(f"not found: {cast_file}")
+        return 2
+    out = Path(args.out).resolve() if args.out else cast_file.parent / "sheet"
+    out.mkdir(parents=True, exist_ok=True)
+    spec = out / "sheet-spec.json"
+    write_json(spec, sheet_spec(cast_file, args.sit_at))
+    try:
+        checks = run_compiler(spec, out, "check", None, None)
+    except RuntimeError as e:
+        print(f"ERROR: {e}")
+        return 2
+    write_json(out / "views.json", sheet_views())
+    done = subprocess.run([find_blender(), "-b", "-noaudio", str(out / "scene.blend"), "-P",
+                           str(ROOT / "lib" / "blender" / "sheet.py"), "--", str(out / "views.json"), str(out / "stills")],
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if "SHEET_DONE" not in done.stdout:
+        print((done.stdout + done.stderr)[-1500:])
+        return 2
+    from PIL import Image
+    marks = json.loads((out / "stills" / "marks.json").read_text())
+    rows = [sheet_rows(out / "stills", ["head-" + n for n, _ in SHEET_HEADS], 420, "Head, six angles"),
+            sheet_rows(out / "stills", ["body-" + n for n, _ in SHEET_HEADS], 520, "Body, six angles"),
+            sheet_rows(out / "stills", ["face-" + n for n, _ in SHEET_FACES], 360, "Faces"),
+            sheet_rows(out / "stills", ["pose-" + n for n, _, _ in SHEET_POSES], 440, "Arms overhead"),
+            sheet_rows(out / "stills", ["pose-" + n for n, _, _ in SHEET_SEATED], 440, "Sitting and typing")]
+    page = Image.new("RGB", (max(r.width for r in rows), sum(r.height for r in rows)), (245, 245, 242))
+    y = 0
+    for r in rows:
+        page.paste(r, (0, y))
+        y += r.height
+    page.save(out / "sheet.jpg", quality=88)
+    # the model's own proportions, from where its landmarks fall in the stills (each a share of the head's height)
+    hf, bf = marks["head-front"], marks["body-front"]
+    measures = {}
+    if "chin" in hf:
+        tall = hf["chin"][1] - hf["head"]["top"]
+        measures["head"] = {
+            "eye_line": round((hf["eyes"][0][1] - hf["head"]["top"]) / tall, 3),
+            "eyes_apart": round((hf["eyes"][1][0] - hf["eyes"][0][0]) / tall, 3),
+            "width": round((hf["head"]["right"] - hf["head"]["left"]) / tall, 3)}
+        if "glasses" in hf:
+            g = hf["glasses"]
+            measures["glasses"] = {"width": round((g["right"] - g["left"]) / tall, 3),
+                                   "height": round((g["bottom"] - g["top"]) / tall, 3),
+                                   "eye_in_frame": round((hf["eyes"][0][1] - g["top"]) / (g["bottom"] - g["top"]), 3)}
+    if "chin" in bf:
+        j, tall = bf["joints"], bf["body"]["bottom"] - bf["body"]["top"]
+        measures["body"] = {
+            "heads_tall": round(tall / (bf["chin"][1] - bf["head"]["top"]), 2),
+            "shoulders": round((j["shoulder_l"][0] - j["shoulder_r"][0]) / tall, 3),
+            "arm": round((j["wrist_l"][1] - j["shoulder_l"][1]) / tall, 3),
+            "leg": round((j["ankle_l"][1] - j["hip_l"][1]) / tall, 3)}
+    problems = checks.get("body_problems") or [i for s in checks.get("shots", []) for i in s.get("issues", [])]
+    write_json(out / "sheet.json", {"measures": measures, "skin": checks.get("skin"), "face": checks.get("face"),
+                                    "ik_max_error_m": checks.get("ik_max_error_m"),
+                                    "hand_in_body_m": checks.get("hand_in_body_m"), "problems": problems})
+    print(f"sheet: {out / 'sheet.jpg'}")
+    for part, vals in measures.items():
+        print(f"  {part}: " + ", ".join(f"{k} {v}" for k, v in vals.items()))
+    for line in problems:
+        print(f"  {line}")
+    if args.photos:
+        for made in sheet_pairs(out / "stills", marks, Path(args.photos).resolve()):
+            print(f"  pair: {made}")
+    return 0
+
+
 def doctor(args) -> int:
     """Is everything a render needs here, and how long will one take on this machine?"""
     ok = True
@@ -649,6 +827,11 @@ def main():
     m.add_argument("--out", required=True, help="the smaller GLB")
     m.add_argument("--faces", type=int, default=60000, help="faces to keep (0: all of them)")
     m.add_argument("--texture", type=int, default=1024, help="the base colour texture's size in pixels")
+    sh = sub.add_parser("sheet", help="a review sheet of one character: every angle, face and stretching pose")
+    sh.add_argument("cast", help="the character file (a fitted model or a clay description)")
+    sh.add_argument("--out", help="folder for the sheet (default: sheet/ beside the character file)")
+    sh.add_argument("--photos", help="photos.json: reference photos by view, with crown, chin and eyes in pixels")
+    sh.add_argument("--sit-at", type=float, default=0.41, help="how far in front of the desk they stand to sit (m)")
     d = sub.add_parser("doctor", help="check Blender, ffmpeg and Pillow, and time a test render")
     d.add_argument("spec", nargs="?", help="spec to time (default: examples/blender-disk-panic)")
     d.add_argument("--res")
@@ -658,7 +841,8 @@ def main():
     args = ap.parse_args()
     if args.cmd == "render" and not args.clips and (args.shots or args.to or args.prores or args.alpha):
         ap.error("--alpha, --shots, --to and --prores need --clips (a film is one opaque MP4)")
-    sys.exit({"check": check, "render": render, "open": open_scene, "doctor": doctor, "fit": fit, "reduce": reduce}[args.cmd](args))
+    sys.exit({"check": check, "render": render, "open": open_scene, "doctor": doctor, "fit": fit, "reduce": reduce,
+              "sheet": sheet}[args.cmd](args))
 
 
 if __name__ == "__main__":

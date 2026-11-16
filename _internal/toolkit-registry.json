@@ -1183,6 +1183,7 @@
         "render": "Check, then render the film with sound",
         "open": "Open the built scene.blend in Blender to look round it",
         "fit": "Experimental: bind a generated 3D character (GLB) to the cast's rig from a fit.json",
+        "sheet": "A review sheet of one character in even light: six angles, seven faces, the poses that stretch a body most, sitting and typing, with its proportions as numbers; --photos pairs each reference photo with the still from its angle",
         "reduce": "Experimental: a smaller copy of a generated model to keep in a repository, thinned inside the islands of its texture so no face is painted from the wrong place (--faces, --texture)",
         "--clips": "One clip per shot in out/clips/ with clips.json and each shot's effects as a WAV, instead of one film",
         "--alpha": "Transparent background: clips are WebM (VP9 with alpha)",
