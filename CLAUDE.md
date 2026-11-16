@@ -117,6 +117,11 @@ One spec gives a whole film, clips for another build, or both; the uses below mi
 - Set kind `studio` is a product stage with no character: a `phone` or a floating `card` showing a picture or a
   video, and an imported `model` (glTF, OBJ, FBX, STL), filmed with `product`, `orbit` and `reveal` shots that take
   their distance from the prop's size (`examples/blender-product-shot`).
+- Prop kind `logo` builds an SVG in 3D, each filled shape its own part, and a studio set's beats move the parts
+  (`turn`, `shear`, `grow`, `press`, `glow`, `flash`, `sweep`, `hit`): a brand's opening and closing ident from one
+  spec, with named sounds on the hit and an `ident` shot whose last frame `check` compares with the flat SVG
+  (parts in place, each colour within 10 Delta E). `--clips --with-sound` puts each clip's sound in its file;
+  `--res 1080x1920` is the vertical one (`examples/blender-ident`).
 
 **Cast:** a character is a JSON description (`body`, `face`, `hair`, `clothes`, `accessories`, each a named choice
 or a hex colour, and a `seed` that fills what is left out), so an agent writes one from a sentence or a photo. Keep
@@ -215,6 +220,7 @@ This is especially critical for background commands where the working directory 
 | **Project tools** | voiceover, music, music_gen, sfx, sfx_search, sync_timing, qc | During video creation workflow |
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark, cutdown | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
+| **Brand** | mark_sheet | A logo at every size, on every ground, in a circle and as a watermark, before it is used |
 | **Publishing** | youtube_upload, youtube_stats | Upload a finished render to YouTube (use `/publish` for the guided workflow); see how it does |
 | **3D (optional)** | blender_render, reference_capture | Character acting, 3D reveals and product shots from a shot spec; needs Blender installed. reference_capture takes the reference photos of a person for a fitted character, from a webcam |
 
@@ -378,7 +384,8 @@ uv run tools/sync_check.py --video out/video.mp4 --cues sync-cues.json
 
 `--kind peak` (default) puts the sound on the biggest movement: a sneeze, a laugh. `--kind impact` puts it where a
 movement stops: a landing, a stamp. `--kind onset` puts it where a sustained movement starts (a badge lifted
-slowly), which has no single spike for `peak` to find. Something picked up (chalk off a table, a cup raised) is
+slowly), which has no single spike for `peak` to find. A hit that sets off something bigger (a clap that knocks a
+shape up, a light that comes on) is `peak`: as `impact` it reads up to 0.36 s late, on whatever it set off. Something picked up (chalk off a table, a cup raised) is
 `onset` too: measured as `impact`, a chalk tap read 0.37 s early, because the check found the hand settling
 after the lift. Give a `--window` around the action: an extended clip's seam
 or a later gesture can be bigger than the one the sound is for. Keep the cues in the project's `sync-cues.json`
@@ -1138,6 +1145,12 @@ its narration cue: a hard edge sweeps across with the next page behind it, and n
 thing is shown again in a new way and the change is the point (one chart in three design sources, a screen before
 and after a fix). Between scenes, use `wipe()` from `@remotion/transitions`: a hard-edged cut is the default for an
 act change in `video-design`, and the effect transitions below are for when the brand calls for them. Sources are installed by the user and never copied into the toolkit.
+
+**Marks and idents:** judge a logo small before building on it. `uv run tools/mark_sheet.py --svg mark.svg --brand
+<name>` draws it at 512 to 16 px, on the brand's grounds, in a circle and as a watermark, and warns about contrast
+under 3:1, a part the circle cuts and a part lost at 16 px. An ident is one mark, one move and one sound; the bar
+and the method for both are in `.claude/skills/video-design/idents.md`. A 3D ident is a Blender `logo` prop
+(optional); the toolkit's own mark is in `brands/video-toolkit/assets/` and its idents in `brands/video-toolkit/ident/`.
 
 ### Usage
 - **During scene review** (`/scene-review`): choose "Refine"
