@@ -113,7 +113,8 @@ uv run ../../tools/qc.py --render out/episode.mp4 --fix        # writes out/epis
 uv run ../../tools/contact_sheet.py out/episode.loudnorm.mp4  # one frame per scene, for the critique
 ```
 
-`open` and `close` are scene ids for the narration of the opening and the close. Scene files sort by name, so
+`open` and `close` are scene ids for the narration of the opening and the close. Both are optional: with no `open`
+lines the opening is the title for about three seconds, which is what an episode with a hook wants. Scene files sort by name, so
 `NN` sets the order. A cue that isn't in the narration fails the bundle with the words that are, so a rewritten
 line can't put an animation on nothing.
 

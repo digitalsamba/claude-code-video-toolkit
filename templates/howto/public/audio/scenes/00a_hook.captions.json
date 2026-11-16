@@ -1,107 +1,107 @@
 [
  {
   "text": "In",
-  "startMs": 140,
-  "endMs": 220,
-  "timestampMs": 180,
+  "startMs": 120,
+  "endMs": 180,
+  "timestampMs": 150,
   "confidence": null
  },
  {
   "text": " the",
-  "startMs": 260,
-  "endMs": 360,
-  "timestampMs": 310,
+  "startMs": 220,
+  "endMs": 340,
+  "timestampMs": 280,
   "confidence": null
  },
  {
   "text": " first",
-  "startMs": 420,
-  "endMs": 660,
-  "timestampMs": 540,
+  "startMs": 380,
+  "endMs": 640,
+  "timestampMs": 510,
   "confidence": null
  },
  {
   "text": " two",
   "startMs": 740,
-  "endMs": 860,
-  "timestampMs": 800,
+  "endMs": 880,
+  "timestampMs": 810,
   "confidence": null
  },
  {
   "text": " weeks",
-  "startMs": 940,
-  "endMs": 1160,
-  "timestampMs": 1050,
+  "startMs": 960,
+  "endMs": 1180,
+  "timestampMs": 1070,
   "confidence": null
  },
  {
   "text": " of",
-  "startMs": 1200,
-  "endMs": 1280,
-  "timestampMs": 1240,
+  "startMs": 1220,
+  "endMs": 1320,
+  "timestampMs": 1270,
   "confidence": null
  },
  {
   "text": " November,",
-  "startMs": 1320,
-  "endMs": 1900,
-  "timestampMs": 1610,
+  "startMs": 1360,
+  "endMs": 1980,
+  "timestampMs": 1670,
   "confidence": null
  },
  {
   "text": " we",
-  "startMs": 2140,
-  "endMs": 2240,
-  "timestampMs": 2190,
+  "startMs": 2280,
+  "endMs": 2380,
+  "timestampMs": 2330,
   "confidence": null
  },
  {
   "text": " made",
-  "startMs": 2280,
-  "endMs": 2580,
-  "timestampMs": 2430,
+  "startMs": 2420,
+  "endMs": 2720,
+  "timestampMs": 2570,
   "confidence": null
  },
  {
   "text": " fifteen",
-  "startMs": 2580,
-  "endMs": 3260,
-  "timestampMs": 2920,
+  "startMs": 2720,
+  "endMs": 3460,
+  "timestampMs": 3090,
   "confidence": null
  },
  {
   "text": " video",
-  "startMs": 3260,
-  "endMs": 3560,
-  "timestampMs": 3410,
+  "startMs": 3460,
+  "endMs": 3760,
+  "timestampMs": 3610,
   "confidence": null
  },
  {
   "text": " projects",
-  "startMs": 3680,
-  "endMs": 4160,
-  "timestampMs": 3920,
+  "startMs": 3860,
+  "endMs": 4360,
+  "timestampMs": 4110,
   "confidence": null
  },
  {
   "text": " with",
-  "startMs": 4200,
-  "endMs": 4300,
-  "timestampMs": 4250,
+  "startMs": 4400,
+  "endMs": 4520,
+  "timestampMs": 4460,
   "confidence": null
  },
  {
   "text": " this",
-  "startMs": 4360,
-  "endMs": 4520,
-  "timestampMs": 4440,
+  "startMs": 4560,
+  "endMs": 4740,
+  "timestampMs": 4650,
   "confidence": null
  },
  {
   "text": " toolkit.",
-  "startMs": 4560,
-  "endMs": 5080,
-  "timestampMs": 4820,
+  "startMs": 4800,
+  "endMs": 5340,
+  "timestampMs": 5070,
   "confidence": null
  }
 ]

@@ -12,13 +12,15 @@
     "checked": "15 Nov 2026"
   },
   "prices": {
-    "ltxClip": 0.1,
+    "ltxClip": 0.12,
     "voiceLine": 0.01,
-    "fluxImage": 0.0075,
+    "fluxImage": 0.012,
     "ideogram": "about 3 to 10 cents an image",
-    "note": "Unit costs from the toolkit's PRICES table, measured on Modal receipts (tools/video_job.py, 2026-11-01)",
-    "source": "tools/video_job.py PRICES (version 2026-11-01): ltx_clip 0.10, voiceover.qwen3 0.01, flux_image 0.0075, ideogram_image 0.03 to 0.10",
-    "checked": "2026-11-15"
+    "note": "What Modal billed for a measured batch, idle time included: 3 LTX-2.3 clips (1024x576, 121 frames) $0.334, so $0.111 each; 10 Qwen3-TTS lines in one call $0.059, so $0.006 each; FLUX.2 images in bursts of four $0.038 and $0.047, so $0.0095 to $0.012 each. The figures here round up. A clip, line or image made on its own costs more: every call is followed by a minute of idle GPU that is billed.",
+    "source": "uv run --extra modal modal billing report --for today -r h --json, the hour of the batch, per app. Not tools/video_job.py PRICES or a tool's 'Est. cost' line: those count the seconds of the call only, and came out about a quarter low for clips and a third low for images",
+    "checked": "16 Nov 2026",
+    "elevenLabs": "$5 a month",
+    "elevenLabsNote": "The toolkit author's own plan: ElevenLabs Starter, $5 a month, which voiced this episode (Conal, 2026-11-16)"
   },
   "bill": {
     "months": { "Aug": 10.87, "Sep": 25.96, "Oct": 14.43, "Nov": 21.96 },

@@ -36,7 +36,6 @@ export const EPISODE: Episode = {
       }),
     },
   },
-  openStops: (cue) => [cue("what's free"), cue("what isn't"), cue('what we really spend'), cue('spend', { edge: 'end' })],
   chapters: [
     { title: ["What's free"], field: 'explain', ask: "what's free?" },
     { title: ['Thirty dollars', 'a month'], field: 'explain', ask: 'what do the AI models cost?' },
@@ -96,11 +95,11 @@ export const EPISODE: Episode = {
         hero: { text: '$30' },
         title: { text: 'What it buys', at: cue('what does') },
         rows: [
-          { label: 'Video clips', show: { video: 'buys/clip.mp4' }, detail: `LTX-2.3, about ${money(F.prices.ltxClip)} a clip`, value: Math.floor(30 / F.prices.ltxClip / 100) * 100, at: cue('three hundred') },
+          { label: 'Video clips', show: { video: 'buys/clip.mp4' }, detail: `LTX-2.3, about ${money(F.prices.ltxClip)} a clip`, value: Math.floor(30 / F.prices.ltxClip / 50) * 50, at: cue('two hundred') },
           { label: 'Voice lines', show: { wave: true }, detail: `Qwen3-TTS, about ${money(F.prices.voiceLine)} a line`, value: Math.floor(30 / F.prices.voiceLine / 1000) * 1000, at: cue('three thousand') },
-          { label: 'Images', show: { images: [1, 2, 3, 4].map((i) => `buys/image-${i}.jpg`) }, detail: `FLUX.2, under a cent an image`, value: Math.floor(30 / F.prices.fluxImage / 1000) * 1000, at: cue('four thousand') },
+          { label: 'Images', show: { images: [1, 2, 3, 4].map((i) => `buys/image-${i}.jpg`) }, detail: `FLUX.2, about a cent an image`, value: Math.floor(30 / F.prices.fluxImage / 500) * 500, at: cue('two and a half') },
         ],
-        note: 'Unit costs measured on our Modal receipts, Nov 2026',
+        note: `Unit costs from our Modal bill for a measured batch, ${F.prices.checked}`,
       }),
     },
     {
@@ -139,7 +138,7 @@ export const EPISODE: Episode = {
       props: (cue) => ({
         title: { text: 'Two things cost extra,', at: cue('two things'), then: { text: 'both optional', at: cue('both are optional') } },
         rows: [
-          { label: 'ElevenLabs voices', detail: "like the one you're hearing", detailAt: cue("like the one"), value: 'paid plan', at: cue('elevenlabs') },
+          { label: 'ElevenLabs voices', detail: "like the one you're hearing", detailAt: cue("like the one"), value: F.prices.elevenLabs, at: cue('elevenlabs') },
           { label: 'Ideogram images', detail: F.prices.ideogram, detailAt: cue('few cents'), value: 'per image', at: cue('ideogram') },
         ],
         after: { text: 'Without them:', at: cue('without them'), then: { text: 'free models, inside the credit', at: cue('free voices') } },
@@ -160,7 +159,7 @@ export const EPISODE: Episode = {
           { at: cue('logs you in'), permission: 'uv run modal setup', description: 'Log in to Modal in the browser', answer: cue('say yes') },
           { at: cue('say yes', { offset: 4 }), tool: 'Bash', arg: 'uv run modal setup', result: ['Opened modal.com in your browser', '{ok|✓} Token written to `~/.modal.toml`'], resultAt: cue('say yes', { offset: 30 }) },
           { at: cue('deploys'), spinner: 'Deploying', until: cue('every model') },
-          { at: cue('every model'), tool: 'Bash', arg: 'uv run tools/modal_setup.py --all', result: ['{ok|✓} 7 apps deployed, endpoint URLs written to `.env`'], resultAt: cue('ready'), id: 'deployed' },
+          { at: cue('every model'), tool: 'Bash', arg: 'uv run tools/modal_setup.py --all', result: ['{ok|✓} 8 apps deployed, endpoint URLs written to `.env`', '{dim|ltx2 (video clips) is one more command: it needs a Hugging Face token}'], resultAt: cue('ready'), id: 'deployed' },
           { at: cue('costs nothing'), say: 'Done. Every app **scales to zero**, so nothing is billed until you use it.', wps: 7 },
         ];
         return {

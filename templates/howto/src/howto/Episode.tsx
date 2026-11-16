@@ -28,6 +28,7 @@ const TIMING = timingJson as Timing;
 
 export const CARD = 54; // a chapter card, in frames
 const OPEN_MIN = 150;
+const OPEN_TITLE = 105; // with no narration of its own the opening is the title and a beat to read it
 const END_CARD = 75; // a Short's end card
 const OPEN_SKIP = 30; // after an ident the 2D opening starts where its track draws: the ident has shown the mark
 const LINK_HOLD = 75; // before an ident close, the link stays this long after the last word
@@ -76,7 +77,8 @@ export const timeline = (ep: Episode, short?: number): Segment[] => {
   }
   const opens = ident.episode?.open;
   if (opens) out.push({ kind: 'ident', file: opens.file, frames: opens.frames });
-  out.push({ kind: 'open', frames: Math.max(TIMING.scenes.open?.frames ?? 0, OPEN_MIN) - (opens ? OPEN_SKIP : 0) });
+  const openFrames = TIMING.scenes.open?.frames;
+  out.push({ kind: 'open', frames: (openFrames ? Math.max(openFrames, OPEN_MIN) : OPEN_TITLE) - (opens ? OPEN_SKIP : 0) });
   let chapter = -1;
   for (const spec of ep.scenes) {
     if (spec.chapter !== chapter) {
