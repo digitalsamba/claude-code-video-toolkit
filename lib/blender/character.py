@@ -59,6 +59,8 @@ FACES = {
     "relieved":   ((1, 1, 1), 1.0, "happy", "smile", 1.0),
     "grin":       ((1, 1, 0.55), 1.0, "happy", "smile", 1.5),
 }
+GLASSES_EYE = (0.35, 0.65)  # how far up its lens opening an eye may sit (0.5 is the middle)
+GLASSES_ROOM = 1.15         # and how much taller than the eye the opening has to be
 BROWS = {"neutral": (0, 0.16), "worry": (24, 0.175), "angry": (-18, 0.145), "happy": (-8, 0.175)}
 LOOKS = {"screen": 7, "down": 12, "ahead": -2, "camera": 0, "up": -12}  # neck pitch, degrees
 LEANS = {"forward": 10, "none": 0, "back": -6, "far_back": -12, "recoil": -4}
@@ -116,6 +118,7 @@ class ClayPerson:
         self.events: list[dict] = []
         self.foot_t, self.knee_t, self.foot_at, self.foot_yaw = {}, {}, {}, {}
         self.touches: list[dict] = []  # each time a hand was put on something: how far off it was
+        self.lid_open = fitted_face.LID_OPEN  # where the lids rest (a fitted face with hooded eyes rests them lower)
         self.moves: list[tuple] = []   # each posture verb's stretch (verb, first frame, last), for how_it_moves
         self.walks: list[tuple] = []   # each walk (first frame, last, curved or not), for walk_report
         self.grips: list[dict] = []    # each time a hand with fingers held something: how open it still was
@@ -808,7 +811,7 @@ class ClayPerson:
             self.brow_at = ((fit["brows"][1][0] - fit["brows"][0][0]) / 2 / k, brow.y - 0.004, brow.z - 0.16)
             self.sweat_x = self.head_r / k + 0.02
             if "glasses" in self.desc["accessories"]:
-                self._build_frames(head, (local(eyes[0]).y + local(eyes[1]).y) / 2)
+                self._build_frames(head, (local(eyes[0]).y + local(eyes[1]).y) / 2, fit["eye_size"][1] / k)
         else:
             self.head = head = sphere(f"{cid}_head", 0.3, M["skin"], self.neck, (0, 0, 0.3), seg=48)
             head.scale = HEAD[face["shape"]]  # everything on the head is its child, so the face follows the shape
@@ -824,7 +827,8 @@ class ClayPerson:
         if fit and "glasses" in self.desc["accessories"]:
             # (frames sit where a painted brow was: at rest the brow clears their top edge, or it is a dark line
             # behind the rim and the face has no brows at all from the front)
-            rim = 0.035 + 0.155 / 2
+            _, tall, mid_z, _, _ = self._frame_box(fit["eye_size"][1] / head.scale[0])
+            rim = mid_z + tall / 2
             self.brow_at = (self.brow_at[0], self.brow_at[1], max(self.brow_at[2], rim + 0.014 + brow_h / 2 - 0.16))
         self.eyes, self.pupils, self.brows = {}, {}, {}
         for s in (1, -1):
@@ -867,6 +871,13 @@ class ClayPerson:
                                                         self.brows, 0.16 + self.brow_at[2], head.scale[0])
             else:
                 self.lids = {s: fitted_face.eyelid(f"{cid}_eye{s}", self.eyes[s], FM["lid"], FM["lash"]) for s in (1, -1)}
+                cover = min(0.6, max(0.0, float(marks.get("lid", 0))))
+                if cover:
+                    # hooded eyes: at rest the lid's edge lies that share of the way down the eye (the edge of a
+                    # shell turned by an angle a stands sin(-a) of the eye's half height above its middle)
+                    self.lid_open = -math.degrees(math.asin(1 - 2 * cover))
+                    for s in (1, -1):
+                        self.lids[s].rotation_euler = (R(self.lid_open), 0, 0)
             self._mouth_now = (0.0, 0.0, 0.0, 0.0)
             self._face_keys(1, 1, "neutral")
         else:
@@ -945,14 +956,33 @@ class ClayPerson:
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         return kit.mesh_obj(name, bm, self.m["brow"], head, at)
 
-    def _build_frames(self, head, face_y=-0.29):
+    FRAME_BRIDGE = 0.05   # between the two openings, in head units (the eyes are 0.2 apart): a quarter of that
+    FRAME_RIMS = (0.02, 0.014, 0.03)  # the rim over an opening, under it and outside it
+
+    def _frame_box(self, eye_tall=0.075):
+        """The glasses' front, sized and placed by the eyes (head units, the eyes at x +-0.1 and z 0.05): each
+        opening is centred on its eye's height and a quarter taller than the eye, so the eye sits in the middle
+        of its lens with room round it. Returns (width, height, middle z, opening width, opening height)."""
+        top, under, side = self.FRAME_RIMS
+        open_h = max(0.085, 1.27 * eye_tall)
+        wide = 0.49
+        open_w = wide / 2 - side - self.FRAME_BRIDGE / 2
+        tall = open_h + top + under
+        return wide, tall, 0.05 + (top - under) / 2, open_w, open_h
+
+    def _build_frames(self, head, face_y=-0.29, eye_tall=0.075):
         """Thick rectangular glasses, a separate item on the head: one front cut from a slab (two lens openings
-        and a notch for the nose), a rivet at each top corner, and the arms."""
-        cid, m = self.id, self.m["frame"]
-        y, z, wide, tall, deep = face_y - 0.03, 0.035, 0.5, 0.155, 0.035
+        and a notch for the nose), a rivet at each top corner, and the arms. Read off a photo of the pair they
+        were made for, in eye spacings: 2.45 wide, openings 0.95 by 0.38, a bridge of 0.25, the top rim the
+        heaviest, and the pupil in the middle of the opening's height. The cartoon eye is taller than a real
+        one, so the opening is as tall as the eye needs and the rest keeps its proportions."""
+        cid, m = self.id, mat(f"{self.id}_frame_black", (0.012, 0.012, 0.014), 0.3)
+        wide, tall, z, open_w, open_h = self._frame_box(eye_tall)
+        y, deep = face_y - 0.03, 0.035
         front = box(f"{cid}_frames", (wide, deep, tall), m, head, (0, y, z), bevel=0.018)
-        cutters = [box(f"{cid}_cut", (0.175, 0.2, 0.095), m, head, (0.124 * s, y, z - 0.012), bevel=0.028) for s in (1, -1)]
-        cutters.append(box(f"{cid}_cut", (0.05, 0.2, 0.09), m, head, (0, y, z - tall / 2), bevel=0.02))
+        mid = self.FRAME_BRIDGE / 2 + open_w / 2
+        cutters = [box(f"{cid}_cut", (open_w, 0.2, open_h), m, head, (mid * s, y, 0.05), bevel=0.03) for s in (1, -1)]
+        cutters.append(box(f"{cid}_cut", (self.FRAME_BRIDGE, 0.2, 0.09), m, head, (0, y, z - tall / 2), bevel=0.02))
         solvers = bpy.types.BooleanModifier.bl_rna.properties["solver"].enum_items.keys()
         for c in cutters:
             mod = front.modifiers.new("cut", "BOOLEAN")
@@ -966,9 +996,10 @@ class ClayPerson:
             D.objects.remove(c)
         for poly in front.data.polygons:
             poly.use_smooth = True
+        self.frame_fit = {"opening_z": 0.05, "opening_tall": open_h, "eye_tall": eye_tall}
         for s in (1, -1):
-            cyl(f"{cid}_rivet", 0.011, 0.008, self.m["rivet"], head, (0.22 * s, y - deep / 2, z + 0.047), (R(90), 0, 0))
-            box(f"{cid}_temple", (0.024, 0.36, 0.04), m, head, (0.239 * s, y + 0.18, z + 0.04), bevel=0.006)
+            cyl(f"{cid}_rivet", 0.011, 0.008, self.m["rivet"], head, (0.22 * s, y - deep / 2, z + tall / 2 - 0.028), (R(90), 0, 0))
+            box(f"{cid}_temple", (0.024, 0.36, 0.04), m, head, (0.239 * s, y + 0.18, z + tall / 2 - 0.03), bevel=0.006)
 
     def _build_extras(self, head):
         """Beard, glasses, headphones, earrings: rigid parts on the head."""
@@ -2864,6 +2895,12 @@ class ClayPerson:
 
     def expression(self, f: int, face: str, dur: int = 6):
         eyes, pupil, brows, mouth, size = FACES[face]
+        if self.lids and self.lid_open != fitted_face.LID_OPEN and not self.paint:
+            # lids that rest part of the way down go right up when the eyes widen, and come back after
+            wide = fitted_face.LID_OPEN if eyes[2] > 1.05 else self.lid_open
+            for s in (1, -1):
+                self.lids[s].keyframe_insert("rotation_euler", frame=f)
+                key(self.lids[s], "rotation_euler", f + dur, (R(wide), 0, 0))
         for s in (1, -1):
             tween(self.eyes[s], "scale", f, f + dur, eyes)
             tween(self.pupils[s], "scale", f, f + dur, (pupil,) * 3)
@@ -2912,6 +2949,23 @@ class ClayPerson:
             if eyes.get("problems"):
                 out["problems"] = out.get("problems", []) + eyes.pop("problems")
             out.update(eyes)
+        frame = getattr(self, "frame_fit", None)
+        if frame:  # glasses: is each eye in the middle of its lens, with room round it
+            inv = self.head.matrix_world.inverted()
+            eye_z = sum((inv @ self.eyes[s].matrix_world.translation).z for s in (1, -1)) / 2
+            up = (eye_z - (frame["opening_z"] - frame["opening_tall"] / 2)) / frame["opening_tall"]
+            room = frame["opening_tall"] / frame["eye_tall"]
+            out["glasses"] = {"eye_in_opening": round(up, 2), "opening_over_eye": round(room, 2)}
+            if not GLASSES_EYE[0] <= up <= GLASSES_EYE[1]:
+                out["problems"] = out.get("problems", []) + [
+                    f"the eyes sit {up:.2f} of the way up the glasses' openings ({GLASSES_EYE[0]} to "
+                    f"{GLASSES_EYE[1]} is the middle): against a rim, they read as peering over or under it"]
+            if room < GLASSES_ROOM:
+                out["problems"] = out.get("problems", []) + [
+                    f"the glasses' openings are {room:.2f} times as tall as the eyes (at least {GLASSES_ROOM}): "
+                    "the eyes fill the lenses"]
+        if self.lid_open != fitted_face.LID_OPEN:
+            out["lid_rest"] = round((1 - math.sin(R(-self.lid_open))) / 2, 2)
         if self.paint:  # (painted brows ride the skin: how hard their furthest tilt squeezes it)
             out["brow_squeeze"] = round(self.brow_squeeze, 2)
             if self.brow_squeeze < facepaint.BROW_SQUEEZE_LIMIT:
@@ -2963,7 +3017,7 @@ class ClayPerson:
         return {"leg_above_hips": high, "stretch": round(worst, 2), "frame": at}
 
     def _lid(self, s, f, shut: bool):
-        key(self.lids[s], "rotation_euler", f, (R(fitted_face.LID_SHUT if shut else fitted_face.LID_OPEN), 0, 0))
+        key(self.lids[s], "rotation_euler", f, (R(fitted_face.LID_SHUT if shut else self.lid_open), 0, 0))
 
     def breathe(self, f0: int, f1: int, period: float = 3.4, pitch: float = 0.7):
         """Idle from f0 to f1: the torso rocks a little, once every `period` seconds."""

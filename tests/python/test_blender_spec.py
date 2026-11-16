@@ -606,6 +606,10 @@ class BlenderCheckTests(unittest.TestCase):
             checks = blender_render.run_compiler(self.conal() / 'enter.json', Path(tmp) / 'out', 'check', '480x270', None)
         self.assertTrue(checks['passed'], checks.get('body_problems'))
         self.assertGreaterEqual(checks['face']['mouth_share'], 0.18)   # a mouth wide enough to read
+        # his glasses are placed by his eyes: each eye in the middle of its lens with room round it (placed at a
+        # set height on the head they sat 0.78 of the way up, against the top rim)
+        self.assertAlmostEqual(checks['face']['glasses']['eye_in_opening'], 0.5, delta=0.1)
+        self.assertGreaterEqual(checks['face']['glasses']['opening_over_eye'], 1.15)
         self.assertEqual(checks['skin']['leg_above_hips'], 0)           # no hem that tears when the thighs bend
         self.assertLessEqual(checks['skin']['stretch'], 4.0)
         self.assertLessEqual(checks['grip_open'], 0.75)                 # the hand closes on the door handle
@@ -888,6 +892,44 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertIn('needs a painted eye', refused.getvalue())
 
     NELL = ROOT / 'tests' / 'fixtures' / 'blender-bare'
+
+    def test_paint_is_shifted_to_a_photos_colours_and_lids_rest_part_way_down(self):
+        """A generated model's hair came out lighter than the person's: `recolour` in the fit moves every texel
+        near the colour of a patch to a colour read off a photo, keeping each strand's shading, and `lid` in the
+        face rests the upper lids part of the way down (hooded eyes), which the check reports. A rule whose
+        patch has nothing in it is an error that names it."""
+        import contextlib
+        import io
+        import re
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            for name in ('spec.json', 'mara.json', 'mara.glb', 'mara_hands.glb'):
+                shutil.copy(self.MARA / name, tmp / name)
+            fit = json.loads((self.MARA / 'fit.json').read_text())
+            fit['face']['lid'] = 0.3
+            fit['recolour'] = [{'name': 'hair', 'sample': [-0.03, 0.05, 1.58, 1.62], 'to': '#2B1D14',
+                                'tolerance': 0.15, 'above': 1.36, 'fill': 3}]
+            (tmp / 'fit.json').write_text(json.dumps(fit))
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(mock.Mock(model=str(tmp / 'mara.glb'), fit=str(tmp / 'fit.json'),
+                                                    out=str(tmp / 'mara-fitted.blend'), preview=None))
+            said = said.getvalue()
+            self.assertEqual(code, 0, said)
+            moved = re.search(r'fit: recolour hair: (\d+) texels', said)
+            self.assertIsNotNone(moved, said)
+            self.assertGreater(int(moved.group(1)), 5000, said)            # her hair, not a stray patch
+            checks = blender_render.run_compiler(tmp / 'spec.json', tmp / 'out', 'check', '480x270', None)
+            self.assertAlmostEqual(checks['face']['lid_rest'], 0.3, delta=0.01)
+            self.assertNotIn('glasses', checks['face'])                    # she wears none
+            fit['recolour'][0]['sample'] = [2.0, 2.1, 1.58, 1.62]          # off the model
+            (tmp / 'fit.json').write_text(json.dumps(fit))
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(mock.Mock(model=str(tmp / 'mara.glb'), fit=str(tmp / 'fit.json'),
+                                                    out=str(tmp / 'off.blend'), preview=None))
+            self.assertEqual(code, 2)
+            self.assertIn('recolour hair: nothing on the model', said.getvalue())
 
     def test_a_bare_armed_model_is_cut_at_the_wrist_sealed_and_keeps_its_painted_face(self):
         """Nell (tests/fixtures/blender-bare, made up) has no cuffs: each hand is found by the wrist's own

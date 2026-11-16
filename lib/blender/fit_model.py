@@ -27,7 +27,8 @@ Optional: "joints_right": {"el": [x, y, z], ...}, a right-side joint where the m
 as the left is (x positive). And "hands": {"model": "open_hands.glb", "scale": 0.7, "smooth": [[along, out_of_palm, across, radius]]}
 (hands.py: the donor's hands are sized to the body's own unless `scale` says, the wrist joint moves to the cuff
 whatever `wr` says, and `smooth` flattens a lump on both hands, in cm from the middle of the knuckle row), and in
-"face", "brows_hidden": [0] for a brow under a fringe.
+"face", "brows_hidden": [0] for a brow under a fringe. "lid": 0.3 rests the upper lids over that share of the eye
+(hooded eyes; without it the rig's eyes are wide open at rest).
 "face", "paint": "keep" leaves the painted face on the model and cuts the eyes that move from it (facepaint.py):
 for a face painted nearer to life than a cartoon, where the rig's own eyes would be twice the size and stare.
 """
@@ -317,6 +318,108 @@ def load_model(path: Path, centre_x: float, faces: int, face: dict):
         poly.use_smooth = True
     ob.name = "model_body"
     return ob, marks, seen
+
+
+def recolour(body, rules, gamma=None) -> list:
+    """Shift parts of the model's own paint to a colour read off a photo. Each rule is {"name", "sample":
+    [x0, x1, z0, z1] (a patch on the model's front where the part is, in the model's metres), "to": a hex colour,
+    "tolerance", "above", "below" (heights the part lies between), "keep": 0 to 1, "fill": texels}. Every texel between those
+    heights whose colour is within `tolerance` of the patch's takes the new colour, as much lighter or darker
+    than it as the texel was than the patch (so strands and stubble keep their shading), fading out to nothing at
+    1.6 times the tolerance. `keep` leaves that share of the old colour in. Rules
+    paint in the order given and none repaints what an earlier one moved, so put the small part first (the grey
+    of a chin before the beard round it). `fill` closes gaps up to that many
+    texels across in what was moved: stubble painted as dots of hair colour on skin goes dark as dots, with the
+    skin left pale between them, and reads as pepper. Returns what each rule changed."""
+    me = body.data
+    uv = me.uv_layers.active.data
+    co = np.array([v.co for v in me.vertices])
+    images = {}
+    for i, m in enumerate(me.materials):
+        img = next((n.image for n in m.node_tree.nodes if n.type == "TEX_IMAGE" and n.image and n.outputs[0].links
+                    and n.outputs[0].links[0].to_socket.name == "Base Color"), None)
+        if img:
+            images[i] = (img, pixels_of(img))
+    lum = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
+    done = []
+    def patch_colour(rule):
+        x0, x1, z0, z1 = rule["sample"]
+        img, px = images[0]
+        h, w = px.shape[:2]
+        patch = []
+        for poly in me.polygons:
+            c = poly.center
+            if poly.material_index == 0 and x0 < c.x < x1 and z0 < c.z < z1 and c.y < 0 and poly.normal.y < -0.3:
+                at = np.array([uv[li].uv for li in poly.loop_indices]).mean(axis=0)
+                patch.append(px[min(h - 1, int(at[1] % 1 * h)), min(w - 1, int(at[0] % 1 * w)), :3].copy())
+        if not patch:
+            raise SystemExit(f"fit: recolour {rule.get('name', '')}: nothing on the model's front in its sample {rule['sample']}")
+        return np.median(np.array(patch), axis=0)
+
+    # every rule's patch is read before any rule paints: a rule's patch may lie in what an earlier one moves
+    samples = [patch_colour(rule) for rule in rules]
+    touched = {i: np.zeros(px.shape[:2], dtype=bool) for i, (_, px) in images.items()}
+    for rule, was in zip(rules, samples):
+        lo, hi = rule.get("above", -1e9), rule.get("below", 1e9)
+        tol = float(rule.get("tolerance", 0.12))
+        to = np.array([int(rule["to"].lstrip("#")[i:i + 2], 16) / 255 for i in (0, 2, 4)], dtype=np.float32)
+        if gamma:  # the whole texture is lightened afterwards: aim at what will come out as `to`
+            to = to ** (1 / float(gamma))
+        zs = co[:, 2]
+        changed = total = 0
+        moved = {i: np.zeros(px.shape[:2], dtype=np.float32) for i, (_, px) in images.items()}
+        within = {i: np.zeros(px.shape[:2], dtype=bool) for i, (_, px) in images.items()}
+        for poly in me.polygons:
+            if poly.material_index not in images:
+                continue
+            z = zs[list(poly.vertices)]
+            if z.max() < lo or z.min() > hi:
+                continue
+            img, px = images[poly.material_index]
+            h, w = px.shape[:2]
+            t = np.array([[uv[li].uv[0] * w, uv[li].uv[1] * h] for li in poly.loop_indices])
+            a0, a1 = int(max(0, t[:, 0].min() - 1)), int(min(w - 1, t[:, 0].max() + 1))
+            b0, b1 = int(max(0, t[:, 1].min() - 1)), int(min(h - 1, t[:, 1].max() + 1))
+            gx, gz = np.meshgrid(np.arange(a0, a1 + 1) + 0.5, np.arange(b0, b1 + 1) + 0.5)
+            pts = np.stack([gx.ravel(), gz.ravel()], axis=1)
+            inside = np.zeros(len(pts), dtype=bool)
+            for i in range(1, len(t) - 1):
+                inside |= _in_triangle(pts, t[0], t[i], t[i + 1], 1.0)
+            sub = px[b0:b1 + 1, a0:a1 + 1]
+            rgb = sub[:, :, :3]
+            # a texel moved by an earlier face of this rule is no longer near the patch's colour, so it is left
+            near = np.linalg.norm(rgb - was, axis=2)
+            free = ~touched[poly.material_index][b0:b1 + 1, a0:a1 + 1]  # (what an earlier rule moved stays as it left it)
+            wgt = np.clip((1.6 * tol - near) / (0.6 * tol), 0, 1) * inside.reshape(near.shape) * free * (1 - float(rule.get("keep", 0)))
+            shade = (rgb @ lum) / max(1e-6, float(was @ lum))
+            rgb += wgt[:, :, None] * (np.clip(to[None, None, :] * shade[:, :, None], 0, 1) - rgb)
+            changed += int((wgt > 0.5).sum())
+            total += int(inside.sum())
+            np.maximum(moved[poly.material_index][b0:b1 + 1, a0:a1 + 1], wgt, out=moved[poly.material_index][b0:b1 + 1, a0:a1 + 1])
+            within[poly.material_index][b0:b1 + 1, a0:a1 + 1] |= inside.reshape(near.shape)
+        filled = 0
+        r = int(rule.get("fill", 0))
+        if r:
+            def spread(a, pick):  # the largest (or smallest) value within r texels, along one axis then the other
+                for axis in (0, 1):
+                    a = pick.reduce([np.roll(a, k, axis=axis) for k in range(-r, r + 1)])
+                return a
+            for i, (img, px) in images.items():
+                closed = spread(spread(moved[i], np.maximum), np.minimum)
+                gap = np.clip(closed - moved[i], 0, 1) * within[i] * ~touched[i] * (1 - float(rule.get("keep", 0)))
+                px[:, :, :3] += gap[:, :, None] * (to[None, None, :] - px[:, :, :3])
+                filled += int((gap > 0.5).sum())
+                moved[i] = np.maximum(moved[i], gap)
+        changed += filled
+        for i in touched:
+            touched[i] |= moved[i] > 0.05
+        done.append({"name": rule.get("name", ""), "was": [round(float(c), 3) for c in was], "texels": changed,
+                     "share": round(changed / max(1, total), 3)})
+    for img, px in images.values():
+        img.pixels.foreach_set(px.ravel())
+        img.update()
+        img.pack()
+    return done
 
 
 def head_mask(body, clothes):
@@ -673,6 +776,9 @@ def main():
         if ring:
             print(f"fit: hands, {ring} vertices on the ring where a bare arm meets its hand share their normals")
         body["hand_material"] = len(body.data.materials) - 1  # (the rig measures a hand's whole skin by it)
+    for r in recolour(body, fit.get("recolour", ()), fit.get("gamma")):
+        print(f"fit: recolour {r['name']}: {r['texels']} texels ({100 * r['share']:.0f}% of the paint between its "
+              f"heights) moved from {r['was']}")
     body.data.transform(Matrix.Scale(scale, 4))  # the whole model, evenly: nothing is stretched or re-posed
     lift = -min(v.co.z for v in body.data.vertices)  # soles on the floor
     body.data.transform(Matrix.Translation((0, 0, lift)))
@@ -700,6 +806,7 @@ def main():
         "mouth": on_head(marks["mouth"]), "eye_size": [x * scale for x in face["eye_size"]],
         "brow_size": [x * scale for x in face["brow_size"]], "mouth_width": face["mouth_width"] * scale,
         "half_width": face["half_width"] * scale, "moustache": bool(face.get("moustache")),
+        "lid": float(face.get("lid", 0)),
         # the chin's underside (the jaw key moves what is between it and the lips): given, or a mouth's width down
         "chin": placed((0, 0, face["chin"])).z if "chin" in face
         else on_head(marks["mouth"])[2] - 1.2 * face["mouth_width"] * scale,
