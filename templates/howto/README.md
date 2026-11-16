@@ -54,6 +54,14 @@ of the prompt as the answer. Without `ask` the card shows the chapter's title. A
 or bar being said and underlines the newest line under a figure, with no setup: it follows the cues the scene
 already has. A ledger's `hero` keeps a figure's number on screen into the next scene.
 
+- **A hook before the title.** `hook: { ask, scene }` in the episode plays a typed question and one scene before
+  anything else, with no music: the most interesting thing the episode has to say (here, our real bill). The
+  brand's ident and the title follow it, and the bed comes in with the title. Its narration is scene id `hook`.
+- **Show the thing.** A ledger row can carry `show: { video }`, `{ images: [...] }` or `{ wave: true }`: a window
+  beside the rows plays the clip, flicks through the images or draws a moving waveform while the narration is on
+  that row. The pilot's are real outputs: an LTX-2.3 clip from `examples/sky-blue-short` and four FLUX.2 images
+  (`public/buys/`).
+
 ## Scene kinds
 
 | Kind | Shows | Lands on the narration |

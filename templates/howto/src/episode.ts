@@ -19,7 +19,23 @@ export const EPISODE: Episode = {
   next: ['Next: the whole setup,', 'in one conversation'],
   link: 'github.com/digitalsamba/claude-code-video-toolkit',
   music: { file: 'audio/music/bed_2.mp3', volume: 0.35 }, // under narration at -16 LUFS
-  openTitle: (cue) => [cue('cost you money'), cue('mostly no')],
+  hook: {
+    ask: 'will this cost me money?',
+    scene: {
+      id: 'hook',
+      kind: 'ledger',
+      chapter: 0,
+      props: (cue) => ({
+        title: { text: 'Two weeks of making videos', at: cue('first two weeks') },
+        rows: [
+          { label: 'Video projects', detail: '1 to 15 November', value: F.bill.projectsInNovember, at: cue('fifteen') },
+          { label: 'Cloud bill', detail: 'every AI model we ran', value: F.bill.months.Nov, format: money, at: cue('cloud bill'), valueAt: cue('twenty two') },
+          { label: 'What we paid', detail: 'the rest of this video is why', detailAt: cue('none', { edge: 'end' }), value: 0, format: () => '$0', at: cue('we paid'), valueAt: cue('none') },
+        ],
+        note: `modal billing report, every app in our workspace, ${F.bill.checked}`,
+      }),
+    },
+  },
   openStops: (cue) => [cue("what's free"), cue("what isn't"), cue('what we really spend'), cue('spend', { edge: 'end' })],
   chapters: [
     { title: ["What's free"], field: 'explain', ask: "what's free?" },
@@ -80,9 +96,9 @@ export const EPISODE: Episode = {
         hero: { text: '$30' },
         title: { text: 'What it buys', at: cue('what does') },
         rows: [
-          { label: 'Video clips', detail: `LTX-2.3, about ${money(F.prices.ltxClip)} a clip`, value: Math.floor(30 / F.prices.ltxClip / 100) * 100, at: cue('three hundred') },
-          { label: 'Voice lines', detail: `Qwen3-TTS, about ${money(F.prices.voiceLine)} a line`, value: Math.floor(30 / F.prices.voiceLine / 1000) * 1000, at: cue('three thousand') },
-          { label: 'Images', detail: `FLUX.2, under a cent an image`, value: Math.floor(30 / F.prices.fluxImage / 1000) * 1000, at: cue('four thousand') },
+          { label: 'Video clips', show: { video: 'buys/clip.mp4' }, detail: `LTX-2.3, about ${money(F.prices.ltxClip)} a clip`, value: Math.floor(30 / F.prices.ltxClip / 100) * 100, at: cue('three hundred') },
+          { label: 'Voice lines', show: { wave: true }, detail: `Qwen3-TTS, about ${money(F.prices.voiceLine)} a line`, value: Math.floor(30 / F.prices.voiceLine / 1000) * 1000, at: cue('three thousand') },
+          { label: 'Images', show: { images: [1, 2, 3, 4].map((i) => `buys/image-${i}.jpg`) }, detail: `FLUX.2, under a cent an image`, value: Math.floor(30 / F.prices.fluxImage / 1000) * 1000, at: cue('four thousand') },
         ],
         note: 'Unit costs measured on our Modal receipts, Nov 2026',
       }),

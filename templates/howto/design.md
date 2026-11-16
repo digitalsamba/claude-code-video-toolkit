@@ -10,7 +10,8 @@ to the end and back into the caret, so an episode ends where it started: at a pr
 
 | Act | Scenes | Says | Field |
 | --- | --- | --- | --- |
-| Open | open | "Will this cost you money? Mostly, no." | work |
+| Hook | hook | "Fifteen video projects, a cloud bill of twenty two dollars. We paid none of it." | work (the question), explain (the bill) |
+| Open | ident, open | the title, and the chapters named | work |
 | 1 What's free / 2 Thirty dollars / 3 What we spend | free · thirty, buys · spent, extras | the facts, one at a time | explain |
 | 4 Setting it up | setup, start | Claude Code does it; you add a card | work |
 | Close | close | next episode, the repo | identity |

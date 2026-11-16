@@ -1,0 +1,86 @@
+[
+ {
+  "text": "The",
+  "startMs": 100,
+  "endMs": 180,
+  "timestampMs": 140,
+  "confidence": null
+ },
+ {
+  "text": " cloud",
+  "startMs": 220,
+  "endMs": 520,
+  "timestampMs": 370,
+  "confidence": null
+ },
+ {
+  "text": " bill",
+  "startMs": 620,
+  "endMs": 820,
+  "timestampMs": 720,
+  "confidence": null
+ },
+ {
+  "text": " for",
+  "startMs": 900,
+  "endMs": 980,
+  "timestampMs": 940,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 1040,
+  "endMs": 1160,
+  "timestampMs": 1100,
+  "confidence": null
+ },
+ {
+  "text": " AI",
+  "startMs": 1220,
+  "endMs": 1500,
+  "timestampMs": 1360,
+  "confidence": null
+ },
+ {
+  "text": " models",
+  "startMs": 1600,
+  "endMs": 1980,
+  "timestampMs": 1790,
+  "confidence": null
+ },
+ {
+  "text": " came",
+  "startMs": 2080,
+  "endMs": 2260,
+  "timestampMs": 2170,
+  "confidence": null
+ },
+ {
+  "text": " to",
+  "startMs": 2300,
+  "endMs": 2400,
+  "timestampMs": 2350,
+  "confidence": null
+ },
+ {
+  "text": " twenty",
+  "startMs": 2400,
+  "endMs": 2620,
+  "timestampMs": 2510,
+  "confidence": null
+ },
+ {
+  "text": " two",
+  "startMs": 2620,
+  "endMs": 2840,
+  "timestampMs": 2730,
+  "confidence": null
+ },
+ {
+  "text": " dollars.",
+  "startMs": 2840,
+  "endMs": 3060,
+  "timestampMs": 2950,
+  "confidence": null
+ }
+]

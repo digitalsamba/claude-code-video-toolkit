@@ -1,0 +1,107 @@
+[
+ {
+  "text": "In",
+  "startMs": 140,
+  "endMs": 220,
+  "timestampMs": 180,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 260,
+  "endMs": 360,
+  "timestampMs": 310,
+  "confidence": null
+ },
+ {
+  "text": " first",
+  "startMs": 420,
+  "endMs": 660,
+  "timestampMs": 540,
+  "confidence": null
+ },
+ {
+  "text": " two",
+  "startMs": 740,
+  "endMs": 860,
+  "timestampMs": 800,
+  "confidence": null
+ },
+ {
+  "text": " weeks",
+  "startMs": 940,
+  "endMs": 1160,
+  "timestampMs": 1050,
+  "confidence": null
+ },
+ {
+  "text": " of",
+  "startMs": 1200,
+  "endMs": 1280,
+  "timestampMs": 1240,
+  "confidence": null
+ },
+ {
+  "text": " November,",
+  "startMs": 1320,
+  "endMs": 1900,
+  "timestampMs": 1610,
+  "confidence": null
+ },
+ {
+  "text": " we",
+  "startMs": 2140,
+  "endMs": 2240,
+  "timestampMs": 2190,
+  "confidence": null
+ },
+ {
+  "text": " made",
+  "startMs": 2280,
+  "endMs": 2580,
+  "timestampMs": 2430,
+  "confidence": null
+ },
+ {
+  "text": " fifteen",
+  "startMs": 2580,
+  "endMs": 3260,
+  "timestampMs": 2920,
+  "confidence": null
+ },
+ {
+  "text": " video",
+  "startMs": 3260,
+  "endMs": 3560,
+  "timestampMs": 3410,
+  "confidence": null
+ },
+ {
+  "text": " projects",
+  "startMs": 3680,
+  "endMs": 4160,
+  "timestampMs": 3920,
+  "confidence": null
+ },
+ {
+  "text": " with",
+  "startMs": 4200,
+  "endMs": 4300,
+  "timestampMs": 4250,
+  "confidence": null
+ },
+ {
+  "text": " this",
+  "startMs": 4360,
+  "endMs": 4520,
+  "timestampMs": 4440,
+  "confidence": null
+ },
+ {
+  "text": " toolkit.",
+  "startMs": 4560,
+  "endMs": 5080,
+  "timestampMs": 4820,
+  "confidence": null
+ }
+]

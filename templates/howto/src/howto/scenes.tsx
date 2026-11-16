@@ -3,12 +3,12 @@
  * act's field. Sizes and colours come from theme.ts only.
  */
 import React from 'react';
-import { spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { Loop, OffthreadVideo, Img, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Counter, terminalTheme, TerminalSession } from '../../../../lib/components';
 import { BRAND } from '../brand';
 import { arrive, Ground, Pen, Punch, Rail, ramp, Rise, stopAt, UnderTrack, useEnter, railGeometry, Words } from './parts';
-import { display, type Field, figure, label, type Layout, MONO, note, SANS, title } from './theme';
-import type { BarsProps, CommandProps, FigureProps, LedgerProps, Lines, Said, SessionProps, StatementProps } from './types';
+import { display, type Field, FIELDS, figure, label, type Layout, MONO, note, SANS, title } from './theme';
+import type { BarsProps, CommandProps, FigureProps, LedgerProps, LedgerRow, Lines, Said, SessionProps, StatementProps } from './types';
 
 type Base = { L: Layout; f: Field };
 
@@ -125,6 +125,17 @@ const Ask: React.FC<Base & { text: string; frame: number }> = ({ L, f, text, fra
   );
 };
 
+/** A question on its own, before the opening (an episode's hook). */
+export const Question: React.FC<Base & { text: string; instant?: boolean }> = ({ L, f, text, instant }) => {
+  const frame = useCurrentFrame();
+  return (
+    <>
+      <Ground L={L} f={f} />
+      <Ask L={L} f={f} text={text} frame={instant ? 999 : frame} />
+    </>
+  );
+};
+
 /**
  * A chapter card: the playhead moves to the chapter's stop and the chapter's title rises. With `instant` (a
  * Short's first frame, its cover) everything is already in place on frame 0.
@@ -207,6 +218,34 @@ const SaidLine: React.FC<{ said: Said; style: React.CSSProperties; thenColor: st
   </div>
 );
 
+/** What a row is about, in a window: a clip playing, images flicked through, or a waveform for something heard. */
+const Shown: React.FC<{ show: NonNullable<LedgerRow['show']>; at: number; box: { left: number; top: number; w: number; h: number } }> = ({ show, at, box }) => {
+  const frame = useCurrentFrame();
+  const t = arrive(frame, at, 12);
+  const k = frame - at;
+  const dark = FIELDS.work;
+  return (
+    <div style={{ position: 'absolute', left: box.left, top: box.top, width: box.w, height: box.h, borderRadius: 12, overflow: 'hidden', background: dark.ground, opacity: Math.min(1, t * 3), transform: `scale(${0.94 + 0.06 * t})`, transformOrigin: 'left top' }}>
+      {show.video && (
+        <Sequence from={at} layout="none">
+          <Loop durationInFrames={140}>
+            <OffthreadVideo src={staticFile(show.video)} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </Loop>
+        </Sequence>
+      )}
+      {show.images && <Img src={staticFile(show.images[Math.floor(Math.max(0, k) / 10) % show.images.length])} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+      {show.wave && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: box.w / 90 }}>
+          {Array.from({ length: 36 }, (_, i) => {
+            const h = 0.12 + 0.8 * Math.abs(Math.sin(i * 0.7 + k * 0.27) * Math.sin(i * 0.31 - k * 0.12));
+            return <div key={i} style={{ width: box.w / 72, height: `${h * 78}%`, borderRadius: box.w / 144, background: dark.accent }} />;
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const Ledger: React.FC<Base & LedgerProps> = ({ L, f, title: head, rows, allAt, note: foot, after, hero }) => {
   const frame = useCurrentFrame();
   const active = after && frame >= after.at ? -1 : current(rows, frame);
@@ -217,7 +256,13 @@ export const Ledger: React.FC<Base & LedgerProps> = ({ L, f, title: head, rows, 
   const rowsTop = titleTop + (head ? (L.vertical ? 220 : 170) : 20);
   // the hero: the number this ledger is about. It starts where the figure scene before left it and moves into place
   const from = figureBox(L);
-  const to = L.vertical ? { left: L.x - 4, top: L.top - 20, size: L.size.display } : { left: L.x - 6, top: rowsTop + 150, size: L.size.display };
+  const shows = rows.some((r) => r.show); // a window beside the rows: the hero moves up to make room
+  const to = L.vertical ? { left: L.x - 4, top: L.top - 20, size: L.size.display } : { left: L.x - 6, top: rowsTop + (shows ? -10 : 150), size: L.size.display };
+  const win = L.vertical ? { left: L.right - 480, top: L.top - 50, w: 480, h: 270 } : { left: L.x, top: rowsTop + 215, w: 480, h: 270 };
+  let showing = -1;
+  rows.forEach((r, i) => {
+    if (r.show && frame >= r.at) showing = i;
+  });
   const k = hero?.carry === false ? 1 : ramp(frame, 3, 20);
   const mix = (p: number, q: number) => p + (q - p) * k;
   const rowsLeft = hero && !L.vertical ? L.x + 560 : L.x;
@@ -232,6 +277,7 @@ export const Ledger: React.FC<Base & LedgerProps> = ({ L, f, title: head, rows, 
           <div style={{ transform: `scale(${mix(from.size / to.size, 1)})`, transformOrigin: 'left top' }}>{hero.text}</div>
         </Punch>
       )}
+      {showing >= 0 && <Shown key={showing} show={rows[showing].show!} at={rows[showing].at} box={win} />}
       <div style={{ position: 'absolute', left: rowsLeft, right: L.W - L.right, top: rowsTop, display: 'flex', flexDirection: 'column', gap: rowGap }}>
         {rows.map((r, i) => {
           const on = i === active || (all && i <= current(rows, frame));

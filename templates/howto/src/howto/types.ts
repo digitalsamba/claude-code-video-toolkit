@@ -23,6 +23,11 @@ export type LedgerRow = {
   detailAt?: number;
   /** The value lands later, on its own words (a number counts up from here) */
   valueAt?: number;
+  /**
+   * What the row is about, shown in a window beside the rows while the narration is on it: a clip, a few images
+   * flicked through, or a moving waveform for something heard. Files are in public/.
+   */
+  show?: { video?: string; images?: string[]; wave?: boolean };
 };
 
 /** A line of text, and optionally more of it that lands on later words */
@@ -125,6 +130,11 @@ export type Episode = {
   scenes: SceneSpec[];
   next: Lines;
   link: string;
+  /**
+   * Before the opening: a question typed at a prompt and one scene that answers it, the most interesting thing
+   * the episode has to say. The brand's ident and the title come after it. Its narration is scene id `hook`.
+   */
+  hook?: { ask?: string; scene: SceneSpec };
   /** Frames in the opening's narration that bring in each line of the title */
   openTitle?: (cue: Cue) => number[];
   /** Frames in the opening's narration that light the chapter stops ("what's free, what isn't...") */

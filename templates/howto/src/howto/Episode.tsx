@@ -16,7 +16,7 @@ import { EPISODE } from '../episode';
 import timingJson from '../timing.json';
 import { IDENT } from './ident';
 import { Badge, Rise } from './parts';
-import { askBox, askFrames, ASK_SENT, ASK_START, ChapterCard, Close, Open, SCENES } from './scenes';
+import { askBox, askFrames, ASK_SENT, ASK_START, ChapterCard, Close, Open, Question, SCENES } from './scenes';
 import { FIELDS, type FieldName, layoutFor, note, loadFonts, SANS, title } from './theme';
 import type { Cue, Episode, SceneSpec } from './types';
 
@@ -48,7 +48,9 @@ const cueFor = (id: string): Cue => {
 type Segment =
   | { kind: 'open'; frames: number }
   | { kind: 'card'; chapter: number; frames: number; instant?: boolean }
-  | { kind: 'scene'; spec: SceneSpec; frames: number; first?: boolean }
+  | { kind: 'scene'; spec: SceneSpec; frames: number; first?: boolean; hook?: boolean }
+  /** The hook's question, typed before anything else */
+  | { kind: 'ask'; text: string; frames: number }
   | { kind: 'close'; frames: number; hold?: boolean }
   /** A clip of the brand's ident; `over` lays the episode's name and link on it (a Short's end) */
   | { kind: 'ident'; file: string; frames: number; over?: boolean }
@@ -68,6 +70,10 @@ export const timeline = (ep: Episode, short?: number): Segment[] => {
     ];
   }
   const out: Segment[] = [];
+  if (ep.hook) {
+    if (ep.hook.ask) out.push({ kind: 'ask', text: ep.hook.ask, frames: askFrames(ep.hook.ask) });
+    out.push({ kind: 'scene', spec: ep.hook.scene, frames: sceneFrames(ep.hook.scene), first: true, hook: true });
+  }
   const opens = ident.episode?.open;
   if (opens) out.push({ kind: 'ident', file: opens.file, frames: opens.frames });
   out.push({ kind: 'open', frames: Math.max(TIMING.scenes.open?.frames ?? 0, OPEN_MIN) - (opens ? OPEN_SKIP : 0) });
@@ -169,11 +175,12 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
   const segs = timeline(ep, short);
   const total = segs.reduce((n, s) => n + s.frames, 0);
   // an ident carries its own sound, so the bed starts after the open clip and is out before the close clip
-  const first = segs[0];
+  // (a hook before the open clip plays dry: the bed comes in with the title)
   const lastSeg = segs[segs.length - 1];
-  const bedFrom = first.kind === 'ident' ? first.frames : 0;
+  const openClip = segs.findIndex((s, i) => s.kind === 'ident' && i < segs.length - 1 && short === undefined);
+  const bedFrom = openClip < 0 ? 0 : segs.slice(0, openClip + 1).reduce((n, s) => n + s.frames, 0);
   const bed = total - bedFrom - (lastSeg.kind === 'ident' ? lastSeg.frames : 0);
-  const openSkip = first.kind === 'ident' ? OPEN_SKIP : 0;
+  const openSkip = openClip < 0 ? 0 : OPEN_SKIP;
   let from = 0;
 
   return (
@@ -190,8 +197,10 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
         const start = from;
         from += s.frames;
         const fieldName: FieldName =
-          s.kind === 'open' || s.kind === 'ident'
+          s.kind === 'open' || s.kind === 'ident' || s.kind === 'ask'
             ? 'work'
+            : s.kind === 'scene' && s.hook
+              ? 'explain'
             : s.kind === 'close' || s.kind === 'end'
               ? 'identity'
               : s.kind === 'card' && ep.chapters[s.chapter].ask
@@ -216,6 +225,13 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
                   </Rise>
                 </div>
               )}
+            </>
+          );
+        } else if (s.kind === 'ask') {
+          body = (
+            <>
+              <Question L={L} f={f} text={s.text} />
+              {sounds && <Sounds list={[{ at: ASK_START + s.text.length + ASK_SENT, name: 'land' }]} />}
             </>
           );
         } else if (s.kind === 'open') {
@@ -252,19 +268,20 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
           const Scene = SCENES[s.spec.kind] as React.FC<any>;
           const cue = cueFor(s.spec.id);
           const props = { ...s.spec.props(cue), ...(L.vertical && s.spec.short ? (s.spec.short as (c: Cue) => object)(cue) : {}) };
-          const asked = s.first && s.spec.kind !== 'session' ? ep.chapters[s.spec.chapter].ask : undefined;
+          const asked = s.hook ? ep.hook?.ask : s.first && s.spec.kind !== 'session' ? ep.chapters[s.spec.chapter].ask : undefined;
+          const under = s.hook ? <Question L={L} f={FIELDS.work} text={asked ?? ''} instant /> : <ChapterCard L={L} f={FIELDS.work} index={s.spec.chapter} of={n} text={[]} ask={asked} instant />;
           const scene = <Scene L={L} f={f} {...props} />;
           body = (
             <>
               {asked ? (
-                <Opens L={L} ground={f.ground} under={<AbsoluteFill style={{ background: FIELDS.work.ground }}><ChapterCard L={L} f={FIELDS.work} index={s.spec.chapter} of={n} text={[]} ask={asked} instant /></AbsoluteFill>}>
+                <Opens L={L} ground={f.ground} under={<AbsoluteFill style={{ background: FIELDS.work.ground }}>{under}</AbsoluteFill>}>
                   {scene}
                 </Opens>
               ) : (
                 scene
               )}
               {sounds && <Sounds list={soundsOf(s.spec.kind, props)} />}
-              {s.spec.kind !== 'session' && short === undefined && <Badge L={L} f={f} text={badge} />}
+              {s.spec.kind !== 'session' && short === undefined && !s.hook && <Badge L={L} f={f} text={badge} />}
               <Voice id={s.spec.id} captions={short !== undefined ? { color: f.ink, accent: f.accent, ground: f.ground, bottom: 330 } : undefined} />
             </>
           );
