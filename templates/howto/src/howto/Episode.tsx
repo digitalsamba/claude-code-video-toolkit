@@ -16,7 +16,7 @@ import { EPISODE } from '../episode';
 import timingJson from '../timing.json';
 import { IDENT } from './ident';
 import { Badge, Rise } from './parts';
-import { askBox, askFrames, ASK_START, ChapterCard, Close, Open, SCENES } from './scenes';
+import { askBox, askFrames, ASK_SENT, ASK_START, ChapterCard, Close, Open, SCENES } from './scenes';
 import { FIELDS, type FieldName, layoutFor, note, loadFonts, SANS, title } from './theme';
 import type { Cue, Episode, SceneSpec } from './types';
 
@@ -242,7 +242,7 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
                   list={[
                     { at: 4, name: 'move' },
                     { at: 20, name: 'tick' },
-                    ...(ep.chapters[s.chapter].ask ? [{ at: ASK_START + ep.chapters[s.chapter].ask!.length + 8, name: 'land' as const }] : []),
+                    ...(ep.chapters[s.chapter].ask ? [{ at: ASK_START + ep.chapters[s.chapter].ask!.length + ASK_SENT, name: 'land' as const }] : []),
                   ]}
                 />
               )}

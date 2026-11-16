@@ -139,7 +139,7 @@ export const EPISODE: Episode = {
       chapter: 3,
       props: (cue) => {
         const lines: SessionLine[] = [
-          { at: 4, user: 'set up modal for me, I want the free tier', perChar: 1, submit: cue('one sentence', { edge: 'end' }) },
+          { at: 16, user: 'set up modal for me, I want the free tier', perChar: 1, submit: cue('one sentence', { edge: 'end' }) },
           { at: cue('checks'), tool: 'Bash', arg: 'uv run modal --version', result: ['modal client version 1.2.1'], resultAt: cue('installed') },
           { at: cue('logs you in'), permission: 'uv run modal setup', description: 'Log in to Modal in the browser', answer: cue('say yes') },
           { at: cue('say yes', { offset: 4 }), tool: 'Bash', arg: 'uv run modal setup', result: ['Opened modal.com in your browser', '{ok|✓} Token written to `~/.modal.toml`'], resultAt: cue('say yes', { offset: 30 }) },

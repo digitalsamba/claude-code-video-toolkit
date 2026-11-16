@@ -63,7 +63,7 @@ only one thing holds it. Nothing exits (the scene cuts). The entrance depends on
 | A row's leader, a bar | draws out from its start, long-tailed, 18 to 20 frames |
 | Detail lines, sources, lines under a figure | a 14 px rise, 10 frames: the quiet ones |
 | The playhead | eases both ways to its stop; the stop lands large and settles |
-| A chapter's question | typed, a character a frame; the caret goes and the box takes the accent when it is sent |
+| A chapter's question | typed, a character a frame; the caret goes and the box takes the accent when it is sent, and it holds about a second more before the answer opens |
 
 The episode is one conversation with an agent. A chapter with `ask` opens on its question, typed at a prompt in
 the `work` field at the largest size that fits; when it is sent, the chapter's first scene opens out of the

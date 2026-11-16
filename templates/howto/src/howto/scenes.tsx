@@ -70,7 +70,9 @@ export const Open: React.FC<Base & { text: Lines; chapters: number; titleAt: num
 
 export const ASK_START = 8; // a chapter's question starts typing here, a character a frame
 /** How long a chapter card with a question runs: it types, is sent, and the answer opens. */
-export const askFrames = (text: string) => ASK_START + text.length + 22;
+export const ASK_SENT = 12; // frames after the last character before it is sent
+export const ASK_HOLD = 32; // and the question stays this long before the answer opens: time to read it
+export const askFrames = (text: string) => ASK_START + text.length + ASK_SENT + ASK_HOLD;
 
 /** Where the question sits: the answer opens out of this box. */
 export const askBox = (L: Layout) => {
@@ -87,7 +89,7 @@ export const askBox = (L: Layout) => {
 const Ask: React.FC<Base & { text: string; frame: number }> = ({ L, f, text, frame }) => {
   const b = askBox(L);
   const typed = Math.max(0, Math.min(text.length, frame - ASK_START));
-  const sent = frame >= ASK_START + text.length + 8;
+  const sent = frame >= ASK_START + text.length + ASK_SENT;
   const room = b.right - b.left - 72;
   const perLine = L.vertical ? Math.ceil((text.length + 2) / 2) + 2 : text.length + 2;
   const size = Math.min(L.size.figure, Math.floor(room / (perLine * 0.6)));
