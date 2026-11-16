@@ -48,6 +48,7 @@ Prerequisites:
 Cloud GPU:      Not configured
 File transfer:  Not configured (using free fallback services)
 Voice:          Not configured
+Music:          Not configured (free key)
 ElevenLabs:     Not configured (optional, paid)
 3D (Blender):   Not installed (optional)
 
@@ -60,9 +61,10 @@ You can skip any step and come back later with /setup.
 ```
 Toolkit Setup — All Configured
 
-Cloud GPU:      Modal (7 tools deployed)
+Cloud GPU:      Modal (8 apps deployed)
 File transfer:  Cloudflare R2 (bucket: video-toolkit)
 Voice:          Qwen3-TTS (speaker: Ryan)
+Music:          ACE-Step API key set
 ElevenLabs:     Configured
 
 Everything looks good! Want me to run a quick verification test?
@@ -147,9 +149,10 @@ Explain what cloud GPU enables:
 - AI image generation (FLUX.2) — title backgrounds, thumbnails
 - AI image editing (Qwen-Edit) — transform photos, add effects
 - AI upscaling (RealESRGAN) — enhance image quality
-- AI music generation (ACE-Step) — background music, jingles
+- AI music generation (ACE-Step): a self-hosted fallback; the default is the free ACE-Step API key in Phase 5
 - Talking heads (SoulX-FlashHead, SadTalker) — animated presenters from a photo
 - Watermark removal (ProPainter) — clean up stock footage
+- AI video clips (LTX-2): a ninth app, deployed on its own after the rest (it needs a Hugging Face token)
 
 Then present the choice:
 
@@ -157,7 +160,10 @@ Then present the choice:
 
 Frame the pitch:
 - **$30/month free compute** on the Starter plan — just requires adding a payment method
-- All 7 toolkit tools typically cost $0.50-2.00/month with normal use
+- A deployed app that isn't called costs nothing. What a call costs, read off Modal's bill for a batch
+  (2026-11-16, `docs/modal-setup.md`): under a cent a voice line, about a cent an image, about 11 cents an
+  LTX-2 video clip. Don't quote a monthly figure: it depends on what the user makes, and
+  `uv run modal billing report` shows theirs
 - Faster cold starts than RunPod
 - Scale to zero — no charges when idle
 - Simple deployment: `uv run tools/modal_setup.py <app>` (deploys and writes `.env`)
@@ -275,7 +281,7 @@ else:
 
 ### Tool Selection
 
-Present all 7 tools with descriptions and let user choose:
+Present the seven choices (eight apps: talking heads is two) with descriptions and let user choose:
 
 ```
 Which AI tools would you like to set up?
@@ -315,7 +321,8 @@ Which AI tools would you like to set up?
   s. Skip for now
 ```
 
-Recommend "all" — with Modal's free tier, there's no cost to having them deployed (they scale to zero).
+Recommend "all": there's no cost to having them deployed (they scale to zero), and `--all` deploys the
+eight apps behind these seven choices. Say that video clips (LTX-2) are one more command afterwards.
 
 ### Modal Deployment Flow
 
@@ -377,16 +384,20 @@ After deployment, run a quick test for at least one tool to verify the pipeline 
 **If Qwen3-TTS was deployed (most common):**
 ```bash
 uv run tools/qwen3_tts.py --text "Setup complete! Your video toolkit is ready." \
-  --speaker Ryan --tone warm --output /tmp/setup-test.mp3 \
+  --speaker Ryan --tone warm --output setup-test.mp3 \
   --cloud modal
 ```
 
 Check that it produces an audio file. If it does, the full pipeline (upload → cloud GPU → download) is working.
+The first call to an app after a deploy is a cold start (45 s for the Qwen3-TTS line and 35 s for the FLUX.2
+image, measured 2026-11-16; the second calls took 8 s and 5 s), so
+say that it is loading, not stuck. The outputs land in the toolkit folder (`/tmp` isn't there on Windows); play
+or show them to the user, then delete them or keep them out of git.
 
 **If FLUX.2 was deployed:**
 ```bash
 uv run tools/flux2.py --prompt "A minimal geometric logo on dark background" \
-  --output /tmp/setup-test.png --cloud modal
+  --output setup-test.png --cloud modal
 ```
 
 ---
@@ -398,7 +409,7 @@ uv run tools/flux2.py --prompt "A minimal geometric logo on dark background" \
 "For voiceovers in your videos, you have two options:
 
 **Qwen3-TTS (recommended, free)**
-Self-hosted on your cloud GPU. 9 built-in speakers, tone presets (warm, professional, excited...), and voice cloning. This is what most toolkit users use.
+Self-hosted on your cloud GPU. 9 built-in speakers (two English, the rest Chinese, Japanese and Korean), tone presets (warm, professional, excited...), and voice cloning. This is what most toolkit users use.
 
 **ElevenLabs (optional, paid)**
 Premium cloud TTS with a large voice library. Pay-per-character. Better for some specific voice styles, but Qwen3-TTS is comparable quality for most use cases."
@@ -409,13 +420,32 @@ If Qwen3-TTS was deployed in Phase 4, it's already ready. Just confirm the defau
 
 ```
 Qwen3-TTS is ready! Available speakers:
-  Ryan, Aiden, Vivian, Luna, Aurora, Aria, Nova, Stella, Orion
+  English: Ryan, Aiden
+  Chinese: Vivian, Serena, Uncle_Fu, Dylan, Eric
+  Japanese: Ono_Anna    Korean: Sohee
 
-Default speaker: Ryan (warm male voice)
+Default speaker: Ryan (English)
 
 You can change the speaker per-video or set a default in your brand's voice.json.
 To preview voices: uv run tools/qwen3_tts.py --list-voices
 ```
+
+### Music (free key)
+
+Background music comes from the ACE-Step API by default (`tools/music_gen.py`), which needs a key and costs
+nothing:
+
+```
+1. Go to https://acemusic.ai/api-key and sign in
+2. Copy the key
+```
+
+After the user provides it, write to .env:
+```
+ACEMUSIC_API_KEY=xxx
+```
+
+Without it, `music_gen.py --cloud modal` uses the Music app deployed in Phase 4.
 
 ### ElevenLabs Setup (Optional)
 
@@ -471,8 +501,10 @@ Cloud GPU: Modal
   [check] Image Editing (Qwen-Edit) — deployed
   [check] Upscaling (RealESRGAN) — deployed
   [check] Music (ACE-Step) — deployed
+  [check] Talking Heads (SoulX-FlashHead) — deployed
   [check] Talking Heads (SadTalker) — deployed
   [check] Watermark Removal (ProPainter) — deployed
+  [ ] Video clips (LTX-2) — not deployed (one more command, needs a Hugging Face token)
 
 File Transfer: Cloudflare R2
   [check] Bucket: video-toolkit
@@ -481,12 +513,14 @@ File Transfer: Cloudflare R2
 Voice: Qwen3-TTS (Ryan)
   [check] Test generation successful
 
+Music: ACE-Step API key set (free)
+
 ElevenLabs: Not configured (optional)
 
 3D: Blender 5.3 found (optional, experimental) — /video will suggest 3D shots
 
 Cost summary:
-  - Modal: $30/mo free compute (you'll use ~$1-2/mo typical)
+  - Modal: $30/mo free compute; nothing is billed until you call an app
   - R2: Free (10GB storage, zero egress)
   - Qwen3-TTS: Free (runs on Modal compute)
   - ElevenLabs: Not configured

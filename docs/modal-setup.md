@@ -8,7 +8,7 @@ Modal is the recommended cloud GPU provider for the toolkit's AI tools. It offer
 
 1. Go to [modal.com](https://modal.com/) and sign up
 2. Choose the **Starter plan** — $30/month free compute, just requires a payment method
-3. Typical toolkit usage is $1-2/month, well within the free allowance
+3. What you spend depends on what you make: see [what a call costs](#cold-starts) below, measured against the bill
 4. All apps scale to zero — no charges when idle
 
 ## Install & Authenticate
