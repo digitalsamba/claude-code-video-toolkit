@@ -19,6 +19,13 @@ generated model, give it a face and fingers and act with it on any machine with 
   Her build is not the one the rig was worked out on (short arms, long legs, narrow shoulders, long hands), so
   this is the spec that shows a number tuned on one character: the same film has to pass on any other.
 
+- `screen-stand.json`, `screen-call.json`: a wider screen test than the walk-in, which never lifts an arm over
+  the head or holds anything. Standing: arms up, hands on the head and behind it, a shrug, a point, a phone
+  held up and a wagged finger. A call over a pint: the phone, a wag, the glass taken up, drunk from and put
+  down. No fitted body passes either yet, and that is their use: each failure is a number in `checks.json`
+  (a hand inside the head, the two hands into each other, skin stretched over 4 times at a cuff or an armpit,
+  a body in the pub's table). Run them on every body after rig work; `docs/blender.md` lists what is open.
+
 To fit her by hand: `uv run tools/blender_render.py fit --model tests/fixtures/blender-fitted/mara.glb
 --fit tests/fixtures/blender-fitted/fit.json --out mara-fitted.blend --preview fit/`, with `mara-fitted.blend` next
 to `mara.json`.
