@@ -105,7 +105,15 @@ export type SceneSpec = {
   };
 }[keyof Kinds];
 
-export type Chapter = { title: Lines; field: FieldName };
+export type Chapter = {
+  title: Lines;
+  field: FieldName;
+  /**
+   * The chapter as a question, typed at a prompt on its card in place of the title ("what does $30 buy?"). The
+   * chapter's first scene then opens out of the prompt, as the answer. Keep it under about 28 characters.
+   */
+  ask?: string;
+};
 
 export type Episode = {
   series: string;

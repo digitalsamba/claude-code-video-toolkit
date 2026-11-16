@@ -22,10 +22,10 @@ export const EPISODE: Episode = {
   openTitle: (cue) => [cue('cost you money'), cue('mostly no')],
   openStops: (cue) => [cue("what's free"), cue("what isn't"), cue('what we really spend'), cue('spend', { edge: 'end' })],
   chapters: [
-    { title: ["What's free"], field: 'explain' },
-    { title: ['Thirty dollars', 'a month'], field: 'explain' },
-    { title: ['What we spend'], field: 'explain' },
-    { title: ['Setting it up'], field: 'work' },
+    { title: ["What's free"], field: 'explain', ask: "what's free?" },
+    { title: ['Thirty dollars', 'a month'], field: 'explain', ask: 'what do the AI models cost?' },
+    { title: ['What we spend'], field: 'explain', ask: 'what do you really spend?' },
+    { title: ['Setting it up'], field: 'work', ask: 'ok, how do I set it up?' },
   ],
   scenes: [
     {

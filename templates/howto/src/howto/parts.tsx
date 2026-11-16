@@ -79,6 +79,43 @@ export const Punch: React.FC<{ at: number; origin?: string; from?: number; style
   return <div style={{ ...style, opacity: o, transform: `scale(${from - (from - 1) * t})`, transformOrigin: origin }}>{children}</div>;
 };
 
+/**
+ * A pen mark on whatever it is put inside (the parent needs `position: relative`): a loop round a value or a
+ * stroke under a line, drawn in 9 frames from `at`. It marks the thing being said.
+ */
+export const Pen: React.FC<{ at: number; color: string; kind?: 'circle' | 'under'; padX?: number; padY?: number; width?: number }> = ({
+  at,
+  color,
+  kind = 'circle',
+  padX = 26,
+  padY = 10,
+  width = 6,
+}) => {
+  const frame = useCurrentFrame();
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [size, setSize] = React.useState<[number, number] | null>(null);
+  // the mark is drawn in pixels at the size of what it marks, so the stroke keeps one width
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (el && (!size || size[0] !== el.offsetWidth || size[1] !== el.offsetHeight)) setSize([el.offsetWidth, el.offsetHeight]);
+  });
+  const t = interpolate(frame, [at, at + 9], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+  const box: React.CSSProperties = kind === 'circle' ? { left: -padX, right: -padX, top: -padY, bottom: -padY } : { left: 0, right: 0, bottom: -padY - 10, height: 16 };
+  const shape = kind === 'circle' ? PEN_CIRCLE : PEN_UNDER;
+  const d = size ? shape.replace(/(-?[\d.]+) (-?[\d.]+)/g, (_, x, y) => `${((+x * size[0]) / 100).toFixed(1)} ${((+y * size[1]) / 100).toFixed(1)}`) : '';
+  return (
+    <div ref={ref} style={{ position: 'absolute', ...box, pointerEvents: 'none' }}>
+      {size && frame >= at && (
+        <svg width={size[0]} height={size[1]} style={{ overflow: 'visible', display: 'block' }}>
+          <path d={d} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" pathLength={1} strokeDasharray="1 1" strokeDashoffset={1 - t} />
+        </svg>
+      )}
+    </div>
+  );
+};
+const PEN_CIRCLE = 'M 14 22 C 34 -6, 104 -4, 99 46 C 95 104, 6 106, 2 54 C -1 18, 44 -4, 90 12';
+const PEN_UNDER = 'M 0 60 C 28 40, 66 78, 100 48';
+
 /** The terminal's rows as hairlines: the template's ground, for type scenes only. */
 export const Ground: React.FC<{ L: Layout; f: Field }> = ({ L, f }) => (
   <svg width={L.W} height={L.H} style={{ position: 'absolute', inset: 0 }}>

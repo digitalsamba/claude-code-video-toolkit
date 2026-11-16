@@ -6,7 +6,7 @@ import React from 'react';
 import { spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Counter, terminalTheme, TerminalSession } from '../../../../lib/components';
 import { BRAND } from '../brand';
-import { arrive, Ground, Punch, Rail, ramp, Rise, stopAt, UnderTrack, useEnter, railGeometry, Words } from './parts';
+import { arrive, Ground, Pen, Punch, Rail, ramp, Rise, stopAt, UnderTrack, useEnter, railGeometry, Words } from './parts';
 import { display, type Field, figure, label, type Layout, MONO, note, SANS, title } from './theme';
 import type { BarsProps, CommandProps, FigureProps, LedgerProps, Lines, Said, SessionProps, StatementProps } from './types';
 
@@ -68,11 +68,66 @@ export const Open: React.FC<Base & { text: Lines; chapters: number; titleAt: num
   );
 };
 
+export const ASK_START = 8; // a chapter's question starts typing here, a character a frame
+/** How long a chapter card with a question runs: it types, is sent, and the answer opens. */
+export const askFrames = (text: string) => ASK_START + text.length + 22;
+
+/** Where the question sits: the answer opens out of this box. */
+export const askBox = (L: Layout) => {
+  const g = railGeometry(L);
+  const h = L.vertical ? 250 : 190;
+  const bottom = L.trackY - g.s - 70;
+  return { left: L.x - 36, right: L.right + 36, top: bottom - h, bottom, h };
+};
+
+/**
+ * A chapter's question, typed at a prompt the way you would ask an agent: the largest size that fits, a block
+ * caret, a hairline box. When it is sent the caret goes and the box takes the accent.
+ */
+const Ask: React.FC<Base & { text: string; frame: number }> = ({ L, f, text, frame }) => {
+  const b = askBox(L);
+  const typed = Math.max(0, Math.min(text.length, frame - ASK_START));
+  const sent = frame >= ASK_START + text.length + 8;
+  const room = b.right - b.left - 72;
+  const perLine = L.vertical ? Math.ceil((text.length + 2) / 2) + 2 : text.length + 2;
+  const size = Math.min(L.size.figure, Math.floor(room / (perLine * 0.6)));
+  const blink = typed < text.length || Math.floor(frame / 8) % 2 === 0;
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: b.left,
+        width: b.right - b.left,
+        top: b.top,
+        height: b.h,
+        boxSizing: 'border-box',
+        border: `3px solid ${sent ? f.accent : f.hair.replace(/[\d.]+\)$/, '0.35)')}`,
+        borderRadius: 18,
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 36px',
+        fontFamily: MONO,
+        fontWeight: 700,
+        fontSize: size,
+        lineHeight: 1.15,
+        letterSpacing: '-0.02em',
+        color: f.ink,
+      }}
+    >
+      <div style={{ whiteSpace: L.vertical ? 'pre-wrap' : 'pre' }}>
+        <span style={{ color: f.accent }}>❯ </span>
+        {text.slice(0, typed)}
+        {!sent && <span style={{ display: 'inline-block', width: '0.55em', height: '0.9em', verticalAlign: '-0.12em', background: f.accent, marginLeft: 4, opacity: blink ? 1 : 0 }} />}
+      </div>
+    </div>
+  );
+};
+
 /**
  * A chapter card: the playhead moves to the chapter's stop and the chapter's title rises. With `instant` (a
  * Short's first frame, its cover) everything is already in place on frame 0.
  */
-export const ChapterCard: React.FC<Base & { index: number; of: number; text: Lines; instant?: boolean }> = ({ L, f, index, of, text, instant }) => {
+export const ChapterCard: React.FC<Base & { index: number; of: number; text: Lines; ask?: string; instant?: boolean }> = ({ L, f, index, of, text, ask, instant }) => {
   const frame = useCurrentFrame();
   const from = index === 0 ? 0 : stopAt(index - 1, of);
   const to = stopAt(index, of);
@@ -85,11 +140,15 @@ export const ChapterCard: React.FC<Base & { index: number; of: number; text: Lin
     <>
       <Ground L={L} f={f} />
       <Rail L={L} f={f} n={of} state={{ fill: 1, drawn: 1, head, caretOn: true, pop }} />
-      <div style={{ ...big, position: 'absolute', left: L.x, bottom: L.H - (L.trackY - g.s - 64) }}>
-        {text.map((line, i) => (
-          <Words key={i} text={line} at={instant ? -20 : 6 + i * 5} blur={10} gap={3} />
-        ))}
-      </div>
+      {ask ? (
+        <Ask L={L} f={f} text={ask} frame={instant ? 999 : frame} />
+      ) : (
+        <div style={{ ...big, position: 'absolute', left: L.x, bottom: L.H - (L.trackY - g.s - 64) }}>
+          {text.map((line, i) => (
+            <Words key={i} text={line} at={instant ? -20 : 6 + i * 5} blur={10} gap={3} />
+          ))}
+        </div>
+      )}
       <UnderTrack L={L} f={f} at={instant ? -10 : 12}>
         {index + 1} of {of}
       </UnderTrack>
@@ -198,9 +257,12 @@ export const Ledger: React.FC<Base & LedgerProps> = ({ L, f, title: head, rows, 
                   transformOrigin: 'left center',
                 }}
               />
-              <Punch at={vAt} origin="right center" style={{ ...(big && typeof r.value === 'number' ? figure(L, f) : title(L, f)), color: on ? f.accent : f.ink, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                {value}
-              </Punch>
+              <div style={{ position: 'relative' }}>
+                <Punch at={vAt} origin="right center" style={{ ...(big && typeof r.value === 'number' ? figure(L, f) : title(L, f)), color: on ? f.accent : f.ink, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                  {value}
+                </Punch>
+                {i === active && !all && <Pen at={vAt + (typeof r.value === 'number' ? 22 : 8)} color={f.accent} padY={big ? 14 : 12} padX={big ? 34 : 26} />}
+              </div>
             </div>
           );
         })}
@@ -238,8 +300,9 @@ export const Figure: React.FC<Base & FigureProps> = ({ L, f, title: head, value,
       </Punch>
       <div style={{ position: 'absolute', left: L.x, right: L.W - L.right, top: figTop + (L.vertical ? 300 : 330), display: 'flex', flexDirection: 'column', gap: 18 }}>
         {shown.map((l, i) => (
-          <Rise key={`${first}-${i}`} at={l.at} style={{ ...title(L, f), color: i === shown.length - 1 ? f.ink : f.ink2 }}>
+          <Rise key={`${first}-${i}`} at={l.at} style={{ ...title(L, f), color: i === shown.length - 1 ? f.ink : f.ink2, position: 'relative', alignSelf: 'flex-start' }}>
             {broken(l.text)}
+            {i === shown.length - 1 && <Pen kind="under" at={l.at + 12} color={f.accent} />}
           </Rise>
         ))}
       </div>
@@ -336,7 +399,10 @@ export const Bars: React.FC<Base & BarsProps> = ({ L, f, title: head, bars, limi
             )}
             {shown && (
               <Punch at={vAt} origin="center top" from={1.3} style={{ ...label(L, f), fontWeight: 700, position: 'absolute', left: x, width: slot, top: y(b.value) + 14, textAlign: 'center', color: i === k ? f.ground : f.ink, fontVariantNumeric: 'tabular-nums' }}>
-                {format(b.value)}
+                <span style={{ position: 'relative', display: 'inline-block' }}>
+                  {format(b.value)}
+                  {i === k && <Pen at={vAt + 10} color={f.ground} padX={16} padY={8} width={4} />}
+                </span>
               </Punch>
             )}
           </React.Fragment>

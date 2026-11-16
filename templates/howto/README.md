@@ -46,6 +46,14 @@ The template ships filled from `brands/video-toolkit`. With `src/ident.json` as 
 `src/episode.ts`, everything above this heading plays instead; nothing needs Blender either way, because the
 clips are already rendered.
 
+## One conversation
+
+An episode plays as a conversation with an agent. Give a chapter an `ask` and its card types that question at a
+prompt (`ask: 'what do the AI models cost?'`, under about 28 characters), and the chapter's first scene opens out
+of the prompt as the answer. Without `ask` the card shows the chapter's title. A pen circles the value of the row
+or bar being said and underlines the newest line under a figure, with no setup: it follows the cues the scene
+already has. A ledger's `hero` keeps a figure's number on screen into the next scene.
+
 ## Scene kinds
 
 | Kind | Shows | Lands on the narration |

@@ -10,13 +10,13 @@
  * the 2D close stops at the link. With no ident, or `ident: false` in the episode, the 2D mark does both.
  */
 import React from 'react';
-import { AbsoluteFill, Audio, OffthreadVideo, Sequence, staticFile, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, Easing, interpolate, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Captions, voice } from '../../../../lib/components';
 import { EPISODE } from '../episode';
 import timingJson from '../timing.json';
 import { IDENT } from './ident';
 import { Badge, Rise } from './parts';
-import { ChapterCard, Close, Open, SCENES } from './scenes';
+import { askBox, askFrames, ASK_START, ChapterCard, Close, Open, SCENES } from './scenes';
 import { FIELDS, type FieldName, layoutFor, note, loadFonts, SANS, title } from './theme';
 import type { Cue, Episode, SceneSpec } from './types';
 
@@ -48,7 +48,7 @@ const cueFor = (id: string): Cue => {
 type Segment =
   | { kind: 'open'; frames: number }
   | { kind: 'card'; chapter: number; frames: number; instant?: boolean }
-  | { kind: 'scene'; spec: SceneSpec; frames: number }
+  | { kind: 'scene'; spec: SceneSpec; frames: number; first?: boolean }
   | { kind: 'close'; frames: number; hold?: boolean }
   /** A clip of the brand's ident; `over` lays the episode's name and link on it (a Short's end) */
   | { kind: 'ident'; file: string; frames: number; over?: boolean }
@@ -63,7 +63,7 @@ export const timeline = (ep: Episode, short?: number): Segment[] => {
     const end = ident.short?.close;
     return [
       { kind: 'card', chapter: short, frames: CARD, instant: true },
-      ...scenes.map((spec) => ({ kind: 'scene' as const, spec, frames: sceneFrames(spec) })),
+      ...scenes.map((spec, i) => ({ kind: 'scene' as const, spec, frames: sceneFrames(spec), first: i === 0 })),
       end ? { kind: 'ident', file: end.file, frames: end.frames, over: true } : { kind: 'end', frames: END_CARD },
     ];
   }
@@ -75,7 +75,10 @@ export const timeline = (ep: Episode, short?: number): Segment[] => {
   for (const spec of ep.scenes) {
     if (spec.chapter !== chapter) {
       chapter = spec.chapter;
-      out.push({ kind: 'card', chapter, frames: CARD });
+      const ask = ep.chapters[chapter].ask;
+      out.push({ kind: 'card', chapter, frames: ask ? Math.max(CARD, askFrames(ask)) : CARD });
+      out.push({ kind: 'scene', spec, frames: sceneFrames(spec), first: true });
+      continue;
     }
     out.push({ kind: 'scene', spec, frames: sceneFrames(spec) });
   }
@@ -141,6 +144,20 @@ const Sounds: React.FC<{ list: Sound[] }> = ({ list }) => (
   </>
 );
 
+/** A chapter's answer opens out of the box its question was typed in, over the card's last frame. */
+const Opens: React.FC<{ L: ReturnType<typeof layoutFor>; ground: string; under: React.ReactNode; children: React.ReactNode }> = ({ L, ground, under, children }) => {
+  const frame = useCurrentFrame();
+  const t = interpolate(frame, [0, 12], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.inOut(Easing.cubic) });
+  const b = askBox(L);
+  const inset = `inset(${b.top * (1 - t)}px ${(L.W - b.right) * (1 - t)}px ${(L.H - b.bottom) * (1 - t)}px ${b.left * (1 - t)}px round ${18 * (1 - t)}px)`;
+  return (
+    <>
+      {t < 1 && under}
+      <AbsoluteFill style={{ background: ground, clipPath: t < 1 ? inset : undefined }}>{children}</AbsoluteFill>
+    </>
+  );
+};
+
 /** The episode comes from src/episode.ts by import: composition props are JSON, and an episode holds functions. */
 export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
   const ep = EPISODE;
@@ -177,7 +194,9 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
             ? 'work'
             : s.kind === 'close' || s.kind === 'end'
               ? 'identity'
-              : ep.chapters[s.kind === 'card' ? s.chapter : s.spec.chapter].field;
+              : s.kind === 'card' && ep.chapters[s.chapter].ask
+                ? 'work' // a question is typed in the terminal's field, whatever field answers it
+                : ep.chapters[s.kind === 'card' ? s.chapter : s.spec.chapter].field;
         const f = s.kind === 'ident' ? { ...FIELDS.work, ground: STAGE } : FIELDS[fieldName];
         let body: React.ReactNode = null;
 
@@ -217,17 +236,33 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
         } else if (s.kind === 'card') {
           body = (
             <>
-              <ChapterCard L={L} f={f} index={s.chapter} of={n} text={ep.chapters[s.chapter].title} instant={s.instant} />
-              {sounds && !s.instant && <Sounds list={[{ at: 4, name: 'move' }, { at: 20, name: 'tick' }]} />}
+              <ChapterCard L={L} f={f} index={s.chapter} of={n} text={ep.chapters[s.chapter].title} ask={ep.chapters[s.chapter].ask} instant={s.instant} />
+              {sounds && !s.instant && (
+                <Sounds
+                  list={[
+                    { at: 4, name: 'move' },
+                    { at: 20, name: 'tick' },
+                    ...(ep.chapters[s.chapter].ask ? [{ at: ASK_START + ep.chapters[s.chapter].ask!.length + 8, name: 'land' as const }] : []),
+                  ]}
+                />
+              )}
             </>
           );
         } else if (s.kind === 'scene') {
           const Scene = SCENES[s.spec.kind] as React.FC<any>;
           const cue = cueFor(s.spec.id);
           const props = { ...s.spec.props(cue), ...(L.vertical && s.spec.short ? (s.spec.short as (c: Cue) => object)(cue) : {}) };
+          const asked = s.first && s.spec.kind !== 'session' ? ep.chapters[s.spec.chapter].ask : undefined;
+          const scene = <Scene L={L} f={f} {...props} />;
           body = (
             <>
-              <Scene L={L} f={f} {...props} />
+              {asked ? (
+                <Opens L={L} ground={f.ground} under={<AbsoluteFill style={{ background: FIELDS.work.ground }}><ChapterCard L={L} f={FIELDS.work} index={s.spec.chapter} of={n} text={[]} ask={asked} instant /></AbsoluteFill>}>
+                  {scene}
+                </Opens>
+              ) : (
+                scene
+              )}
               {sounds && <Sounds list={soundsOf(s.spec.kind, props)} />}
               {s.spec.kind !== 'session' && short === undefined && <Badge L={L} f={f} text={badge} />}
               <Voice id={s.spec.id} captions={short !== undefined ? { color: f.ink, accent: f.accent, ground: f.ground, bottom: 330 } : undefined} />

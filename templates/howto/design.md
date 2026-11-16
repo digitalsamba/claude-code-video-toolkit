@@ -63,6 +63,17 @@ only one thing holds it. Nothing exits (the scene cuts). The entrance depends on
 | A row's leader, a bar | draws out from its start, long-tailed, 18 to 20 frames |
 | Detail lines, sources, lines under a figure | a 14 px rise, 10 frames: the quiet ones |
 | The playhead | eases both ways to its stop; the stop lands large and settles |
+| A chapter's question | typed, a character a frame; the caret goes and the box takes the accent when it is sent |
+
+The episode is one conversation with an agent. A chapter with `ask` opens on its question, typed at a prompt in
+the `work` field at the largest size that fits; when it is sent, the chapter's first scene opens out of the
+prompt's box in 12 frames, as the answer. So the turn of colour at each chapter has a cause: you asked, and it
+answered. A chapter that happens in the terminal follows its question with a plain cut, since it is the same
+place.
+
+A pen marks what is being said: a loop round the value of the row or bar the narration is on, a stroke under the
+newest line beneath a figure. It is drawn in 9 frames, in the accent, and moves on with the narration, so there
+is one mark on screen at a time.
 
 A number that carries a chapter stays on screen across the cut: a ledger's `hero` starts where the figure scene
 before it left the number and moves into place beside the rows.
