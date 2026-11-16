@@ -30,6 +30,7 @@ uv run tools/blender_render.py render spec.json --res 640x360                 # 
 uv run tools/blender_render.py render spec.json --engine cycles               # physical light; ~10x slower (17 s/frame)
 uv run tools/blender_render.py render spec.json --clips --alpha --to projects/my-video/public/blender
 uv run tools/blender_render.py open   spec.json                               # the built scene in Blender
+uv run tools/blender_render.py sheet  kits/acme/cast/lead.json --out sheet/   # a character from every angle, in every face and stretching pose
 ```
 
 **Tell the person how long it will take before you start.** A fitted character acting in a room renders at about
@@ -189,6 +190,15 @@ fit's output: any line with FAIL (a torn thumb web, faces painted from the wrong
 moving with the body) is a fault that will show in a close shot. The joints are written for the left and mirrored:
 slice both arms of the mesh, and where the right differs give it in `"joints_right"` (a right elbow mirrored 3 cm
 outside the arm left a sheet of skin hanging from it to the hip). The steps and their costs are in `docs/blender.md`.
+**When a fitted character does not read as the person**, make a review sheet before changing anything:
+`blender_render.py sheet cast.json --photos photos.json` renders the character in even light from every angle, in
+every face and in the poses a walk-in never reaches (arms up, hands on and behind the head, sitting, typing), and
+lays each reference photo beside and over the still from its angle with crown and chin on the same lines.
+Compare proportions as shares of the head's height and colours as lightness against the skin, write each finding
+down (Seen, Wanted, Layer, Measure, Status), and fix the top ones. The fit file takes `"recolour"` (shift the
+model's painted hair, beard or skin to a colour read off a photo, with `fill` for stubble painted as dots) and
+`"lid"` in `face` (hooded eyes: the lids rest part of the way down). Glasses are placed and sized by the eyes.
+The method is in `docs/blender.md`, "Refining a character".
 For a character of a real person, the reference photos come from `uv run tools/reference_capture.py --out <folder>`:
 a local page that talks the sitter through eight poses at a webcam. It needs the person at a browser, so ask
 them to run it; never commit their photos. Two things to settle on the character sheet, before any 3D spend: the

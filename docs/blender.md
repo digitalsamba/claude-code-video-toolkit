@@ -553,6 +553,81 @@ What could be better: the proof scripts (tiled stills, close cameras on a hand o
 in a project folder and are not yet tools in the toolkit; the fit still wants its joints read off a still by hand;
 and two characters is the least that shows a tuned number, where three of different builds would show more.
 
+### Refining a character: a review sheet against the photos
+
+A fitted character that passes every check can still not read as the person, and the person often cannot say
+why. Finding what is off is a job of its own, done before any fix. It was run on one character with Claude Fable
+5.2; the method, in order:
+
+1. **Make the review sheet.** `uv run tools/blender_render.py sheet kits/acme/cast/lead.json --out sheet/` builds
+   the character in even light with no grading (a room's mood light would be compared with the photo instead of
+   the paint) and writes `sheet.jpg`: the head and the body from six angles, seven faces (rest, smile, blink,
+   glance, wink, grin, shocked), the poses that stretch a body most (arms up, hands on the head, hands behind
+   it), then sitting down, sitting and typing at a desk. It prints the model's own proportions (`sheet.json`:
+   eye line, eye spacing and head width as shares of the head's height, the glasses' size and where the eye
+   sits in them, heads tall, shoulders, arm and leg as shares of the body's height) and whatever the checks
+   say of those poses. The poses are the point: a walk-in never lifts an arm over the head, and four bodies
+   that passed theirs all failed here (a hand 10 to 12 cm inside the head, skin stretched 5 to 7 times).
+2. **Pair it with the photos.** `--photos photos.json` lays each reference photo beside the still from its
+   angle, and the two over each other, with the crown and the chin of both on the same two lines. The file
+   names the photo for a view and three things read off it in its own pixels:
+   `{"head-front": {"file": "front.jpg", "crown": 645, "chin": 1310, "eyes": [[475, 965], [625, 965]]}}`
+   (views: `head-front`, `head-threeq-left`, `head-threeq-right`, `head-profile-left`, `head-profile-right`;
+   left is the sitter's own left, the side the camera sees). Read them off a crop of the photo with a pixel
+   grid drawn over it. The stills are taken from three head heights away, about where a webcam sits.
+3. **Compare by number, then by eye.** Proportions as shares of the head's height, from the same grid on photo
+   and still: eye line, eye spacing, glasses' width and height, where the pupil sits in the lens, hair width.
+   Colours as lightness against the skin beside them, which survives a change of light: hair, beard, the grey
+   in it, the top. On the character this was worked out on, every proportion of the head was within a few
+   percent, and the colours were not: hair 0.75 of the skin's lightness where the photo has 0.22. That is why
+   nobody could say what was wrong. A caricature keeps its style's proportions (a head a quarter of the
+   height, short arms): go after what makes the person read (hair, beard, glasses, eyes), not realism.
+4. **Write each finding down** with the same five fields: Seen (what, with its tile), Wanted, Layer (model, fit,
+   face, rig or spec), Measure (the number that proves it fixed) and Status. Rank by how much each changes
+   how the character reads on screen, do the top ones, and say why for the rest. The layer says where the fix
+   goes: paint and face marks in the fit file, a part the rig builds (glasses, lids, brows) in the rig, a
+   shape only the generator can change in the model.
+5. **Fix with the loop above**: measure on every body, add the check, fix from the body's measures, prove.
+
+What the fit file takes for it:
+
+- **`recolour`** shifts parts of the model's own paint to a colour read off a photo. A generated model's hair
+  and beard come out a tone or two off, and a re-generation changes the whole body to fix a colour.
+  `{"name": "hair and beard", "sample": [x0, x1, z0, z1], "to": "#3A281C", "tolerance": 0.2, "above": 1.3,
+  "fill": 5}`: `sample` is a patch on the model's front where the part is (the model's metres, as for the
+  clothes), and every texel between `above` and `below` within `tolerance` of the patch's colour takes `to`,
+  as much lighter or darker as it was than the patch, so strands keep their shading. `keep` leaves a share of
+  the old colour in. `fill` closes gaps up to that many texels across: stubble is painted as dots of hair
+  colour on skin, and darkened as dots it reads as pepper. Rules paint in the order given and none repaints
+  what an earlier one moved, so the small part goes first (the grey of a chin before the beard round it; the
+  other way round the beard's fill swallowed the grey). Every rule's patch is read before any rule paints.
+  Pick `to` from the photo, a little lighter than it measures: the film's light and grading darken it again.
+- **`"lid": 0.3`** in `face` rests the upper lids over that share of the eye. The rig's eyes are wide open at
+  rest, which on a face with hooded eyes reads as startled; the lids go right up for `shocked` and come back.
+  `check` reports it as `lid_rest`.
+- **Glasses are placed by the eyes.** Each lens opening is centred on its eye's height and a quarter taller
+  than the eye, with the top rim the heaviest. Placed at a set height on the head, the eyes of the first
+  fitted character sat 0.78 of the way up the openings, against the top rim, and read as peering under it.
+  `face.glasses` in `checks.json` has `eye_in_opening` (fails outside 0.35 to 0.65) and `opening_over_eye`
+  (fails under 1.15).
+
+**Open: the poses over the head.** `hands_on_head` and `hands_behind_head` were written for the clay cast, a
+mitten on a ball. A fitted hand is as long as its forearm, hair stands off the skull, and a short arm cannot get
+a hand behind its own head at all: on four bodies a hand ends 10 to 12 cm inside the head, and on three the two
+hands meet behind it. Moving the wrist out of the head until the hand was clear was tried and dropped: the hand
+keeps the forearm's direction, so it came clear by hanging in the air beside the head. The pose needs the hand
+turned to lie on the skull, and the shoulder's skin (a thick top is dragged up into wings by a raised arm, 5 to
+7 times its length at the cuff and the armpit) needs its own work. Until then, film these poses from the front
+and close, or use `celebrate` and `gesture`.
+
+**A wider screen test.** `tests/fixtures/blender-fitted/screen-stand.json` and `screen-call.json` act what the
+walk-in does not: arms over the head, a shrug, a point, a phone and a wagged finger on their feet, then a call
+over a pint (the glass taken up, drunk from, put down). Run on four bodies, none passes yet. Besides the hands
+at the head: a sip stretches the sleeve 4.7 to 7.5 times on every body that has one, two bodies sit 3 cm into the
+pub's table as the scene starts, one puts the glass 1.4 cm into the table top, and one is 2 cm short of the
+glass where it stands (the spec error says so). The checks that catch these were already there; what was
+missing was a film that asked.
+
 ## A product stage
 
 Set kind `studio` is a backdrop that curves from floor to wall, with soft lights and no character. Its props are a
