@@ -68,6 +68,9 @@ export const Open: React.FC<Base & { text: Lines; chapters: number; titleAt: num
   );
 };
 
+/** In a Short nothing a scene draws goes below this: the burned captions sit under it (Episode.tsx, bottom 330). */
+export const CAPTION_TOP = 1380;
+
 export const ASK_START = 8; // a chapter's question starts typing here, a character a frame
 /** How long a chapter card with a question runs: it types, is sent, and the answer opens. */
 export const ASK_SENT = 12; // frames after the last character before it is sent
@@ -319,7 +322,8 @@ export const Ledger: React.FC<Base & LedgerProps> = ({ L, f, title: head, rows, 
         <SaidLine
           said={after}
           thenColor={f.accent}
-          style={{ ...title(L, f), color: f.accent, position: 'absolute', left: L.x, right: L.W - L.right, top: L.foot - L.size.note - (L.vertical ? 260 : 150) }}
+          // in a Short the burned captions own the band above the note, so the line ends above them
+          style={{ ...title(L, f), color: f.accent, position: 'absolute', left: L.x, right: L.W - L.right, ...(L.vertical ? { bottom: L.H - CAPTION_TOP + 40 } : { top: L.foot - L.size.note - 150 }) }}
         />
       )}
       <Foot L={L} f={f} text={foot} />
