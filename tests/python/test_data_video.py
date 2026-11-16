@@ -82,7 +82,8 @@ class DataVideoTests(unittest.TestCase):
             data.update(source='Source: release metrics', headline='42 active users')
             spec.write_text(json.dumps(data))
             report = prepare(spec, brand='digital-samba')
-            self.assertEqual(report['theme']['palette'][0], '#F06859')
+            primary = json.loads((Path(__file__).resolve().parents[2] / 'brands/digital-samba/brand.json').read_text(encoding='utf-8'))['colors']['primary']
+            self.assertEqual(report['theme']['palette'][0], primary)
             self.assertIn('Inter', report['theme']['fontFamily'])
             self.assertTrue(Path(report['theme']['fontPath']).is_file())
             overlay = np.asarray(text_overlay(report))

@@ -14,6 +14,9 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 import data_video
 
+# The narrated series takes the brand's primary: read it, so a brand's colour can change without these tests
+DS_PRIMARY = json.loads((ROOT / 'brands/digital-samba/brand.json').read_text(encoding='utf-8'))['colors']['primary']
+
 
 class ChartReviewTests(unittest.TestCase):
     def setUp(self):
@@ -73,18 +76,18 @@ class ChartReviewTests(unittest.TestCase):
         report = self.report(['Jan', 'Feb'])
         figure, _ = self.renderer(report)
         self.assertIsNone(figure.axes[0].get_legend())
-        self.assertEqual(colors.to_rgba(figure.axes[0].lines[0].get_color()), colors.to_rgba('#F06859'))
+        self.assertEqual(colors.to_rgba(figure.axes[0].lines[0].get_color()), colors.to_rgba(DS_PRIMARY))
         report = self.report(['Jan', 'Feb'], names=('A', 'B', 'C', 'D'))
         figure, _ = self.renderer(report)
         rendered = [colors.to_rgba(line.get_color()) for line in figure.axes[0].lines]
-        self.assertEqual(rendered[0], colors.to_rgba('#F06859'))
+        self.assertEqual(rendered[0], colors.to_rgba(DS_PRIMARY))
         self.assertEqual(rendered[1:], [colors.to_rgba(report['theme']['muted'])] * 3)
         self.assertIsNotNone(figure.axes[0].get_legend())
 
     def test_bars_share_primary_and_period_text_is_visible_and_changes(self):
         report = self.report(['January', 'February'], kind='bar', names=('A', 'B', 'C'))
         figure, frame_at = self.renderer(report)
-        expected = colors.to_rgba('#F06859')
+        expected = colors.to_rgba(DS_PRIMARY)
         self.assertEqual([bar.get_facecolor() for bar in figure.axes[0].patches], [expected] * 3)
         first, middle, last = [frame_at(t) for t in (0, .5, 2)]
         # The period occupies the otherwise empty band between headline and plot.
