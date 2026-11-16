@@ -327,6 +327,16 @@ First request after idle triggers a cold start while Modal loads the model:
 
 After 60 seconds of no requests, containers scale back to zero. No charges while idle.
 
+That last minute is billed, and so is a cold start, so what a clip or an image costs depends on how many you make
+in a run. A tool's `Est. cost` line counts the seconds of its own call and nothing else. Measured on 2026-11-16
+against Modal's bill for the hour: three LTX-2.3 clips came to $0.111 each where the tool lines said $0.083, four
+FLUX.2 images to about a cent each where the lines said under half a cent after the first, and ten Qwen3-TTS lines
+in one call to $0.006 each. To quote a price, make a batch and read the bill:
+
+```bash
+uv run --extra modal modal billing report --for today -r h --json    # cost per app, per hour
+```
+
 ## Monitoring & Billing
 
 ```bash

@@ -1,0 +1,100 @@
+[
+ {
+  "text": "The",
+  "startMs": 80,
+  "endMs": 140,
+  "timestampMs": 110,
+  "confidence": null
+ },
+ {
+  "text": " one",
+  "startMs": 220,
+  "endMs": 380,
+  "timestampMs": 300,
+  "confidence": null
+ },
+ {
+  "text": " thing",
+  "startMs": 480,
+  "endMs": 680,
+  "timestampMs": 580,
+  "confidence": null
+ },
+ {
+  "text": " you",
+  "startMs": 740,
+  "endMs": 920,
+  "timestampMs": 830,
+  "confidence": null
+ },
+ {
+  "text": " do",
+  "startMs": 980,
+  "endMs": 1160,
+  "timestampMs": 1070,
+  "confidence": null
+ },
+ {
+  "text": " need",
+  "startMs": 1260,
+  "endMs": 1580,
+  "timestampMs": 1420,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 1720,
+  "endMs": 1800,
+  "timestampMs": 1760,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 1860,
+  "endMs": 1920,
+  "timestampMs": 1890,
+  "confidence": null
+ },
+ {
+  "text": " Claude",
+  "startMs": 1980,
+  "endMs": 2340,
+  "timestampMs": 2160,
+  "confidence": null
+ },
+ {
+  "text": " plan,",
+  "startMs": 2460,
+  "endMs": 2820,
+  "timestampMs": 2640,
+  "confidence": null
+ },
+ {
+  "text": " to",
+  "startMs": 3120,
+  "endMs": 3240,
+  "timestampMs": 3180,
+  "confidence": null
+ },
+ {
+  "text": " run",
+  "startMs": 3280,
+  "endMs": 3460,
+  "timestampMs": 3370,
+  "confidence": null
+ },
+ {
+  "text": " Claude",
+  "startMs": 3560,
+  "endMs": 3840,
+  "timestampMs": 3700,
+  "confidence": null
+ },
+ {
+  "text": " Code.",
+  "startMs": 3940,
+  "endMs": 4300,
+  "timestampMs": 4120,
+  "confidence": null
+ }
+]

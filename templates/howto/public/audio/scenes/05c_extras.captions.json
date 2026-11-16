@@ -1,0 +1,86 @@
+[
+ {
+  "text": "Without",
+  "startMs": 80,
+  "endMs": 420,
+  "timestampMs": 250,
+  "confidence": null
+ },
+ {
+  "text": " them,",
+  "startMs": 480,
+  "endMs": 720,
+  "timestampMs": 600,
+  "confidence": null
+ },
+ {
+  "text": " free",
+  "startMs": 1080,
+  "endMs": 1280,
+  "timestampMs": 1180,
+  "confidence": null
+ },
+ {
+  "text": " voices",
+  "startMs": 1380,
+  "endMs": 1880,
+  "timestampMs": 1630,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 1900,
+  "endMs": 2000,
+  "timestampMs": 1950,
+  "confidence": null
+ },
+ {
+  "text": " image",
+  "startMs": 2140,
+  "endMs": 2360,
+  "timestampMs": 2250,
+  "confidence": null
+ },
+ {
+  "text": " models",
+  "startMs": 2460,
+  "endMs": 2840,
+  "timestampMs": 2650,
+  "confidence": null
+ },
+ {
+  "text": " run",
+  "startMs": 2960,
+  "endMs": 3120,
+  "timestampMs": 3040,
+  "confidence": null
+ },
+ {
+  "text": " inside",
+  "startMs": 3160,
+  "endMs": 3640,
+  "timestampMs": 3400,
+  "confidence": null
+ },
+ {
+  "text": " your",
+  "startMs": 3680,
+  "endMs": 3820,
+  "timestampMs": 3750,
+  "confidence": null
+ },
+ {
+  "text": " Modal",
+  "startMs": 3880,
+  "endMs": 4160,
+  "timestampMs": 4020,
+  "confidence": null
+ },
+ {
+  "text": " credit.",
+  "startMs": 4260,
+  "endMs": 4700,
+  "timestampMs": 4480,
+  "confidence": null
+ }
+]

@@ -1,5 +1,6 @@
 {
   "made_by": "examples/blender-ident/build.py",
+  "default": "clap",
   "idents": {
     "clap": {
       "open": {
@@ -14,6 +15,7 @@
         },
         "sound": "clap-open.wav",
         "hit_frame": 20,
+        "title_frame": 51,
         "hit_checked": true,
         "alpha_ground": "dark"
       },
@@ -42,6 +44,7 @@
         },
         "sound": "key-open.wav",
         "hit_frame": 22,
+        "title_frame": 59,
         "hit_checked": true
       },
       "close": {

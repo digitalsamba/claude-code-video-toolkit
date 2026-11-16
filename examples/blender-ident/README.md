@@ -19,7 +19,10 @@ uv run tools/blender_render.py render examples/blender-ident/clap.json --clips -
 
 Output lands in `out/` (gitignored): `clips/open.mp4` and `clips/close.mp4` with their sound in the file,
 `open.wav` and `close.wav` beside them, `clips.json`, `contact_sheet.png`, `checks.json` and `render_checks.json`.
-The rendered clips for the toolkit's brand are kept in `brands/video-toolkit/ident/`.
+The rendered clips for the toolkit's brand are kept in `brands/video-toolkit/ident/`, the brand's ident slot
+(`docs/creating-brands.md`, "Mark and ident"). `build.py` fills it: it copies the clips, names the default ident,
+and measures from each open the frame of the hit and `title_frame`, the first frame from which the picture is at
+rest. `templates/howto` plays what is there.
 
 What it shows:
 

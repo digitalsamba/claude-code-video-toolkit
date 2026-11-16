@@ -1,0 +1,1 @@
+Claude Code checks what's installed, logs you in, and deploys the toolkit's apps.

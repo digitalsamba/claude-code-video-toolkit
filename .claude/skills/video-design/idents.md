@@ -71,5 +71,10 @@ shapes and ids in each.
 7. **Say what nobody has heard.** Levels and sync can be measured. Whether the sound is right cannot: a person
    listens before it is used.
 
+8. **Put it in the brand's slot.** `brands/<name>/ident/` with an `ident.json` (lengths, the hit's frame, the
+   frame a title may come in) and the flat mark in `brands/<name>/assets/mark.svg`; the format is in
+   `docs/creating-brands.md`. A template that reads the slot plays the ident, and keeps its own 2D opening when
+   the slot is empty, so a video never depends on the ident being there.
+
 Without Blender, the same bar holds for a 2D ident in Remotion: the mark's shapes as SVG, one move on a `cue()`
 frame, one sound on that frame.

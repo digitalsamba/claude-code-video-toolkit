@@ -1,0 +1,44 @@
+[
+ {
+  "text": "September,",
+  "startMs": 80,
+  "endMs": 700,
+  "timestampMs": 390,
+  "confidence": null
+ },
+ {
+  "text": " our",
+  "startMs": 1140,
+  "endMs": 1360,
+  "timestampMs": 1250,
+  "confidence": null
+ },
+ {
+  "text": " busiest",
+  "startMs": 1400,
+  "endMs": 1840,
+  "timestampMs": 1620,
+  "confidence": null
+ },
+ {
+  "text": " month,",
+  "startMs": 1920,
+  "endMs": 2220,
+  "timestampMs": 2070,
+  "confidence": null
+ },
+ {
+  "text": " twenty",
+  "startMs": 2220,
+  "endMs": 2900,
+  "timestampMs": 2560,
+  "confidence": null
+ },
+ {
+  "text": " six.",
+  "startMs": 2900,
+  "endMs": 3580,
+  "timestampMs": 3240,
+  "confidence": null
+ }
+]

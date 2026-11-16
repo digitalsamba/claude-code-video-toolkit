@@ -1,0 +1,72 @@
+[
+ {
+  "text": "You",
+  "startMs": 100,
+  "endMs": 160,
+  "timestampMs": 130,
+  "confidence": null
+ },
+ {
+  "text": " add",
+  "startMs": 240,
+  "endMs": 420,
+  "timestampMs": 330,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 460,
+  "endMs": 540,
+  "timestampMs": 500,
+  "confidence": null
+ },
+ {
+  "text": " card",
+  "startMs": 600,
+  "endMs": 880,
+  "timestampMs": 740,
+  "confidence": null
+ },
+ {
+  "text": " in",
+  "startMs": 920,
+  "endMs": 1020,
+  "timestampMs": 970,
+  "confidence": null
+ },
+ {
+  "text": " your",
+  "startMs": 1060,
+  "endMs": 1140,
+  "timestampMs": 1100,
+  "confidence": null
+ },
+ {
+  "text": " browser,",
+  "startMs": 1220,
+  "endMs": 1760,
+  "timestampMs": 1490,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 2000,
+  "endMs": 2100,
+  "timestampMs": 2050,
+  "confidence": null
+ },
+ {
+  "text": " say",
+  "startMs": 2200,
+  "endMs": 2360,
+  "timestampMs": 2280,
+  "confidence": null
+ },
+ {
+  "text": " yes.",
+  "startMs": 2500,
+  "endMs": 2920,
+  "timestampMs": 2710,
+  "confidence": null
+ }
+]

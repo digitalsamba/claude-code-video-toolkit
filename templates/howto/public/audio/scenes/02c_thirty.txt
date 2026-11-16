@@ -1,0 +1,1 @@
+Idle apps scale to zero, so you only pay for the seconds a GPU is working.

@@ -1125,7 +1125,7 @@
         "keep": "prune: newest jobs never pruned (default 10; submit auto-prunes with VIDEO_JOB_KEEP)",
         "older-than": "prune: only jobs finished at least this many days ago"
       },
-      "prices": "PRICES table in the module (presets --json prints it), checked against receipts 2026-11-01: ltx clip 0.10, ideogram image 0.03/0.06/0.10 by speed, flux image 0.0075, qwen3 voice 0.01/scene (actuals booked from the Modal cost event), elevenlabs 0.20/1k chars, scribe captions 0.40/audio hour",
+      "prices": "PRICES table in the module (presets --json prints it), checked against the Modal bill 2026-11-16: ltx clip 0.12, ideogram image 0.03/0.06/0.10 by speed, flux image 0.012, qwen3 voice 0.01/scene (actuals booked from the Modal cost event), elevenlabs 0.20/1k chars, scribe captions 0.40/audio hour",
       "env": [
         "VIDEO_JOB_EXPANDER",
         "VIDEO_JOB_MAX_USD",
@@ -1489,6 +1489,14 @@
       "created": "2026-10-28",
       "updated": "2026-10-28",
       "skill": "synthetic-ui-demo",
+      "agentSupport": "session"
+    },
+    "howto": {
+      "path": "templates/howto/",
+      "description": "How-to and tutorial episodes about a tool: one mark (a terminal prompt whose chevron fills into play and whose caret becomes the playhead) carries the opening, the chapter cards and the close; scenes are ledgers, figures, bars, statements, agent CLI sessions and commands, each landing on its narration word via cue(); colour by act, every figure from a facts file; a 9:16 Short per chapter with captions. Plays a brand's own mark and ident when it has them (brands/<name>/assets/mark.svg and brands/<name>/ident/, read by scripts/ident.py) and its own 2D mark when not. Ships as Getting started 1, What it costs",
+      "status": "beta",
+      "created": "2026-11-15",
+      "skill": "video-design",
       "agentSupport": "session"
     }
   },

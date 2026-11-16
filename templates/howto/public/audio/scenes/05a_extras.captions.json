@@ -1,0 +1,58 @@
+[
+ {
+  "text": "Two",
+  "startMs": 100,
+  "endMs": 240,
+  "timestampMs": 170,
+  "confidence": null
+ },
+ {
+  "text": " things",
+  "startMs": 360,
+  "endMs": 660,
+  "timestampMs": 510,
+  "confidence": null
+ },
+ {
+  "text": " cost",
+  "startMs": 780,
+  "endMs": 1040,
+  "timestampMs": 910,
+  "confidence": null
+ },
+ {
+  "text": " extra,",
+  "startMs": 1220,
+  "endMs": 1720,
+  "timestampMs": 1470,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 2000,
+  "endMs": 2180,
+  "timestampMs": 2090,
+  "confidence": null
+ },
+ {
+  "text": " both",
+  "startMs": 2340,
+  "endMs": 2700,
+  "timestampMs": 2520,
+  "confidence": null
+ },
+ {
+  "text": " are",
+  "startMs": 2820,
+  "endMs": 2980,
+  "timestampMs": 2900,
+  "confidence": null
+ },
+ {
+  "text": " optional.",
+  "startMs": 3040,
+  "endMs": 3560,
+  "timestampMs": 3300,
+  "confidence": null
+ }
+]

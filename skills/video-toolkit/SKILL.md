@@ -45,6 +45,7 @@ written, QC can judge the result, and there's a cost cap. Offer a `job` when one
 | A short explainer on a topic (Shorts, Reels, a 16:9 explainer) from a brief | `concept-explainer-short` via `video_job.py` | job | this file | `examples/sky-blue-short` |
 | A post or short video for someone who has a kit (a small business, a coach, a product team) | `video_job.py` with `"kit"`: their photos as `file` scenes, `text` scenes in their colours | job | `kits/README.md` | |
 | A walkthrough, feature demo or release-notes video of an app whose source you can read | synthetic UI: `templates/ds-release-notes`, components `Stage`, `Cursor`, `cues` (`Terminal` for a shell, `TerminalSession` for a Claude Code, Codex or other agent CLI session) | session | `.claude/skills/synthetic-ui-demo/SKILL.md` | `examples/ds-release-649`, `examples/ds-free-schedule-demo` |
+| A how-to or tutorial about a tool or CLI, in chapters, with Shorts cut from it | `templates/howto` (mark-and-track opening and close, ledger, figure, bars, `TerminalSession` scenes on narration cues, `facts.json`) | session | `templates/howto/README.md`, `.claude/skills/video-design/SKILL.md` | `templates/howto` itself (Getting started 1) |
 | The same, but you can't read the source | Playwright recording into `product-demo` | session | `.claude/skills/playwright-recording/` | |
 | A marketing or product launch video | `templates/product-demo` | session | the template's README | `examples/digital-samba-skill-demo` |
 | A sprint or monthly review | `templates/sprint-review`, `templates/sprint-review-v2` | session | the template's README | `examples/hello-world` |
@@ -312,7 +313,7 @@ Receipts also append to `MEDIA_SPEND_LOG` (default `logs/media-spend.log` in the
 per paid call, so a runtime that keeps a spend ledger reads single assets and jobs from one file. If your runtime
 sets a workspace, export `VIDEO_JOB_WORKSPACE` to it: the ledger goes to its `logs/`, relative spec paths resolve
 there, and `submit` books the whole estimate at once so a daily cap counts it before the work starts. Prices (`presets`, checked
-against receipts on 2026-11-01): LTX clip ~$0.10, Ideogram image $0.03 to $0.10, FLUX image under a cent,
+against Modal's bill on 2026-11-16): LTX clip ~$0.12, Ideogram image $0.03 to $0.10, FLUX image about a cent,
 Qwen3 voice ~$0.01 a scene, captions ~$0.0001 a second. A 7-scene, 45 s video with two clips and two cards
 lands around $0.40 to $0.55; the first clip after idle pays a Modal cold start on top. Under `--progress json`
 every call prints one `cost` event, failures included ($0).

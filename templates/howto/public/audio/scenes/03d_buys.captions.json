@@ -1,0 +1,51 @@
+[
+ {
+  "text": "Or",
+  "startMs": 180,
+  "endMs": 380,
+  "timestampMs": 280,
+  "confidence": null
+ },
+ {
+  "text": " two",
+  "startMs": 580,
+  "endMs": 720,
+  "timestampMs": 650,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 740,
+  "endMs": 820,
+  "timestampMs": 780,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 860,
+  "endMs": 900,
+  "timestampMs": 880,
+  "confidence": null
+ },
+ {
+  "text": " half",
+  "startMs": 960,
+  "endMs": 1200,
+  "timestampMs": 1080,
+  "confidence": null
+ },
+ {
+  "text": " thousand",
+  "startMs": 1320,
+  "endMs": 1900,
+  "timestampMs": 1610,
+  "confidence": null
+ },
+ {
+  "text": " images.",
+  "startMs": 2020,
+  "endMs": 2540,
+  "timestampMs": 2280,
+  "confidence": null
+ }
+]

@@ -1,0 +1,1 @@
+To begin, type slash setup in Claude Code.

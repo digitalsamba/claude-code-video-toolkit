@@ -1,0 +1,44 @@
+[
+ {
+  "text": "Setting",
+  "startMs": 120,
+  "endMs": 420,
+  "timestampMs": 270,
+  "confidence": null
+ },
+ {
+  "text": " up",
+  "startMs": 480,
+  "endMs": 620,
+  "timestampMs": 550,
+  "confidence": null
+ },
+ {
+  "text": " Modal",
+  "startMs": 680,
+  "endMs": 1100,
+  "timestampMs": 890,
+  "confidence": null
+ },
+ {
+  "text": " takes",
+  "startMs": 1280,
+  "endMs": 1500,
+  "timestampMs": 1390,
+  "confidence": null
+ },
+ {
+  "text": " one",
+  "startMs": 1740,
+  "endMs": 1920,
+  "timestampMs": 1830,
+  "confidence": null
+ },
+ {
+  "text": " sentence.",
+  "startMs": 2060,
+  "endMs": 2680,
+  "timestampMs": 2370,
+  "confidence": null
+ }
+]

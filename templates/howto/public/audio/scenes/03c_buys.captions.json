@@ -1,0 +1,37 @@
+[
+ {
+  "text": "Or",
+  "startMs": 100,
+  "endMs": 260,
+  "timestampMs": 180,
+  "confidence": null
+ },
+ {
+  "text": " three",
+  "startMs": 260,
+  "endMs": 920,
+  "timestampMs": 590,
+  "confidence": null
+ },
+ {
+  "text": " thousand",
+  "startMs": 920,
+  "endMs": 1580,
+  "timestampMs": 1250,
+  "confidence": null
+ },
+ {
+  "text": " voice",
+  "startMs": 1580,
+  "endMs": 1840,
+  "timestampMs": 1710,
+  "confidence": null
+ },
+ {
+  "text": " lines.",
+  "startMs": 1920,
+  "endMs": 2380,
+  "timestampMs": 2150,
+  "confidence": null
+ }
+]

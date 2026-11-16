@@ -1,0 +1,44 @@
+[
+ {
+  "text": "So",
+  "startMs": 220,
+  "endMs": 440,
+  "timestampMs": 330,
+  "confidence": null
+ },
+ {
+  "text": " what",
+  "startMs": 620,
+  "endMs": 760,
+  "timestampMs": 690,
+  "confidence": null
+ },
+ {
+  "text": " does",
+  "startMs": 780,
+  "endMs": 940,
+  "timestampMs": 860,
+  "confidence": null
+ },
+ {
+  "text": " thirty",
+  "startMs": 940,
+  "endMs": 1430,
+  "timestampMs": 1185,
+  "confidence": null
+ },
+ {
+  "text": " dollars",
+  "startMs": 1430,
+  "endMs": 1920,
+  "timestampMs": 1675,
+  "confidence": null
+ },
+ {
+  "text": " buy?",
+  "startMs": 1920,
+  "endMs": 2220,
+  "timestampMs": 2070,
+  "confidence": null
+ }
+]

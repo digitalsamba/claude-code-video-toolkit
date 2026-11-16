@@ -1,0 +1,93 @@
+[
+ {
+  "text": "Claude",
+  "startMs": 80,
+  "endMs": 380,
+  "timestampMs": 230,
+  "confidence": null
+ },
+ {
+  "text": " Code",
+  "startMs": 460,
+  "endMs": 820,
+  "timestampMs": 640,
+  "confidence": null
+ },
+ {
+  "text": " checks",
+  "startMs": 1020,
+  "endMs": 1300,
+  "timestampMs": 1160,
+  "confidence": null
+ },
+ {
+  "text": " what's",
+  "startMs": 1340,
+  "endMs": 1540,
+  "timestampMs": 1440,
+  "confidence": null
+ },
+ {
+  "text": " installed,",
+  "startMs": 1580,
+  "endMs": 2220,
+  "timestampMs": 1900,
+  "confidence": null
+ },
+ {
+  "text": " logs",
+  "startMs": 2580,
+  "endMs": 2800,
+  "timestampMs": 2690,
+  "confidence": null
+ },
+ {
+  "text": " you",
+  "startMs": 2860,
+  "endMs": 2980,
+  "timestampMs": 2920,
+  "confidence": null
+ },
+ {
+  "text": " in,",
+  "startMs": 3060,
+  "endMs": 3220,
+  "timestampMs": 3140,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 3600,
+  "endMs": 3680,
+  "timestampMs": 3640,
+  "confidence": null
+ },
+ {
+  "text": " deploys",
+  "startMs": 3740,
+  "endMs": 4260,
+  "timestampMs": 4000,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 4300,
+  "endMs": 4400,
+  "timestampMs": 4350,
+  "confidence": null
+ },
+ {
+  "text": " toolkit's",
+  "startMs": 4440,
+  "endMs": 4980,
+  "timestampMs": 4710,
+  "confidence": null
+ },
+ {
+  "text": " apps.",
+  "startMs": 5100,
+  "endMs": 5460,
+  "timestampMs": 5280,
+  "confidence": null
+ }
+]
