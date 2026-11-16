@@ -50,8 +50,8 @@ export { PointingHand } from './PointingHand';
 export type { PointingHandProps } from './PointingHand';
 
 // Synthetic UI demos (see .claude/skills/synthetic-ui-demo/)
-export { Stage, cameraAt, typed } from './Stage';
-export type { StageProps, CameraKeyframe } from './Stage';
+export { Stage, cameraAt, typed, urlAt, followCamera } from './Stage';
+export type { StageProps, CameraKeyframe, StageUrl } from './Stage';
 
 export { Cursor, cursorAt, press, near } from './Cursor';
 export type { CursorProps, CursorPoint } from './Cursor';

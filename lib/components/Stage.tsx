@@ -10,6 +10,13 @@
  * (1 = the whole window, at `fit` of the frame width). The camera clamps so it never
  * shows past the window's edges. The cursor renders at zIndex 100 inside the canvas.
  *
+ * `url` can change inside a scene (a click that leads to another site): pass
+ * `[{ at: 0, url: 'example.com' }, { at: 96, url: 'app.example.com/call' }]`.
+ *
+ * In a narrow frame (a 9:16 Short) the whole window is too small to read. Put the Stage
+ * in a box (a positioned parent with `overflow: hidden`), give it the box's size as
+ * `viewWidth`/`viewHeight`, and let `followCamera(path, 3)` keep the cursor in view.
+ *
  * @example
  * ```tsx
  * import { Stage } from '../../../../lib/components';
@@ -55,6 +62,36 @@ export const cameraAt = (frame: number, keys: CameraKeyframe[]): CameraKeyframe 
 /** Text revealed one character per `perChar` frames from `start`, for typing into fields */
 export const typed = (frame: number, text: string, start: number, perChar = 3) =>
   text.slice(0, Math.max(0, Math.min(text.length, Math.floor((frame - start) / perChar) + 1)));
+
+/** The address bar's text: one address, or the address from each frame on. */
+export type StageUrl = string | { at: number; url: string }[];
+
+/** The address showing at a frame: the last entry whose `at` has come (the first one before that). */
+export const urlAt = (url: StageUrl, frame: number): string => {
+  if (typeof url === 'string') return url;
+  let shown = url[0]?.url ?? '';
+  for (const u of url) if (frame >= u.at) shown = u.url;
+  return shown;
+};
+
+/**
+ * A camera that keeps the cursor in view at one zoom, for a frame too narrow to show the whole window. It holds
+ * still while the cursor stays within `dead` canvas pixels of where the camera last settled (small moves inside a
+ * form don't swing the picture) and travels with the cursor when it goes further. `ahead` puts the cursor left of
+ * centre by that many canvas pixels, so what is typed or opens to its right is in the picture.
+ */
+export const followCamera = (
+  path: CursorPoint[],
+  z: number,
+  { dead = { x: 90, y: 70 }, ahead = 0 }: { dead?: { x: number; y: number }; ahead?: number } = {},
+): CameraKeyframe[] => {
+  if (!path.length) return [{ f: 0, z, x: 0, y: 0 }];
+  let at = { x: path[0].x + ahead, y: path[0].y };
+  return path.map((p) => {
+    if (Math.abs(p.x + ahead - at.x) > dead.x || Math.abs(p.y - at.y) > dead.y) at = { x: p.x + ahead, y: p.y };
+    return { f: p.f, z, x: at.x, y: at.y };
+  });
+};
 
 const clampCentre = (c: number, half: number, size: number) =>
   size <= half * 2 ? size / 2 : Math.min(Math.max(c, half), size - half);
@@ -102,8 +139,8 @@ const BrowserChrome: React.FC<{ url: string; height: number; fontFamily: string 
 };
 
 export interface StageProps {
-  /** Address bar text, e.g. "app.example.com/settings" (host shown darker than the path) */
-  url: string;
+  /** Address bar text, e.g. "app.example.com/settings" (host shown darker than the path), or the address from each frame on */
+  url: StageUrl;
   /** Camera keyframes in canvas pixels */
   camera: CameraKeyframe[];
   /** Cursor keyframes in canvas pixels; omit for no cursor */
@@ -133,6 +170,12 @@ export interface StageProps {
    * passes a hairline instead, e.g. `0 0 0 1px rgba(17,17,17,0.12)`.
    */
   windowShadow?: string;
+  /**
+   * The size of the area the stage is drawn in, when that is not the whole frame: a box in a 9:16 layout. The
+   * parent is that box (positioned, `overflow: hidden`); zoom 1 is then the window at `fit` of the box's width.
+   */
+  viewWidth?: number;
+  viewHeight?: number;
   children: React.ReactNode;
 }
 
@@ -152,10 +195,15 @@ export const Stage: React.FC<StageProps> = ({
   rippleColor,
   fadeIn = true,
   windowShadow = '0 30px 80px rgba(50,63,102,0.25), 0 0 0 1px rgba(50,63,102,0.08)',
+  viewWidth,
+  viewHeight,
   children,
 }) => {
   const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
+  const video = useVideoConfig();
+  const { fps } = video;
+  const width = viewWidth ?? video.width;
+  const height = viewHeight ?? video.height;
   const cam = cameraAt(frame, camera);
   const intro = fadeIn ? spring({ frame, fps, config: { damping: 200 }, durationInFrames: 14 }) : 1;
   const winH = canvasHeight + chromeHeight;
@@ -180,7 +228,7 @@ export const Stage: React.FC<StageProps> = ({
           boxShadow: windowShadow,
         }}
       >
-        {chromeHeight > 0 && <BrowserChrome url={url} height={chromeHeight} fontFamily={fontFamily} />}
+        {chromeHeight > 0 && <BrowserChrome url={urlAt(url, frame)} height={chromeHeight} fontFamily={fontFamily} />}
         <div style={{ position: 'relative', width: canvasWidth, height: canvasHeight, overflow: 'hidden' }}>
           {children}
           {cur && !hideCursor && (
