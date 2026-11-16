@@ -126,6 +126,24 @@ The toolkit's `lib/transitions` (`glitch`, `rgbSplit`, `lightLeak`, `pixelate`, 
 decorative. They fit when the content gives them a reason (a glitch on a "broken" problem scene, a light leak on
 a celebration), not as the seam between every pair of scenes.
 
+## Keeping an explainer watched
+
+A narrated explainer built as slides loses people even when every scene is tidy. What changed a flat cut into one
+its owner called a clear improvement (`templates/howto`, 2026-11):
+
+- **Open on the result, not the title.** The first 15 seconds show the real thing (a bill, an output, a number)
+  and leave a question open. The ident and the title come after it, and the title needs no spoken list of chapters.
+- **Give the video one world.** A device that carries from scene to scene (there, a question typed at a prompt
+  and the answer opening out of it) does more than a different transition per scene.
+- **Show the thing being counted.** A row that says "video clips" plays a clip beside it; "images" flicks through
+  real ones.
+- **An entrance per role.** A number lands large and settles, a title arrives word by word, a row slides in. One
+  entrance for everything reads as a template.
+- **Something to hear.** A tick on a row and a soft landing under a figure, well under the voice, and a bed
+  chosen by ear against the picture: the measured pick favours a calm bed, which can sound flat.
+- **Say every number from a source you measured.** A price quoted from an estimate was a quarter out
+  (`docs/modal-setup.md`, the note on the bill).
+
 ## Defaults that look generated
 
 Generated video falls into these when nothing has been decided. Treat each as **off by default**. Use one only

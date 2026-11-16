@@ -54,6 +54,11 @@ of the prompt as the answer. Without `ask` the card shows the chapter's title. A
 or bar being said and underlines the newest line under a figure, with no setup: it follows the cues the scene
 already has. A ledger's `hero` keeps a figure's number on screen into the next scene.
 
+In a Short the burned captions own a band low in the frame (their baseline is 330 px from the bottom). A scene
+draws nothing under `CAPTION_TOP` (`src/howto/scenes.tsx`) but its source note: a line placed lower is written
+over by the captions, and the horizontal render will not show it. After a change to a scene, look at a late frame
+of its Short as well as the episode's.
+
 - **A hook before the title.** `hook: { ask, scene }` in the episode plays a typed question and one scene before
   anything else, with no music: the most interesting thing the episode has to say (here, our real bill). The
   brand's ident and the title follow it, and the bed comes in with the title. Its narration is scene id `hook`.

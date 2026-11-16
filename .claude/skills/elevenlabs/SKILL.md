@@ -69,6 +69,11 @@ save(audio, "voiceover.mp3")
   spoken words, since captions are spelled from it. It can be measured before anyone listens: with the word times
   from `captions.py`, an American r pulls the third formant under about 2,200 Hz at the end of "dollars" or
   "card" in a woman's voice, and a British ending leaves it near 2,700 (Praat, `uv sync --extra prosody`).
+- **A pace direction slows a line a little.** v4 ignores speed, but `[crisp British English accent, measured and
+  unhurried]` at the start gave takes about 8% longer than the same line without "measured and unhurried" (four
+  takes of three lines). For an opening line, make three or four takes and let `pick_takes.py` choose. Its wpm
+  counts the words of the tag, so read the durations, and put the spoken words back in the `.txt` before
+  `captions.py`.
 - `eleven_v4_turbo` is the real-time variant, available only over the Text to Dialogue WebSocket. The toolkit doesn't use it, since offline renders don't benefit from low latency.
 
 ### Voice Settings by Style
