@@ -105,7 +105,7 @@ the hall lit only by its windows, the door opens and the corridor's light comes 
 in and press the light switch beside the door, and the ceiling lights come on in three banks from the board back,
 each with a fluorescent stutter and a clunk. Then they walk to their mark while the camera comes down the hall
 from the back and lands on the board camera's framing on the frame the walk ends. It cuts to the board, which
-looks the same, and the first word comes half a second later. About 8.6 s to the cut.
+looks the same, and the first word comes half a second later. 9 s to the cut.
 
 `"opening": {"lights": "on"}` is the hall lit from the start: the latch clicks on black, the hall holds still for
 a second, the door opens and the presenter walks in (about 7.8 s); its times are under `"lit"` in the defaults.
@@ -126,7 +126,8 @@ a second, the door opens and the presenter walks in (about 7.8 s); its times are
   hall's measure, `lens`), `hall` (the set's `hall` options: `windows`, `audience`, `colors`, `corridor`, `spill`,
   `board_dark`, ...), and `sounds` for the latch, the door, the footsteps, the switch, each bank's stutter and its
   clunk (CC0 recordings in `public/audio/sfx/`, laid on the room shot's own event frames).
-- It renders at 1920x1080, opaque: about 17 minutes on an Apple M4 for Mara (4.3 s a frame) (`render` says before it starts).
+- It renders at 1920x1080, opaque: about 14 minutes on an Apple M4 (258 frames at 3.0 to 3.2 s a frame, either
+  body) (`render` says before it starts).
 
 ## What is open
 

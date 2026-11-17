@@ -121,7 +121,7 @@
  "opening": {
   "note": "lecture.json \"opening\": {} (or any of these keys) opens the lecture on the whole hall: it fades in from black onto the hall in the dark, the presenter opens the door, steps in, switches the lights on (they come on in banks from the board back, each with a stutter) and walks to their mark while the camera comes down the hall and lands on the board camera's framing as the walk ends, then cuts to the board. \"lights\": \"on\" is the hall lit from the start (the latch clicks on black, then the door and one walk): its times are \"lit\", under the lecture's own keys. Times are seconds from black; places are in the hall's measure (metres for a presenter of 1.75 m).",
   "lights": "switch",
-  "seconds": 8.6,
+  "seconds": 9.0,
   "first_word": 0.5,
   "latch": null,
   "fade": [
@@ -130,18 +130,18 @@
   ],
   "door": 1.6,
   "step_in": [
-   2.4,
-   3.6
+   2.3,
+   4.0
   ],
   "switch_spot": "reach",
   "switch_facing": -90,
-  "switch": 4.0,
+  "switch": 4.4,
   "banks": 3,
   "stutter": true,
   "gap": 0.45,
   "walk": [
-   4.75,
-   8.1
+   5.15,
+   8.5
   ],
   "lit": {
    "latch": 0.45,
