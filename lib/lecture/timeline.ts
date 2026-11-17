@@ -28,8 +28,10 @@ export type BoardItem = {
   /** A tap of the chalk (a full stop, a tick). */
   tap?: boolean;
   /** A pane: a clean slate panel in a plain sans with a title and a source line, for something real (a picture,
-   * a code listing). Panes are what the camera goes into in a window. */
-  pane?: { x: number; y: number; w: number; h: number; title: string; source?: string; image?: string; code?: string; out?: At };
+   * a video, a code listing). Panes are what the camera goes into in a window. A `video` (public/) plays muted from
+   * the pane's `at`, `from` seconds in, and holds its last frame. */
+  pane?: { x: number; y: number; w: number; h: number; title: string; source?: string; image?: string; video?: string; from?: number;
+    code?: string; out?: At };
   /** One of the project's own drawings (src/custom.tsx), given `at` and these props. */
   component?: string;
   props?: Record<string, unknown>;
@@ -74,6 +76,8 @@ export type Timeline = {
   presenter?: { head_px: number[]; box_px: number[]; share: number; scale?: number | null };
   roomFrames?: number;
   opening?: { fadeFrom: number; fadeFrames: number };
+  /** Each pane video's length in frames (tools/lecture.py timeline reads it from the file). */
+  videos?: Record<string, number>;
 };
 
 /** What a lecture and its timeline give the board: frames of words, segment edges, the clips' spans. */

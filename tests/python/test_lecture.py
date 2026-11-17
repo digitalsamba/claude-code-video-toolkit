@@ -65,6 +65,23 @@ class LectureTests(unittest.TestCase):
         self.assertLess(w['from'], w['to'])
         self.assertEqual([m['s'] for m in tl['moves']], [1.4, 1])          # the camera goes in and comes back out
 
+    def test_a_panes_video_is_measured_from_its_file(self):
+        """A pane can play a video (public/): the timeline writes its length in frames, read from the file, so the
+        board holds its last frame without a typed length; a missing file is named before anything renders."""
+        clip = self.tmp / 'public' / 'clip.mp4'
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=64x36:r=30', '-t', '2.5',
+                        '-pix_fmt', 'yuv420p', str(clip)], check=True)
+        self.lec['segments'][1]['board'] = [{'at': 'look closer', 'pane': {'x': 60, 'y': 300, 'w': 800, 'h': 500,
+                                             'title': 'A clip', 'video': 'clip.mp4', 'out': 'and back'}}]
+        self.write()
+        tl = lecture.cmd_timeline(self.tmp, None)
+        self.assertEqual(tl['videos'], {'clip.mp4': 75})
+        self.lec['segments'][1]['board'][0]['pane']['video'] = 'gone.mp4'
+        self.write()
+        with self.assertRaises(SystemExit) as ctx:
+            lecture.cmd_timeline(self.tmp, None)
+        self.assertIn('gone.mp4', str(ctx.exception))
+
     def test_a_join_is_crossed_by_one_move_keyed_alike_in_both_clips(self):
         """The second clip starts inside the turn to its heading that the first one began: both clips hold the same
         beat at the same master frame, and the second has a lead-in shot it is not rendered from."""

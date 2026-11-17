@@ -3,7 +3,7 @@
 // lecture.json and timeline.json and gets the compositions back; it writes no code of its own, beyond any
 // drawing it wants that chalk lines and strokes cannot make (src/custom.tsx).
 import React from 'react';
-import { AbsoluteFill, Audio, Img, Loop, Sequence, interpolate, staticFile, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, Audio, Img, Loop, OffthreadVideo, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { loadFont } from '@remotion/google-fonts/Inter';
 import { Board, BoardDrawn } from './Board';
 import { Camera } from './Camera';
@@ -23,16 +23,28 @@ const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 
 /** A pane: a cleaner, darker slate in a plain sans, with a title and a source line, so something real never reads
  * as a sketch. A picture (public/), or a code listing set in a monospace. */
-const Pane: React.FC<{ item: NonNullable<BoardItem['pane']>; at: number; out?: number }> = ({ item, at, out }) => {
+const Pane: React.FC<{ item: NonNullable<BoardItem['pane']>; at: number; out?: number; videoFrames?: number }> = ({ item, at, out, videoFrames }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   if (frame < at || (out !== undefined && frame > out + 8)) return null;
   const o = interpolate(frame, [at, at + 10], [0, 1], clamp) * (out === undefined ? 1 : interpolate(frame, [out, out + 8], [1, 0], clamp));
-  const { x, y, w, h, title, source, image, code } = item;
+  const { x, y, w, h, title, source, image, video, code } = item;
+  const box = { position: 'absolute', left: 20, top: 56, width: w - 40, height: h - 106, objectFit: 'contain' } as const;
+  // a video plays once from the pane's start, `from` seconds in, then holds its last frame
+  const skip = Math.round((item.from ?? 0) * fps);
+  const last = Math.max(skip, (videoFrames ?? Infinity) - 1);
   return (
     <div data-qc="product" style={{ position: 'absolute', left: x, top: y, width: w, height: h, opacity: o, background: '#1b2422',
       border: '2px solid rgba(243,240,230,0.75)', borderRadius: 6, fontFamily: SANS, color: WHITE, overflow: 'hidden' }}>
       <div style={{ position: 'absolute', left: 20, top: 12, fontSize: 26, fontWeight: 600 }}>{title}</div>
-      {image ? <Img src={staticFile(image)} style={{ position: 'absolute', left: 20, top: 56, width: w - 40, height: h - 106, objectFit: 'contain' }} /> : null}
+      {image ? <Img src={staticFile(image)} style={box} /> : null}
+      {video ? (
+        // (placed so its own frame is the video's: plays from `at`, then holds the last frame. Not <Freeze>: under
+        // the board's nested sequences it showed a frame some 200 ahead of the one asked for)
+        <Sequence from={frame - Math.min(frame - at + skip, last)} layout="none">
+          <OffthreadVideo src={staticFile(video)} muted style={box} />
+        </Sequence>
+      ) : null}
       {code ? (
         <pre style={{ position: 'absolute', left: 20, top: 56, right: 20, margin: 0, fontFamily: 'Menlo, Consolas, monospace', fontSize: 26,
           lineHeight: 1.35, color: '#d9e0dc', whiteSpace: 'pre' }}>{code}</pre>
@@ -95,7 +107,8 @@ const SegmentBoard: React.FC<{ L: LectureTimeline; lecture: Lecture; n: number; 
 const SegmentPanes: React.FC<{ L: LectureTimeline; lecture: Lecture; n: number }> = ({ L, lecture, n }) => (
   <>
     {(lecture.segments[n].board ?? []).filter((i) => i.pane).map((item, k) => (
-      <Pane key={k} item={item.pane!} at={L.at(n, item.at)} out={item.pane!.out !== undefined ? L.at(n, item.pane!.out) : L.N(n) - 20} />
+      <Pane key={k} item={item.pane!} at={L.at(n, item.at)} out={item.pane!.out !== undefined ? L.at(n, item.pane!.out) : L.N(n) - 20}
+        videoFrames={item.pane!.video ? L.tl.videos?.[item.pane!.video] : undefined} />
     ))}
   </>
 );

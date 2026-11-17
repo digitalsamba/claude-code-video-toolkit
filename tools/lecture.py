@@ -210,6 +210,17 @@ def cmd_timeline(project: Path, args) -> dict:
             windows.append({"segment": seg["id"], "from": a + o["in_frames"], "to": b})
     tl["windows"] = windows
     tl["moves"] = sorted(moves, key=lambda m: m["at"])
+    videos = {}  # (a pane's video plays once and holds its last frame: its length, from the file)
+    for s in lec["segments"]:
+        for item in s.get("board", []):
+            v = (item.get("pane") or {}).get("video")
+            if v and v not in videos:
+                f = project / "public" / v
+                if not f.exists():
+                    raise LectureError(f'{s["id"]}: the pane\'s video {f} not found (a path under public/)')
+                videos[v] = math.floor(probe_seconds(f) * fps)
+    if videos:
+        tl["videos"] = videos
     for k in ("presenter",):  # (what `check` measured stays until it is measured again)
         if k in old:
             tl[k] = old[k]

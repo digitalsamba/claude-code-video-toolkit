@@ -71,7 +71,9 @@ frame (the chalk, the windows, the acting) is looked up from the captions, so no
 - **Board items**: `chalk` (lettering written from x, y: sizes `xl l m s xs`, `color` white or yellow, `weight`,
   `tilt`), `stroke` (`line` and `arrow` take x1 y1 x2 y2, `box` x y w h, `ring` cx cy rx ry, `tick` and `cross` x y
   size, `under` x y text-size width, or `path` with `d`), `tap`, `pane` (a clean panel for something real: an
-  `image` from public/ or a `code` listing, with a `title` and a `source` line), and `component` for a drawing of
+  `image` or a `video` from public/, or a `code` listing, with a `title` and a `source` line; a video plays muted
+  from the pane's `at`, `"from"` seconds in, and holds its last frame, its length read from the file by
+  `timeline`), and `component` for a drawing of
   your own in `src/custom.tsx`. Board pixels are 1920x1080. Keep chalk left of x 1250: the presenter stands right.
 - **Windows**: the camera goes into the board (1.4x on the left part, by default) from `in` to `out`; the
   presenter is out of shot, so they are shown in an inset at the bottom right. Keep a window's content left of
