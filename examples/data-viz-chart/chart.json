@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "type": "line",
+  "dataset": "data/star_series.json",
+  "seriesName": "Stars",
+  "title": "github.com/digitalsamba/claude-code-video-toolkit",
+  "unit": "Stars",
+  "source": "Source: GitHub Stars API",
+  "headline": "718 stars",
+  "durationSeconds": 15,
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "headlineStartSeconds": 10,
+  "headlineFadeSeconds": 0.5
+}

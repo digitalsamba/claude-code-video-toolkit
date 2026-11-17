@@ -1173,6 +1173,23 @@
       "created": "2026-10-31",
       "updated": "2026-11-06"
     },
+    "data_video": {
+      "path": "tools/data_video.py",
+      "description": "Shared Matplotlib and MoviePy/Pillow chart renderer used by examples/data-viz-chart; calendar-spaced lines, labelled bar periods, one brand data accent, timed author-written headlines and dataset provenance",
+      "usage": "uv run tools/data_video.py --spec chart.json --brand digital-samba --output chart.mp4 [--narration narration.wav] [--dry-run]",
+      "status": "beta",
+      "created": "2026-10-31",
+      "category": "utility",
+      "updated": "2026-11-11",
+      "options": {
+        "brand": "Load colours and font families from brands/<name>/brand.json; default default",
+        "spec": "CSV/JSON chart spec with type, dataset, title, source, headline and dimensions; dataset paths relative to spec",
+        "headlineStartSeconds": "Spec field: author-written headline reveal time, default 0",
+        "headlineFadeSeconds": "Spec field: headline fade duration, default 0.5; 0 reveals immediately",
+        "narration": "Author-provided audio sets duration; headline timing must fit",
+        "dry-run": "Validate and print report without writing outputs"
+      }
+    },
     "blender_render": {
       "path": "tools/blender_render.py",
       "description": "Shot spec in, Blender film or clips out: builds a 3D scene from a JSON spec (a rigged cartoon cast described as build, face, hair, clothes and a seed; a desk set, or a studio stage with a phone, a card, an imported model or a logo built from an SVG whose parts beats can move (turn, shear, grow, press, glow, flash, hit) for an ident; shots by type; acting beats in seconds or on narration words), checks every camera by geometry (subject in frame, nothing blocking, a moving lens clear of the cast) with a solver that moves failing cameras, writes a labelled contact sheet, then renders the film with sound placed on the keyed motion, or one clip per shot (MP4, or transparent WebM if asked) with a clips.json manifest, for Remotion's BlenderClip, a moviepy build, a video job's file scene or an editor. For a logo it also tests the frame an ident ends on against the flat SVG (parts in place, colours within 10 Delta E) and each hit against the rendered clip (the sound's frame is the picture's biggest change)",
