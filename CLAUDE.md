@@ -105,27 +105,9 @@ Reusable Remotion components live in `lib/components/` and the registry lists th
 release-notes video, prefer a synthetic UI demo (`Stage` and `Cursor`, screens rebuilt from the app's source) to a
 Playwright recording when the source is readable. Inside Remotion, draw charts with `LineChart` and `BarChart`
 instead of embedding a Matplotlib MP4. `Stage`, `Cursor`, `Terminal`, `TerminalSession`, the data charts and `cue()`
-are described in `.claude/skills/remotion/components.md`.
-
-### Python data charts
-
-`examples/data-viz-chart/build.py` and `tools/data_video.py` share one renderer for CSV/JSON line
-and bar charts. Matplotlib draws the data; Pillow text is overlaid in MoviePy for the author's
-title, source and headline. `--brand` supplies colours and fonts from `brands/<name>/brand.json`.
-
-```bash
-uv run examples/data-viz-chart/build.py --spec chart.json --brand digital-samba --output out/chart.mp4
-```
-
-Specs name `dataset` relative to the spec, `type: "line" | "bar"`, and optional `title`, `source`,
-`headline`, `headlineStartSeconds` (default 0), `headlineFadeSeconds` (default 0.5), `unit`,
-`width`, `height`, `fps`, `durationSeconds`. The headline timing must fit the final duration.
-Rows use `period`, `series`, `value`, or an explicit `columns` mapping. Dated line periods use
-calendar spacing and month labels; categorical periods keep equal spacing. Bars show their
-current period or transition. Bars and the first line use the brand primary, with other lines
-in one neutral. A single line has no legend. `--narration` uses author-provided audio and sets duration;
-the tool never derives narration from data. `--save-report` records dataset/brand hashes and any
-font fallback. Reruns replace completed outputs; `--dry-run` validates without writes.
+are described in `.claude/skills/remotion/components.md`. Without Node, `tools/data_video.py` renders a line or bar
+chart video from a CSV or JSON spec in a brand's colours (Matplotlib and moviepy); the spec format is in
+`examples/data-viz-chart/README.md`.
 
 ## Python Tools
 
