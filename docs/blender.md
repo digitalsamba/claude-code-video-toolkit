@@ -300,6 +300,14 @@ the hall as before. 9 s to the cut. In a spec it is the set's `"lights": "off"` 
   states, 20 to 40 levels from frame to frame (the far still points caught it; it was seen first as noise from
   the bright doorway, and switching the bounce light to ambient occlusion did not clear it on the second body).
   A drawn hall that starts dark sets the pool to 1024 MB, which clears both bodies.
+- **Finding a flicker's cause.** Re-render only the flagged frames from the render's own `scene.blend` with one
+  setting changed at a time (`blender -b out/<shot>/scene.blend --python ...`, a few minutes each) and read the
+  same still points: guessing pointed the wrong way once here. A level that flips between two fixed values
+  (113, 90, 113) is a shadow popping (the shadow pool); a level that wanders is noise (EEVEE's screen-space
+  bounce light: ray tracing off steadies it). Frames in Blender count from 1 and in a video from 0: Blender's
+  frame 133 is the video's frame 132.
+- **A place worked out while the set is built** reads an object's `.location`: its world matrix is not updated
+  until the view layer is, and a spot taken from it put the walk at the room's middle, 1.9 m off.
 - **Orla's hand** was 2 cm short of the handle from the lit opening's start (0.33 m behind the door); the dark
   opening starts them at 0.30.
 

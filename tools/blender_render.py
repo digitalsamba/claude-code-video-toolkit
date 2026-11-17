@@ -383,7 +383,10 @@ def flicker(out: Path, videos: dict, size: tuple[int, int]) -> list[dict]:
     found = []
     for sid, (video, first) in videos.items():
         shot = points["shots"].get(sid)
-        if not shot or not Path(video).exists():
+        if not shot:
+            continue
+        if not Path(video).exists():  # (said, not skipped quietly: an empty result here read as a clean render)
+            print(f"  not read for flicker: {sid}'s video {video} does not exist")
             continue
         f0, f1 = shot["frames"]
         by_frame = {}
