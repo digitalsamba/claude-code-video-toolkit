@@ -254,8 +254,47 @@ walk ends, then cuts to the board. What it took:
   pane now runs on under its frame, inside its depth.
 - The lecture's hidden table (only there for the close) stood on the walk's path, and the body went 3 cm into
   it: with an opening and no close, the clips have no table (`"table": false`).
-- The latch clicks on black, before the picture: the handle goes down behind the shut door (`open_door`'s
-  `latch`) and the event is keyed on it; the door swings once the hall has been still for a second.
+- With the hall lit from the start (`"lights": "on"` in the opening), the latch clicks on black, before the
+  picture: the handle goes down behind the shut door (`open_door`'s `latch`) and the event is keyed on it; the
+  door swings once the hall has been still for a second.
+
+#### The hall in the dark
+
+The opening's default since 2026-11-17: the hall fades in dark, lit by its windows; the door opens onto the
+presenter in silhouette; they step in, press the switch beside the door, and the ceiling lights come on in three
+banks from the board back, each with a fluorescent stutter; then the walk to the mark, the camera coming down
+the hall as before. About 8.6 s to the cut. In a spec it is the set's `"lights": "off"` and a `lights` beat
+(the `blender` skill has the options). What it took:
+
+- **Lights that change are events.** `kit.Lamps` holds a set's lights (their energy) and glowing materials
+  (their strength) in banks; a `lights` beat keys each bank off, through its stutter, to full, as steps (a tube is
+  on or off). Each bank's start and hold are events (`lamp_stutter`, `lamp_on`) and the switch is one
+  (`switch`), so sounds go on those frames. The hall is split into banks only when it starts dark, so a hall lit
+  from the start builds as it did, and the lecture writes the same specs as before with `"lights": "on"`.
+- **The dark has to read.** The window light (light-linked to the hall) stays on; the presenter's own lights come
+  on with the front bank, more than three seconds before the cut, so the match cut is unchanged. A picture on
+  the board glows by itself, so in the dark it is held at 6% (`hall.board_dark`). A check's still is taken once
+  the lights hold: on a frame mid-stutter the hall measured 0.06 against the 0.08 floor.
+- **Where to stand to press it.** On the door's line the switch was 11 to 16 cm out of reach on every body; a
+  fixed spot in front of it put the shoulder 18 cm from it, and the arm could not fold back onto it. A press
+  reads with the arm as straight as a point, and arm length against height differs from body to body, so
+  `{"switch": "reach"}` is worked out from the walker's own arm: side-on to the wall, a step toward the door
+  from the switch (so from the back of the hall they stand in front of the bright doorway, in silhouette).
+- **A press is a point that arrives**, not a handle. With the door's grip the hand turned on the forearm and
+  stretched the cuff 4.6 to 7.2 times; as a point (`touch`), the cuff stayed at 2.6 to 3.5 on all four bodies.
+  The pointing index sits about 14 degrees off the hand's own line, so the hand aims along the line from the
+  shoulder and the wrist is moved by what the fingertip missed: aimed from the wrist, each correction turned
+  the hand again and the tip stayed 7 cm off.
+- **Two walks, not one.** In at the door with one bend to the switch, then a walk to the mark. The stop works
+  where it failed before because the second walk's bend is small: arriving at heading -80 left a 72-degree turn
+  on the spot in about a second, and a hand brushed the body on Mara and Nell; at -50 all four pass. The second
+  walk sets off after the pressing hand is home (0.6 s after the press). The camera sets off with the last walk
+  (`"start": "last_walk"`), so it holds the whole hall as its lights come on.
+- **The doorway.** The corridor light is six times brighter in a dark hall, and a warm panel in the opening
+  (`hall.spill`) comes up as the door opens, so the floor inside the door catches the light. At 250 W it
+  blew out the open leaf and lit the presenter's front in the doorway by bounce; 120 keeps the silhouette.
+- **Orla's hand** was 2 cm short of the handle from the lit opening's start (0.33 m behind the door); the dark
+  opening starts them at 0.30.
 
 ### The cuff on gestures and points
 
@@ -346,6 +385,11 @@ place in the frame, between pixels. Read at the nearest whole pixel, a slow push
 on it stepped the reading a pixel at a time across the letters, and the lecture hall's board was reported as
 flickering on 104 frames with nothing to see; a surface with a picture on it is now read as smoothly as a
 plain one, and two faces in one plane are caught as before.
+
+Lights coming on are a jump that comes back: exactly what the render check looks for. The frames where a `lights`
+beat changes the light are written beside the still points (`light_changes`), and only those frames, with one
+either side, are not read; `render_checks.json` lists them under `not_read`. Everywhere else a stutter still
+fails, and a fight between two faces beside them is still caught (`tests/python/test_blender_spec.py`).
 
 ### A character from a generated 3D model (experimental)
 

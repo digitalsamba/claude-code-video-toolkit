@@ -798,6 +798,9 @@ class ClayPerson:
         """The point of hand `s` that goes on a thing, in the world, now: the knuckles, or for a hand with
         fingers that is taking hold of a bar, the crook of its fingers."""
         bone = self.rig.pose.bones["hand." + ("L" if s > 0 else "R")]
+        if self.holding[s] == "index" and self.fingers.get(s):  # (the tip of the index finger: a pressed switch)
+            sd = "L" if s > 0 else "R"
+            return self.rig.matrix_world @ self.rig.pose.bones[f"{self.fingers[s][1]['name']}.b.{sd}"].tail
         if self.holding[s] == "tips" and self.fingers.get(s):  # (the pads of the four fingers: a lid's edge)
             sd = "L" if s > 0 else "R"
             tips = [self.rig.pose.bones[f"{f['name']}.b.{sd}"].tail for f in self.fingers[s][1:]]
@@ -1972,7 +1975,7 @@ class ClayPerson:
         self.holding[s] = False
         self.touches.append({"frame": f, "m": (tip - Vector(point(f))).length, "hand": "left" if s > 0 else "right",
                              "what": what})
-        if held and self.fingers.get(s):
+        if held is True and self.fingers.get(s):
             self.grips.append({"frame": f, "open": round(self.grip_open(s, point(f)), 2),
                                "hand": "left" if s > 0 else "right", "what": what})
 
@@ -3226,11 +3229,30 @@ class ClayPerson:
 
     POINT_REACH = 0.92  # how straight a pointing arm is: the wrist this share of the arm's length from the shoulder
 
-    def point(self, f0: int, f1: int, target, hand: str | None = None, back: bool = True):
+    def press_reach(self, hand: str, point, along: float = 0.0) -> float:
+        """How far from a point on a wall (m, along the floor) the middle of someone standing side-on to it, that
+        hand's shoulder to the wall and `along` metres short of it along the wall, is when they press it with the
+        arm as straight as a point (`point` with `touch`): nearer, the elbow bends and the forearm leaves the line,
+        and the hand can't bend back to it."""
+        s = 1 if hand == "left" else -1
+        bpy.context.view_layer.update()
+        mw = self.spine.matrix_world
+        sh = mw @ Vector(self.SH[s])
+        across = (sh - mw @ Vector((0.0, self.SH[s].y, self.SH[s].z))).length
+        tip = self.hand_len + (self.fingers[s][1]["length"] if self.fingers.get(s) else 0.0)
+        reach = self.POINT_REACH * 0.7122 * self.arm + tip
+        return across + math.sqrt(max(0.0, reach * reach - (Vector(point).z - sh.z) ** 2 - along * along))
+
+    def point(self, f0: int, f1: int, target, hand: str | None = None, back: bool = True, touch: str | None = None):
         """Point at something in the room: the arm lifts nearly straight towards it from the shoulder (a raised
         arm reads from across a room; a pointing hand at the side does not), the index finger out along the
         line, thumb up, held to f1 and then, unless `back` is False, back where it was. With no `hand`, the one
-        on the side the target is on (an arm pointing across the chest folds against it)."""
+        on the side the target is on (an arm pointing across the chest folds against it).
+
+        With `touch` (what the thing is called, "light switch") the fingertip arrives on the target, in about
+        0.4 s from f0, and presses it: the wrist stops short of it by the pointing hand's own length, so the
+        hand keeps the point's line and its turn on the forearm (the cuff). Raises if it is out of reach, or so
+        near the shoulder that the arm would have to fold back on itself."""
         sc = bpy.context.scene
         sc.frame_set(f0)
         bpy.context.view_layer.update()
@@ -3247,7 +3269,7 @@ class ClayPerson:
             self.pole_t[side].keyframe_insert("location", frame=f0)
         if was_q is not None:
             bone.keyframe_insert("rotation_quaternion", frame=f0)
-        up = f0 + max(2, min(n(10), (f1 - f0) // 2))  # (an arm comes up in about 0.4 s)
+        up = f0 + (n(10) if touch else max(2, min(n(10), (f1 - f0) // 2)))  # (an arm comes up in about 0.4 s)
         sc.frame_set(up)
         bpy.context.view_layer.update()
         local = self.spine.matrix_world.inverted() @ Vector(target)
@@ -3256,10 +3278,24 @@ class ClayPerson:
             raise ValueError(f"{self.id} can't point at their own shoulder")
         wrist = Vector(self.SH[s]) + way.normalized() * self.POINT_REACH * 0.7122 * self.arm
         toward = Vector(target)
+        if touch:  # (the wrist a pointing hand's length short of the target, along the line from the shoulder)
+            tip = self.hand_len + (self.fingers[s][1]["length"] if self.fingers.get(s) else 0.0)
+            reach = way.length - tip
+            if reach > self.POINT_REACH * 0.7122 * self.arm:
+                raise ValueError(f"{self.id}'s {hand} hand is {reach - self.POINT_REACH * 0.7122 * self.arm:.2f} m short "
+                                 f"of the {touch}: stand them closer to it")
+            if reach < 0.45 * 0.7122 * self.arm:
+                raise ValueError(f"{self.id} stands too close to the {touch} to reach it with a finger (the arm would "
+                                 f"fold back on itself): stand them further from it")
+            wrist = Vector(self.SH[s]) + way.normalized() * reach
+
+        fixed = (self.spine.matrix_world @ Vector(self.SH[s]), ) if touch else None
 
         def aim(f):  # (the index along the line from the wrist to the target, the palm to the body's middle)
             at = self.rig.matrix_world @ self.rig.pose.bones["hand." + sd].head
-            line = (toward - at).normalized()
+            # (a press keeps the line from the shoulder: moving the wrist to put the fingertip on the target then
+            # moves only the fingertip, which sits off the hand's own line, and does not turn the hand again)
+            line = (toward - (fixed[0] if fixed else at)).normalized()
             inward = self.root.matrix_world.to_3x3() @ Vector((-s, 0, 0))
             palm = inward - line * inward.dot(line)
             return palm.normalized() if palm.length > 1e-3 else Vector((0, 0, -1)), line
@@ -3268,6 +3304,24 @@ class ClayPerson:
         self.arm_pose = "point"
         for f in (up, f1):
             self._arm_key(s, f, wrist, self._mirror((1, 0.4, -1), s), aim if self.fingers.get(s) else None, free=True)
+        if touch:  # (the fingertip, or a mitten's knuckles, onto the target: the wrist moved by what it missed)
+            self.holding[s] = "index"
+            inv = self.spine.matrix_world.inverted().to_3x3()
+            for _ in range(12):
+                sc.frame_set(up)
+                bpy.context.view_layer.update()
+                miss = inv @ (toward - self._hold_point(s))
+                if miss.length < 0.003:
+                    break
+                arm = wrist + miss - Vector(self.SH[s])  # (never past the arm's reach)
+                wrist = Vector(self.SH[s]) + arm * min(1.0, 0.985 * 0.7122 * self.arm / max(arm.length, 1e-6))
+                for f in (up, f1):
+                    self._arm_key(s, f, wrist, self._mirror((1, 0.4, -1), s), aim if self.fingers.get(s) else None,
+                                  free=True)
+            self.holding[s] = False
+        if touch:
+            self._touched(s, up, lambda f: toward, touch, held="index")
+            self._touched(s, f1, lambda f: toward, touch, held="index")
         sc.frame_set(up)  # (how true the aim is: the arm, shoulder to knuckles, against the line to the target)
         bpy.context.view_layer.update()
         mw = self.rig.matrix_world

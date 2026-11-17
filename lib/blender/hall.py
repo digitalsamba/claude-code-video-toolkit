@@ -22,7 +22,7 @@ import bmesh
 import bpy
 from mathutils import Vector
 
-from kit import R, area_light, box, color, cyl, empty, glow, mat, media, mesh_obj, quad
+from kit import R, Lamps, area_light, box, color, cyl, empty, glow, key, link, mat, media, mesh_obj, n, quad
 from sets import DeskRoom
 
 D = bpy.data
@@ -44,7 +44,7 @@ BOARD = {"x0": -2.3, "x1": 1.7, "z0": 0.55, "z1": 2.8}  # the board for a presen
 # and the lights. Every number is an option of the set.
 HALL = {"depth": 17.0, "width": 10.6, "height": 6.8, "seats": "benches",
         "rows": {"from": 4.6, "pitch": 0.95, "rise": 0.13, "aisle": 2.6},
-        "windows": "left", "lights": True, "audience": 0, "seed": 7,
+        "windows": "left", "lights": True, "audience": 0, "seed": 7, "corridor": 6.0, "spill": 120.0, "board_dark": 0.06,
         "colors": {"seat": "#7A3B34", "bench": "#8A6444", "rake": "#5E4636", "ceiling": "#E4DDCC", "panel": "#9C7A57",
                    "sky": "#CFE0F2", "lamp": "#FFF1D6"}}
 
@@ -87,8 +87,14 @@ def board_floor(rect: dict, scale: float, u, out) -> list:
 class LectureHall(DeskRoom):
     def __init__(self, palette: dict | None = None, walls: bool = True, door: dict | None = None,
                  board: dict | None = None, image=None, strength: float = 1.0, table: dict | None = None,
-                 scale: float = 1.0, hall: dict | None = None):
+                 scale: float = 1.0, hall: dict | None = None, lights: str = "on"):
         self.door_cfg, self.door, self.handle = door, None, None
+        # "off": the hall starts dark, lit by its windows and the corridor, until a `lights` beat switches it on
+        # (the ceiling lights and the hall's own fill in banks front to back, the presenter's lights with the
+        # front bank). Built split into banks only then, so a hall that is lit from the start is as it was.
+        self.dark = lights == "off"
+        self.lamps = Lamps()
+        self.switch = None
         self.chair, self.desk_y, self.desk_z, self.chair_z = None, 0.0, 0.0, 0.0
         p = {"wall": "#CFC6B2", "wall2": "#BDB29C", "floor": "#6E5540", "desk": "#8A6444", "board": "#2F4A3C",
              "trim": "#5B3F2A", **(palette or {})}
@@ -162,9 +168,23 @@ class LectureHall(DeskRoom):
                 ob.scale, ob.hide_render = (0, 0, 0), True
         # (the lights stand where they would for a lecturer, as far from the presenter for any size, as bright)
         aim = empty("aim", None, (1.0 * k, 2.0, 1.3 * k))
-        area_light("key", (-1.6 * k, -1.6 * k, 3.3 * k), 230 * k * k, 2.5 * k, (1, 0.93, 0.85), aim)
-        area_light("fill", (3.4 * k, -0.6 * k, 2.0 * k), 70 * k * k, 3 * k, (0.8, 0.88, 1.0), aim)
+        key_l = area_light("key", (-1.6 * k, -1.6 * k, 3.3 * k), 230 * k * k, 2.5 * k, (1, 0.93, 0.85), aim)
+        fill = area_light("fill", (3.4 * k, -0.6 * k, 2.0 * k), 70 * k * k, 3 * k, (0.8, 0.88, 1.0), aim)
         top = area_light("top", (0.6 * k, 2.2, 3.7 * k), 90 * k * k, 2.0 * k, (1, 0.95, 0.88), aim)
+        if self.dark:  # (the presenter's lights are the front bank's: on well before a walk to the board ends)
+            for o in (key_l, fill, top):
+                self.lamps.add(0, o)
+            face = getattr(self, "board_face", None)
+            if face is not None and face.active_material and face.active_material.name.startswith("board_picture"):
+                # (a picture on the board shines by itself: in the dark it is as faint as a board by a window)
+                self.lamps.add(0, face.active_material, dark=float((self.hall or {}).get("board_dark", HALL["board_dark"])))
+            if self.door_cfg:
+                self._switch()
+                self._spill()
+                corridor = D.objects.get("hall_light")
+                if corridor:  # (the corridor, the one light in a dark hall, throws the doorway across the floor)
+                    corridor.data.energy *= float((self.hall or {}).get("corridor", HALL["corridor"]))
+            self.lamps.off(1)
         if self.hall:  # (a dressed hall shows the wall over the board, where this light, close to it, makes a hot spot)
             wall = D.collections.new("top_light_skips")
             for ob in D.objects:
@@ -299,14 +319,22 @@ class LectureHall(DeskRoom):
         if slats:
             lit += [boxes("wall_panels", backs, mat("panel_back", "#3E3128", 0.8)), boxes("wall_slats", slats, m["panel"], 0.006 * k)]
         # rows of lights in the ceiling
+        rows_at = []  # how far out each row of ceiling lights is
         if h["lights"]:
             panels = []
             d = 2.2
             while d < depth - 0.8:
+                rows_at.append(d)
                 for x in (-3.2, 0.0, 3.2):
                     panels.append(((1.5 * k, 0.55 * k, 0.04), (cx + x * k, Y(d), H - 0.025)))
                 d += 2.6
-            boxes("ceiling_lights", panels, m["lamp"])
+            if not self.dark:
+                boxes("ceiling_lights", panels, m["lamp"])
+            else:  # (a row to a bank, each its own glow, a diffuser that reads pale under the windows when off)
+                for i in range(len(rows_at)):
+                    lamp = mat(f"lamp_row{i}", "#BDB8AE", 0.6, emit=1.6 * glow_k, emit_color=col["lamp"])
+                    boxes("ceiling_lights", panels[3 * i:3 * i + 3], lamp)
+                    self.lamps.add(1 + i, lamp)
         # a clock over the door
         if self.door_cfg:
             dx, top = self.door_cfg["x"], self.door_cfg["height"]
@@ -322,8 +350,17 @@ class LectureHall(DeskRoom):
         recv = D.collections.new("hall_lit")
         for ob in lit:
             recv.objects.link(ob)
-        aim = empty("hall_light_aim", None, (cx, Y(depth * 0.55), 0))
-        fills = [area_light("hall_fill", (cx, Y(depth * 0.55), H - 0.3), 900 * k * k, depth * 0.6 * k, (1, 0.95, 0.88), aim)]
+        if not self.dark or not rows_at:
+            aim = empty("hall_light_aim", None, (cx, Y(depth * 0.55), 0))
+            fills = [area_light("hall_fill", (cx, Y(depth * 0.55), H - 0.3), 900 * k * k, depth * 0.6 * k, (1, 0.95, 0.88), aim)]
+        else:  # (the same light in a strip under each row, so the hall lights up as its rows come on)
+            fills = []
+            for i, d in enumerate(rows_at):
+                o = area_light("hall_fill", (cx, Y(d), H - 0.3), 900 * k * k / len(rows_at), 2.6 * k, (1, 0.95, 0.88),
+                               empty("hall_light_aim", None, (cx, Y(d), 0)))
+                o.data.shape, o.data.size, o.data.size_y = "RECTANGLE", 2 * hw * 0.9, 2.6 * k
+                fills.append(o)
+                self.lamps.add(1 + i, o)
         for side in sides:
             win_aim = empty("window_light_aim", None, (cx - side * hw, Y(depth * 0.55), 0))
             fills.append(area_light("window_light", (cx + side * (hw - 0.3), Y(depth * 0.55), 4.6 * k), 700 * k * k,
@@ -331,6 +368,88 @@ class LectureHall(DeskRoom):
         for f in fills:
             f.light_linking.receiver_collection = recv
         self.hall_objects = lit
+
+    # ------------------------------------------------------------ the light switch and the lights coming on
+    def _switch(self):
+        """A switch plate on the wall beside the door, on the side away from its hinge (where a hand coming in
+        finds it), at the height of a hand reaching out: the door handle's (sized for the presenter) and a
+        little more. Named door_* so a room that is not drawn keeps it to be reached and does not draw it."""
+        d, k = self.door_cfg, self.scale
+        side = 1 if d["x"] > 0 else -1
+        x = d["x"] - side * (d["width"] / 2 + 0.07 + 0.09 * k)
+        z = d["handle"] + 0.2 * k
+        plate = mat("switch_plate", "#ECE8DE", 0.4)
+        self.switch = empty("door_switch", None, (x, WALL_Y, z))
+        box("door_switch_plate", (0.085 * k, 0.012, 0.12 * k), plate, self.switch, (0, -0.006, 0), bevel=0.003)
+        self.rocker = empty("door_switch_pivot", self.switch, (0, -0.013, 0))
+        box("door_switch_rocker", (0.03 * k, 0.012, 0.05 * k), plate, self.rocker, (0, -0.004, 0), bevel=0.002)
+        self.rocker.rotation_euler = (R(-9), 0, 0)  # (off: the top of the rocker in)
+
+    SWITCH_ALONG = 0.25  # where someone stands to press the switch: this far from it toward the door (hall measure)
+
+    def switch_floor(self, out: float, along: float = 0.0) -> list:
+        """A spot on the floor in front of the switch, `out` metres into the room and `along` metres from it
+        toward the door (both the hall's measure)."""
+        if self.switch is None:
+            raise ValueError('this hall has no light switch: a lecture_hall with a "door" and "lights": "off" has one')
+        toward = 1 if self.door_cfg["x"] > self.switch.location.x else -1
+        # (the plate hangs on nothing: its own place is where it is)
+        return [self.switch.location.x + toward * along * self.scale, WALL_Y - out * self.scale]
+
+    def _spill(self):
+        """The corridor's light through the open doorway: a warm panel the size of the opening, facing into the
+        room, off while the door is shut and up as it opens (open_door keys it), so the floor inside the door,
+        the jamb and whoever stands in front of it catch the light. Hidden with the room when it is not drawn."""
+        d, k = self.door_cfg, self.scale
+        light = D.lights.new("door_spill", "AREA")
+        light.shape, light.size, light.size_y = "RECTANGLE", d["width"] * 0.9, d["height"] * 0.8
+        light.energy, light.color = float((self.hall or {}).get("spill", HALL["spill"])) * k * k, (1, 0.86, 0.7)
+        self.spill = link(D.objects.new("door_spill", light))
+        self.spill.location = (d["x"], WALL_Y + 0.07, d["height"] * 0.55)
+        self.spill.constraints.new("TRACK_TO").target = empty("door_spill_aim", None, (d["x"], WALL_Y - 3.0 * k, 0.0))
+        self.spill_full = light.energy
+        light.energy = 0.0
+        if not self.walls:
+            self.spill.hide_render = True
+
+    def open_door(self, f0: int, f1: int, angle: float = 100.0, latch: int | None = None):
+        super().open_door(f0, f1, angle, latch)
+        spill = getattr(self, "spill", None)
+        if spill is not None:  # (the light through the doorway widens with the gap: a smooth change, not a step)
+            spill.data.keyframe_insert("energy", frame=f0)
+            spill.data.energy = self.spill_full if angle else 0.0
+            spill.data.keyframe_insert("energy", frame=f0 + max(1, (f1 - f0) // 2))
+
+    def switch_point(self) -> Vector:
+        """Where a fingertip presses the switch: on the rocker's face, off the wall by the plate and the rocker."""
+        if self.switch is None:
+            raise ValueError('this hall has no light switch: a lecture_hall with a "door" and "lights": "off" has one')
+        return self.switch.location + Vector((0, -0.028, 0))
+
+    def lights(self, f: int, banks: int = 3, stutter: bool = True, gap: float = 11, pressed: bool = True) -> int:
+        """The lights come on: the switch clicks on frame f (when someone presses it), and the rows of ceiling
+        lights with the hall's fill under them come on in `banks` groups front to back, `gap` frames (at 24 fps)
+        apart, the presenter's lights with the first; with `stutter` each group flashes first. Events: "switch",
+        and for each group "lamp_stutter" as it starts and "lamp_on" as it holds full. Returns the frame the
+        last group holds full from."""
+        if not self.dark:
+            raise ValueError('the lights are on already: give the set "lights": "off" for a hall that starts dark')
+        if pressed and self.switch is not None:
+            key(self.rocker, "rotation_euler", f - 1, (R(-9), 0, 0))
+            key(self.rocker, "rotation_euler", f, (R(9), 0, 0))
+            self.events.append({"frame": f, "kind": "switch"})
+        rows = len(self.lamps.banks) - 1
+        banks = max(1, min(int(banks), rows)) if rows else 1
+        last = f
+        for g in range(banks):
+            at = f + n(5) + n(gap * g)
+            members = ([0] if g == 0 else []) + [1 + r for r in range(rows) if r * banks // rows == g]
+            held = max(self.lamps.on(b, at, stutter, seed=g) for b in members)
+            if stutter:
+                self.events.append({"frame": at, "kind": "lamp_stutter", "bank": g, "of": banks})
+            self.events.append({"frame": held, "kind": "lamp_on", "bank": g, "of": banks})
+            last = max(last, held)
+        return last
 
     def _board(self, image, strength):
         """The board: the picture on a panel just off the wall, facing the room, and a wooden frame round it

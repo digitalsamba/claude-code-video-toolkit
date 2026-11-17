@@ -372,8 +372,13 @@ def flicker(out: Path, videos: dict, size: tuple[int, int]) -> list[dict]:
     The level is read at the point's exact place, not the nearest pixel's, so a surface with a picture on it
     (a board with writing) under a moving camera is not misread.
     `videos` maps a shot id to (file, the frame number of its first frame). Returns one finding per object and
-    shot: {"object", "shot", "frames", "worst", "at"}."""
+    shot: {"object", "shot", "frames", "worst", "at"}.
+
+    Lights that change on purpose (a `lights` beat: banks coming on, a tube's stutter) are listed with their frames
+    in still_points.json ("light_changes"), and only those frames are left out, with one frame either side: a
+    stutter is a jump that comes back, exactly what this looks for, everywhere else."""
     points = json.loads((out / "still_points.json").read_text())
+    excused = {f for a, b in points.get("light_changes", []) for f in range(a - 1, b + 2)}
     w, h = size
     found = []
     for sid, (video, first) in videos.items():
@@ -403,7 +408,7 @@ def flicker(out: Path, videos: dict, size: tuple[int, int]) -> list[dict]:
             window[f] = im
             window.pop(f - 3, None)
             mid = f - 1  # the frame with a neighbour on each side now
-            if mid - 1 not in window:
+            if mid - 1 not in window or mid in excused:
                 continue
             for _f, k, x, y, xa, ya, xb, yb in by_frame.get(mid, ()):
                 a, b, c = level(window[mid - 1], xa, ya), level(window[mid], x, y), level(window[f], xb, yb)
@@ -425,8 +430,14 @@ def report_flicker(out: Path, videos: dict, size) -> bool:
         return True
     found = flicker(out, videos, size)
     failed = [r for r in found if r["fails"]]
-    write_json(out / "render_checks.json", {"passed": not failed, "flicker": failed,
-                                            "flicker_notes": [r for r in found if not r["fails"]]})
+    changes = json.loads((out / "still_points.json").read_text()).get("light_changes", [])
+    result = {"passed": not failed, "flicker": failed, "flicker_notes": [r for r in found if not r["fails"]]}
+    if changes:  # (said, so a reader knows which frames the check did not read)
+        result["not_read"] = {"frames": changes, "why": "lights change on purpose here (a lights beat: banks coming "
+                                                        "on, each tube's stutter); one frame either side is left out too"}
+        print(f"  not read for flicker: {len(changes)} light changes on purpose, frames "
+              + ", ".join(f"{a}-{b}" for a, b in changes))
+    write_json(out / "render_checks.json", result)
     for r in failed:
         print(f"  FAIL  {r['object']} flickers in {r['shot']}: {len(r['frames'])} frames jump and come back (worst "
               f"{r['worst']:.0f} levels at frame {r['at']}). Two faces in one plane, or light noise: see docs/blender.md")

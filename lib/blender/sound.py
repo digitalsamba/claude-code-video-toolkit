@@ -120,6 +120,15 @@ def render(events_path, out_path, seed=3, start=0.0, end=None, score=True, room=
             mix.add(t, 0.05, lambda t: math.exp(-80 * t) * math.sin(2 * math.pi * 900 * t), g * 0.25)
             mix.add(t + 0.08, 0.6, lambda t: math.sin(math.pi * t / 0.6) * 0.5
                     * math.sin(2 * math.pi * (240 + 90 * math.sin(11 * t)) * t), g * 0.05)
+        elif k == "switch":  # a wall switch: a short hard click
+            mix.add(t, 0.03, lambda t: math.exp(-160 * t) * (math.sin(2 * math.pi * 2400 * t) + rng.uniform(-1, 1)), g * 0.3)
+        elif k == "lamp_stutter":  # a tube starting: ticks and a buzz at twice the mains
+            for j, dt in enumerate((0.0, 0.09, 0.21, 0.26, 0.38)):
+                mix.add(t + dt, 0.025, lambda t: math.exp(-120 * t) * rng.uniform(-1, 1), g * 0.12)
+            mix.add(t, 0.45, lambda t: math.sin(2 * math.pi * 100 * t) * (0.5 + 0.5 * math.sin(2 * math.pi * 7 * t)), g * 0.03)
+        elif k == "lamp_on":  # the tube catches: a soft low clunk
+            mix.add(t, 0.15, lambda t: math.exp(-30 * t) * (math.sin(2 * math.pi * (80 - 120 * t) * t)
+                                                            + 0.3 * rng.uniform(-1, 1)), g * 0.3)
         elif k in ("lid_open", "lid_close"):  # a laptop lid: a soft knock when it shuts, a faint creak opening
             if k == "lid_close":
                 mix.add(t, 0.12, lambda t: math.exp(-38 * t) * (math.sin(2 * math.pi * (140 - 300 * t) * t)

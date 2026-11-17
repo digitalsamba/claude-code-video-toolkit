@@ -693,6 +693,51 @@ class BlenderCheckTests(unittest.TestCase):
             self.compile({'set': {'kind': 'desk_room', 'hall': {}}, 'shots': [{'id': 'A', 'dur': 2, 'type': 'wide'}]})
         self.assertIn('"hall" dresses a lecture_hall', str(ctx.exception))
 
+    def test_a_dark_hall_is_switched_on_by_hand_and_its_lights_come_on_in_banks(self):
+        """The lecture's opening with the lights off: the hall starts dark, someone opens the door, steps in to
+        side-on at the wall where their own arm presses the switch straight ({"switch": "reach"}), presses it on
+        the beat's frame with the tip of a finger, and the ceiling lights come on in three banks from the board
+        back, each stuttering first; then they walk to their mark and the camera, set off by that last walk, lands
+        on the board."""
+        spec = {'fps': 30, 'set': {'kind': 'lecture_hall', 'door': {}, 'hall': {}, 'table': False, 'lights': 'off'},
+                'cast': [{'id': 'dev', 'posture': 'stand', 'at': {'door': -0.3}, 'facing': 0}],
+                'shots': [{'id': 'E1', 'dur': 8.6, 'type': 'move',
+                           'from': {'cam': {'hall': [0.8, 16.2, 5.0]}, 'aim': {'hall': [0, 0, 1.7]}, 'lens': 26},
+                           'to': {'cam': 'board'}, 'start': 'last_walk', 'arrive': 'walk'}],
+                'beats': [{'at': 1.6, 'do': 'open_door', 'dur': 0.8, 'by': 'dev', 'hand': 'right'},
+                          {'at': 2.4, 'do': 'walk', 'to': {'switch': 'reach'}, 'facing': -90, 'curve': True,
+                           'heading': -90, 'until': 3.6},
+                          {'at': 4.0, 'do': 'lights', 'by': 'dev', 'hand': 'right'},
+                          {'at': 4.75, 'do': 'walk', 'to': {'board': [1600, 1.0]}, 'facing': -8, 'curve': True,
+                           'heading': -50, 'until': 8.1},
+                          {'at': 8.1, 'do': 'settle', 'dur': 0.3}]}
+        checks, events = self.compile(spec)
+        self.assertTrue(checks['passed'], (checks.get('body_problems'), checks['shots'][0]['issues']))
+        self.assertLess(checks['touch_miss_m'], 0.02)                     # the fingertip on the switch
+        move = checks['shots'][0]
+        self.assertEqual(move['sets_off'], 143)                          # with the last walk (4.75 s), not the first
+        ev = [e for e in events['events'] if e['kind'] in ('switch', 'lamp_stutter', 'lamp_on')]
+        self.assertEqual(ev[0], {**ev[0], 'kind': 'switch', 'frame': 121})   # on the beat's frame
+        stutters = [e for e in ev if e['kind'] == 'lamp_stutter']
+        held = [e for e in ev if e['kind'] == 'lamp_on']
+        self.assertEqual([e['bank'] for e in stutters], [0, 1, 2])           # from the board back
+        self.assertTrue(all(a['frame'] < b['frame'] for a, b in zip(stutters, stutters[1:])))
+        self.assertTrue(all(s_['frame'] < h['frame'] for s_, h in zip(stutters, held)))
+        self.assertLess(held[0]['frame'], move['lands'] - 60)               # the presenter's lights well before the cut
+        all_at_once = {**spec, 'beats': [{**b, 'banks': 1, 'stutter': False} if b['do'] == 'lights' else b
+                                         for b in spec['beats']]}
+        _, events = self.compile(all_at_once)
+        kinds = [e['kind'] for e in events['events'] if e['kind'] in ('switch', 'lamp_stutter', 'lamp_on')]
+        self.assertEqual(kinds, ['switch', 'lamp_on'])                     # one click, everything on at once
+        for bad, said in (({'set': {**spec['set'], 'lights': 'on'}}, '"lights": "off"'),
+                          ({'set': {**spec['set'], 'lights': 'dim'}}, '"lights" is "on"'),
+                          ({'beats': [{'at': 1, 'do': 'lights', 'banks': 0}]}, '"banks"'),
+                          ({'set': {'kind': 'desk_room', 'lights': 'off'}, 'shots': [{'id': 'A', 'dur': 2, 'type': 'wide'}],
+                            'beats': [], 'cast': [{'id': 'dev'}]}, 'lecture_hall')):
+            with self.assertRaises(RuntimeError) as ctx:
+                self.compile({**spec, **bad})
+            self.assertIn(said, str(ctx.exception))
+
     def test_the_kitchen_example_passes_on_its_second_character(self):
         """examples/blender-kitchen has a film for each fitted character in the repo; this is the author's."""
         film = json.loads((ROOT / 'examples' / 'blender-kitchen' / 'spec-conal.json').read_text())
@@ -1193,6 +1238,45 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertNotIn('board_face', by)
         self.assertTrue(by['board_patch']['fails'])
         self.assertEqual(by['board_patch']['frames'], [11, 21, 31, 41, 51])
+
+    def test_lights_coming_on_are_not_flicker_and_flicker_beside_them_still_fails(self):
+        """A stutter is a jump that comes back: exactly what the flicker check looks for. The frames where lights
+        change on purpose (still_points.json "light_changes", from a lights beat) are left out, one frame either
+        side, and only those: the same stutter outside them still fails, as does a fight on another surface."""
+        import numpy as np
+        frames = [np.full((40, 40), 60.0, dtype=np.float32) for _ in range(40)]
+        for f in (10, 12, 14, 16, 18):
+            for fr in frames[f:f + 1]:
+                fr[:, :] += 50.0                     # the whole hall: banks stuttering on, frames 10 to 18
+        for f in range(19, 40):
+            frames[f][:, :] += 80.0                  # and held on
+        for f in (24, 27, 30, 33, 36):
+            frames[f][8:13, 8:13] += 30.0            # the door frame fights with the wall after the lights hold
+        rows = [[f, k, x, y, x, y, x, y] for f in range(1, 41) for k, (x, y) in enumerate(((0.25, 0.25), (0.75, 0.75)))]
+        found = {}
+        for changes in ([[11, 19]], []):
+            with tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp)
+                points = {'objects': ['door_frame', 'wall'], 'shots': {'A': {'frames': [1, 40], 'points': rows}}}
+                if changes:
+                    points['light_changes'] = changes
+                (out / 'still_points.json').write_text(json.dumps(points))
+                (out / 'A.mp4').write_bytes(b'')
+                real = blender_render.gray_frames
+                blender_render.gray_frames = lambda video, size: iter(frames)
+                try:
+                    found[bool(changes)] = {r['object']: r for r in blender_render.flicker(out, {'A': (out / 'A.mp4', 1)}, (40, 40))}
+                    clean = blender_render.report_flicker(out, {'A': (out / 'A.mp4', 1)}, (40, 40))
+                    saved = json.loads((out / 'render_checks.json').read_text())
+                finally:
+                    blender_render.gray_frames = real
+            if changes:
+                self.assertFalse(clean)                                   # the fight after them still fails
+                self.assertEqual(saved['not_read']['frames'], [[11, 19]])  # and it says what it did not read
+        self.assertNotIn('wall', found[True])                              # the stutter is not flicker
+        self.assertEqual(found[True]['door_frame']['frames'], [25, 28, 31, 34, 37])
+        self.assertTrue(found[True]['door_frame']['fails'])
+        self.assertTrue(found[False]['wall']['fails'])                     # unexcused, the same stutter fails
 
     def test_mistakes_with_postures_are_named(self):
         shots = [{'id': 'A', 'dur': 3, 'type': 'wide'}]
