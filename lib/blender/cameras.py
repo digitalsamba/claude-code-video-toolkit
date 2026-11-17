@@ -775,7 +775,8 @@ def fighting(cams, every: int = 4, gap: float = 0.0002) -> list:
 LIMB_NEAR = 0.3  # a moving part of a character this near a still point puts its shadow on it (m)
 
 
-def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pixels: float = 0.002) -> dict:
+def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pixels: float = 0.002,
+                 far: float = 0.12) -> dict:
     """Points on flat surfaces, and where each is in the picture on every frame it is seen and standing still
     (the frame before and after too). A render's pixels at such a point change smoothly or not at all: a jump
     for one frame is flicker. `blender_render.py` reads this beside the clips it has rendered.
@@ -784,7 +785,11 @@ def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pi
     in clear view and at least `pixels` of the picture's width across: the reader averages a few pixels, and an
     edge, a thin leg or something passing in front would look like a jump. A point is also left out on frames
     when part of a character is moving within `LIMB_NEAR` of it: fingers passing over a desk put a shadow on a
-    point for one frame and take it off the next, which is the picture changing and not flicker."""
+    point for one frame and take it off the next, which is the picture changing and not flicker.
+
+    A second set of points stands on surfaces at least half a metre across, each flat for `far` metres round it:
+    from the back of a lecture hall (16 m, a 26 mm lens) a 2 cm patch is a fraction of a pixel, and the fine
+    points alone left the whole wide part of a shot unread."""
     sc = bpy.context.scene
     pts = []
     for o in sc.objects:
@@ -797,22 +802,25 @@ def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pi
             continue
         for ax in range(3):
             u, v = (i for i in range(3) if i != ax)
-            if size[u] < 3 * flat or size[v] < 3 * flat:
-                continue
-            nu, nv = (max(1, min(most, int(size[k] / step))) for k in (u, v))
-            for side in (0, 1):
-                for i in range(nu):
-                    for j in range(nv):
-                        p = Vector((0, 0, 0))
-                        p[ax] = hi[ax] if side else lo[ax]
-                        p[u], p[v] = lo[u] + size[u] * (i + 0.5) / nu, lo[v] + size[v] * (j + 0.5) / nv
-                        round_it = []
-                        for k, way in ((u, 1), (u, -1), (v, 1), (v, -1)):
-                            q = p.copy()
-                            q[k] += way * flat
-                            round_it.append(q)
-                        if all((o.closest_point_on_mesh(q)[1] - q).length < 5e-4 for q in [p] + round_it):
-                            pts.append((o, p, round_it))
+            for fl, need in ((flat, 3 * flat), (far, 0.5)):  # (fine points, and far ones on big surfaces)
+                if size[u] < need or size[v] < need:
+                    continue
+                nu, nv = (max(1, min(most, int(size[k] / step))) for k in (u, v))
+                if fl == far:  # (a few, between the fine ones: they are for wide shots)
+                    nu, nv = max(1, nu // 2), max(1, nv // 2)
+                for side in (0, 1):
+                    for i in range(nu):
+                        for j in range(nv):
+                            p = Vector((0, 0, 0))
+                            p[ax] = hi[ax] if side else lo[ax]
+                            p[u], p[v] = lo[u] + size[u] * (i + 0.5) / nu, lo[v] + size[v] * (j + 0.5) / nv
+                            round_it = []
+                            for k, way in ((u, 1), (u, -1), (v, 1), (v, -1)):
+                                q = p.copy()
+                                q[k] += way * fl
+                                round_it.append(q)
+                            if all((o.closest_point_on_mesh(q)[1] - q).length < 5e-4 for q in [p] + round_it):
+                                pts.append((o, p, round_it))
     out = {"objects": [o.name for o, _p, _r in pts], "shots": {}}
     rigs = [o for o in sc.objects if o.type == "ARMATURE"]
 

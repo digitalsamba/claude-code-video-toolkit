@@ -263,7 +263,7 @@ walk ends, then cuts to the board. What it took:
 The opening's default since 2026-11-17: the hall fades in dark, lit by its windows; the door opens onto the
 presenter in silhouette; they step in, press the switch beside the door, and the ceiling lights come on in three
 banks from the board back, each with a fluorescent stutter; then the walk to the mark, the camera coming down
-the hall as before. About 8.6 s to the cut. In a spec it is the set's `"lights": "off"` and a `lights` beat
+the hall as before. 9 s to the cut. In a spec it is the set's `"lights": "off"` and a `lights` beat
 (the `blender` skill has the options). What it took:
 
 - **Lights that change are events.** `kit.Lamps` holds a set's lights (their energy) and glowing materials
@@ -288,11 +288,18 @@ the hall as before. About 8.6 s to the cut. In a spec it is the set's `"lights":
 - **Two walks, not one.** In at the door with one bend to the switch, then a walk to the mark. The stop works
   where it failed before because the second walk's bend is small: arriving at heading -80 left a 72-degree turn
   on the spot in about a second, and a hand brushed the body on Mara and Nell; at -50 all four pass. The second
-  walk sets off after the pressing hand is home (0.6 s after the press). The camera sets off with the last walk
+  walk sets off after the pressing hand is home (0.6 s after the press). The step in is the stroll stride taken
+  slowly (1.7 s, five steps on three bodies, seven on the tallest): in 1.2 s it was seven steps 0.15 s apart, a
+  shuffle, and a longer stride swung a hand into the body in the bend (3 to 8 cm on three bodies). The camera sets off with the last walk
   (`"start": "last_walk"`), so it holds the whole hall as its lights come on.
 - **The doorway.** The corridor light is six times brighter in a dark hall, and a warm panel in the opening
   (`hall.spill`) comes up as the door opens, so the floor inside the door catches the light. At 250 W it
   blew out the open leaf and lit the presenter's front in the doorway by bounce; 120 keeps the silhouette.
+- **The shadow pool.** A row of fill lights to a bank, each with its own shadows, ran EEVEE's shadow pool out
+  at its 512 MB default: as the camera moved, shadows on the floor and the wall by the door popped between two
+  states, 20 to 40 levels from frame to frame (the far still points caught it; it was seen first as noise from
+  the bright doorway, and switching the bounce light to ambient occlusion did not clear it on the second body).
+  A drawn hall that starts dark sets the pool to 1024 MB, which clears both bodies.
 - **Orla's hand** was 2 cm short of the handle from the lit opening's start (0.33 m behind the door); the dark
   opening starts them at 0.30.
 
@@ -390,6 +397,13 @@ Lights coming on are a jump that comes back: exactly what the render check looks
 beat changes the light are written beside the still points (`light_changes`), and only those frames, with one
 either side, are not read; `render_checks.json` lists them under `not_read`. Everywhere else a stutter still
 fails, and a fight between two faces beside them is still caught (`tests/python/test_blender_spec.py`).
+
+A still point is read only where the flat patch round it covers enough of the picture, and from the back of the
+lecture hall (16 m, a 26 mm lens) the 2 cm patches cover a fraction of a pixel: the first 203 frames of the
+opening had no points at all, lit or dark, so nothing in the wide part was ever read. Big surfaces (half a metre
+or more) now also carry far points with a 12 cm patch. Proven on the room shot as rendered: a patch of wall made
+to flicker on frames 31 to 91 now fails (it passed before), and the lit opening still passes. They found a real
+fault at once (below, the shadow pool).
 
 ### A character from a generated 3D model (experimental)
 

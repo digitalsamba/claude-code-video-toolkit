@@ -185,6 +185,12 @@ class LectureHall(DeskRoom):
                 if corridor:  # (the corridor, the one light in a dark hall, throws the doorway across the floor)
                     corridor.data.energy *= float((self.hall or {}).get("corridor", HALL["corridor"]))
             self.lamps.off(1)
+            ee = bpy.context.scene.eevee
+            if self.walls and hasattr(ee, "shadow_pool_size") and int(ee.shadow_pool_size) < 1024:
+                # (a row of fill lights to a bank, each with its shadows, ran EEVEE's shadow pool out at 512 MB:
+                # shadows popped between two states as the camera moved, the floor and the wall by the door 20 to
+                # 40 levels from frame to frame. 1024 MB holds them all)
+                ee.shadow_pool_size = "1024"
         if self.hall:  # (a dressed hall shows the wall over the board, where this light, close to it, makes a hot spot)
             wall = D.collections.new("top_light_skips")
             for ob in D.objects:
