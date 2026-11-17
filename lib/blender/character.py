@@ -2229,6 +2229,25 @@ class ClayPerson:
         self.touches.append({"frame": f, "m": (tip - Vector(point(f))).length, "hand": "left" if s > 0 else "right",
                              "what": what})
 
+    def settle(self, f0: int, f1: int):
+        """Someone on their feet lets their arms hang as a placed stance has them (place): after a walk in and a
+        door, so that a clip placed on the same spot, standing, starts in the same pose. The arms come there
+        from wherever they are by f1, and they stand up straight (a walk ends with the knees soft, the hips 12 mm
+        under a placed stance's); the fingers keep their shape."""
+        self._need("stand", "settle")
+        self._body_key(f0)
+        self._body_key(f1, height=self.stand_h)
+        now = self._hands_now(f0)
+        stages = {}
+        for s in (1, -1):
+            hand, pole = self._down(s)
+            stages[s] = [(f0, now[s][0], now[s][1], 0), (f1, hand, pole, 0)]
+        self._hands_path(stages)
+        for s in (1, -1):  # (the last frame keyed as place keys it, so the two agree to the vertex)
+            hand, pole = self._down(s)
+            self._arm_key(s, f1, hand, self._mirror(pole, s))
+        self.arm_pose = "down"
+
     def _hands_now(self, f):
         """Each hand's wrist target and elbow direction as they are on frame f: where a path starts from."""
         bpy.context.scene.frame_set(f)

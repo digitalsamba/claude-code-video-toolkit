@@ -658,6 +658,41 @@ class BlenderCheckTests(unittest.TestCase):
             self.compile({'shots': [{'id': 'A', 'dur': 2, 'type': 'fixed', 'cam': 'board'}], 'beats': []})
         self.assertIn('lecture_hall', str(ctx.exception))
 
+    def test_a_move_comes_down_a_dressed_hall_and_lands_on_the_board_as_the_walk_ends(self):
+        """The lecture's opening on the clay cast: the hall dressed (rows on a rake, an aisle down the middle,
+        windows, lights), someone presses the door's handle behind it, opens it and walks to their mark, and the
+        camera sets off with the walk, comes down the aisle and lands on the board camera's framing on the frame
+        the walk ends (keyed on it, not typed). Every frame is checked: the lens clear of the set, the board and
+        the walker in view, and once landed the board fills the frame to the pixel with nobody but them in front."""
+        spec = {'fps': 30, 'set': {'kind': 'lecture_hall', 'door': {}, 'hall': {}, 'table': False},
+                'cast': [{'id': 'dev', 'posture': 'stand', 'at': {'door': -0.33}, 'facing': 0}],
+                'shots': [{'id': 'E1', 'dur': 7.0, 'type': 'move',
+                           'from': {'cam': {'hall': [0.8, 16.2, 5.0]}, 'aim': {'hall': [0, 0, 1.7]}, 'lens': 26},
+                           'to': {'cam': 'board'}, 'start': 'walk', 'arrive': 'walk'}],
+                'beats': [{'at': 1.5, 'do': 'open_door', 'dur': 0.8, 'by': 'dev', 'hand': 'right', 'latch': 1.0},
+                          {'at': 2.4, 'do': 'walk', 'to': {'board': [1600, 1.0]}, 'facing': -8, 'curve': True,
+                           'heading': -80, 'until': 6.5}]}   # (the clay's arms miss a 0.8 stride's swing)
+        checks, events = self.compile(spec)
+        self.assertTrue(checks['passed'], (checks.get('body_problems'), checks['shots'][0]['issues']))
+        move = checks['shots'][0]
+        self.assertEqual(move['sets_off'], 73)                          # the walk's first frame (2.4 s)
+        self.assertEqual(move['lands'], 196)                            # its last (6.5 s), the turn at the end in it
+        self.assertEqual(move['lens'], [26, 108.0])                     # the board camera's own lens
+        self.assertLess(move['landing']['corner_error_px'], 0.5)        # its framing, to the pixel
+        self.assertEqual(move['landing']['board_hidden_by_set'], 0.0)   # down the aisle, over the rows
+        self.assertGreater(move['nearest_set_m'], 0.12)
+        kinds = {e['kind']: e['frame'] for e in reversed(events['events'])}
+        self.assertLess(kinds['latch'], kinds['door_open'])             # the handle goes down before the door moves
+        for bad, said in (({'type': 'move', 'from': spec['shots'][0]['from']}, '"from" and "to"'),
+                          ({'type': 'move', 'from': spec['shots'][0]['from'], 'to': {'cam': 'board'}, 'arrive': 'later'},
+                           '"arrive"')):
+            with self.assertRaises(RuntimeError) as ctx:
+                self.compile({**spec, 'shots': [{'id': 'E1', 'dur': 7.0, **bad}]})
+            self.assertIn(said, str(ctx.exception))
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({'set': {'kind': 'desk_room', 'hall': {}}, 'shots': [{'id': 'A', 'dur': 2, 'type': 'wide'}]})
+        self.assertIn('"hall" dresses a lecture_hall', str(ctx.exception))
+
     def test_the_kitchen_example_passes_on_its_second_character(self):
         """examples/blender-kitchen has a film for each fitted character in the repo; this is the author's."""
         film = json.loads((ROOT / 'examples' / 'blender-kitchen' / 'spec-conal.json').read_text())

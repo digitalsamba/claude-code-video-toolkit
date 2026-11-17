@@ -252,6 +252,9 @@ def check(args) -> int:
         if wanted and shot["id"] not in wanted:
             shot["passed"], shot["problems"], shot["skipped"] = not shot["issues"], list(shot["issues"]), True
             continue
+        if shot.get("built_only"):  # (built for the acting to run through, and never rendered: not judged)
+            shot["passed"], shot["problems"] = not shot["issues"], list(shot["issues"])
+            continue
         png = out / "stills" / f"{shot['id']}.png"
         mean, clipped = exposure(png)
         shot["luma"], shot["clipped"] = round(mean, 3), round(clipped, 4)

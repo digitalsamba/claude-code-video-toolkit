@@ -117,9 +117,11 @@ class DeskRoom:
         # take turns being drawn as the camera moves, and the strip flickers. So the wall stops inside the frame
         # (`e` past its inner face), and the hall's floor starts where the room's ends.
         e = 0.02
-        box("wall_back", (left - e + 5, 0.1, 4), M["wall"], loc=((left - e - 5) / 2, 3, 2))
-        box("wall_back_r", (5 - right - e, 0.1, 4), M["wall"], loc=((right + e + 5) / 2, 3, 2))
-        box("wall_back_top", (w + 2 * e, 0.1, 4 - h - e), M["wall"], loc=(x, 3, (4 + h + e) / 2))
+        # (the wall's extent: a room 10 m wide and 4 m high, unless a set that is bigger says, as a dressed hall does)
+        x0, x1, top = getattr(self, "back_wall", (-5.0, 5.0, 4.0))
+        box("wall_back", (left - e - x0, 0.1, top), M["wall"], loc=((left - e + x0) / 2, 3, top / 2))
+        box("wall_back_r", (x1 - right - e, 0.1, top), M["wall"], loc=((right + e + x1) / 2, 3, top / 2))
+        box("wall_back_top", (w + 2 * e, 0.1, top - h - e), M["wall"], loc=(x, 3, (top + h + e) / 2))
         hall = mat("hall", (0.2, 0.19, 0.18), 0.9)
         box("hall_floor", (3, 0.3, 0.02), M["floor"], loc=(x, 5.15, -0.01))
         for size, at in (((3, 0.1, 4), (x, 5.2, 2)), ((0.1, 2.2, 4), (x - 1.5, 4.1, 2)), ((0.1, 2.2, 4), (x + 1.5, 4.1, 2)),
@@ -157,10 +159,20 @@ class DeskRoom:
         """The middle of a handle's bar, in the room, now: where a hand takes hold of it."""
         return handle.matrix_world @ Vector((self.door_side * 0.05, 0, 0))
 
-    def open_door(self, f0: int, f1: int, angle: float = 100.0):
-        """The door swings into the room (0 shuts it again)."""
+    def open_door(self, f0: int, f1: int, angle: float = 100.0, latch: int | None = None):
+        """The door swings into the room (0 shuts it again). With `latch` (a frame before f0) someone on the other
+        side presses the handle down then, which clicks the latch, and holds it until the door swings, when it
+        springs back up."""
         if not self.door:
             raise ValueError('this set has no door: give the set "door": {}')
+        if latch is not None:
+            down = (0, R(35) * self.door_side, 0)  # (about the stem: the free end of each bar goes down)
+            for h in (self.handle, self.handle_out):
+                key(h, "rotation_euler", latch, (0, 0, 0))
+                key(h, "rotation_euler", latch + n(4), down)
+                key(h, "rotation_euler", f0, down)
+                key(h, "rotation_euler", f0 + n(6), (0, 0, 0))
+            self.events.append({"frame": latch + n(4), "kind": "latch"})
         tween(self.door, "rotation_euler", f0, f1, (0, 0, R(angle) * self.door_side))
         self.events.append({"frame": f0, "kind": "door_open" if angle else "door_close"})
 
