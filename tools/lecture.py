@@ -40,7 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULTS = json.loads((ROOT / "lib" / "lecture" / "defaults.json").read_text(encoding="utf-8"))
 RULES, STAGING, WINDOW = DEFAULTS["rules"], DEFAULTS["staging"], DEFAULTS["window"]
 FACES = ("happy", "content", "worried", "neutral", "grin", "smile", "shocked")
-ROOM_PER = 4.0  # seconds a frame for the opening's room shot (the dressed hall, opaque, 1920x1080) on an Apple M4
+ROOM_PER = 4.3  # seconds a frame for the opening's room shot (the dressed hall, opaque, 1920x1080) on an Apple M4
 
 
 class LectureError(SystemExit):

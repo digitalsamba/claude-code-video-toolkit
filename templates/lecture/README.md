@@ -116,7 +116,7 @@ frame the walk ends. Then it cuts to the board, which looks the same, and the fi
   metres behind the door), `stride`, `heading`, `camera` (the start: `cam` and `aim` in the hall's measure, `lens`),
   `hall` (the set's `hall` options: `windows`, `audience`, `colors`, ...), and `sounds` for the latch, the door and
   the footsteps (CC0 recordings in `public/audio/sfx/`, laid on the room shot's own event frames).
-- It renders at 1920x1080, opaque: about ROOM_MIN minutes on an Apple M4 (`render` says before it starts).
+- It renders at 1920x1080, opaque: about 17 minutes on an Apple M4 for Mara (4.3 s a frame) (`render` says before it starts).
 
 ## What is open
 

@@ -159,8 +159,8 @@
    "door_open": {
     "file": "audio/sfx/door-open.mp3",
     "volume": 0.35,
-    "offset": 0,
-    "frames": 45
+    "offset": -10,
+    "frames": 55
    },
    "step": {
     "files": [
