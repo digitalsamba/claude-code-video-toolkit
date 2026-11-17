@@ -786,3 +786,56 @@ imported rigs whose actions become verbs.
 | `cast member 'maya': hair.style is one of ...` | A character field that isn't one of its choices. Pick from the list in the message |
 | A studio shot is `FAIL` with "faces the lens" | The orbit turns the screen away for more than half the shot. Narrow `az` to `az_to` |
 | A studio shot fails with `exposure 0.73 outside (0.08, 0.7)` | A light backdrop fills the frame. Darken `palette.backdrop` a step, or raise the shot's `fill` |
+
+## Summary for agents
+
+Optional, and limited by the machine more than by the tool: it needs Blender and renders in minutes with a GPU
+(`doctor` times a frame). The clay cast, the desk sets, the studio stage and clips in Remotion are the settled
+part. Characters fitted from a generated 3D model, the kitchen and the lecture hall are experimental. Before
+proposing a character film, tell the person it is hours of rendering over a few sessions.
+
+A general 3D tool, not a template: 3D scenes, character acting and product shots from a JSON spec: `tools/blender_render.py check|render spec.json`,
+built by `lib/blender/` (a rigged cartoon cast, a set, shots by type, acting beats in seconds or on narration words
+with `cue:`). `check` (about 5 s) verifies every camera by geometry (subject in frame, nothing in the way, a moving
+lens clear of the cast; failing cameras are moved by a solver) and writes a labelled contact sheet to read before
+rendering; sound is placed on the frames the motion was keyed on. `doctor` finds Blender and times a frame on
+this machine (about 1.6 s at 1080p on an M4).
+
+One spec gives a whole film, clips for another build, or both; the uses below mix freely:
+- `render spec.json` is the whole film with sound (`examples/blender-disk-panic`).
+- `render --clips` is one MP4 per shot for any build: a moviepy timeline, a `file` scene in a video job, an editor
+  (`--prores`), or `cutdown.py` for a vertical cut.
+- `render --clips --alpha --to <project>/public/blender` is one clip per shot with a transparent background and a
+  `clips.json` manifest; `BlenderClip` and `blenderClip()` (`lib/components`) play them over a scene's own field,
+  with type behind the character. Set the spec's `fps` to 30.
+- `set.screen.video` puts a Remotion render on the laptop in the scene, and a `pull_out` shot starts with it
+  covering the frame, so a flat scene hard-cuts to itself in 3D and the camera pulls back (`push_in` returns).
+  Render that video at the spec's `fps`; another rate is a spec error.
+- Set kind `studio` is a product stage with no character: a `phone` or a floating `card` showing a picture or a
+  video, and an imported `model` (glTF, OBJ, FBX, STL), filmed with `product`, `orbit` and `reveal` shots that take
+  their distance from the prop's size (`examples/blender-product-shot`).
+- Prop kind `logo` builds an SVG in 3D, each filled shape its own part, and a studio set's beats move the parts
+  (`turn`, `shear`, `grow`, `press`, `glow`, `flash`, `sweep`, `hit`): a brand's opening and closing ident from one
+  spec, with named sounds on the hit and an `ident` shot whose last frame `check` compares with the flat SVG
+  (parts in place, each colour within 10 Delta E). `--clips --with-sound` puts each clip's sound in its file;
+  `--res 1080x1920` is the vertical one (`examples/blender-ident`).
+
+**Cast:** a character is a JSON description (`body`, `face`, `hair`, `clothes`, `accessories`, each a named choice
+or a hex colour, and a `seed` that fills what is left out), so an agent writes one from a sentence or a photo. Keep
+a standing character in `kits/<name>/cast/<id>.json` and name it with `"from"`; fields beside `from` re-costume
+it. All characters share one rig, so every verb works on each. They are caricatures in one cartoon style, not
+likenesses. For a fitted character of a real person, `uv run tools/reference_capture.py --out <folder>` opens a
+local page that talks them through eight poses at a webcam and keeps the sharpest frame of each; the photos stay
+on the machine and out of the repo. A mistake in a spec (an unknown face, pose, shot type or hair style) is a named error listing the
+choices, before anything renders.
+
+Use it when a video needs a consistent, directable character, a 3D reveal, a product or device shot, or acting
+timing that LTX clips can't hold. **Suggest it while planning a video when it is installed**
+(`uv run tools/blender_render.py doctor --no-bench` exits 0); without Blender nothing else changes, so don't
+propose it unless the user asks for 3D. Blender runs headless through its own Python; a Blender MCP server is for trying a look in an open window,
+and what it finds goes back into the spec. Needs Blender 4.2+ (optional): run on 5.3 on macOS and 4.2 LTS on Linux
+(Cycles on a server with no GPU; EEVEE works there on software GL, slowly); Windows is not yet run. Format, verbs
+and the shot grammar are in the `blender` skill, setup and timings in `docs/blender.md`, and there is an example
+of each use: `examples/blender-disk-panic` (a film), `blender-product-shot` (a studio stage),
+`blender-in-remotion` (clips in a Remotion video) and `blender-kitchen` (experimental: a character fitted from a
+generated 3D model, on her feet in a kitchen with a mug).
