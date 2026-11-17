@@ -8,7 +8,8 @@ import { Counter, terminalTheme, TerminalSession } from '../../../../lib/compone
 import { BRAND } from '../brand';
 import { arrive, Ground, Pen, Punch, Rail, ramp, Rise, stopAt, UnderTrack, useEnter, railGeometry, Words } from './parts';
 import { display, type Field, FIELDS, figure, label, type Layout, MONO, note, SANS, title } from './theme';
-import type { BarsProps, CommandProps, FigureProps, LedgerProps, LedgerRow, Lines, Said, SessionProps, StatementProps } from './types';
+import { ASK_SENT, ASK_START } from './timeline';
+import type { BarsProps, CommandProps, FigureProps, LedgerProps, LedgerRow, Lines, Said, SessionProps, SplitProps, SplitSide, StatementProps } from './types';
 
 type Base = { L: Layout; f: Field };
 
@@ -70,12 +71,6 @@ export const Open: React.FC<Base & { text: Lines; chapters: number; titleAt: num
 
 /** In a Short nothing a scene draws goes below this: the burned captions sit under it (Episode.tsx, bottom 330). */
 export const CAPTION_TOP = 1380;
-
-export const ASK_START = 8; // a chapter's question starts typing here, a character a frame
-/** How long a chapter card with a question runs: it types, is sent, and the answer opens. */
-export const ASK_SENT = 12; // frames after the last character before it is sent
-export const ASK_HOLD = 32; // and the question stays this long before the answer opens: time to read it
-export const askFrames = (text: string) => ASK_START + text.length + ASK_SENT + ASK_HOLD;
 
 /** Where the question sits: the answer opens out of this box. */
 export const askBox = (L: Layout) => {
@@ -236,7 +231,13 @@ const Shown: React.FC<{ show: NonNullable<LedgerRow['show']>; at: number; box: {
           </Loop>
         </Sequence>
       )}
-      {show.images && <Img src={staticFile(show.images[Math.floor(Math.max(0, k) / 10) % show.images.length])} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+      {show.images && (
+        <Img
+          src={staticFile(show.images[Math.floor(Math.max(0, k) / 10) % show.images.length])}
+          // one picture is pushed in slowly, so the window is never a frozen frame; several are flicked through
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: show.images.length === 1 ? `scale(${1 + Math.min(0.32, Math.max(0, k) * 0.0011)})` : undefined }}
+        />
+      )}
       {show.wave && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: box.w / 90 }}>
           {Array.from({ length: 36 }, (_, i) => {
@@ -249,26 +250,30 @@ const Shown: React.FC<{ show: NonNullable<LedgerRow['show']>; at: number; box: {
   );
 };
 
-export const Ledger: React.FC<Base & LedgerProps> = ({ L, f, title: head, rows, allAt, note: foot, after, hero }) => {
+export const Ledger: React.FC<Base & LedgerProps> = ({ L, f, title: head, rows, allAt, note: foot, after, hero, big: large }) => {
   const frame = useCurrentFrame();
   const active = after && frame >= after.at ? -1 : current(rows, frame);
   const all = allAt !== undefined && frame >= allAt && current(rows, frame) === current(rows, allAt);
-  const big = rows.length <= 3; // a few rows fill the frame: the detail under the label, the value at figure size
+  const big = large ?? rows.length <= 3; // a few rows fill the frame: the detail under the label, the value at figure size
   const rowGap = L.vertical ? (big ? 96 : 64) : big ? 60 : 44;
-  const titleTop = L.top + (hero && L.vertical ? 190 : 0);
+  const shows = rows.some((r) => r.show); // a window beside the rows
+  const aside = !!hero || shows; // the left of the frame is taken, by the hero, the window or both
+  const titleTop = L.top + (aside && L.vertical ? (hero ? 190 : 250) : 0);
   const rowsTop = titleTop + (head ? (L.vertical ? 220 : 170) : 20);
   // the hero: the number this ledger is about. It starts where the figure scene before left it and moves into place
   const from = figureBox(L);
-  const shows = rows.some((r) => r.show); // a window beside the rows: the hero moves up to make room
   const to = L.vertical ? { left: L.x - 4, top: L.top - 20, size: L.size.display } : { left: L.x - 6, top: rowsTop + (shows ? -10 : 150), size: L.size.display };
-  const win = L.vertical ? { left: L.right - 480, top: L.top - 50, w: 480, h: 270 } : { left: L.x, top: rowsTop + 215, w: 480, h: 270 };
+  // with a hero the window sits under it (beside it in a Short); alone it takes the hero's place
+  const win = L.vertical
+    ? { left: hero ? L.right - 480 : L.x, top: L.top - 50, w: 480, h: 270 }
+    : { left: L.x, top: rowsTop + (hero ? 215 : 12), w: 480, h: 270 };
   let showing = -1;
   rows.forEach((r, i) => {
     if (r.show && frame >= r.at) showing = i;
   });
   const k = hero?.carry === false ? 1 : ramp(frame, 3, 20);
   const mix = (p: number, q: number) => p + (q - p) * k;
-  const rowsLeft = hero && !L.vertical ? L.x + 560 : L.x;
+  const rowsLeft = aside && !L.vertical ? L.x + 560 : L.x;
   return (
     <>
       {head && <SaidLine said={head} thenColor={f.ink2} style={{ ...title(L, f), position: 'absolute', left: L.x, top: titleTop }} />}
@@ -489,6 +494,90 @@ export const Session: React.FC<Base & SessionProps> = ({ L, f, lines, skin = 'cl
   );
 };
 
+// ---------------------------------------------------------------- split: who does what, counted
+
+const landed = (side: SplitSide, frame: number) => side.rows.filter((r) => frame >= r.at);
+const lastAt = (side: SplitSide, frame: number) => Math.max(-1, ...landed(side, frame).map((r) => r.at));
+
+/**
+ * Two columns ("You", "Claude Code"), each row landing on its words, and under each column a count of what has
+ * landed so far. The accent is on the row being said; when a column's count is said (`countAt`) the count takes
+ * it and the pen circles it. In a Short the columns stack and each count sits at the end of its head's line.
+ */
+export const Split: React.FC<Base & SplitProps> = ({ L, f, title: head, left, right, note: foot }) => {
+  const frame = useCurrentFrame();
+  const sides = [left, right];
+  // what holds the accent: the newest of every row and every count that has been said
+  const rowAt = Math.max(lastAt(left, frame), lastAt(right, frame));
+  const countSaid = sides.map((s) => (s.countAt !== undefined && frame >= s.countAt ? s.countAt : -1));
+  const newest = Math.max(rowAt, ...countSaid);
+  const top = L.top + (head ? (L.vertical ? 170 : 150) : 0);
+  const gutter = L.vertical ? 0 : 96;
+  const span = L.right - L.x;
+  const leftW = L.vertical ? span : Math.round((span - gutter) * 0.42);
+  const boxes = L.vertical
+    ? null
+    : [
+        { left: L.x, width: leftW },
+        { left: L.x + leftW + gutter, width: span - leftW - gutter },
+      ];
+  const rowStyle: React.CSSProperties = { ...label(L, f), color: f.ink, lineHeight: 1.25 };
+  const column = (side: SplitSide, i: number) => {
+    // the count climbs to each row's share over a few frames, so a row worth ten is seen being counted
+    const n = Math.round(side.rows.reduce((sum, r) => sum + (r.count ?? 1) * ramp(frame, r.at, Math.min(48, 6 + 4 * (r.count ?? 1))), 0));
+    const counted = countSaid[i] >= 0 && countSaid[i] === newest;
+    const bump = counted ? side.countAt! : lastAt(side, frame);
+    const count = (
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <Punch key={bump} at={bump} origin={L.vertical ? 'right center' : 'left bottom'} style={{ ...(L.vertical ? title(L, f) : figure(L, f)), color: counted ? f.accent : f.ink, fontVariantNumeric: 'tabular-nums' }}>
+          {n}
+        </Punch>
+        {counted && <Pen at={side.countAt! + 8} color={f.accent} padX={L.vertical ? 22 : 30} padY={L.vertical ? 10 : 14} />}
+      </div>
+    );
+    return (
+      <div key={i} style={L.vertical ? { marginBottom: 64 } : { position: 'absolute', top, bottom: L.H - L.foot + L.size.note + 44, ...boxes![i], display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <Words text={side.head} at={4 + i * 6} style={{ ...title(L, f), whiteSpace: 'nowrap' }} />
+          {L.vertical && n > 0 && (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 44 }}>
+              {side.unit && <div style={label(L, f)}>{side.unit}</div>}
+              {count}
+            </div>
+          )}
+        </div>
+        <div style={{ height: 3, background: f.ink, opacity: 0.35, margin: L.vertical ? '14px 0 22px' : '16px 0 26px', transform: `scaleX(${arrive(frame, 4 + i * 6, 20)})`, transformOrigin: 'left center' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: L.vertical ? 12 : 24, flex: 1 }}>
+          {side.rows.map((r, k) => (
+            <div key={k}>
+              <Words text={r.text} at={r.at} style={{ ...rowStyle, color: r.at === newest && frame >= r.at ? f.accent : f.ink, fontWeight: 700 }} />
+              {r.detail && (
+                <Rise at={r.detailAt ?? r.at} style={{ ...note(L, f), marginTop: 4 }}>
+                  {r.detail}
+                </Rise>
+              )}
+            </div>
+          ))}
+        </div>
+        {!L.vertical && n > 0 && (
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 52 }}>
+            {count}
+            {side.unit && <div style={label(L, f)}>{side.unit}</div>}
+          </div>
+        )}
+      </div>
+    );
+  };
+  return (
+    <>
+      {head && <SaidLine said={head} thenColor={f.ink2} style={{ ...title(L, f), position: 'absolute', left: L.x, right: L.W - L.right, top: L.top }} />}
+      {L.vertical ? <div style={{ position: 'absolute', left: L.x, right: L.W - L.right, top }}>{sides.map(column)}</div> : sides.map(column)}
+      {!L.vertical && <div style={{ position: 'absolute', left: boxes![1].left - gutter / 2, top, bottom: L.H - L.foot + L.size.note + 44, width: 2, background: f.ink, opacity: 0.12 }} />}
+      <Foot L={L} f={f} text={foot} />
+    </>
+  );
+};
+
 // ---------------------------------------------------------------- command: the one thing to type
 
 export const Command: React.FC<Base & CommandProps> = ({ L, f, command, at, lines, note: foot }) => {
@@ -516,5 +605,5 @@ export const Command: React.FC<Base & CommandProps> = ({ L, f, command, at, line
   );
 };
 
-export const SCENES = { ledger: Ledger, figure: Figure, statement: Statement, bars: Bars, session: Session, command: Command };
+export const SCENES = { ledger: Ledger, figure: Figure, statement: Statement, bars: Bars, session: Session, command: Command, split: Split };
 

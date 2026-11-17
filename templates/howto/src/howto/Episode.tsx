@@ -13,28 +13,15 @@ import React from 'react';
 import { AbsoluteFill, Audio, Easing, interpolate, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Captions, voice } from '../../../../lib/components';
 import { EPISODE } from '../episode';
-import timingJson from '../timing.json';
-import { IDENT } from './ident';
 import { Badge, Rise } from './parts';
-import { askBox, askFrames, ASK_SENT, ASK_START, ChapterCard, Close, Open, Question, SCENES } from './scenes';
+import { askBox, ChapterCard, Close, Open, Question, SCENES } from './scenes';
+import { ASK_SENT, ASK_START, OPEN_SKIP, phrasesOf, timeline } from './timeline';
 import { FIELDS, type FieldName, layoutFor, note, loadFonts, SANS, title } from './theme';
-import type { Cue, Episode, SceneSpec } from './types';
+import type { Cue } from './types';
 
 loadFonts();
 
-type Phrase = { file: string; at: number; frames: number; words: { text: string; startMs: number; endMs: number }[] };
-type Timing = { fps: number; scenes: Record<string, { frames: number; phrases: Phrase[] }> };
-const TIMING = timingJson as Timing;
-
-export const CARD = 54; // a chapter card, in frames
-const OPEN_MIN = 150;
-const OPEN_TITLE = 105; // with no narration of its own the opening is the title and a beat to read it
-const END_CARD = 75; // a Short's end card
-const OPEN_SKIP = 30; // after an ident the 2D opening starts where its track draws: the ident has shown the mark
-const LINK_HOLD = 75; // before an ident close, the link stays this long after the last word
 const STAGE = '#05070c'; // behind an ident clip while it loads
-
-const phrasesOf = (id: string) => TIMING.scenes[id]?.phrases ?? [];
 
 const cueFor = (id: string): Cue => {
   const ps = phrasesOf(id);
@@ -45,64 +32,6 @@ const cueFor = (id: string): Cue => {
   }
   return voice(ps.map((p) => ({ file: p.file, at: p.at, captions: p.words }))).cue;
 };
-
-type Segment =
-  | { kind: 'open'; frames: number }
-  | { kind: 'card'; chapter: number; frames: number; instant?: boolean }
-  | { kind: 'scene'; spec: SceneSpec; frames: number; first?: boolean; hook?: boolean }
-  /** The hook's question, typed before anything else */
-  | { kind: 'ask'; text: string; frames: number }
-  | { kind: 'close'; frames: number; hold?: boolean }
-  /** A clip of the brand's ident; `over` lays the episode's name and link on it (a Short's end) */
-  | { kind: 'ident'; file: string; frames: number; over?: boolean }
-  | { kind: 'end'; frames: number };
-
-const sceneFrames = (spec: SceneSpec) => Math.max(TIMING.scenes[spec.id]?.frames ?? 0, spec.minFrames ?? 0, 30);
-
-export const timeline = (ep: Episode, short?: number): Segment[] => {
-  const ident = ep.ident === false ? {} : IDENT;
-  if (short !== undefined) {
-    const scenes = ep.scenes.filter((s) => s.chapter === short);
-    const end = ident.short?.close;
-    return [
-      { kind: 'card', chapter: short, frames: CARD, instant: true },
-      ...scenes.map((spec, i) => ({ kind: 'scene' as const, spec, frames: sceneFrames(spec), first: i === 0 })),
-      end ? { kind: 'ident', file: end.file, frames: end.frames, over: true } : { kind: 'end', frames: END_CARD },
-    ];
-  }
-  const out: Segment[] = [];
-  if (ep.hook) {
-    if (ep.hook.ask) out.push({ kind: 'ask', text: ep.hook.ask, frames: askFrames(ep.hook.ask) });
-    out.push({ kind: 'scene', spec: ep.hook.scene, frames: sceneFrames(ep.hook.scene), first: true, hook: true });
-  }
-  const opens = ident.episode?.open;
-  if (opens) out.push({ kind: 'ident', file: opens.file, frames: opens.frames });
-  const openFrames = TIMING.scenes.open?.frames;
-  out.push({ kind: 'open', frames: (openFrames ? Math.max(openFrames, OPEN_MIN) : OPEN_TITLE) - (opens ? OPEN_SKIP : 0) });
-  let chapter = -1;
-  for (const spec of ep.scenes) {
-    if (spec.chapter !== chapter) {
-      chapter = spec.chapter;
-      const ask = ep.chapters[chapter].ask;
-      out.push({ kind: 'card', chapter, frames: ask ? Math.max(CARD, askFrames(ask)) : CARD });
-      out.push({ kind: 'scene', spec, frames: sceneFrames(spec), first: true });
-      continue;
-    }
-    out.push({ kind: 'scene', spec, frames: sceneFrames(spec) });
-  }
-  const closes = ident.episode?.close;
-  if (closes) {
-    const said = phrasesOf('close');
-    const last = said[said.length - 1];
-    out.push({ kind: 'close', frames: (last ? last.at + last.frames : 60) + LINK_HOLD, hold: true });
-    out.push({ kind: 'ident', file: closes.file, frames: closes.frames });
-  } else {
-    out.push({ kind: 'close', frames: Math.max(TIMING.scenes.close?.frames ?? 0, 150) });
-  }
-  return out;
-};
-
-export const duration = (ep: Episode, short?: number) => timeline(ep, short).reduce((n, s) => n + s.frames, 0);
 
 /** The narration of a scene, and in a Short its captions. */
 const Voice: React.FC<{ id: string; captions?: { color: string; accent: string; ground: string; bottom: number } }> = ({ id, captions }) => (
@@ -137,6 +66,11 @@ const soundsOf = (kind: string, p: any): Sound[] => {
   if (kind === 'ledger') return p.rows.map((r: { at: number }) => ({ at: r.at, name: 'tick' as const }));
   if (kind === 'figure') return [{ at: p.at, name: 'land' }];
   if (kind === 'bars') return [...p.bars.map((b: { at: number }) => ({ at: b.at, name: 'tick' as const })), ...(p.limit ? [{ at: p.limit.at, name: 'land' as const }] : [])];
+  if (kind === 'split')
+    return [p.left, p.right].flatMap((s: { rows: { at: number }[]; countAt?: number }) => [
+      ...s.rows.map((r) => ({ at: r.at, name: 'tick' as const })),
+      ...(s.countAt !== undefined ? [{ at: s.countAt, name: 'land' as const }] : []),
+    ]);
   return [];
 };
 
