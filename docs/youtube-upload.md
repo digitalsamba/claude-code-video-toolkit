@@ -252,3 +252,54 @@ status, so read the update's own response, or wait about 20 seconds before readi
 | `errorType: "quota"` | Daily quota hit — wait or request more quota |
 | Video uploaded but stays `private` | Unverified-app lock — verify your OAuth app, or publish manually |
 | `access_denied` in the browser | The Google account isn't a Test user on the consent screen — add it |
+
+## Command reference and stats
+
+Upload a finished render to YouTube via the Data API v3. Use the `/publish` command for the
+guided workflow (it auto-fills title/description/tags from `project.json`), or call the tool directly.
+
+```bash
+# One-time login (opens a browser, caches a refresh token under _internal/.youtube/)
+uv run tools/youtube_upload.py --auth
+
+# Upload privately (the safe default)
+uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
+    --description-file DESCRIPTION.md --tags "ai,agents,explainer" --json-out
+
+# Schedule a public go-live
+uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
+    --publish-at 2026-06-10T09:00:00Z --thumbnail out/thumb.png --json-out
+
+# Validate everything without uploading (also reports auth readiness)
+uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
+
+# Setup check: channel, scopes, Data/Analytics API on or off, with the fix for each (read-only)
+uv run tools/youtube_upload.py --check --account personal
+
+# Subtitles and chapters from the render: one SRT for --captions, chapter lines for the description
+uv run tools/publish_kit.py --project projects/my-video --video out/video.mp4
+```
+
+Before uploading, and in a dry run, the tool prints notes on the metadata (`notes` in the JSON): no hashtags, no
+link, no tag in the title, no `--category`, and a Short that may need its related video set by hand in Studio.
+They are advice and never stop an upload.
+
+The publish kit transcribes the render once (Scribe, about $0.01 for 90 s, or `--engine whisper`) and aligns it to
+the scene scripts, so the subtitles are spelled as written and timed to the render, with no scene offsets to add
+up. Chapters sit at each scene's cut, titled from `project.json` `scenes[].title` or the file names, under
+YouTube's rules (first at 0:00, three or more, 10 s each). Re-runs reuse the saved transcript.
+
+**Setup is OAuth, not an API key** (uploads act on behalf of a channel). See
+`docs/youtube-upload.md` for the one-time Google Cloud Console walkthrough and
+`YOUTUBE_CLIENT_SECRETS_FILE` in `.env`. Key realities:
+- Default quota is 10,000 units/day; `videos.insert` costs ~1,600 units → **~6 uploads/day**.
+- **Unaudited API projects *may* have public uploads force-locked to private**: but this
+  mainly affects uploads to *other* people's channels. First-party uploads (your own project +
+  channel + account) generally publish public/scheduled fine without the audit. The tool reports
+  the actual returned privacy. "Testing"-mode refresh tokens expire after ~7 days (re-run `--auth`).
+- Cached tokens live in `_internal/.youtube/` (gitignored, they grant channel-upload access).
+
+**How it did:** `uv run --extra youtube tools/youtube_stats.py --account personal [--github]` reads views, likes and
+comments with the same token, adds watch time, retention and traffic sources once the token has the Analytics scope
+(`--auth`), and snapshots each run to `_internal/.youtube/stats/` so the next one shows the change. Reading the
+numbers, and what has worked on Shorts, is in `.claude/skills/youtube-stats/`.
