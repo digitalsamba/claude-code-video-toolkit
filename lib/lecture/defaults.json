@@ -119,22 +119,49 @@
   "frames": 1500
  },
  "opening": {
-  "note": "lecture.json \"opening\": {} (or any of these keys) opens the lecture on the whole hall: it fades in from black, the presenter comes in at the door and walks to their mark while the camera comes down the hall and lands on the board camera's framing as the walk ends, then cuts to the board. Times are seconds from black; places are in the hall's measure (metres for a presenter of 1.75 m).",
-  "seconds": 7.8,
+  "note": "lecture.json \"opening\": {} (or any of these keys) opens the lecture on the whole hall: it fades in from black onto the hall in the dark, the presenter opens the door, steps in, switches the lights on (they come on in banks from the board back, each with a stutter) and walks to their mark while the camera comes down the hall and lands on the board camera's framing as the walk ends, then cuts to the board. \"lights\": \"on\" is the hall lit from the start (the latch clicks on black, then the door and one walk): its times are \"lit\", under the lecture's own keys. Times are seconds from black; places are in the hall's measure (metres for a presenter of 1.75 m).",
+  "lights": "switch",
+  "seconds": 8.6,
   "first_word": 0.5,
-  "latch": 0.45,
+  "latch": null,
   "fade": [
-   0.95,
-   0.7
+   0.2,
+   1.0
   ],
-  "door": 2.4,
+  "door": 1.6,
+  "step_in": [
+   2.4,
+   3.6
+  ],
+  "switch_spot": "reach",
+  "switch_facing": -90,
+  "switch": 4.0,
+  "banks": 3,
+  "stutter": true,
+  "gap": 0.45,
   "walk": [
-   2.9,
-   7.35
+   4.75,
+   8.1
   ],
-  "behind": -0.33,
-  "stride": 0.8,
-  "heading": -80,
+  "lit": {
+   "latch": 0.45,
+   "fade": [
+    0.95,
+    0.7
+   ],
+   "door": 2.4,
+   "walk": [
+    2.9,
+    7.35
+   ],
+   "seconds": 7.8,
+   "behind": -0.33,
+   "stride": 0.8,
+   "heading": -80
+  },
+  "behind": -0.3,
+  "stride": 0.65,
+  "heading": -50,
   "camera": {
    "cam": [
     0.8,
@@ -171,8 +198,26 @@
     "volume": 0.22,
     "offset": 0,
     "frames": 14
+   },
+   "switch": {
+    "file": "audio/sfx/light-switch.mp3",
+    "volume": 0.8,
+    "offset": 0,
+    "frames": 12
+   },
+   "lamp_stutter": {
+    "file": "audio/sfx/lamp-stutter.mp3",
+    "volume": 0.6,
+    "offset": -3,
+    "frames": 26
+   },
+   "lamp_on": {
+    "file": "audio/sfx/lamp-on.mp3",
+    "volume": 0.5,
+    "offset": -3,
+    "frames": 48
    }
   },
-  "note_sounds": "laid on the room shot's own events (clips.json), the presenter's clips keep \"sounds\": a step here is a footfall of the walk in"
+  "note_sounds": "laid on the room shot's own events (clips.json), the presenter's clips keep \"sounds\": a step here is a footfall of the walk in, a lamp_stutter a bank of lights starting and lamp_on the frame it holds full"
  }
 }

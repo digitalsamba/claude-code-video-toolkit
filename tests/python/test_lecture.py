@@ -107,7 +107,7 @@ class LectureTests(unittest.TestCase):
         self.assertEqual([s['id'] for s in e1['shots']], ['E1', 'tail'])
         self.assertEqual(e1['shots'][0]['dur'], p01['shots'][0]['dur'])          # the room shot is the lead-in
         self.assertEqual(e1['shots'][0]['to'], {'cam': 'board', 'lens': 108})
-        self.assertEqual((e1['shots'][0]['start'], e1['shots'][0]['arrive']), ('walk', 'walk'))
+        self.assertEqual((e1['shots'][0]['start'], e1['shots'][0]['arrive']), ('last_walk', 'walk'))
         for k in ('beats', 'cast', 'clock', 'fps'):
             self.assertEqual(e1[k], p01[k], k)
         self.assertEqual((e1['set']['walls'], p01['set']['walls']), (True, False))
@@ -122,6 +122,46 @@ class LectureTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             lecture.cmd_timeline(self.tmp, None)
         self.assertIn('in that order', str(ctx.exception))
+
+    def test_the_opening_switches_the_lights_on_or_keeps_the_lit_hall(self):
+        """By default the hall starts dark: the first clip and the room shot both have the set's lights off, a
+        step in to where the presenter's own arm presses the switch, the press with the door hand, and then the
+        walk to the mark; no latch. "lights": "on" is the lit hall's opening as it was (its own times, the latch,
+        one walk), and the order of the opening's times is checked for each."""
+        self.lec['opening'] = {}
+        self.write()
+        lecture.cmd_timeline(self.tmp, None)
+        lecture.cmd_specs(self.tmp, None)
+        d = self.tmp / 'blender' / 'presenter'
+        e1, p01 = json.loads((d / 'E1.json').read_text()), json.loads((d / 'P01.json').read_text())
+        o = lecture.DEFAULTS['opening']
+        self.assertEqual((e1['set']['lights'], p01['set']['lights']), ('off', 'off'))
+        beats = [b for b in p01['beats'] if b['do'] in ('open_door', 'walk', 'lights', 'settle')]
+        self.assertEqual([b['do'] for b in beats], ['open_door', 'walk', 'lights', 'walk', 'settle'])
+        door, step, press, walk = beats[:4]
+        self.assertNotIn('latch', door)                                          # the switch pulls you in now
+        self.assertEqual(step['to'], {'switch': 'reach'})
+        self.assertEqual((press['by'], press['hand']), ('presenter', door['hand']))  # the hand that opened the door
+        self.assertEqual((press['at'], walk['at']), (o['switch'], o['walk'][0]))
+        self.assertTrue(8.5 <= o['seconds'] <= 9.0)
+        self.lec['opening'] = {'lights': 'on'}
+        self.write()
+        lecture.cmd_timeline(self.tmp, None)
+        lecture.cmd_specs(self.tmp, None)
+        e1, p01 = json.loads((d / 'E1.json').read_text()), json.loads((d / 'P01.json').read_text())
+        self.assertNotIn('lights', p01['set'])
+        self.assertEqual(e1['shots'][0]['start'], 'walk')
+        verbs = [b['do'] for b in p01['beats']]
+        self.assertNotIn('lights', verbs)
+        self.assertEqual(verbs.count('walk'), 1)
+        self.assertEqual(next(b for b in p01['beats'] if b['do'] == 'open_door')['latch'],
+                         round(o['lit']['door'] - o['lit']['latch'], 3))
+        for bad in ({'lights': 'dim'}, {'switch': 9.0}):
+            self.lec['opening'] = bad
+            self.write()
+            with self.assertRaises(SystemExit) as ctx:
+                lecture.cmd_timeline(self.tmp, None)
+            self.assertIn('"lights"' if 'lights' in bad else 'in that order', str(ctx.exception))
 
     def test_a_beat_that_would_collide_is_dropped_and_said(self):
         """A gesture on the first words, while the arm shows the heading, is left out, and the run says so; a turn

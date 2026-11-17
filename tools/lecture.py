@@ -105,12 +105,29 @@ def load(project: Path) -> dict:
     if op is True:
         op = {}
     if isinstance(op, dict):  # (the establishing shot: defaults under the lecture's own keys)
-        lec["opening"] = {**DEFAULTS["opening"], **op, "camera": {**DEFAULTS["opening"]["camera"], **op.get("camera", {})},
-                          "sounds": {**DEFAULTS["opening"]["sounds"], **op.get("sounds", {})}}
+        base = DEFAULTS["opening"]
+        lights = op.get("lights", base["lights"])
+        if lights not in ("switch", "on"):
+            raise LectureError('"opening": "lights" is "switch" (the hall starts dark and the presenter switches it on) '
+                               'or "on" (lit from the start)')
+        if lights == "on":  # (the lit hall's own times, as it was before the lights could be off)
+            base = {k: v for k, v in {**base, **base["lit"]}.items()
+                    if k not in ("step_in", "switch_spot", "switch_facing", "switch", "banks", "stutter", "gap")}
+        lec["opening"] = {**base, **op, "camera": {**base["camera"], **op.get("camera", {})},
+                          "sounds": {**base["sounds"], **op.get("sounds", {})}}
         o = lec["opening"]
-        if not (o["latch"] < o["door"] and o["fade"][0] + o["fade"][1] < o["door"] < o["walk"][0] < o["walk"][1] < o["seconds"]):
+        o.pop("lit", None)
+        fade_end = o["fade"][0] + o["fade"][1]
+        if lights == "on" and not (o["latch"] is not None and o["latch"] < o["door"]
+                                   and fade_end < o["door"] < o["walk"][0] < o["walk"][1] < o["seconds"]):
             raise LectureError('"opening": the latch, the fade, the door, the walk and the cut have to come in that order '
                                f'(latch {o["latch"]}, fade {o["fade"]}, door {o["door"]}, walk {o["walk"]}, cut {o["seconds"]})')
+        if lights == "switch" and not ((o["latch"] is None or o["latch"] < o["door"]) and fade_end < o["door"]
+                                       < o["step_in"][0] < o["step_in"][1] < o["switch"] < o["walk"][0] < o["walk"][1]
+                                       < o["seconds"]):
+            raise LectureError('"opening": the fade, the door, the step in, the switch, the walk and the cut have to come '
+                               f'in that order (fade {o["fade"]}, door {o["door"]}, step_in {o["step_in"]}, switch '
+                               f'{o["switch"]}, walk {o["walk"]}, cut {o["seconds"]})')
     elif op not in (None, False):
         raise LectureError('"opening" is {} (or true) for the establishing shot, with any of its keys from lib/lecture/defaults.json')
     else:
@@ -299,11 +316,20 @@ def spec_for(project: Path, lec: dict, tl: dict, words: Words, spans, i: int, no
              {"at": round(at, 4), "do": "talk", "until": round(end + 0.2, 4)}]
     if opening:  # the latch behind the door, the door, the walk to the mark (the room shot lands as it ends)
         o = opening
-        beats += [{"at": o["door"], "do": "open_door", "dur": 0.8, "by": "presenter", "hand": hand,
-                   "latch": round(o["door"] - o["latch"], 3)},
+        door = {"at": o["door"], "do": "open_door", "dur": 0.8, "by": "presenter", "hand": hand}
+        if o.get("latch") is not None:
+            door["latch"] = round(o["door"] - o["latch"], 3)
+        beats += [door,
                   # (the hand that let go of the handle hangs loose again, as every later clip starts it)
-                  {"at": round(o["door"] + 0.9, 3), "do": "hand", "shape": "loose", "hand": hand, "dur": 0.35},
-                  {"at": o["walk"][0], "do": "walk", "to": {"board": list(st["stand"])}, "facing": st["facing"],
+                  {"at": round(o["door"] + 0.9, 3), "do": "hand", "shape": "loose", "hand": hand, "dur": 0.35}]
+        if o.get("lights") == "switch":  # in at the door, the switch beside it with the same hand, then the walk
+            # (one bend from the doorway to side-on at the wall, the switch at that hand's shoulder: "reach" is as
+            # far out as their own arm presses it straight)
+            beats += [{"at": o["step_in"][0], "do": "walk", "to": {"switch": o["switch_spot"]},
+                       "facing": o["switch_facing"], "curve": True, "heading": o["switch_facing"], "until": o["step_in"][1]},
+                      {"at": o["switch"], "do": "lights", "by": "presenter", "hand": hand, "banks": o["banks"],
+                       "stutter": o["stutter"], "gap": o["gap"]}]
+        beats += [{"at": o["walk"][0], "do": "walk", "to": {"board": list(st["stand"])}, "facing": st["facing"],
                    "curve": True, "heading": o["heading"], "until": o["walk"][1], "stride": o["stride"]},
                   # (the arms come to hang as the later clips' placed stance has them, so those clips meet this one)
                   {"at": o["walk"][1], "do": "settle", "dur": 0.3}]
@@ -406,7 +432,8 @@ def spec_for(project: Path, lec: dict, tl: dict, words: Words, spans, i: int, no
         "title": f"{sid} ({seg['id']})", "fps": fps, "resolution": f"{w}x{h}", "engine": "eevee", "transparent": True,
         "clock": round((f0 - pre_f) / fps, 4), "master_start_frame": f0 - pre_f,
         "look": {"view": "Standard", "exposure": -0.9},
-        "set": {"kind": "lecture_hall", "walls": False, "table": table, **({"door": {}} if opening else {})},
+        "set": {"kind": "lecture_hall", "walls": False, "table": table, **({"door": {}} if opening else {}),
+                **({"lights": "off"} if opening and opening.get("lights") == "switch" else {})},
         "cast": [{"id": "presenter", "from": str(rel), "posture": "stand",
                   "at": {"door": opening["behind"]} if opening else {"board": list(st["stand"])},
                   "facing": 0 if opening else st["facing"]}],
@@ -433,7 +460,9 @@ def room_spec(lec: dict, first: dict) -> dict:
     c = o["camera"]
     room["shots"] = [{"id": "E1", "dur": pre["dur"], "type": "move",
                       "from": {"cam": {"hall": c["cam"]}, "aim": {"hall": c["aim"]}, "lens": c["lens"]},
-                      "to": {"cam": "board", "lens": st["lens"]}, "start": "walk", "arrive": "walk"},
+                      "to": {"cam": "board", "lens": st["lens"]},
+                      # (after a stop at the switch, the camera holds the hall as its lights come on)
+                      "start": "last_walk" if o.get("lights") == "switch" else "walk", "arrive": "walk"},
                      {"id": "tail", "dur": clip["dur"], "type": "fixed", "cam": "board", "lens": st["lens"], "built_only": True}]
     return room
 
