@@ -1,0 +1,1 @@
+Hello. This is Blender support in the video toolkit, and I'm made with it. I'm a 3D model the toolkit fitted to its rig, with joints, a face and fingers. The hall, the light and every move I make come from one file. Nobody animated me by hand.

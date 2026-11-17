@@ -1,0 +1,1 @@
+First, the honest part. Blender support is optional: nothing else in the toolkit needs it. To render in minutes, you need Blender four point two or later, and a graphics card or an Apple Silicon Mac. A film like this one is still hours of rendering, over a few sessions.

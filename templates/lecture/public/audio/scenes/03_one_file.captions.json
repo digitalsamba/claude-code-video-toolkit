@@ -1,0 +1,380 @@
+[
+ {
+  "text": "So",
+  "startMs": 100,
+  "endMs": 240,
+  "timestampMs": 170,
+  "confidence": null
+ },
+ {
+  "text": " how",
+  "startMs": 460,
+  "endMs": 580,
+  "timestampMs": 520,
+  "confidence": null
+ },
+ {
+  "text": " does",
+  "startMs": 600,
+  "endMs": 720,
+  "timestampMs": 660,
+  "confidence": null
+ },
+ {
+  "text": " it",
+  "startMs": 740,
+  "endMs": 860,
+  "timestampMs": 800,
+  "confidence": null
+ },
+ {
+  "text": " work?",
+  "startMs": 900,
+  "endMs": 1220,
+  "timestampMs": 1060,
+  "confidence": null
+ },
+ {
+  "text": " One",
+  "startMs": 1900,
+  "endMs": 2020,
+  "timestampMs": 1960,
+  "confidence": null
+ },
+ {
+  "text": " file",
+  "startMs": 2160,
+  "endMs": 2400,
+  "timestampMs": 2280,
+  "confidence": null
+ },
+ {
+  "text": " describes",
+  "startMs": 2460,
+  "endMs": 2960,
+  "timestampMs": 2710,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 3000,
+  "endMs": 3100,
+  "timestampMs": 3050,
+  "confidence": null
+ },
+ {
+  "text": " film:",
+  "startMs": 3160,
+  "endMs": 3400,
+  "timestampMs": 3280,
+  "confidence": null
+ },
+ {
+  "text": " who",
+  "startMs": 3860,
+  "endMs": 3980,
+  "timestampMs": 3920,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 4019,
+  "endMs": 4120,
+  "timestampMs": 4069,
+  "confidence": null
+ },
+ {
+  "text": " in",
+  "startMs": 4180,
+  "endMs": 4260,
+  "timestampMs": 4220,
+  "confidence": null
+ },
+ {
+  "text": " it,",
+  "startMs": 4300,
+  "endMs": 4480,
+  "timestampMs": 4390,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 4720,
+  "endMs": 4840,
+  "timestampMs": 4780,
+  "confidence": null
+ },
+ {
+  "text": " set,",
+  "startMs": 4920,
+  "endMs": 5260,
+  "timestampMs": 5090,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 5440,
+  "endMs": 5560,
+  "timestampMs": 5500,
+  "confidence": null
+ },
+ {
+  "text": " shots,",
+  "startMs": 5620,
+  "endMs": 6040,
+  "timestampMs": 5830,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 6180,
+  "endMs": 6260,
+  "timestampMs": 6220,
+  "confidence": null
+ },
+ {
+  "text": " every",
+  "startMs": 6500,
+  "endMs": 6780,
+  "timestampMs": 6640,
+  "confidence": null
+ },
+ {
+  "text": " move,",
+  "startMs": 6900,
+  "endMs": 7200,
+  "timestampMs": 7050,
+  "confidence": null
+ },
+ {
+  "text": " timed",
+  "startMs": 7520,
+  "endMs": 7860,
+  "timestampMs": 7690,
+  "confidence": null
+ },
+ {
+  "text": " to",
+  "startMs": 7900,
+  "endMs": 8000,
+  "timestampMs": 7950,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 8039,
+  "endMs": 8119,
+  "timestampMs": 8079,
+  "confidence": null
+ },
+ {
+  "text": " words",
+  "startMs": 8160,
+  "endMs": 8480,
+  "timestampMs": 8320,
+  "confidence": null
+ },
+ {
+  "text": " I'm",
+  "startMs": 8520,
+  "endMs": 8680,
+  "timestampMs": 8600,
+  "confidence": null
+ },
+ {
+  "text": " saying.",
+  "startMs": 8760,
+  "endMs": 9040,
+  "timestampMs": 8900,
+  "confidence": null
+ },
+ {
+  "text": " Here",
+  "startMs": 9540,
+  "endMs": 9700,
+  "timestampMs": 9620,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 9740,
+  "endMs": 9820,
+  "timestampMs": 9780,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 9860,
+  "endMs": 9920,
+  "timestampMs": 9890,
+  "confidence": null
+ },
+ {
+  "text": " piece",
+  "startMs": 9940,
+  "endMs": 10120,
+  "timestampMs": 10030,
+  "confidence": null
+ },
+ {
+  "text": " of",
+  "startMs": 10140,
+  "endMs": 10240,
+  "timestampMs": 10190,
+  "confidence": null
+ },
+ {
+  "text": " mine.",
+  "startMs": 10300,
+  "endMs": 10500,
+  "timestampMs": 10400,
+  "confidence": null
+ },
+ {
+  "text": " Before",
+  "startMs": 11160,
+  "endMs": 11520,
+  "timestampMs": 11340,
+  "confidence": null
+ },
+ {
+  "text": " anything",
+  "startMs": 11600,
+  "endMs": 11900,
+  "timestampMs": 11750,
+  "confidence": null
+ },
+ {
+  "text": " renders,",
+  "startMs": 12000,
+  "endMs": 12480,
+  "timestampMs": 12240,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 12680,
+  "endMs": 12780,
+  "timestampMs": 12730,
+  "confidence": null
+ },
+ {
+  "text": " toolkit",
+  "startMs": 12840,
+  "endMs": 13180,
+  "timestampMs": 13010,
+  "confidence": null
+ },
+ {
+  "text": " checks",
+  "startMs": 13320,
+  "endMs": 13700,
+  "timestampMs": 13510,
+  "confidence": null
+ },
+ {
+  "text": " every",
+  "startMs": 13800,
+  "endMs": 14020,
+  "timestampMs": 13910,
+  "confidence": null
+ },
+ {
+  "text": " camera",
+  "startMs": 14140,
+  "endMs": 14500,
+  "timestampMs": 14320,
+  "confidence": null
+ },
+ {
+  "text": " against",
+  "startMs": 14560,
+  "endMs": 14860,
+  "timestampMs": 14710,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 14900,
+  "endMs": 15000,
+  "timestampMs": 14950,
+  "confidence": null
+ },
+ {
+  "text": " acting.",
+  "startMs": 15080,
+  "endMs": 15400,
+  "timestampMs": 15240,
+  "confidence": null
+ },
+ {
+  "text": " Then",
+  "startMs": 15900,
+  "endMs": 16120,
+  "timestampMs": 16010,
+  "confidence": null
+ },
+ {
+  "text": " Blender",
+  "startMs": 16260,
+  "endMs": 16580,
+  "timestampMs": 16420,
+  "confidence": null
+ },
+ {
+  "text": " draws",
+  "startMs": 16700,
+  "endMs": 17020,
+  "timestampMs": 16860,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 17060,
+  "endMs": 17180,
+  "timestampMs": 17120,
+  "confidence": null
+ },
+ {
+  "text": " frames,",
+  "startMs": 17220,
+  "endMs": 17600,
+  "timestampMs": 17410,
+  "confidence": null
+ },
+ {
+  "text": " overnight",
+  "startMs": 17960,
+  "endMs": 18460,
+  "timestampMs": 18210,
+  "confidence": null
+ },
+ {
+  "text": " if",
+  "startMs": 18500,
+  "endMs": 18560,
+  "timestampMs": 18530,
+  "confidence": null
+ },
+ {
+  "text": " it",
+  "startMs": 18600,
+  "endMs": 18660,
+  "timestampMs": 18630,
+  "confidence": null
+ },
+ {
+  "text": " has",
+  "startMs": 18700,
+  "endMs": 18920,
+  "timestampMs": 18810,
+  "confidence": null
+ },
+ {
+  "text": " to.",
+  "startMs": 18960,
+  "endMs": 19080,
+  "timestampMs": 19020,
+  "confidence": null
+ }
+]

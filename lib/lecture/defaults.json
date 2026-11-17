@@ -1,0 +1,121 @@
+{
+ "note": "The lecture format's defaults, read by tools/lecture.py and lib/lecture alike. A lecture.json overrides any of them under the same key.",
+ "rules": {
+  "gap": 1.2,
+  "start": 1.0,
+  "tail": 2.5,
+  "lead_frames": 15,
+  "heading_at": [
+   520,
+   150
+  ],
+  "carry": "board",
+  "carry_lead": 0.6,
+  "turn": 0.5,
+  "holds": {
+   "count": 1.0,
+   "open": 1.1,
+   "both": 1.3,
+   "shrug": 1.2
+  },
+  "rest": 0.75,
+  "look_round": {
+   "from": 4.5,
+   "every": 6.5,
+   "clear": 2.2
+  },
+  "audience": [
+   [
+    -2.6,
+    -6.0,
+    1.5
+   ],
+   [
+    1.9,
+    -6.0,
+    1.55
+   ],
+   [
+    -0.9,
+    -7.0,
+    1.45
+   ]
+  ],
+  "in_window": "open",
+  "close": false,
+  "pre_roll": 1.5,
+  "note_close": "true: after the last word the chalk goes down on a hidden table in front of the presenter (staging.table), the hands are dusted, a look and a smile. Off by default: place the table for your presenter first (`tools/lecture.py check` says if a hand is short of it or the body goes into it)"
+ },
+ "staging": {
+  "stand": [
+   1600,
+   1.0
+  ],
+  "facing": -8,
+  "table": {
+   "at": [
+    1830,
+    1.42
+   ],
+   "chalk": [
+    1745,
+    1.27
+   ],
+   "size": [
+    0.35,
+    0.35
+   ],
+   "height": 0.82
+  },
+  "chalk": "left",
+  "lens": 108,
+  "window": [
+   0.64,
+   0.0,
+   1.0,
+   0.62
+  ],
+  "density": 1.25,
+  "note_table": "the table the chalk goes down on at the close: hidden, in front of the presenter on the chalk hand's side (board pixel column and metres out, size and height in metres, all in the hall's measure)"
+ },
+ "window": {
+  "zoom": 1.4,
+  "cx": 686,
+  "cy": 572,
+  "lead": -20,
+  "back": -8,
+  "in_frames": 40,
+  "out_frames": 26
+ },
+ "sounds": {
+  "put_down": {
+   "file": "audio/sfx/chalk-tap.mp3",
+   "volume": 0.25,
+   "offset": 0,
+   "frames": 12
+  },
+  "pick_up": {
+   "file": "audio/sfx/chalk-tap.mp3",
+   "volume": 0.12,
+   "offset": 1,
+   "frames": 12
+  },
+  "dust": {
+   "file": "audio/sfx/hands-dust.mp3",
+   "volume": 1.0,
+   "offset": -10,
+   "frames": 26
+  }
+ },
+ "inset": {
+  "left": 1620,
+  "top": 810,
+  "width": 270,
+  "height": 240
+ },
+ "room_tone": {
+  "file": "audio/sfx/room-tone.mp3",
+  "volume": 1.6,
+  "frames": 1500
+ }
+}

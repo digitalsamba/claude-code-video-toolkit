@@ -87,6 +87,15 @@ from source as static React, driven by the `Stage` cursor and camera, with sente
 pace and pitch. Ships as the finished release 650 build, so it renders as is; for a new release keep the kits and
 replace `src/scenes/` and the voice phrases. Method in the `synthetic-ui-demo` skill.
 
+### lecture
+A presenter at a chalkboard (experimental, needs Blender): a fitted character rendered as one transparent clip a
+segment, standing at a board Remotion draws, with chalk written on the narration's words, windows the camera goes
+into and an inset of the presenter meanwhile. A lecture is its script, `lecture.json` and the timeline
+`tools/lecture.py timeline` writes; the code is `lib/lecture` and `tools/lecture.py` (specs, check, render), so a new
+lecture copies none. The hall is sized by the presenter, clips join in the middle of a move, and `check` fails a
+presenter hiding over 10% of the board or a join that moves. Ships as the opening of "Introducing Blender support"
+with Mara. README is the walkthrough; `docs/blender.md` "A lecture" is the method.
+
 ### concept-explainer-short
 9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts). **Python/moviepy, not Remotion** — the whole video derives from `scenes.json` (per-scene narration + visual asset). Pipeline: `gen_vo.py` (per-scene TTS via voiceover.py, clone or built-in, `--max-wpm` pacing clamp) → `gen_captions.py` (whisper word timing force-aligned to script text, needs `uv sync --extra whisper`) → `build.py` (audio-anchored composite: Ken Burns on stills, boomerang-looped clips, burned karaoke caption pills, ducked music). Renders at every stage — placeholder cards before assets, silent before audio. Visuals follow the FLUX/Ideogram/LTX split: Ideogram cards at `1440x2560` for anything text-bearing, LTX b-roll at `576x1024` for motion.
 
@@ -209,7 +218,7 @@ This is especially critical for background commands where the working directory 
 | **Utility tools** | redub, addmusic, notebooklm_brand, locate_watermark, cutdown | Quick transformations on existing videos |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, music_gen, flux2 | AI processing via RunPod or Modal (`--cloud runpod\|modal`; soulx is Modal-only) |
 | **Publishing** | youtube_upload, youtube_stats | Upload a finished render to YouTube (use `/publish` for the guided workflow); see how it does |
-| **3D (optional)** | blender_render, reference_capture | Character acting, 3D reveals and product shots from a shot spec; needs Blender installed. reference_capture takes the reference photos of a person for a fitted character, from a webcam |
+| **3D (optional)** | blender_render, reference_capture, lecture | Character acting, 3D reveals and product shots from a shot spec; needs Blender installed. reference_capture takes the reference photos of a person for a fitted character, from a webcam |
 
 Utility tools work on any video file without requiring a project structure.
 

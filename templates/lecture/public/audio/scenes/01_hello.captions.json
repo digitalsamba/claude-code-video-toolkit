@@ -1,0 +1,338 @@
+[
+ {
+  "text": "Hello.",
+  "startMs": 60,
+  "endMs": 380,
+  "timestampMs": 220,
+  "confidence": null
+ },
+ {
+  "text": " This",
+  "startMs": 820,
+  "endMs": 920,
+  "timestampMs": 870,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 980,
+  "endMs": 1140,
+  "timestampMs": 1060,
+  "confidence": null
+ },
+ {
+  "text": " Blender",
+  "startMs": 1160,
+  "endMs": 1460,
+  "timestampMs": 1310,
+  "confidence": null
+ },
+ {
+  "text": " support",
+  "startMs": 1540,
+  "endMs": 1920,
+  "timestampMs": 1730,
+  "confidence": null
+ },
+ {
+  "text": " in",
+  "startMs": 1960,
+  "endMs": 2020,
+  "timestampMs": 1990,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 2060,
+  "endMs": 2120,
+  "timestampMs": 2090,
+  "confidence": null
+ },
+ {
+  "text": " video",
+  "startMs": 2160,
+  "endMs": 2400,
+  "timestampMs": 2280,
+  "confidence": null
+ },
+ {
+  "text": " toolkit,",
+  "startMs": 2520,
+  "endMs": 2920,
+  "timestampMs": 2720,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 3320,
+  "endMs": 3400,
+  "timestampMs": 3360,
+  "confidence": null
+ },
+ {
+  "text": " I'm",
+  "startMs": 3480,
+  "endMs": 3660,
+  "timestampMs": 3570,
+  "confidence": null
+ },
+ {
+  "text": " made",
+  "startMs": 3720,
+  "endMs": 3980,
+  "timestampMs": 3850,
+  "confidence": null
+ },
+ {
+  "text": " with",
+  "startMs": 4019,
+  "endMs": 4120,
+  "timestampMs": 4069,
+  "confidence": null
+ },
+ {
+  "text": " it.",
+  "startMs": 4160,
+  "endMs": 4280,
+  "timestampMs": 4220,
+  "confidence": null
+ },
+ {
+  "text": " I'm",
+  "startMs": 4900,
+  "endMs": 4960,
+  "timestampMs": 4930,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 5020,
+  "endMs": 5080,
+  "timestampMs": 5050,
+  "confidence": null
+ },
+ {
+  "text": " 3D",
+  "startMs": 5320,
+  "endMs": 5560,
+  "timestampMs": 5440,
+  "confidence": null
+ },
+ {
+  "text": " model",
+  "startMs": 5620,
+  "endMs": 5920,
+  "timestampMs": 5770,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 5960,
+  "endMs": 6060,
+  "timestampMs": 6010,
+  "confidence": null
+ },
+ {
+  "text": " toolkit",
+  "startMs": 6120,
+  "endMs": 6500,
+  "timestampMs": 6310,
+  "confidence": null
+ },
+ {
+  "text": " fitted",
+  "startMs": 6700,
+  "endMs": 6980,
+  "timestampMs": 6840,
+  "confidence": null
+ },
+ {
+  "text": " to",
+  "startMs": 7020,
+  "endMs": 7120,
+  "timestampMs": 7070,
+  "confidence": null
+ },
+ {
+  "text": " its",
+  "startMs": 7160,
+  "endMs": 7340,
+  "timestampMs": 7250,
+  "confidence": null
+ },
+ {
+  "text": " rig,",
+  "startMs": 7420,
+  "endMs": 7640,
+  "timestampMs": 7530,
+  "confidence": null
+ },
+ {
+  "text": " with",
+  "startMs": 7920,
+  "endMs": 8080,
+  "timestampMs": 8000,
+  "confidence": null
+ },
+ {
+  "text": " joints,",
+  "startMs": 8160,
+  "endMs": 8560,
+  "timestampMs": 8360,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 8800,
+  "endMs": 8801,
+  "timestampMs": 8800,
+  "confidence": null
+ },
+ {
+  "text": " face",
+  "startMs": 8960,
+  "endMs": 9320,
+  "timestampMs": 9140,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 9420,
+  "endMs": 9500,
+  "timestampMs": 9460,
+  "confidence": null
+ },
+ {
+  "text": " fingers.",
+  "startMs": 9640,
+  "endMs": 10080,
+  "timestampMs": 9860,
+  "confidence": null
+ },
+ {
+  "text": " The",
+  "startMs": 10640,
+  "endMs": 10740,
+  "timestampMs": 10690,
+  "confidence": null
+ },
+ {
+  "text": " hall,",
+  "startMs": 10820,
+  "endMs": 11160,
+  "timestampMs": 10990,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 11400,
+  "endMs": 11520,
+  "timestampMs": 11460,
+  "confidence": null
+ },
+ {
+  "text": " light",
+  "startMs": 11600,
+  "endMs": 11880,
+  "timestampMs": 11740,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 12060,
+  "endMs": 12140,
+  "timestampMs": 12100,
+  "confidence": null
+ },
+ {
+  "text": " every",
+  "startMs": 12340,
+  "endMs": 12580,
+  "timestampMs": 12460,
+  "confidence": null
+ },
+ {
+  "text": " move",
+  "startMs": 12680,
+  "endMs": 12860,
+  "timestampMs": 12770,
+  "confidence": null
+ },
+ {
+  "text": " I",
+  "startMs": 12960,
+  "endMs": 13020,
+  "timestampMs": 12990,
+  "confidence": null
+ },
+ {
+  "text": " make",
+  "startMs": 13080,
+  "endMs": 13380,
+  "timestampMs": 13230,
+  "confidence": null
+ },
+ {
+  "text": " come",
+  "startMs": 13440,
+  "endMs": 13620,
+  "timestampMs": 13530,
+  "confidence": null
+ },
+ {
+  "text": " from",
+  "startMs": 13640,
+  "endMs": 13880,
+  "timestampMs": 13760,
+  "confidence": null
+ },
+ {
+  "text": " one",
+  "startMs": 13940,
+  "endMs": 14100,
+  "timestampMs": 14020,
+  "confidence": null
+ },
+ {
+  "text": " file.",
+  "startMs": 14260,
+  "endMs": 14580,
+  "timestampMs": 14420,
+  "confidence": null
+ },
+ {
+  "text": " Nobody",
+  "startMs": 15200,
+  "endMs": 15560,
+  "timestampMs": 15380,
+  "confidence": null
+ },
+ {
+  "text": " animated",
+  "startMs": 15640,
+  "endMs": 16079,
+  "timestampMs": 15859,
+  "confidence": null
+ },
+ {
+  "text": " me",
+  "startMs": 16120,
+  "endMs": 16239,
+  "timestampMs": 16179,
+  "confidence": null
+ },
+ {
+  "text": " by",
+  "startMs": 16280,
+  "endMs": 16440,
+  "timestampMs": 16360,
+  "confidence": null
+ },
+ {
+  "text": " hand.",
+  "startMs": 16500,
+  "endMs": 16860,
+  "timestampMs": 16680,
+  "confidence": null
+ }
+]
