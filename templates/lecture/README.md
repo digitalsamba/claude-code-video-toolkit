@@ -98,6 +98,26 @@ a look and a smile. The table's place (`staging.table`) has to suit the presente
 tried on, one put the chalk down cleanly and the other was 8 cm short or put a hand into the table top. Turn it
 on, run `check`, and move the table until both its notes are gone.
 
+## Opening on the hall
+
+`"opening": {}` in lecture.json starts the lecture on the whole hall: it fades in from black (the room tone and
+the click of the door's latch come first), the hall holds still for a second, the door opens, the presenter walks
+in to their mark, and the camera comes down the hall from the back and lands on the board camera's framing on the
+frame the walk ends. Then it cuts to the board, which looks the same, and the first word comes half a second later.
+
+- `tools/lecture.py specs` writes the room shot as `blender/presenter/E1.json`: the first clip's own spec with the
+  hall drawn and dressed (rows, windows, lights), so the walk in is acted in both and the pose at the cut is the
+  same by construction (`check` measures it: the join `E1->P01`). The first clip keeps the opening as its lead-in.
+- The board on the wall is `public/board/title.png` (`npm run board`): the title stays up after the cut and goes
+  with the first segment's board.
+- The camera's arrival is keyed to the walk's end, not to a typed time: change `walk` and the camera follows.
+- Keys (seconds from black; defaults in `lib/lecture/defaults.json` "opening"): `seconds` (the cut), `first_word`
+  (after the cut), `latch`, `fade` ([start, length]), `door`, `walk` ([start, end]), `behind` (where they wait,
+  metres behind the door), `stride`, `heading`, `camera` (the start: `cam` and `aim` in the hall's measure, `lens`),
+  `hall` (the set's `hall` options: `windows`, `audience`, `colors`, ...), and `sounds` for the latch, the door and
+  the footsteps (CC0 recordings in `public/audio/sfx/`, laid on the room shot's own event frames).
+- It renders at 1920x1080, opaque: about ROOM_MIN minutes on an Apple M4 (`render` says before it starts).
+
 ## What is open
 
 - The presenter does not write: lettering chalks itself in while they point at it.

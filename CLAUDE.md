@@ -93,8 +93,10 @@ segment, standing at a board Remotion draws, with chalk written on the narration
 into and an inset of the presenter meanwhile. A lecture is its script, `lecture.json` and the timeline
 `tools/lecture.py timeline` writes; the code is `lib/lecture` and `tools/lecture.py` (specs, check, render), so a new
 lecture copies none. The hall is sized by the presenter, clips join in the middle of a move, and `check` fails a
-presenter hiding over 10% of the board or a join that moves. Ships as the opening of "Introducing Blender support"
-with Mara. README is the walkthrough; `docs/blender.md` "A lecture" is the method.
+presenter hiding over 10% of the board or a join that moves. `"opening": {}` starts it on the whole hall (a fade
+from black, the presenter walks in at the door, the camera comes down the dressed hall and lands on the board
+camera's framing as the walk ends, then a match cut to the board): about 8 s, its room shot written by
+`tools/lecture.py specs`. Ships as the opening of "Introducing Blender support" with Mara, opening on. README is the walkthrough; `docs/blender.md` "A lecture" is the method.
 
 ### concept-explainer-short
 9:16 vertical concept-explainer shorts (TikTok/Reels/YouTube Shorts). **Python/moviepy, not Remotion** — the whole video derives from `scenes.json` (per-scene narration + visual asset). Pipeline: `gen_vo.py` (per-scene TTS via voiceover.py, clone or built-in, `--max-wpm` pacing clamp) → `gen_captions.py` (whisper word timing force-aligned to script text, needs `uv sync --extra whisper`) → `build.py` (audio-anchored composite: Ken Burns on stills, boomerang-looped clips, burned karaoke caption pills, ducked music). Renders at every stage — placeholder cards before assets, silent before audio. Visuals follow the FLUX/Ideogram/LTX split: Ideogram cards at `1440x2560` for anything text-bearing, LTX b-roll at `576x1024` for motion.

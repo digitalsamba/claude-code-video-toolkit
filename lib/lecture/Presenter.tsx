@@ -12,7 +12,7 @@ import { AbsoluteFill, Audio, Sequence, continueRender, delayRender, getStaticFi
 import { BlenderClip, blenderClip, type BlenderManifest } from '../components/BlenderClip';
 import { Stroke, box } from './chalk';
 import defaults from './defaults.json';
-import type { Lecture, LectureTimeline } from './timeline';
+import type { Lecture, LectureTimeline, Sound } from './timeline';
 
 export const useManifest = (): BlenderManifest | null => {
   const there = getStaticFiles().some((f) => f.name === 'blender/clips.json');
@@ -40,6 +40,7 @@ export const presenterBox = (L: LectureTimeline) => {
 /** The lecture hall's room shots, frames 0 to the first presenter clip. A dark card stands in until they exist. */
 export const Room: React.FC<{ L: LectureTimeline }> = ({ L }) => {
   const manifest = useManifest();
+  const frame = useCurrentFrame();
   const shots = (manifest?.clips ?? []).filter((c) => /^E/.test(c.id) && has(c.file)).sort((x, y) => x.id.localeCompare(y.id));
   if (!shots.length) {
     return (
@@ -49,8 +50,11 @@ export const Room: React.FC<{ L: LectureTimeline }> = ({ L }) => {
     );
   }
   let at = 0;
+  // the opening fades in from black (its sound, the room tone and the latch, has started before it)
+  const op = L.tl.opening;
+  const seen = op ? interpolate(frame, [op.fadeFrom, op.fadeFrom + op.fadeFrames], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) : 1;
   return (
-    <AbsoluteFill style={{ background: '#000' }}>
+    <AbsoluteFill style={{ background: '#000', opacity: seen }}>
       {shots.map((c, i) => {
         const from = at;
         at += c.frames;
@@ -148,7 +152,10 @@ export const Inset: React.FC<{ L: LectureTimeline }> = ({ L }) => {
 export const PropSounds: React.FC<{ L: LectureTimeline; lecture: Lecture }> = ({ L, lecture }) => {
   const manifest = useManifest();
   if (!manifest) return null;
-  const sounds = { ...defaults.sounds, ...(lecture.sounds ?? {}) } as Record<string, { file: string; volume?: number; offset?: number; frames?: number }>;
+  const sounds = { ...defaults.sounds, ...(lecture.sounds ?? {}) } as Record<string, Sound>;
+  // the room shots' events (the latch, the door, the footsteps of the walk in) take the opening's sounds
+  const opening = typeof lecture.opening === 'object' ? lecture.opening : {};
+  const roomSounds = { ...sounds, ...defaults.opening.sounds, ...(opening.sounds ?? {}) } as Record<string, Sound>;
   // a room shot starts where the shots before it (by id) end, as Room plays them; a presenter clip at its span
   const starts: Record<string, number> = {};
   let t = 0;
@@ -157,19 +164,23 @@ export const PropSounds: React.FC<{ L: LectureTimeline; lecture: Lecture }> = ({
     t += c.frames;
   }
   for (const c of L.clips) starts[c.id] = c.from;
-  const laid: { key: string; at: number; s: (typeof sounds)[string] }[] = [];
+  const laid: { key: string; at: number; s: Sound; file: string }[] = [];
   for (const c of manifest.clips) {
     if (starts[c.id] === undefined) continue;
+    const count: Record<string, number> = {};
     for (const e of c.events ?? []) {
-      const s = sounds[e.kind];
-      if (s && getStaticFiles().some((f) => f.name === s.file)) laid.push({ key: `${c.id}-${e.kind}-${e.frame}`, at: starts[c.id] + e.frame, s });
+      const s = (/^E/.test(c.id) ? roomSounds : sounds)[e.kind];
+      if (!s) continue;
+      const k = (count[e.kind] = (count[e.kind] ?? -1) + 1);
+      const file = s.files ? s.files[k % s.files.length] : s.file;  // (in turn: no two footsteps alike)
+      if (file && getStaticFiles().some((f) => f.name === file)) laid.push({ key: `${c.id}-${e.kind}-${e.frame}`, at: starts[c.id] + e.frame, s, file });
     }
   }
   return (
     <>
-      {laid.map(({ key, at, s }) => (
+      {laid.map(({ key, at, s, file }) => (
         <Sequence key={key} from={Math.max(0, at + (s.offset ?? 0))} durationInFrames={s.frames ?? 20} layout="none">
-          <Audio src={staticFile(s.file)} volume={s.volume ?? 1} />
+          <Audio src={staticFile(file)} volume={s.volume ?? 1} />
         </Sequence>
       ))}
     </>

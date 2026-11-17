@@ -53,12 +53,16 @@ export type Lecture = {
   fps?: number;
   presenter: { cast: string };
   room_seconds?: number;
+  /** The establishing shot (tools/lecture.py writes its room spec): {} for the defaults, keys as in defaults.json. */
+  opening?: Partial<Omit<typeof defaults.opening, 'sounds'>> & { sounds?: Record<string, Sound> } | boolean;
   rules?: Partial<typeof defaults.rules>;
   staging?: Partial<typeof defaults.staging>;
-  sounds?: Record<string, { file: string; volume?: number; offset?: number; frames?: number }>;
+  sounds?: Record<string, Sound>;
   segments: Segment[];
 };
 
+/** A sound laid on a clip's event: one file, or several taken in turn (footsteps). */
+export type Sound = { file?: string; files?: string[]; volume?: number; offset?: number; frames?: number };
 export type Word = { w: string; f: number; e: number };
 export type Move = { at: number; dur: number; s: number; cx: number; cy: number };
 export type Timeline = {
@@ -68,6 +72,8 @@ export type Timeline = {
   windows: { segment: string; from: number; to: number }[];
   moves: Move[];
   presenter?: { head_px: number[]; box_px: number[]; share: number; scale?: number | null };
+  roomFrames?: number;
+  opening?: { fadeFrom: number; fadeFrames: number };
 };
 
 /** What a lecture and its timeline give the board: frames of words, segment edges, the clips' spans. */
@@ -102,7 +108,7 @@ export const makeTimeline = (lecture: Lecture, tl: Timeline) => {
   const S = (n: number) => seg(n).startFrame;
   const E = (n: number) => seg(n).startFrame + seg(n).frames;
   const N = (n: number) => (n + 1 < tl.segments.length ? S(n + 1) : tl.totalFrames);
-  const first = Math.round((lecture.room_seconds ?? 0) * tl.fps);
+  const first = tl.roomFrames ?? Math.round((lecture.room_seconds ?? 0) * tl.fps);
   /** Each presenter clip: its id (as tools/lecture.py names it) and the master frames it covers. */
   const clips = tl.segments.map((s, i) => ({
     id: 'P' + s.id.split('_')[0].replace(/[^A-Za-z0-9]/g, '').slice(0, 4),

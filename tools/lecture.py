@@ -40,6 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULTS = json.loads((ROOT / "lib" / "lecture" / "defaults.json").read_text(encoding="utf-8"))
 RULES, STAGING, WINDOW = DEFAULTS["rules"], DEFAULTS["staging"], DEFAULTS["window"]
 FACES = ("happy", "content", "worried", "neutral", "grin", "smile", "shocked")
+ROOM_PER = 4.0  # seconds a frame for the opening's room shot (the dressed hall, opaque, 1920x1080) on an Apple M4
 
 
 class LectureError(SystemExit):
@@ -100,10 +101,29 @@ def load(project: Path) -> dict:
     lec = json.loads(p.read_text(encoding="utf-8"))
     lec["rules"] = {**RULES, **lec.get("rules", {})}
     lec["staging"] = {**STAGING, **lec.get("staging", {})}
+    op = lec.get("opening")
+    if op is True:
+        op = {}
+    if isinstance(op, dict):  # (the establishing shot: defaults under the lecture's own keys)
+        lec["opening"] = {**DEFAULTS["opening"], **op, "camera": {**DEFAULTS["opening"]["camera"], **op.get("camera", {})},
+                          "sounds": {**DEFAULTS["opening"]["sounds"], **op.get("sounds", {})}}
+        o = lec["opening"]
+        if not (o["latch"] < o["door"] and o["fade"][0] + o["fade"][1] < o["door"] < o["walk"][0] < o["walk"][1] < o["seconds"]):
+            raise LectureError('"opening": the latch, the fade, the door, the walk and the cut have to come in that order '
+                               f'(latch {o["latch"]}, fade {o["fade"]}, door {o["door"]}, walk {o["walk"]}, cut {o["seconds"]})')
+    elif op not in (None, False):
+        raise LectureError('"opening" is {} (or true) for the establishing shot, with any of its keys from lib/lecture/defaults.json')
+    else:
+        lec["opening"] = None
     ids = [s["id"] for s in lec.get("segments", [])]
     if not ids or len(set(ids)) != len(ids):
         raise LectureError('lecture.json needs "segments", each with its own "id" (the audio file stem)')
     return lec
+
+
+def room_seconds(lec: dict) -> float:
+    """How long the lecture is in the hall before the board: the opening's length, or "room_seconds"."""
+    return float(lec["opening"]["seconds"]) if lec.get("opening") else float(lec.get("room_seconds", 0.0))
 
 
 def probe_seconds(path: Path) -> float:
@@ -128,7 +148,7 @@ def cmd_timeline(project: Path, args) -> dict:
     r = lec["rules"]
     scenes = project / "public" / "audio" / "scenes"
     old = json.loads((project / "timeline.json").read_text()) if (project / "timeline.json").exists() else {}
-    t = float(lec.get("room_seconds", 0.0)) + r["start"]
+    t = room_seconds(lec) + (lec["opening"]["first_word"] if lec.get("opening") else r["start"])
     segs = []
     for s in lec["segments"]:
         mp3, caps = scenes / f"{s['id']}.mp3", scenes / f"{s['id']}.captions.json"
@@ -148,7 +168,11 @@ def cmd_timeline(project: Path, args) -> dict:
         t += dur + float(s.get("gap_after", r["gap"]))
     end = segs[-1]["start"] + segs[-1]["dur"] + r["tail"]
     tl = {"note": "written by tools/lecture.py timeline from the audio, the captions and lecture.json",
-          "fps": fps, "segments": segs, "end": round(end, 3), "totalFrames": round(end * fps)}
+          "fps": fps, "segments": segs, "end": round(end, 3), "totalFrames": round(end * fps),
+          "roomFrames": round(room_seconds(lec) * fps)}
+    if lec.get("opening"):
+        o = lec["opening"]
+        tl["opening"] = {"fadeFrom": round(o["fade"][0] * fps), "fadeFrames": round(o["fade"][1] * fps)}
     words = Words(tl)
     windows, moves = [], []
     for seg, s in zip(segs, lec["segments"]):
@@ -188,7 +212,7 @@ def clip_spans(lec: dict, tl: dict) -> list[tuple[int, int]]:
     """Each segment's clip, in master frames: from lead_frames before its first word to the next clip's start
     (the first from the end of the room shots, or frame 0)."""
     segs, lead = tl["segments"], int(lec["rules"]["lead_frames"])
-    first = round(float(lec.get("room_seconds", 0.0)) * tl["fps"])
+    first = round(room_seconds(lec) * tl["fps"])
     starts = [first] + [s["startFrame"] - lead for s in segs[1:]] + [tl["totalFrames"]]
     return [(starts[i], starts[i + 1]) for i in range(len(segs))]
 
@@ -253,10 +277,12 @@ def spec_for(project: Path, lec: dict, tl: dict, words: Words, spans, i: int, no
     f0, f1 = spans[i]
     sid = clip_id(seg["id"])
     into = carried(lec, tl, spans, i)                 # the move this clip starts inside
+    opening = lec.get("opening") if i == 0 else None  # the first clip comes in at the door, in the room shot
     # A clip that starts inside a move has a lead-in shot ("pre") that is built and not rendered: the move starts
     # from the stance in it, so the clip's first frame is mid-move. (A character is placed, and its stance keyed,
-    # on a spec's first frame, so a move cannot start before it.)
-    pre_f = round(float(r["pre_roll"]) * fps) if into else 0
+    # on a spec's first frame, so a move cannot start before it.) After an opening the lead-in is the opening:
+    # the walk in is acted in this clip too, so the clip starts in the pose the room shot ends on.
+    pre_f = round(float(r["pre_roll"]) * fps) if into else round(opening["seconds"] * fps) if opening else 0
     pre = pre_f / fps
     dur = (f1 - f0) / fps
     loc = lambda frame: round((frame - f0) / fps + pre, 3)  # noqa: E731  (master frame -> seconds into the spec)
@@ -269,8 +295,19 @@ def spec_for(project: Path, lec: dict, tl: dict, words: Words, spans, i: int, no
     out = carried(lec, tl, spans, i + 1) if not last else None  # the move it ends inside
     setup_t = 0.0
     beats = [{"at": setup_t, "do": "hand", "shape": "loose", "hand": hand, "dur": 0},
-             {"at": round(pre + 0.1, 3), "do": "blinks"}, {"at": round(at, 4), "do": "talk", "until": round(end + 0.2, 4)}]
-    if not into:  # (a still join: head and eyes on the lens either side)
+             {"at": round(0.2 if opening else pre + 0.1, 3), "do": "blinks"},
+             {"at": round(at, 4), "do": "talk", "until": round(end + 0.2, 4)}]
+    if opening:  # the latch behind the door, the door, the walk to the mark (the room shot lands as it ends)
+        o = opening
+        beats += [{"at": o["door"], "do": "open_door", "dur": 0.8, "by": "presenter", "hand": hand,
+                   "latch": round(o["door"] - o["latch"], 3)},
+                  # (the hand that let go of the handle hangs loose again, as every later clip starts it)
+                  {"at": round(o["door"] + 0.9, 3), "do": "hand", "shape": "loose", "hand": hand, "dur": 0.35},
+                  {"at": o["walk"][0], "do": "walk", "to": {"board": list(st["stand"])}, "facing": st["facing"],
+                   "curve": True, "heading": o["heading"], "until": o["walk"][1], "stride": o["stride"]},
+                  # (the arms come to hang as the later clips' placed stance has them, so those clips meet this one)
+                  {"at": o["walk"][1], "do": "settle", "dur": 0.3}]
+    elif not into:  # (a still join: head and eyes on the lens either side)
         beats.insert(0, {"at": -0.1, "do": "look_at", "target": "camera", "dur": 0.1})
     beats.append({"at": setup_t, "do": "hold", "prop": "chalk", "hand": chalk})
     arm_free, look_free = 0.0, 0.0
@@ -281,7 +318,7 @@ def spec_for(project: Path, lec: dict, tl: dict, words: Words, spans, i: int, no
         arm_free, look_free = end_into + 0.8, end_into + 0.6
     elif sdef.get("heading"):  # the first clip: the turn to the heading inside the clip
         a0 = at - 0.35
-        if in_window(tl, f0 + round((a0 + r["turn"]) * fps), f0 + round((at + 1.35) * fps)):
+        if in_window(tl, f0 + round((a0 - pre + r["turn"]) * fps), f0 + round((at - pre + 1.35) * fps)):
             raise LectureError(f"{sid}: the heading is chalked while the inset is on screen; they would turn away in it")
         target = sdef.get("heading_at", r["heading_at"])
         beats += [{"at": round(a0, 3), "do": "present", "target": {"board": list(target)}, "dur": 1.5},
@@ -362,21 +399,43 @@ def spec_for(project: Path, lec: dict, tl: dict, words: Words, spans, i: int, no
     win = st["window"]
     w = round((win[2] - win[0]) * 1920 * st["density"] / 2) * 2
     h = round((win[3] - win[1]) * 1080 * st["density"] / 2) * 2
+    table = {**table_of(st), "hidden": True, "cup_on": True}
+    if lec.get("opening") and not r["close"]:  # (no table where the walk in goes: it is only there for the close)
+        table = False
     spec = {
         "title": f"{sid} ({seg['id']})", "fps": fps, "resolution": f"{w}x{h}", "engine": "eevee", "transparent": True,
         "clock": round((f0 - pre_f) / fps, 4), "master_start_frame": f0 - pre_f,
         "look": {"view": "Standard", "exposure": -0.9},
-        "set": {"kind": "lecture_hall", "walls": False,
-                "table": {**table_of(st), "hidden": True, "cup_on": True}},
-        "cast": [{"id": "presenter", "from": str(rel), "posture": "stand", "at": {"board": list(st["stand"])},
-                  "facing": st["facing"]}],
+        "set": {"kind": "lecture_hall", "walls": False, "table": table, **({"door": {}} if opening else {})},
+        "cast": [{"id": "presenter", "from": str(rel), "posture": "stand",
+                  "at": {"door": opening["behind"]} if opening else {"board": list(st["stand"])},
+                  "facing": 0 if opening else st["facing"]}],
         "voice": [{"captions": str(cap), "at": round(at, 4)}],
         "shots": ([{"id": "pre", "dur": round(pre, 4), "type": "fixed", "cam": "board", "lens": st["lens"],
-                    "window": list(win)}] if pre_f else [])
+                    "window": list(win), "built_only": True}] if pre_f else [])
         + [{"id": sid, "dur": round(dur, 4), "type": "fixed", "cam": "board", "lens": st["lens"], "window": list(win)}],
         "beats": sorted(beats, key=lambda b: b["at"]),
     }
     return sid, spec
+
+
+def room_spec(lec: dict, first: dict) -> dict:
+    """The opening's room shot: the first clip's spec (the same cast, beats and clock, so the pose at the cut is
+    the same in both) with the hall drawn and dressed, the board showing the titled board, and the camera coming
+    down the hall from the back to land on the board camera's framing as the walk ends. The first clip's own shot
+    stays on as "tail", built and not rendered, so both specs run the same length."""
+    o, st = lec["opening"], lec["staging"]
+    room = json.loads(json.dumps(first))
+    pre, clip = room["shots"][0], room["shots"][-1]
+    room.update({"title": "E1 (the opening)", "resolution": "1920x1080", "transparent": False})
+    room["set"] = {**room["set"], "walls": True, "hall": o["hall"],
+                   "board": {"image": "../../public/board/title.png"}}
+    c = o["camera"]
+    room["shots"] = [{"id": "E1", "dur": pre["dur"], "type": "move",
+                      "from": {"cam": {"hall": c["cam"]}, "aim": {"hall": c["aim"]}, "lens": c["lens"]},
+                      "to": {"cam": "board", "lens": st["lens"]}, "start": "walk", "arrive": "walk"},
+                     {"id": "tail", "dur": clip["dur"], "type": "fixed", "cam": "board", "lens": st["lens"], "built_only": True}]
+    return room
 
 
 def cmd_specs(project: Path, args) -> list[dict]:
@@ -390,6 +449,10 @@ def cmd_specs(project: Path, args) -> list[dict]:
     for i in range(len(tl["segments"])):
         sid, spec = spec_for(project, lec, tl, words, spans, i, notes)
         (d / f"{sid}.json").write_text(json.dumps(spec, indent=1) + "\n")
+        if i == 0 and lec.get("opening"):
+            (d / "E1.json").write_text(json.dumps(room_spec(lec, spec), indent=1) + "\n")
+            index.append({"id": "E1", "room": True, "from": 0, "frames": spans[0][0], "pre": 0})
+            print(f"E1: the opening, master frames 0 to {spans[0][0]} (the room shot; {sid} walks in with it)")
         pre = round(spec["shots"][0]["dur"] * tl["fps"]) if spec["shots"][0]["id"] == "pre" else 0
         index.append({"id": sid, "segment": tl["segments"][i]["id"], "from": spans[i][0], "frames": spans[i][1] - spans[i][0],
                       "pre": pre})
@@ -487,7 +550,12 @@ def cmd_check(project: Path, args) -> bool:
             ok = False
             continue
         b = res.get("board") or {}
-        boards.append(b)
+        if not c.get("room"):  # (the inset's crop and the board share are the presenter's clips')
+            boards.append(b)
+        for sh in res.get("shots", []):  # (the opening's move: where it sets off and lands, and how it lands)
+            if sh.get("type") == "move":
+                print(f"  {sh['id']}: sets off at frame {sh['sets_off']}, lands at {sh['lands']}; lens {sh['lens'][0]} to "
+                      f"{sh['lens'][1]} mm; nearest the set {sh['nearest_set_m']} m; landed: {sh.get('landing')}")
         skin = res.get("skin") or {}
         print(f"{c['id']}: {'pass' if res.get('passed') else 'FAIL'} in {time.time() - t:.0f} s; board {100 * b.get('share', 0):.1f}%"
               f", stretch {skin.get('stretch', '-')}" + ("" if res.get("passed") else f" | {'; '.join(res.get('body_problems', []))}"))
@@ -516,13 +584,17 @@ def cmd_render(project: Path, args) -> None:
     win = st["window"]
     pixels = (win[2] - win[0]) * 1920 * (win[3] - win[1]) * 1080 * st["density"] ** 2
     per = 0.81 * pixels / (864 * 836)  # (measured: 0.81 s a frame for Mara's 864x836 clips on an Apple M4; a heavier body is slower)
-    print(f"{len(index)} clips, {frames} frames: about {frames * per / 60:.0f} min on an Apple M4, one at a time "
+    room = sum(c["frames"] for c in index if c.get("room"))
+    # (measured: the dressed hall at 1920x1080 is about ROOM_PER s a frame on an Apple M4)
+    est = (frames - room) * per + room * ROOM_PER
+    print(f"{len(index)} clips, {frames} frames: about {est / 60:.0f} min on an Apple M4, one at a time "
           f"(longer for a body of many faces)")
     dest = project / "public" / "blender"
     for c in index:
         spec = project / "blender" / "presenter" / f"{c['id']}.json"
         t = time.time()
-        a = ["render", str(spec), "--clips", "--alpha", "--no-sound", "--force", "--to", str(dest), "--shots", c["id"]]
+        a = ["render", str(spec), "--clips", *([] if c.get("room") else ["--alpha"]), "--no-sound", "--force",
+             "--to", str(dest), "--shots", c["id"]]
         if args.draft:
             a += ["--res", args.draft]
         code = blender_tool(*a, log=logs / f"render-{c['id']}.log")

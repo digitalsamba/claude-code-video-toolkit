@@ -117,5 +117,62 @@
   "file": "audio/sfx/room-tone.mp3",
   "volume": 1.6,
   "frames": 1500
+ },
+ "opening": {
+  "note": "lecture.json \"opening\": {} (or any of these keys) opens the lecture on the whole hall: it fades in from black, the presenter comes in at the door and walks to their mark while the camera comes down the hall and lands on the board camera's framing as the walk ends, then cuts to the board. Times are seconds from black; places are in the hall's measure (metres for a presenter of 1.75 m).",
+  "seconds": 7.8,
+  "first_word": 0.5,
+  "latch": 0.45,
+  "fade": [
+   0.95,
+   0.7
+  ],
+  "door": 2.4,
+  "walk": [
+   2.9,
+   7.35
+  ],
+  "behind": -0.33,
+  "stride": 0.8,
+  "heading": -80,
+  "camera": {
+   "cam": [
+    0.8,
+    16.2,
+    5.0
+   ],
+   "aim": [
+    0,
+    0,
+    1.7
+   ],
+   "lens": 26
+  },
+  "hall": {},
+  "sounds": {
+   "latch": {
+    "file": "audio/sfx/door-latch.mp3",
+    "volume": 1.0,
+    "offset": 0,
+    "frames": 20
+   },
+   "door_open": {
+    "file": "audio/sfx/door-open.mp3",
+    "volume": 0.35,
+    "offset": 0,
+    "frames": 45
+   },
+   "step": {
+    "files": [
+     "audio/sfx/step-1.mp3",
+     "audio/sfx/step-2.mp3",
+     "audio/sfx/step-3.mp3"
+    ],
+    "volume": 0.22,
+    "offset": 0,
+    "frames": 14
+   }
+  },
+  "note_sounds": "laid on the room shot's own events (clips.json), the presenter's clips keep \"sounds\": a step here is a footfall of the walk in"
  }
 }

@@ -4,6 +4,7 @@
  "presenter": {
   "cast": "cast/presenter.json"
  },
+ "opening": {},
  "staging": {},
  "rules": {},
  "segments": [

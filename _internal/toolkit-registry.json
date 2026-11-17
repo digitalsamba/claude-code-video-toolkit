@@ -131,7 +131,7 @@
     },
     "blender": {
       "path": ".claude/skills/blender/",
-      "description": "3D scenes, character acting and product shots from a shot spec, as a film, as clips for any build, or as elements of a Remotion video: spec format, the cast schema (build, face, hair, clothes, accessories, seed, a character file per kit), sets (desk_room, desk, lecture_hall, kitchen with a mug carried by its handle, picked up and drunk from, a lid opened by hand and Claude the CRT, living_room with a sofa, pub with a pint held, let go of and drunk from, a phone held up for a video call with a camera that looks back from it, a finger wag, studio with phone, card and model props), shot types and camera moves, acting verbs, narration cues, the check/contact-sheet loop, BlenderClip compositing, brief-to-beats shot grammar, Blender Python vs MCP, Blender 5 gotchas",
+      "description": "3D scenes, character acting and product shots from a shot spec, as a film, as clips for any build, or as elements of a Remotion video: spec format, the cast schema (build, face, hair, clothes, accessories, seed, a character file per kit), sets (desk_room, desk, lecture_hall with an optional dressed hall of rows, windows and lights, kitchen with a mug carried by its handle, picked up and drunk from, a lid opened by hand and Claude the CRT, living_room with a sofa, pub with a pint held, let go of and drunk from, a phone held up for a video call with a camera that looks back from it, a finger wag, studio with phone, card and model props), shot types and camera moves (a move from one framing to another, keyed to a walk), acting verbs, narration cues, the check/contact-sheet loop, BlenderClip compositing, brief-to-beats shot grammar, Blender Python vs MCP, Blender 5 gotchas",
       "status": "beta",
       "created": "2026-11-11"
     }
@@ -1447,7 +1447,7 @@
   "templates": {
     "lecture": {
       "path": "templates/lecture/",
-      "description": "A lecture at a chalkboard: a fitted presenter rendered in Blender (one transparent clip a segment, joined pose to pose) in front of a board Remotion draws, with chalk written on the narration's words, windows the camera goes into, and an inset of the presenter while it is in one. The whole lecture is lecture.json, the voiced script and the timeline tools/lecture.py writes; the code is lib/lecture. Ships as the opening of \"Introducing Blender support\" with Mara, the invented fitted character. Needs Blender (optional)",
+      "description": "A lecture at a chalkboard: a fitted presenter rendered in Blender (one transparent clip a segment, joined pose to pose) in front of a board Remotion draws, with chalk written on the narration's words, windows the camera goes into, and an inset of the presenter while it is in one; optionally an opening on the whole hall (a fade from black, a walk in at the door, a camera move down the dressed hall that lands on the board camera's framing as the walk ends, a match cut to the board). The whole lecture is lecture.json, the voiced script and the timeline tools/lecture.py writes; the code is lib/lecture. Ships as the opening of \"Introducing Blender support\" with Mara, the invented fitted character. Needs Blender (optional)",
       "status": "experimental",
       "created": "2026-11-17",
       "updated": "2026-11-17",

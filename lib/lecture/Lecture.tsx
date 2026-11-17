@@ -61,7 +61,9 @@ const SegmentBoard: React.FC<{ L: LectureTimeline; lecture: Lecture; n: number; 
   const seg = lecture.segments[n];
   const windowed = (seg.windows ?? []).length > 0;
   return (
-    <Seg from={L.S(n) - 12} to={L.N(n) - 20}>
+    <Seg from={n === 0 && L.first > 0 ? L.first : L.S(n) - 12} to={L.N(n) - 20}>
+      {/* after the room shots, the title they showed on the wall is still up, and goes with the first segment */}
+      {n === 0 && L.first > 0 ? <Title lecture={lecture} /> : null}
       {seg.heading ? (
         <Chalk x={HX} y={windowed ? 205 : HB} size={windowed ? SIZE.l : SIZE.xl} at={L.S(n) - 4}>{seg.heading}</Chalk>
       ) : null}

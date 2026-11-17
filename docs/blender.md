@@ -217,6 +217,46 @@ walkthrough. It was lifted out of a nine-minute sprint review and made generic i
   compares every body vertex and the face at each join: 0.2 to 1.2 mm on two bodies.
 - **A free hand turns no further than its cuff takes.** See the next section.
 
+### Opening on the hall
+
+`"opening": {}` in lecture.json makes the lecture start on the whole hall: a fade from black, the door opens, the
+presenter walks to their mark, and the camera comes down the hall and lands on the board camera's framing as the
+walk ends, then cuts to the board. What it took:
+
+- **A hall worth seeing wide** is the set's `"hall": {}`: deeper (17 m in the hall's measure), rows of desks and
+  benches on a rake, a ceiling with lights, windows down one side, slatted panels on the other, all scaled by the
+  presenter like the board. Its own lights reach only the hall (light linking: EEVEE honours it in Blender 5.3;
+  not yet tried on 4.2 LTS), so the presenter is lit as in every clip.
+- **The board camera stands 12 m out**, in the hall's measure (a 108 mm lens framing a 4 m board), so the hall is
+  deep enough to hold it, with an aisle down the middle in line with the board. With a 2 m aisle the end panels of
+  the front rows showed at the foot of the landed frame (0.6% of the board); at 2.6 m nothing does. The landing
+  check casts a grid of rays at the board from the lens on every landed frame and fails on anything but the
+  presenter in front of it.
+- **A move from one framing to another** (`"type": "move"`) eases out, comes down before it comes in, and arrives
+  along the end framing's axis, so the last of it is straight in. Ending on the board camera itself, and not on a
+  shorter lens at the same framing, keeps the presenter the size the board clips draw them: a 50 mm lens at the
+  same framing makes a presenter a metre off the wall 12% bigger. So the lens does much of the framing change
+  (26 to 108 mm) and the move gives the parallax: the rows rising past as it comes down.
+- **The cut is a match by construction.** The room shot's spec is the first clip's own (cast, beats, clock), with
+  the hall drawn; the first clip keeps the walk in as its lead-in, built and not rendered (`"built_only": true`).
+  `tools/lecture.py check` measures the join like any other: 0.0 mm.
+- **The arrival is keyed to the walk** (`"start"` and `"arrive"`: `"walk"`). One curved walk from behind the door
+  to the mark: a stop inside the door and a second walk into an 80-degree bend took a foot 22 mm past its reach.
+- **The later clips start placed on the mark**, so the walk in has to end in a placed stance. Two things did
+  not: a walk ends with the knees soft (the hips 12 mm under a placed stance), and the arms came out of the walk
+  and the door at another turn of the wrist (the fingers 7 cm off on Mara, 1 cm on the author's body). The opening
+  ends with `settle` (they stand up straight and the arms hang as a placed stance's do) and puts the door hand
+  back to `loose`; the join after the first clip went from 75 mm to 0.7 mm. (Standing every walk up straight on
+  its last step did it too, and changed the clay cast's walk: `settle` keeps it to the specs that ask.)
+- The opening walks at Jasmina's stride, 0.8 of a leg, which fitted bodies take cleanly; the clay cast's arms miss
+  that swing by 4 to 7 cm (`ik_max_error_m`), so a clay presenter walks at the default 0.5.
+- The window panes fought their frames (flicker) in a hall at the clay cast's scale and not at the author's: a
+  pane now runs on under its frame, inside its depth.
+- The lecture's hidden table (only there for the close) stood on the walk's path, and the body went 3 cm into
+  it: with an opening and no close, the clips have no table (`"table": false`).
+- The latch clicks on black, before the picture: the handle goes down behind the shut door (`open_door`'s
+  `latch`) and the event is keyed on it; the door swings once the hall has been still for a second.
+
 ### The cuff on gestures and points
 
 A fitted model's cuff is one band of skin shared by the forearm and the hand, so any turn of the hand on the

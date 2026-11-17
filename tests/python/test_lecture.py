@@ -85,6 +85,44 @@ class LectureTests(unittest.TestCase):
         self.assertAlmostEqual(p02['clock'] * fps, p02['master_start_frame'], places=3)  # (breathing keeps the global clock)
         self.assertNotIn('look_at', [b['do'] for b in p02['beats'] if b['at'] < 0.5])  # (no look at the lens to snap to)
 
+    def test_an_opening_is_the_first_clips_lead_in_drawn_in_the_hall(self):
+        """With "opening", the lecture starts on the room shot: its spec is the first clip's (the same cast, beats
+        and clock, so the pose at the cut is the same in both) with the hall drawn and dressed and a camera that
+        lands on the board as the walk ends; the first clip has the opening as its lead-in, not rendered, and the
+        first word comes half a second after the cut."""
+        self.lec['opening'] = {}
+        self.write()
+        tl = lecture.cmd_timeline(self.tmp, None)
+        lecture.cmd_specs(self.tmp, None)
+        d = self.tmp / 'blender' / 'presenter'
+        e1, p01 = json.loads((d / 'E1.json').read_text()), json.loads((d / 'P01.json').read_text())
+        index = json.loads((d / 'index.json').read_text())
+        fps, o = tl['fps'], lecture.DEFAULTS['opening']
+        self.assertEqual(tl['roomFrames'], round(o['seconds'] * fps))
+        self.assertEqual(tl['segments'][0]['startFrame'], round((o['seconds'] + o['first_word']) * fps))
+        self.assertEqual([c['id'] for c in index], ['E1', 'P01', 'P02'])
+        self.assertTrue(index[0]['room'])
+        self.assertEqual(index[0]['frames'], index[1]['from'])
+        self.assertEqual([s['id'] for s in p01['shots']], ['pre', 'P01'])
+        self.assertEqual([s['id'] for s in e1['shots']], ['E1', 'tail'])
+        self.assertEqual(e1['shots'][0]['dur'], p01['shots'][0]['dur'])          # the room shot is the lead-in
+        self.assertEqual(e1['shots'][0]['to'], {'cam': 'board', 'lens': 108})
+        self.assertEqual((e1['shots'][0]['start'], e1['shots'][0]['arrive']), ('walk', 'walk'))
+        for k in ('beats', 'cast', 'clock', 'fps'):
+            self.assertEqual(e1[k], p01[k], k)
+        self.assertEqual((e1['set']['walls'], p01['set']['walls']), (True, False))
+        self.assertEqual(e1['set']['hall'], {})
+        self.assertIs(p01['set']['table'], False)                                 # (nothing where the walk goes)
+        self.assertEqual(p01['cast'][0]['at'], {'door': o['behind']})
+        verbs = [b['do'] for b in p01['beats']]
+        self.assertIn('open_door', verbs)
+        self.assertIn('walk', verbs)
+        self.lec['opening'] = {'door': 0.5}                                      # before the picture is up
+        self.write()
+        with self.assertRaises(SystemExit) as ctx:
+            lecture.cmd_timeline(self.tmp, None)
+        self.assertIn('in that order', str(ctx.exception))
+
     def test_a_beat_that_would_collide_is_dropped_and_said(self):
         """A gesture on the first words, while the arm shows the heading, is left out, and the run says so; a turn
         to the board while the camera is in a window becomes a gesture to the hall."""
