@@ -65,6 +65,25 @@ class LectureTests(unittest.TestCase):
         self.assertLess(w['from'], w['to'])
         self.assertEqual([m['s'] for m in tl['moves']], [1.4, 1])          # the camera goes in and comes back out
 
+    def test_a_segment_that_opens_in_a_window_is_joined_on_a_look_at_the_lens(self):
+        """When the next segment opens in a window, the carried move is a gesture to the hall, and both clips also
+        look at the lens, the second look landing on the join's frame: the head was the one part left to each
+        clip's own earlier beats, 72 mm apart at a join in the first lecture to do this."""
+        self.lec['segments'][1]['windows'] = [{'in': "So here's", 'out': 'and back'}]
+        self.write()
+        lecture.cmd_timeline(self.tmp, None)
+        lecture.cmd_specs(self.tmp, None)
+        d = self.tmp / 'blender' / 'presenter'
+        index = json.loads((d / 'index.json').read_text())
+        join = index[1]['from']
+        for clip in ('P01', 'P02'):
+            spec = json.loads((d / f'{clip}.json').read_text())
+            fps, m = spec['fps'], spec['master_start_frame']
+            looks = [b for b in spec['beats'] if b['do'] == 'look_at' and b['target'] == 'camera'
+                     and join - 40 < m + b['at'] * fps < join]
+            self.assertEqual(round(m + (looks[-1]['at'] + looks[-1]['dur']) * fps), join, clip)
+            self.assertIn('gesture', [b['do'] for b in spec['beats'] if abs(m + b['at'] * fps - join) < 30])
+
     def test_a_panes_video_is_measured_from_its_file(self):
         """A pane can play a video (public/): the timeline writes its length in frames, read from the file, so the
         board holds its last frame without a typed length; a missing file is named before anything renders."""

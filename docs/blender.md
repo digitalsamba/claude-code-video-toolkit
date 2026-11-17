@@ -214,7 +214,11 @@ walkthrough. It was lifted out of a nine-minute sprint review and made generic i
   spec's `clock` is the film's), and the held part of a turn depends only on its target, so both poses agree.
   A character's stance is keyed on a spec's first frame, so a move cannot start before it: a clip that starts
   mid-move has a lead-in shot (`pre`) that is built and not rendered (`render --shots`). `tools/lecture.py check`
-  compares every body vertex and the face at each join: 0.2 to 1.2 mm on two bodies.
+  compares every body vertex and the face at each join: 0.2 to 1.2 mm on two bodies. When the next segment opens in a window, the
+  carried move is a gesture to the hall (a turn would show the inset a profile), and a gesture says nothing of the
+  head: the first lecture to do this left each clip's head where its own earlier beats put it, 72 mm apart. Both
+  clips now look at the lens as well, twice (a look aims from where the head is, which the neck moves), the second
+  landing on the join's frame, and the join measures 0.0 mm.
 - **A free hand turns no further than its cuff takes.** See the next section.
 
 ### Opening on the hall

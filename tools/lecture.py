@@ -281,8 +281,19 @@ def carried(lec: dict, tl: dict, spans, i: int) -> list[dict] | None:
     speech = tl["segments"][i]["startFrame"]
     hold_to = speech + round(1.1 * fps)  # (held until the heading is chalked, then back to the hall)
     if in_window(tl, f0 + round(r["turn"] * fps), hold_to):
+        # (a gesture to the hall says nothing of the head: both clips look at the lens first, settled before the join,
+        # or the new clip starts with the head where its stance left it, 7 degrees off the old clip's look. Twice:
+        # a look aims from where the head is, which the neck moves, so one look from the stance ends half a degree
+        # from one made by a head already on the lens; the second starts from the lens in both clips and lands on
+        # the join's frame: ended before it, the new clip's head eases on toward its next look from there while
+        # the old clip's stays, 3.5 mm apart at the join; held past it, it aims from a head the new clip's speech
+        # has moved, 20 mm)
         kind = r["in_window"]
-        return [{"f": f0, "do": "gesture", "kind": kind, "hand": other(lec), "dur": round((hold_to - f0) / fps, 3)}]
+        look = max(spans[i][0] - round(r["pre_roll"] * fps) + 1, f0 - round(0.9 * fps))
+        held = look + round(0.4 * fps)
+        return [{"f": look, "do": "look_at", "target": "camera", "dur": 0.35},
+                {"f": held, "do": "look_at", "target": "camera", "dur": round((join - held) / fps, 3)},
+                {"f": f0, "do": "gesture", "kind": kind, "hand": other(lec), "dur": round((hold_to - f0) / fps, 3)}]
     target = seg_def.get("heading_at", r["heading_at"])
     return [{"f": f0, "do": "present", "target": {"board": list(target)}, "dur": round((hold_to - f0) / fps, 3)},
             {"f": hold_to + round(0.25 * fps), "do": "look_at", "target": "camera", "dur": 0.4}]
