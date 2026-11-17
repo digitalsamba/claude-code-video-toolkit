@@ -24,6 +24,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import bpy  # noqa: E402
+import numpy as np  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
 import acting  # noqa: E402
@@ -33,7 +34,7 @@ import kit  # noqa: E402
 from character import FACES, LEANS, LOOKS, POSES, POSTURES, TYPING, ClayPerson  # noqa: E402
 
 HAND_SHAPES = tuple(ClayPerson.HAND_SHAPES)
-from hall import LectureHall  # noqa: E402
+from hall import STATURE as HALL_STATURE, LectureHall, board_floor, board_rect  # noqa: E402
 from kitchen import Kitchen  # noqa: E402
 from lounge import LivingRoom  # noqa: E402
 from pub import Pub  # noqa: E402
@@ -59,6 +60,7 @@ CARRIED_TILT = 12.0     # a mug in the hand is level to within this (degrees; th
 CARRIED_THROUGH = 0.006  # and no deeper than this in a table or a door (m)
 GRIP_OPEN = 0.75  # a hand holding something has its fingertips within this share of a finger's length of it
 SKIN_LIMITS = {"leg_above_hips": 50, "stretch": 4.0}  # a fitted model's weights (character.skin_report)
+BOARD_COVER = 0.10  # the most of a lecture hall's board its presenter may hide from the board camera
 SET_VERBS = {"alert", "work", "done", "open_door", "close_door", "pull_in", "open_lid", "close_lid", "claude_type",
              "claude_turn"}
 KITCHEN_VERBS = ("open_lid", "close_lid", "claude_type", "claude_turn")  # verbs only a kitchen has
@@ -83,6 +85,103 @@ def _point(v):
     return isinstance(v, (list, tuple)) and len(v) == 2 and all(_number(x) for x in v)
 
 
+def _board_ref(v):
+    """A place named by the lecture hall's board: {"board": [u, v]} in board pixels (a spot on the floor takes
+    [u, metres out from the wall])."""
+    return isinstance(v, dict) and set(v) == {"board"} and _point(v["board"])
+
+
+def _board_cover(room, p, spec, tl, cams):
+    """How much of the board the presenter hides from each "board" camera, every half second: the share of the
+    board's pixels behind them (their mesh cast onto the board from the lens, on a grid of 10 board pixels), the
+    box they ever reach in board pixels, where their head is at the start, and whether they stay inside the
+    shot's window (a clip of part of the frame cuts off a hand that reaches out of it)."""
+    shots = [s for s in spec.get("shots", []) if s.get("board_cam")]
+    if not shots:
+        return None
+    from hall import WALL_Y
+    sc = kit.scene()
+    b = room.board
+    gw, gh = 192, 108
+    objs = [o for o in p.visible_objects() if o.type == "MESH"]
+    out = {"share": 0.0, "frame": None, "box_px": None, "head_px": None, "outside_window": 0}
+    for s in shots:
+        cam = next(c for f0, f1, c in cams if c.name == s["id"])
+        f0, f1 = tl.frame(tl.shots[s["id"]][0]), tl.frame(tl.shots[s["id"]][1]) - 1
+        win = s.get("window")
+        for f in sorted(set(range(f0, f1 + 1, max(1, round(tl.fps / 2)))) | {f1}):
+            sc.frame_set(f)
+            dg = bpy.context.evaluated_depsgraph_get()
+            pts = []
+            for o in objs:
+                ev = o.evaluated_get(dg)
+                mesh = ev.to_mesh()
+                co = np.empty(len(mesh.vertices) * 3, dtype=np.float64)
+                mesh.vertices.foreach_get("co", co)
+                ev.to_mesh_clear()
+                mw = np.array(o.matrix_world)
+                co = co.reshape(-1, 3) @ mw[:3, :3].T + mw[:3, 3]
+                pts.append(co)
+            P = np.concatenate(pts)
+            c = np.array(cam.matrix_world.translation)
+            t = (WALL_Y - 0.03 - c[1]) / (P[:, 1] - c[1])
+            on = c + (P - c) * t[:, None]
+            u = (on[:, 0] - b["x0"]) / (b["x1"] - b["x0"]) * 1920
+            v = (b["z1"] - on[:, 2]) / (b["z1"] - b["z0"]) * 1080
+            if f == f0 and out["head_px"] is None:
+                hu, hv = room.board_px(c + (np.array(p.head.matrix_world.translation) - c)
+                                       * ((WALL_Y - 0.03 - c[1]) / (p.head.matrix_world.translation.y - c[1])))
+                out["head_px"] = [round(hu), round(hv)]
+            box = [float(u.min()), float(v.min()), float(u.max()), float(v.max())]
+            out["box_px"] = box if out["box_px"] is None else [min(out["box_px"][0], box[0]), min(out["box_px"][1], box[1]),
+                                                               max(out["box_px"][2], box[2]), max(out["box_px"][3], box[3])]
+            if win:  # (the window is shares of the frame from the left and the bottom; what is off the frame
+                # is cut off by the frame anyway, legs below its bottom edge included)
+                wx0, wy0, wx1, wy1 = win
+                seen = [max(0.0, box[0]), max(0.0, box[1]), min(1920.0, box[2]), min(1080.0, box[3])]
+                if (seen[0] < wx0 * 1920 - 1 or seen[2] > wx1 * 1920 + 1 or seen[1] < (1 - wy1) * 1080 - 1
+                        or seen[3] > (1 - wy0) * 1080 + 1):
+                    out["outside_window"] += 1
+            inside = (u >= 0) & (u < 1920) & (v >= 0) & (v < 1080)
+            grid = np.zeros((gh, gw), bool)
+            grid[(v[inside] / 1080 * gh).astype(int), (u[inside] / 1920 * gw).astype(int)] = True
+
+            def grow(g):
+                h = g.copy()
+                h[1:] |= g[:-1]
+                h[:-1] |= g[1:]
+                h[:, 1:] |= g[:, :-1]
+                h[:, :-1] |= g[:, 1:]
+                return h
+            grid = ~grow(~grow(grid))  # (closed: the gaps between projected vertices filled, the outline kept)
+            share = float(grid.mean())
+            if share > out["share"]:
+                out["share"], out["frame"] = round(share, 4), f
+    out["box_px"] = [round(x) for x in out["box_px"]]
+    return out
+
+
+def _resolve_board(spec, room, cast):
+    """Turn the places a lecture spec names by the board into the hall's metres, now that the hall is sized: a
+    cast member's spot, a walk's end, a beat's target, and a "board" camera (square on, edge to edge with the
+    shot's lens, 108 mm unless it says)."""
+    for b in spec.get("beats", []):
+        if _board_ref(b.get("target")):
+            b["target"] = room.board_point(*b["target"]["board"])
+        if b.get("do") == "walk" and _board_ref(b.get("to")):
+            b["to"] = room.board_floor(*b["to"]["board"])
+    for s in spec.get("shots", []):
+        if s.get("cam") == "board":
+            s["lens"] = float(s.get("lens", 108))
+            s["cam"], s["aim"] = room.board_camera(s["lens"])
+            s["board_cam"] = True
+            # (a long lens stands the camera well back, behind the room's front wall: the wall still lights the
+            # room and is not drawn for the camera)
+            front = bpy.data.objects.get("wall_front")
+            if front is not None:
+                front.visible_camera = False
+
+
 def validate(spec):
     """Everything about a spec that can be wrong without Blender: a clear SpecError now, not a traceback later."""
     fps = spec.get("fps", 24)
@@ -97,6 +196,9 @@ def validate(spec):
     studio = kind == "studio"
     if st.get("door") is not None and (not isinstance(st["door"], dict) or kind not in ("desk_room", "lecture_hall", "kitchen")):
         raise SpecError('"door" is an object (it may be empty: {}), and only a desk_room has a wall to put it in')
+    tab = (st.get("table") or {}).get("at") if isinstance(st.get("table"), dict) else None
+    if tab is not None and not (_point(tab) or (kind == "lecture_hall" and _board_ref(tab))):
+        raise SpecError('"table": "at" is a spot on the floor as [x, y] in metres, or {"board": [u, out]}')
     if not _number(st.get("chair_out", 0)):
         raise SpecError('"chair_out" is how far the chair starts pulled back from the desk, in metres')
     spec.setdefault("cast", [])
@@ -111,9 +213,11 @@ def validate(spec):
         if c.get("posture", "sit") not in POSTURES:
             raise SpecError(f'cast member {c.get("id")!r}: "posture" is one of {", ".join(POSTURES)}, '
                             f'not {c["posture"]!r}')
-        if not _point(c.get("at", [0, 0])) or not _number(c.get("facing", 0)):
-            raise SpecError(f'cast member {c.get("id")!r}: "at" is a spot on the floor as [x, y] in metres and '
-                            f'"facing" a number of degrees (0 faces -Y, positive turns to their left)')
+        at_ok = _point(c.get("at", [0, 0])) or (kind == "lecture_hall" and _board_ref(c.get("at")))
+        if not at_ok or not _number(c.get("facing", 0)):
+            raise SpecError(f'cast member {c.get("id")!r}: "at" is a spot on the floor as [x, y] in metres (in a '
+                            f'lecture_hall also {{"board": [u, out]}}: in front of board pixel column u, out metres '
+                            f'from the wall) and "facing" a number of degrees (0 faces -Y, positive turns to their left)')
     props = st.get("props") or [] if studio else []
     for p in props:
         if not isinstance(p.get("id"), str) or p.get("kind") not in PROP_KINDS:
@@ -139,6 +243,8 @@ def validate(spec):
             raise SpecError(f'shot {s.get("id")!r}: unknown subject {subject!r} (have: screen, {", ".join(ids)})')
         if s.get("side") not in (None, "left", "right"):
             raise SpecError(f'shot {s.get("id")!r}: "side" is "left" or "right"')
+        if s.get("cam") == "board" and (kind != "lecture_hall" or s["type"] != "fixed"):
+            raise SpecError(f'shot {s.get("id")!r}: "cam": "board" is a fixed shot square on to a lecture_hall\'s board')
     for b in spec.get("beats", []):
         if "at" not in b or "do" not in b:
             raise SpecError(f'a beat needs "at" and "do": {b}')
@@ -184,7 +290,7 @@ def validate(spec):
             _one_of(b, "target", LOOKS, numbers=True, default="screen")
         elif verb == "lean":
             _one_of(b, "amount", LEANS, numbers=True, default="none")
-        elif verb == "walk" and (not _point(b.get("to")) or not _number(b.get("facing", 0))
+        elif verb == "walk" and (not (_point(b.get("to")) or (kind == "lecture_hall" and _board_ref(b.get("to")))) or not _number(b.get("facing", 0))
                                  or not _number(b.get("heading", 0)) or not isinstance(b.get("curve", False), bool)
                                  or not (_number(b.get("stride", 0.5)) and 0.3 <= b.get("stride", 0.5) <= 0.85)):
             raise SpecError(f'beat at {b["at"]!r}: walk needs "to", a spot on the floor as [x, y] in metres (and '
@@ -201,9 +307,11 @@ def validate(spec):
         elif verb == "point" and not isinstance(b.get("back", True), bool):
             raise SpecError(f'beat at {b["at"]!r}: point takes "back": true or false (the arm goes back after)')
         elif verb in ("look_at", "reach", "point", "present") and not (b.get("target") in LOOK_AT or (
-                isinstance(b.get("target"), list) and len(b["target"]) == 3 and all(_number(x) for x in b["target"]))):
+                isinstance(b.get("target"), list) and len(b["target"]) == 3 and all(_number(x) for x in b["target"]))
+                or (kind == "lecture_hall" and _board_ref(b.get("target")))):
             raise SpecError(f'beat at {b["at"]!r}: {verb} needs "target": a point in the room as [x, y, z] in metres'
-                            f', or one of {", ".join(LOOK_AT)}')
+                            f', or one of {", ".join(LOOK_AT)}' + (' (or {"board": [u, v]}, a board pixel)'
+                                                                   if kind == "lecture_hall" else ''))
         elif verb == "glance" and not (_number(b.get("yaw", 0)) and _number(b.get("pitch", 0))):
             raise SpecError(f'beat at {b["at"]!r}: glance takes "yaw" and "pitch" in degrees')
         elif verb == "turn" and not _number(b.get("facing")):
@@ -287,7 +395,7 @@ def build(spec, args):
         if cast:
             raise SpecError("prototype supports one character per set")
         cast[c["id"]] = ClayPerson(c["id"], casting.resolve(c, base))
-        if any(k in c for k in ("posture", "at", "facing")):
+        if any(k in c for k in ("posture", "at", "facing")) and not _board_ref(c.get("at")):
             cast[c["id"]].place(c.get("posture", "sit"), c.get("at", (0, 0)), float(c.get("facing", 0)))
     if not cast:
         raise SpecError("spec needs a cast")
@@ -299,9 +407,20 @@ def build(spec, args):
             picture = Path(picture) if Path(picture).is_absolute() else base / picture
             if not picture.exists():
                 raise SpecError(f"board image not found: {picture}")
+        # (the hall is sized by its presenter, as a desk is by whoever sits at it: hall.py)
+        who = next(iter(cast.values()))
+        scale = round(who.stature() / HALL_STATURE, 4) if who.desc.get("model") else 1.0
+        rect = board_rect(st.get("board"), scale)
+        for c in spec.get("cast", []):  # (a spot named by the board is a place once the board is sized)
+            if _board_ref(c.get("at")):
+                cast[c["id"]].place(c.get("posture", "stand"), board_floor(rect, scale, *c["at"]["board"]),
+                                    float(c.get("facing", 0)))
         room = LectureHall(st.get("palette"), walls=bool(st.get("walls", True)), door=door, board=st.get("board"),
                            image=picture, strength=float((st.get("board") or {}).get("brightness", 1.0)) * 2 ** -exposure,
-                           table=st.get("table"))
+                           table=st.get("table"), scale=scale)
+        _resolve_board(spec, room, cast)
+        kit.hall = {"scale": scale, "stature_m": round(who.stature(), 3),
+                    "board_m": {k: round(v, 3) for k, v in room.board.items()}}
     elif kind == "pub":
         who = next(iter(cast.values()))
         room = Pub(st.get("palette"), fit=who.furniture(), pint=st.get("pint"),
@@ -600,6 +719,7 @@ def build(spec, args):
     kit.face = p.face_report()
     kit.skin = p.skin_report(range(1, tl.frames, max(1, tl.frames // 14)))
     kit.fighting = cameras.fighting(cams)  # faces in one plane that a camera sees: they would flicker
+    kit.board = _board_cover(room, p, spec, tl, cams) if kind == "lecture_hall" else None
     return tl, cams, reports, ik, events
 
 
@@ -766,6 +886,21 @@ def main():
         if said_skin:
             checks["passed"] = False
             checks["body_problems"] = checks.get("body_problems", []) + said_skin
+    board = getattr(kit, "board", None)
+    if board is not None:  # a lecture: the hall's size, and how much of the board the presenter hides
+        hall = getattr(kit, "hall", None)
+        checks["board"] = {**(hall or {}), **board, "limit": BOARD_COVER}
+        said_board = []
+        if board["share"] > BOARD_COVER:
+            said_board.append(f'the presenter hides {100 * board["share"]:.0f}% of the board at '
+                              f'{(board["frame"] - 1) / tl.fps:.2f} s (limit {100 * BOARD_COVER:.0f}%): stand them further '
+                              f'from the board, or nearer its edge')
+        if board["outside_window"]:
+            said_board.append(f'the presenter reaches out of the shot\'s window on {board["outside_window"]} of the '
+                              f'frames looked at (board pixels {board["box_px"]}): a clip of the window cuts them off')
+        if said_board:
+            checks["passed"] = False
+            checks["body_problems"] = checks.get("body_problems", []) + said_board
     fights = getattr(kit, "fighting", None) or []
     if fights:  # two faces in one plane, seen by a camera: the strip flickers between them as things move
         checks["passed"] = False

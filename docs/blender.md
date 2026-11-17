@@ -17,6 +17,7 @@ moviepy timeline, a video job, an editor), or both from the same spec.
 - **Blender clips inside a Remotion video:** `examples/blender-in-remotion`
 - **A product stage with no character:** `examples/blender-product-shot`
 - **A fitted character on her feet in a kitchen (experimental):** `examples/blender-kitchen`
+- **A presenter at a chalkboard, a lecture as data (experimental):** `templates/lecture`
 
 ## Model, rig and render
 
@@ -189,6 +190,48 @@ What a longer video taught (a nine-minute lecture: six room shots, fourteen pres
 It works in the other direction too. A spec's `set.screen.video` puts a Remotion render on the laptop in the
 scene, and a `pull_out` shot starts with that picture covering the frame, so a flat scene can cut to itself in 3D.
 `examples/blender-in-remotion` does both.
+
+## A lecture: a presenter at a board (experimental)
+
+`templates/lecture` is a presenter rendered in Blender standing at a chalkboard Remotion draws: the board, the
+chalk and the windows the camera goes into are `lib/lecture`, and the presenter is one transparent clip a segment
+from `tools/lecture.py`. A lecture is its script, `lecture.json` (per segment: a heading, what is chalked on which
+words, the windows, the acting) and the timeline the tool writes from the audio; the template's README is the
+walkthrough. It was lifted out of a nine-minute sprint review and made generic in one session; what that took:
+
+- **The hall is sized by its presenter**, as a desk is by whoever sits at it. A fitted model's height over a
+  lecturer's (1.75 m) scales the board, the table and the lights (the clay cast, which the hall was built round,
+  keeps it as built). In the first lecture the author's body, 2.25 m as fitted, stood in an unscaled hall and hid
+  15% of the board from the board camera; Mara, 1.65 m, hid 5%. Scaled, they hide 7.8% and 6.0%, and `check`
+  fails a clip over 10% (`board` in `checks.json`: `share`, the `box_px` the presenter ever reaches, `head_px`,
+  `outside_window` for a hand that leaves the clip's window). Place things by the board, not in metres:
+  `"cam": "board"` frames the board edge to edge, `{"board": [u, v]}` is a board pixel for a target, and a cast
+  member's `"at": {"board": [u, out]}` stands them in front of column u, `out` metres from the wall in the hall's
+  measure. The same numbers then stage any body.
+- **Joins inside a move, not on a stance.** The first lecture's fourteen clips each began and ended in the same
+  neutral stance, looking at the lens, so every join read as a reset. Now the turn to the next heading starts in the
+  old clip and the new clip starts inside it: both clips key the same beat at the same frames of the film (each
+  spec's `clock` is the film's), and the held part of a turn depends only on its target, so both poses agree.
+  A character's stance is keyed on a spec's first frame, so a move cannot start before it: a clip that starts
+  mid-move has a lead-in shot (`pre`) that is built and not rendered (`render --shots`). `tools/lecture.py check`
+  compares every body vertex and the face at each join: 0.2 to 1.2 mm on two bodies.
+- **A free hand turns no further than its cuff takes.** See the next section.
+
+### The cuff on gestures and points
+
+A fitted model's cuff is one band of skin shared by the forearm and the hand, so any turn of the hand on the
+forearm lands in it. A point at the board behind the presenter turned the hand 150 to 180 degrees on the forearm
+(its palm kept "to the body's middle") and stretched the cuff 5.5 to 6.7 times on all four bodies, past the check's
+4; the gestures took the author's body to 4.8. Measured at rest, by the check's own measure, stretch rises
+smoothly with the turn, and each body takes a different amount before it reaches 3: about 68 degrees each way on
+the author's, 85 on Mara's and Orla's, 100 on Nell's. So the rig measures that range on each hand of each body
+(`twist_range`, once a build) and a hand whose roll is a choice (a gesture, a point) keeps inside it: the way the
+fingers point is kept and the palm rolls back toward the forearm's own. A hand that has to sit on a thing (a
+handle, a mug, the keys) is left alone. On the lecture screen test (`tests/fixtures/blender-fitted/screen-lecture.json`,
+two points at the board, every gesture and a dust) the four bodies went from 5.5 to 6.7 times to 3.2 to 3.9, and
+up close the point reads better: the index along the line, where the old one turned its knuckles to the camera.
+`skin` in `checks.json` has `wrist_twist` (the range, each hand) and `twist_held` (how often a turn was held back).
+A sip is not a free hand, and still stretches a sleeve 4.7 to 7.5 times (below).
 
 ## In other builds
 
@@ -620,7 +663,10 @@ turned to lie on the skull, and the shoulder's skin (a thick top is dragged up i
 7 times its length at the cuff and the armpit) needs its own work. Until then, film these poses from the front
 and close, or use `celebrate` and `gesture`.
 
-**A wider screen test.** `tests/fixtures/blender-fitted/screen-stand.json` and `screen-call.json` act what the
+**A wider screen test.** `tests/fixtures/blender-fitted/screen-lecture.json` is a presenter at the board (points,
+every gesture, a dust). The author's body and Mara pass it; Orla and Nell put their hands into each other as they
+dust them (with or without the way up round the belly, which took the author's hand out of his belly: it went
+7 cm in), and Orla's arm misses its mark by 2 cm there. `dust_hands` is open on those two. `screen-stand.json` and `screen-call.json` act what the
 walk-in does not: arms over the head, a shrug, a point, a phone and a wagged finger on their feet, then a call
 over a pint (the glass taken up, drunk from, put down). Run on four bodies, none passes yet. Besides the hands
 at the head: a sip stretches the sleeve 4.7 to 7.5 times on every body that has one, two bodies sit 3 cm into the
@@ -870,7 +916,8 @@ film from a brief to a cut its author would publish.
 `check` builds its stills in the film's own shape (the spec's `resolution`, or `--res`), because where the solver
 puts a camera depends on the shape of the frame.
 
-One character per set; the clay cast's hands are one bone; a walk goes through furniture unless it is bent
+A lecture's presenter does not write (lettering chalks itself in while they point at it), and the close's table
+is placed by hand for each presenter (templates/lecture README). One character per set; the clay cast's hands are one bone; a walk goes through furniture unless it is bent
 round it; the sets are `desk_room`, `desk` (no room, for transparent renders), `lecture_hall`, `kitchen`,
 `living_room`, `pub` and `studio` (props and no character); a `lean` carries hands resting on a table down through it; a standing arm
 does not reach a low table (sit first); a cartoon style; acting keyed from verbs, with no motion

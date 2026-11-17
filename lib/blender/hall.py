@@ -7,6 +7,12 @@ Remotion draws.
 
 The board is a rectangle of the back wall given as x0, x1, z0, z1 (metres): the same rectangle a `fixed` camera
 frames square on, so a pixel of the Remotion frame is a point of the wall.
+
+The hall takes its measures from the presenter, as the desk and chair do: `scale` is the presenter's height over
+STATURE (1 for the clay cast, which the hall was built round), and the board and the table are that much bigger or
+smaller unless the spec gives them in metres. So a fitted body of 2.25 m and one of 1.64 m both stand beside a
+board that is as big against them as a lecture hall's is against a lecturer. A spec can also name places by the
+board itself (`board_point`, `board_floor`, `board_camera`), which holds whatever the scale.
 """
 from __future__ import annotations
 
@@ -28,21 +34,49 @@ def cone(name, r0, r1, depth, m, parent=None, loc=(0, 0, 0)):
 
 
 WALL_Y = 2.95  # the back wall's face on the room side (the wall is 0.1 thick about y = 3)
+STATURE = 1.75  # a lecturer's height: a fitted presenter this tall stands in the hall as it is built
+BOARD = {"x0": -2.3, "x1": 1.7, "z0": 0.55, "z1": 2.8}  # the board for a presenter of STATURE (16:9, as the frame)
+
+
+def board_rect(board: dict | None, scale: float) -> dict:
+    """The board's rectangle of the wall (x0, x1, z0, z1): as given, or the hall's own scaled by the presenter."""
+    return {**{key: v * scale for key, v in BOARD.items()}, **{key: v for key, v in (board or {}).items() if key in BOARD}}
+
+
+def board_floor(rect: dict, scale: float, u, out) -> list:
+    """A spot on the floor in front of board pixel column u, `out` metres (hall measure) from the wall."""
+    return [rect["x0"] + u / 1920 * (rect["x1"] - rect["x0"]), WALL_Y - out * scale]
 
 
 class LectureHall(DeskRoom):
     def __init__(self, palette: dict | None = None, walls: bool = True, door: dict | None = None,
-                 board: dict | None = None, image=None, strength: float = 1.0, table: dict | None = None):
+                 board: dict | None = None, image=None, strength: float = 1.0, table: dict | None = None,
+                 scale: float = 1.0):
         self.door_cfg, self.door, self.handle = door, None, None
         self.chair, self.desk_y, self.desk_z, self.chair_z = None, 0.0, 0.0, 0.0
         p = {"wall": "#CFC6B2", "wall2": "#BDB29C", "floor": "#6E5540", "desk": "#8A6444", "board": "#2F4A3C",
              "trim": "#5B3F2A", **(palette or {})}
         self.events: list[dict] = []
         self.walls = walls
-        b = {"x0": -2.3, "x1": 1.7, "z0": 0.55, "z1": 2.8, **(board or {})}
+        self.scale = k = scale
+        b = board_rect(board, k)
         self.board = b
-        t = {"at": (1.6, 1.42), "size": (0.5, 0.5), "height": 0.97, **(table or {})}
+        t = {"at": (1.6 * k, 1.42 * k), "size": (0.5 * k, 0.5 * k), "height": 0.97 * k, **(table or {})}
+        if isinstance(t["at"], dict):  # {"board": [u, out]}: in front of a board column, as a presenter is placed,
+            # and then its size and height are in the hall's measure too, as are the cup's and chalk's spots
+            spot = lambda r: (b["x0"] + r["board"][0] / 1920 * (b["x1"] - b["x0"]), WALL_Y - r["board"][1] * k)  # noqa: E731
+            t["at"] = spot(t["at"])
+            if table and "size" in table:
+                t["size"] = tuple(x * k for x in table["size"])
+            if table and "height" in table:
+                t["height"] = table["height"] * k
+            for prop in ("cup", "chalk"):
+                if isinstance(t.get(prop), dict):
+                    t[prop] = spot(t[prop])
         self.table = t
+        if door is not None and "x" not in door:  # (beside the board, clear of its frame)
+            door = {**door, "x": max(2.6, b["x1"] + 0.3 + door["width"] / 2)}
+            self.door_cfg = door
         self.m = M = {
             "wood": mat("wood", p["desk"], 0.45), "metal": mat("metal", (0.2, 0.2, 0.22), 0.35, 0.8),
             "floor": mat("floor", p["floor"], 0.5), "wall": mat("wall", p["wall"], 0.9),
@@ -63,10 +97,11 @@ class LectureHall(DeskRoom):
             self._board(image, strength)
         self._table()
         self._props()
-        aim = empty("aim", None, (1.0, 2.0, 1.3))
-        area_light("key", (-1.6, -1.6, 3.3), 230, 2.5, (1, 0.93, 0.85), aim)
-        area_light("fill", (3.4, -0.6, 2.0), 70, 3, (0.8, 0.88, 1.0), aim)
-        area_light("top", (0.6, 2.2, 3.7), 90, 2.0, (1, 0.95, 0.88), aim)
+        # (the lights stand where they would for a lecturer, as far from the presenter for any size, as bright)
+        aim = empty("aim", None, (1.0 * k, 2.0, 1.3 * k))
+        area_light("key", (-1.6 * k, -1.6 * k, 3.3 * k), 230 * k * k, 2.5 * k, (1, 0.93, 0.85), aim)
+        area_light("fill", (3.4 * k, -0.6 * k, 2.0 * k), 70 * k * k, 3 * k, (0.8, 0.88, 1.0), aim)
+        area_light("top", (0.6 * k, 2.2, 3.7 * k), 90 * k * k, 2.0 * k, (1, 0.95, 0.88), aim)
 
     def _board(self, image, strength):
         """The board: the picture on a panel just off the wall, facing the room, and a wooden frame round it
@@ -144,6 +179,31 @@ class LectureHall(DeskRoom):
         if name == "chalk":
             return self.chalk_hand, self.chalk_table, self.chalk_spot
         raise ValueError(f'this set has a "cup" and a "chalk", not {name!r}')
+
+    # ------------------------------------------------------------ places named by the board
+    # A board pixel (u, v) is one of the Remotion frame's 1920x1080 when the board fills it: the board camera.
+    def board_point(self, u, v) -> list:
+        """The point of the board's face at pixel (u, v), a hand's breadth off it (where a point or a look goes)."""
+        b = self.board
+        return [b["x0"] + u / 1920 * (b["x1"] - b["x0"]), WALL_Y - 0.05, b["z1"] - v / 1080 * (b["z1"] - b["z0"])]
+
+    def board_floor(self, u, out) -> list:
+        """A spot on the floor in front of board column u, `out` metres from the wall in the hall's measure (so
+        the same number puts any presenter as far off the board, against their size)."""
+        return board_floor(self.board, self.scale, u, out)
+
+    def board_camera(self, lens: float, sensor: float = 36.0) -> tuple[list, list]:
+        """A camera square on to the board that frames it edge to edge with a `lens` mm lens: (cam, aim)."""
+        b = self.board
+        cx, cz = (b["x0"] + b["x1"]) / 2, (b["z0"] + b["z1"]) / 2
+        d = (b["x1"] - b["x0"]) / 2 * lens / (sensor / 2)
+        face = WALL_Y - 0.03
+        return [cx, face - d, cz], [cx, face, cz]
+
+    def board_px(self, point) -> tuple[float, float]:
+        """Where a point of the board's face is, in board pixels (the inverse of board_point)."""
+        b = self.board
+        return ((point[0] - b["x0"]) / (b["x1"] - b["x0"]) * 1920, (b["z1"] - point[2]) / (b["z1"] - b["z0"]) * 1080)
 
     # ------------------------------------------------------------ what the compiler and the cameras ask of a set
     def anchors(self) -> dict:

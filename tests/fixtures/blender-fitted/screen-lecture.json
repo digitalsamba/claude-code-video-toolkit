@@ -1,0 +1,138 @@
+{
+ "title": "Screen test, at the board",
+ "fps": 30,
+ "resolution": "960x540",
+ "engine": "eevee",
+ "look": {
+  "view": "Standard",
+  "exposure": -0.9
+ },
+ "set": {
+  "kind": "lecture_hall",
+  "table": {
+   "at": {
+    "board": [
+     1960,
+     0.8
+    ]
+   },
+   "hidden": true,
+   "cup_on": true
+  }
+ },
+ "cast": [
+  {
+   "id": "mara",
+   "from": "mara.json",
+   "posture": "stand",
+   "at": {
+    "board": [
+     1650,
+     1.0
+    ]
+   },
+   "facing": -8
+  }
+ ],
+ "shots": [
+  {
+   "id": "L1_board",
+   "dur": 9.0,
+   "type": "fixed",
+   "cam": "board"
+  },
+  {
+   "id": "L2_close",
+   "dur": 9.0,
+   "type": "medium",
+   "az": -20
+  }
+ ],
+ "beats": [
+  {
+   "at": 0,
+   "do": "hold",
+   "prop": "chalk",
+   "hand": "left"
+  },
+  {
+   "at": 0,
+   "do": "hand",
+   "shape": "loose",
+   "hand": "right",
+   "dur": 0
+  },
+  {
+   "at": 0.4,
+   "do": "present",
+   "target": {
+    "board": [
+     520,
+     150
+    ]
+   },
+   "dur": 1.5
+  },
+  {
+   "at": 2.1,
+   "do": "look_at",
+   "target": "camera",
+   "dur": 0.4
+  },
+  {
+   "at": 2.6,
+   "do": "gesture",
+   "kind": "open",
+   "hand": "right",
+   "dur": 1.1
+  },
+  {
+   "at": 4.6,
+   "do": "gesture",
+   "kind": "count",
+   "hand": "right",
+   "dur": 1.0
+  },
+  {
+   "at": 6.5,
+   "do": "present",
+   "target": {
+    "board": [
+     1150,
+     720
+    ]
+   },
+   "dur": 1.5
+  },
+  {
+   "at": 8.6,
+   "do": "look_at",
+   "target": "camera",
+   "dur": 0.4
+  },
+  {
+   "at": 9.2,
+   "do": "gesture",
+   "kind": "both",
+   "dur": 1.3
+  },
+  {
+   "at": 11.4,
+   "do": "gesture",
+   "kind": "shrug",
+   "dur": 1.2
+  },
+  {
+   "at": 13.6,
+   "do": "gesture",
+   "kind": "open",
+   "hand": "left",
+   "dur": 1.1
+  },
+  {
+   "at": 15.3,
+   "do": "dust_hands",
+   "dur": 1.15
+  }
+ ]
+}

@@ -19,6 +19,11 @@ generated model, give it a face and fingers and act with it on any machine with 
   Her build is not the one the rig was worked out on (short arms, long legs, narrow shoulders, long hands), so
   this is the spec that shows a number tuned on one character: the same film has to pass on any other.
 
+- `screen-lecture.json`: a presenter at a lecture hall's board, placed by the board (`"cam": "board"`, board
+  pixels), so the hall is sized by whoever stands there: two points at the board, every gesture and a dust. It is
+  the test for the cuff (a hand turned on its forearm stretched it 5.5 to 6.7 times on all four bodies) and for
+  the share of the board a presenter hides. The author's body and Mara pass it; Orla and Nell put their hands into
+  each other in the dust, which is open.
 - `screen-stand.json`, `screen-call.json`: a wider screen test than the walk-in, which never lifts an arm over
   the head or holds anything. Standing: arms up, hands on the head and behind it, a shrug, a point, a phone
   held up and a wagged finger. A call over a pint: the phone, a wag, the glass taken up, drunk from and put

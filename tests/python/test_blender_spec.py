@@ -626,6 +626,38 @@ class BlenderCheckTests(unittest.TestCase):
             self.assertLessEqual(checks[kind], 0.03, kind)
         self.assertLessEqual(checks['snap_m'], 0.02)                    # nothing jumps in a single frame
 
+    def test_a_lecture_hall_is_sized_by_its_presenter_and_a_free_hand_keeps_inside_its_cuff(self):
+        """The lecture screen test on the author's body (2.25 m as fitted): the hall's board is scaled to him, so he
+        hides a sensible share of it from the board camera; staged in the hall's own metres, as the first lecture
+        was, he hides 15% and the check fails. A gesture or a point turns the hand on the forearm no further than
+        this body's cuff takes (it went 168 degrees, stretching the skin 6.7 times)."""
+        spec = json.loads((ROOT / 'tests' / 'fixtures' / 'blender-fitted' / 'screen-lecture.json').read_text())
+        spec['cast'][0].update(id='conal', **{'from': str(self.conal() / 'conal.json')})
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'spec.json').write_text(json.dumps(spec))
+            checks = blender_render.run_compiler(Path(tmp) / 'spec.json', Path(tmp) / 'out', 'check', '480x270', None)
+            old = json.loads(json.dumps(spec))
+            old['set']['board'] = {'x0': -2.3, 'x1': 1.7, 'z0': 0.55, 'z1': 2.8}   # the hall as built, in metres
+            old['set']['table'] = {'at': [1.66, 1.29], 'hidden': True, 'cup_on': True}
+            old['cast'][0]['at'] = [1.02, 1.88]
+            (Path(tmp) / 'old.json').write_text(json.dumps(old))
+            before = blender_render.run_compiler(Path(tmp) / 'old.json', Path(tmp) / 'old', 'check', '480x270', None)
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        board = checks['board']
+        self.assertGreater(board['scale'], 1.2)                               # his height over a lecturer's
+        self.assertLessEqual(board['share'], 0.10)
+        self.assertEqual(board['outside_window'], 0)
+        self.assertGreater(before['board']['share'], 0.10)                    # the first lecture's staging
+        self.assertFalse(before['passed'])
+        self.assertTrue(any('hides' in p for p in before['body_problems']))
+        self.assertLessEqual(checks['skin']['stretch'], 4.0)
+        for lo, hi in checks['skin']['wrist_twist'].values():                  # measured on this body, each hand
+            self.assertTrue(-130 < lo < -40 and 40 < hi < 130, (lo, hi))
+        self.assertGreater(sum(checks['skin']['twist_held'].values()), 0)     # and the points did want more
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({'shots': [{'id': 'A', 'dur': 2, 'type': 'fixed', 'cam': 'board'}], 'beats': []})
+        self.assertIn('lecture_hall', str(ctx.exception))
+
     def test_the_kitchen_example_passes_on_its_second_character(self):
         """examples/blender-kitchen has a film for each fitted character in the repo; this is the author's."""
         film = json.loads((ROOT / 'examples' / 'blender-kitchen' / 'spec-conal.json').read_text())

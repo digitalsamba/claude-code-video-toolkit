@@ -138,6 +138,7 @@ class ClayPerson:
         self.typed = []     # each stretch of typing with fingers (first frame, last), for typing_report
         self.swung = {}     # each arm's last swing key (frame, swing, elbow, out), for the keys between (_swing)
         self.wrist_q = {}   # each hand's last turn on the forearm (so the next key goes the short way round)
+        self.twisted = {}   # each hand's turns on the forearm that were held back to what its cuff takes
         self.palm_off = []  # each time a hand was laid on something: how far its palm was from facing it (degrees)
         self.hold_at, self.holding = {}, {1: False, -1: False}  # where a hand holds a bar (the hand bone's space)
         self.carry_spans = {}  # each arm's stretches of carrying something (first frame, last)
@@ -601,8 +602,92 @@ class ClayPerson:
 
     WRIST_BEND = 65.0   # degrees a hand can bend at the wrist from the forearm's line
     WRIST_SIDE = 20.0   # and how far it turns sideways toward straight ahead when it lies on a desk
+    TWIST_STRETCH = 3.0  # how far a hand turning on its forearm may stretch the cuff's skin (the check fails over 4)
 
-    def _wrist_key(self, s, f, hand, lay=None, was=None, mix=1.0):
+    def twist_range(self, s) -> tuple[float, float]:
+        """How far hand `s` can turn on its forearm each way (degrees, about the hand's own length, from its rest)
+        before the cuff's skin stretches TWIST_STRETCH times, measured on this body. A fitted model's cuff is a
+        band of skin shared by the forearm and the hand, so the whole turn lands in it: one body takes 68 degrees
+        before its skin is stretched 3 times, another 100. Measured at rest with the IK off (every other bone
+        straight), by the check's own measure, once per hand; nothing is keyed or left changed."""
+        cache = self.__dict__.setdefault("_twist", {})
+        if s in cache:
+            return cache[s]
+        rig, body, sc = self.rig, self.body, bpy.context.scene
+        me = body.data
+        count = len(me.vertices)
+        rest = np.empty(count * 3, dtype=np.float32)
+        me.vertices.foreach_get("co", rest)
+        rest = rest.reshape(-1, 3)
+        ed = np.empty(len(me.edges) * 2, dtype=np.int32)
+        me.edges.foreach_get("vertices", ed)
+        ed = ed.reshape(-1, 2)
+        length = np.linalg.norm(rest[ed[:, 0]] - rest[ed[:, 1]], axis=1)
+        neck = body.vertex_groups["neck"].index  # (left out, as skin_report leaves it out)
+        on_head = np.array([any(g.group == neck and g.weight > 0.01 for g in v.groups) for v in me.vertices])
+        keep = (length > 0.002) & ~on_head[ed[:, 0]] & ~on_head[ed[:, 1]]
+        ed, length = ed[keep], length[keep]
+        ad = rig.animation_data
+        action = ad.action if ad else None
+        saved = [(pb, pb.rotation_quaternion.copy(), pb.rotation_euler.copy(), pb.location.copy(), pb.scale.copy(),
+                  [c.mute for c in pb.constraints]) for pb in rig.pose.bones]
+        frame = sc.frame_current
+        try:
+            if ad:
+                ad.action = None
+            for pb, *_ in saved:
+                pb.rotation_quaternion, pb.rotation_euler = (1, 0, 0, 0), (0, 0, 0)
+                pb.location, pb.scale = (0, 0, 0), (1, 1, 1)
+                for c in pb.constraints:
+                    c.mute = True
+            hb = rig.pose.bones["hand." + ("L" if s > 0 else "R")]
+
+            def stretch(deg):
+                hb.rotation_quaternion = Quaternion((0, 1, 0), R(deg))
+                bpy.context.view_layer.update()
+                ev = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+                mesh = ev.to_mesh()
+                co = np.empty(count * 3, dtype=np.float32)
+                mesh.vertices.foreach_get("co", co)
+                ev.to_mesh_clear()
+                co = co.reshape(-1, 3)
+                return float(np.percentile(np.linalg.norm(co[ed[:, 0]] - co[ed[:, 1]], axis=1) / length, 99.9))
+
+            ends = []
+            for way in (-1, 1):
+                lo, hi = 0.0, 170.0
+                if stretch(way * hi) <= self.TWIST_STRETCH:
+                    ends.append(way * hi)
+                    continue
+                for _ in range(8):  # (to within a degree)
+                    mid = (lo + hi) / 2
+                    lo, hi = (mid, hi) if stretch(way * mid) <= self.TWIST_STRETCH else (lo, mid)
+                ends.append(way * lo)
+        finally:
+            for pb, q, e, loc, sca, mutes in saved:
+                pb.rotation_quaternion, pb.rotation_euler, pb.location, pb.scale = q, e, loc, sca
+                for c, m in zip(pb.constraints, mutes):
+                    c.mute = m
+            if ad:
+                ad.action = action
+            sc.frame_set(frame)
+            bpy.context.view_layer.update()
+        cache[s] = (round(ends[0], 1), round(ends[1], 1))
+        return cache[s]
+
+    def _free_twist(self, s, q) -> Quaternion:
+        """`q` with its turn about the hand's length held inside what this body's cuff takes (twist_range): the
+        way the fingers point is kept, and the palm rolls back toward the forearm's own. For a hand whose roll is
+        a choice (a gesture, a point), not one that has to sit on a thing (a handle, a mug, the keys)."""
+        swing, twist = q.to_swing_twist("Y")
+        lo, hi = self.twist_range(s)
+        held = max(R(lo), min(R(hi), twist))
+        if abs(held - twist) < 1e-6:
+            return q
+        self.twisted.setdefault(s, []).append(round(math.degrees(twist), 1))
+        return swing @ Quaternion((0, 1, 0), held)
+
+    def _wrist_key(self, s, f, hand, lay=None, was=None, mix=1.0, free=False):
         """Turn the hand on the forearm for frame f, from the arm as it is posed on that frame (the forearm's
         own twist comes out of the IK, so a turn worked out in the rest pose points the palm somewhere else).
         With no `lay` the hand follows the forearm and only rolls: hanging at the side the palm faces the leg,
@@ -611,7 +696,8 @@ class ClayPerson:
         swing) or a function of the frame giving the way
         the palm faces and the way the fingers point, in the room (on a thigh). `was` and `mix` blend from one
         lay to another on the way between two things. Only a hand with fingers shows which way it faces, so
-        the clay cast is left alone."""
+        the clay cast is left alone. `free` says the hand's roll is a choice, not a fit to a thing, so it is kept
+        inside what this body's cuff takes (_free_twist)."""
         if not self.fingers.get(s):
             return
         sc = bpy.context.scene
@@ -676,6 +762,8 @@ class ClayPerson:
         q = turn(lay)
         if mix < 1.0:
             q = turn(was).slerp(q, mix)
+        if free:
+            q = self._free_twist(s, q)
         last = self.wrist_q.get(s)
         if last is not None and last.dot(q) < 0:
             q = -q
@@ -1038,6 +1126,16 @@ class ClayPerson:
     BELLY_ROOM = 0.05  # how far the desk's near edge stands off the belly (m): they lean in as the chair stops
     LEG_ROOM = 0.02  # how far the desk's underside stays over a hand on the thigh of someone sitting at it (m)
 
+    def stature(self) -> float:
+        """How tall this character stands, in metres: a fitted model's own height as it was fitted (it rests
+        standing), or the clay cast's top of head over its feet."""
+        if self.desc.get("model"):
+            co = np.empty(len(self.body.data.vertices) * 3, dtype=np.float32)
+            self.body.data.vertices.foreach_get("co", co)
+            z = co.reshape(-1, 3)[:, 2] * self.body.matrix_world.to_scale().z
+            return float(z.max() - z.min())
+        return 2.604  # (measured: the clay cast's bounding box standing, hair included)
+
     def furniture(self) -> dict:
         """Where this character needs its furniture, against the clay cast's (all zero for the clay cast): `chair`
         is how much higher the seat is, `desk` how much further forward (-y is forward) and higher the desk and
@@ -1121,11 +1219,11 @@ class ClayPerson:
         n = (pole - ax * pole.dot(ax)).normalized()
         return (sh + hand) / 2 + n * 0.6
 
-    def _arm_key(self, s, f, hand, pole, lay=None, was=None, mix=1.0):
+    def _arm_key(self, s, f, hand, pole, lay=None, was=None, mix=1.0, free=False):
         hand = Vector(hand)
         key(self.hand_t[s], "location", f, hand)
         key(self.pole_t[s], "location", f, self._pole_pos(s, hand, Vector(pole)))
-        self._wrist_key(s, f, hand, lay, was, mix)
+        self._wrist_key(s, f, hand, lay, was, mix, free)
 
     def _lay(self, name=None):
         """How the hands lie in a pose: on the keys to type (sloping down from the wrist, for hands with fingers),
@@ -3014,7 +3112,12 @@ class ClayPerson:
             ratio = float(np.percentile(np.linalg.norm(co[ed[:, 0]] - co[ed[:, 1]], axis=1) / length, 99.9))
             if ratio > worst:
                 worst, at = ratio, f
-        return {"leg_above_hips": high, "stretch": round(worst, 2), "frame": at}
+        out = {"leg_above_hips": high, "stretch": round(worst, 2), "frame": at}
+        twist = self.__dict__.get("_twist")
+        if twist:  # (measured only where a hand's roll was free: a gesture or a point)
+            out["wrist_twist"] = {("L" if s > 0 else "R"): list(v) for s, v in sorted(twist.items(), reverse=True)}
+            out["twist_held"] = {("L" if s > 0 else "R"): len(v) for s, v in sorted(self.twisted.items(), reverse=True)}
+        return out
 
     def _lid(self, s, f, shut: bool):
         key(self.lids[s], "rotation_euler", f, (R(fitted_face.LID_SHUT if shut else self.lid_open), 0, 0))
@@ -3145,7 +3248,7 @@ class ClayPerson:
         self.hand_shape(f0, up, "point", hand)
         self.arm_pose = "point"
         for f in (up, f1):
-            self._arm_key(s, f, wrist, self._mirror((1, 0.4, -1), s), aim if self.fingers.get(s) else None)
+            self._arm_key(s, f, wrist, self._mirror((1, 0.4, -1), s), aim if self.fingers.get(s) else None, free=True)
         sc.frame_set(up)  # (how true the aim is: the arm, shoulder to knuckles, against the line to the target)
         bpy.context.view_layer.update()
         mw = self.rig.matrix_world

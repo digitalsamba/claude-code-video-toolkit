@@ -225,12 +225,12 @@ def gesture(p, f0: int, f1: int, kind: str = "open", hand: str | None = None):
         name = "left" if s > 0 else "right"
         p.hand_shape(f0, up, "point" if kind == "count" else "open", name)
         late = n(2) if s != sides[0] else 0  # (the second hand is a little behind the first)
-        p._arm_key(s, up + late, wrist, pole, lay)
+        p._arm_key(s, up + late, wrist, pole, lay, free=True)
         if f1 - up >= n(10):
             mid = (up + f1) // 2
-            p._arm_key(s, mid - n(2), wrist, pole, lay)
-            p._arm_key(s, mid + n(2), wrist + Vector((0, -0.02, -0.035)), pole, lay)
-        p._arm_key(s, f1, wrist, pole, lay)
+            p._arm_key(s, mid - n(2), wrist, pole, lay, free=True)
+            p._arm_key(s, mid + n(2), wrist + Vector((0, -0.02, -0.035)), pole, lay, free=True)
+        p._arm_key(s, f1, wrist, pole, lay, free=True)
         _hand_home(p, s, f1 + n(11) + late, states[s])
     if kind == "shrug":  # the head tips with it
         d = p.neck.delta_rotation_euler.copy()
@@ -286,6 +286,9 @@ def dust_hands(p, f0: int, f1: int):
         lay = lambda f, s=s: (own @ Vector((-s, 0, 0)), own @ Vector((0, -0.8, 0.6)))  # noqa: E731
         base = Vector((s * half, -0.52 * L, p.SH[s].z - 0.42 * L))
         pole = p._mirror((0.7, 0.8, -0.5), s)
+        # (up from the sides out round the belly, as they go back: straight from the side to the middle, a hand
+        # went 7 cm into a round body on its way)
+        p._arm_key(s, f0 + n(5), base + Vector((s * 0.17, -0.02, -0.12)), pole, lay)
         for i, f in enumerate(beats):
             way = s if i % 2 == 0 else -s
             p._arm_key(s, f, base + Vector((0, -0.012 * way, 0.04 * way)), pole, lay)
