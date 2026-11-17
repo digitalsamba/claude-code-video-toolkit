@@ -208,7 +208,7 @@
    "lamp_stutter": {
     "file": "audio/sfx/lamp-stutter.mp3",
     "volume": 0.6,
-    "offset": -3,
+    "offset": 3,
     "frames": 26
    },
    "lamp_on": {
