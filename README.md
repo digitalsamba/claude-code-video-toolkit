@@ -378,6 +378,13 @@ claude-code-video-toolkit/
 - [Project System](lib/project/README.md) — Multi-session lifecycle, schema, reconciliation
 - [Optional Components](docs/optional-components.md) — Local GPU tools setup
 - [Blender](docs/blender.md): 3D shot specs (optional): setup, what your machine needs, timings, what it has been run on, and how a character film is made over several sessions
+- [Voiceover](docs/voiceover.md): ElevenLabs, Qwen3-TTS and 60db, and fixing a cloned voice that is flat or rushed
+- [Timing](docs/timing.md): word budgets, scene durations, TTS drift and audio-anchored timelines
+- [QC](docs/qc.md): what `qc.py` checks before and after a render, loudness, and sound effects placed on movement
+- [Captions](docs/captions.md): burned word captions, SRT and VTT
+- [Image Tools](docs/image-tools.md): cloud GPU providers, FLUX.2 or Ideogram 4, image editing, upscaling, watermark removal
+- [Music and Sound](docs/music-and-sound.md): ACE-Step music, choosing a take, ducking under speech, stock sound effects
+- [Reusing a Video](docs/repurposing.md): cut-downs to 9:16 and 1:1, transcript highlights, redub, NotebookLM branding
 - [Agent Video Jobs](docs/agent-video-jobs.md) — Brief in, MP4 out for any agent: `video_job.py` submit/status/result, the MCP server, and the `skills/video-toolkit/` skill for OpenClaw, Codex, Hermes and friends
 - [Toolkit Development](_internal/ROADMAP.md) — Roadmap, backlog, changelog
 
