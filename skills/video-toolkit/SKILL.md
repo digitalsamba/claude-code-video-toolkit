@@ -326,6 +326,12 @@ Everything below is what `video_job.py` drives for you. Reach for it directly wh
 (an image, a clip, a song), a different template, or a talking head. Add `--progress json` to any cloud tool
 for JSON-lines progress on stderr, and `--json` for a machine-readable result on stdout.
 
+The full reference for each area is in the toolkit's `docs/`: `voiceover.md` (providers, a cloned voice that is
+flat or rushed), `timing.md` (word budgets, TTS drift), `qc.md` (what `qc.py` checks, loudness, sound effects on
+movement), `captions.md`, `image-tools.md` (cloud GPU, FLUX.2 or Ideogram 4, editing, watermarks),
+`music-and-sound.md` and `repurposing.md` (cut-downs, highlights, redub). Read the one for the tool you are about
+to use.
+
 ### Defaults that are current (2026-11-06)
 
 | Need | Use | Not |
