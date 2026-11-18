@@ -115,11 +115,11 @@ const strokePath = (item: BoardItem, seed: number): string => {
 };
 
 /** One segment's items on the board, chalked on their words, wiped before the next segment. */
-const SegmentBoard: React.FC<{ L: LectureTimeline; lecture: Lecture; n: number; custom: Custom; written?: number }> = ({ L, lecture, n, custom, written }) => {
+const SegmentBoard: React.FC<{ L: LectureTimeline; lecture: Lecture; n: number; custom: Custom; written?: number; until?: number }> = ({ L, lecture, n, custom, written, until }) => {
   const seg = lecture.segments[n];
   // `written`: the frame a short starts on, with this segment's heading already up (its first frame is the cover)
   return (
-    <Seg from={written ?? (n === 0 && L.first > 0 ? L.first : L.S(n) - 12)} to={L.N(n) - 20}>
+    <Seg from={written ?? (n === 0 && L.first > 0 ? L.first : L.S(n) - 12)} to={until ?? L.N(n) - 20}>
       {/* after the room shots, the title they showed on the wall is still up, and goes with the first segment */}
       {n === 0 && L.first > 0 ? <Title lecture={lecture} /> : null}
       {seg.heading ? (
@@ -281,7 +281,8 @@ const makeShort = (L: LectureTimeline, full: Lecture, spec: Short, custom: Custo
         <div style={{ position: 'absolute', left: 0, top: 0, width: 1920, height: 1080, transformOrigin: '0 0',
           transform: `translate(${-cx * k}px, ${o.top - cy * k}px) scale(${k})` }}>
           <AbsoluteFill style={{ filter: 'url(#chalkFx)' }}>
-            {idx.map((n) => <SegmentBoard key={n} L={L} lecture={lecture} n={n} custom={custom} written={n === n0 ? from : undefined} />)}
+            {idx.map((n) => <SegmentBoard key={n} L={L} lecture={lecture} n={n} custom={custom} written={n === n0 ? from : undefined}
+              until={n === n1 ? to + 30 : undefined} />)}
           </AbsoluteFill>
         </div>
         {cover ? (
