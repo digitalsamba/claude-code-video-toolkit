@@ -181,6 +181,14 @@ or the presenter, so the layout is rebuilt:
 - It starts at the first segment's clip and ends `tail` frames (12) after the last word. A pane that would fade out
   in those frames stays up.
 
+- **A Short with its own words** (a new hook said to camera, a shorter step) is its own lecture: copy the project
+  (leave `out/` and `public/blender/` behind), give it the new segments' `.txt`, copy the unchanged segments' `.mp3`,
+  `.txt` and `.captions.json` under their new ids, voice and caption only the new ones, then `timeline`, `specs`,
+  `check`, `render` and the short as above. The presenter's mouth follows the narration, so a new spoken line is a
+  new clip; a Short of three segments (about 47 s) renders in about 14 minutes on an Apple M4.
+- A takeover that runs to the last word (a walk in that lands) holds to the short's end: give the short a `tail`
+  long enough for the video to finish.
+
 Every layout number is under `"short"` in `lib/lecture/defaults.json`, and any of them can be set on one short.
 `qc.py --layout` does not read a lecture: read stills (`npx remotion still ... --frame=N`) instead.
 

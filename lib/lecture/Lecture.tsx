@@ -265,7 +265,9 @@ const makeShort = (L: LectureTimeline, full: Lecture, spec: Short, custom: Custo
   const takeovers = idx.flatMap((n) => (lecture.segments[n].board ?? []).filter((i) => i.pane?.takeover).map((item) => {
     const p = item.pane!;
     const at = L.at(n, item.at);
-    const out = p.out !== undefined ? L.at(n, p.out) : L.N(n) - 20;
+    const end = p.out !== undefined ? L.at(n, p.out) : L.N(n) - 20;
+    // (one that runs to the last word holds to the short's end: the short ends on it, as on a walk in that lands)
+    const out = n === n1 && end >= L.E(n1) - 1 ? to + 6 : end;
     return { item: p, at, out, keys: p.takeover!.keys.map((k) => ({ at: L.at(n, k.at), region: k.region })) };
   }));
   const [ty0, ty1] = o.takeover_band;
