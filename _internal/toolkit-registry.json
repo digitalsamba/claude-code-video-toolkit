@@ -29,6 +29,13 @@
       "created": "2026-11-04",
       "updated": "2026-11-04"
     },
+    "explainer-script": {
+      "path": ".claude/skills/explainer-script/",
+      "description": "Storytelling script for a short knowledge video: one idea, key points pulled from a source, hook / points / payoff beats, words (or Thai characters) budgeted to seconds, written to scenes.json for concept-explainer-short; Thai and English",
+      "status": "beta",
+      "created": "2026-11-18",
+      "updated": "2026-11-18"
+    },
     "elevenlabs": {
       "path": ".claude/skills/elevenlabs/",
       "description": "ElevenLabs audio - TTS, voice cloning, music, SFX",
