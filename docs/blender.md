@@ -331,6 +331,23 @@ up close the point reads better: the index along the line, where the old one tur
 `skin` in `checks.json` has `wrist_twist` (the range, each hand) and `twist_held` (how often a turn was held back).
 A sip is not a free hand, and still stretches a sleeve 4.7 to 7.5 times (below).
 
+**The inside of the cuff.** With the turn held, the first lecture still showed a fault on every open palm: the
+far side of the cuff opened toward the camera and showed a light, ragged band round the wrist. The stretch read
+3.73, inside the limit, because it was not stretch. Rendered with the sleeve's back faces painted red, the band was
+the inside of the sleeve: a generated model's clothes are one sheet of surface, and its inside was drawn lit, in
+the cloth's own colour, so the opening read as a torn hole. Two other fixes were tried and dropped. Dual
+quaternion skinning changed nothing. A cuff bone that follows the hand's bend but not its turn (the sleeve's hand
+weight moved onto it) smoothed the rim a little, and on a point opened a black gap over the wrist. The fix is
+in the shading: `line_cloth` draws every face of a fitted model's clothes seen from behind at 0.45 of its colour
+(`LINING`), so the inside of a cuff, a collar or a hem reads as the shade inside a real one. The grafted hands are
+left as they are. At 0.12 the dark-green cuff was right, but an orange one showed a black notch at the wrist that
+read as a hole. It is done after the head is built, since the face finds the model's paint by its link into Base
+Color. `skin.lined` in `checks.json` lists each material and whether it is lined. Proof: the four walk-ins and
+lecture screen tests give the same checks as before on all four bodies, and the clay cast is unchanged. What it
+does not change: the sleeve rim still takes 40 to 85% of the hand's weight past the wrist and 10 to 16% up the
+forearm, so it turns with the palm, and on a point the skin between hand and sleeve folds. The weights are the
+next piece of rig work.
+
 ## In other builds
 
 `render --clips` without `--alpha` writes an ordinary H.264 `.mp4` per shot, so a Blender shot goes wherever a

@@ -93,6 +93,33 @@ def skeleton():
     return SK, edges
 
 
+LINING = 0.45  # how dark the inside of a fitted model's clothes is drawn, as a share of the cloth's own colour
+
+
+def line_cloth(material) -> bool:
+    """Draw the inside of a generated model's clothes in shadow. Its sleeve is one sheet of surface, and the
+    inside of the sheet was drawn lit, in the cloth's own colour: where a cuff opens towards the camera (a palm
+    turned up in a gesture) the inside read as a light, torn hole round the wrist. Only a face seen from behind
+    darkens, so the outside is unchanged, and the inside of a cuff, a collar or a hem reads as the shadow inside
+    a real one. False when the material has nothing to darken (no Principled BSDF) or is lined already."""
+    nt = material.node_tree if material.use_nodes else None
+    bsdf = next((x for x in nt.nodes if x.type == "BSDF_PRINCIPLED"), None) if nt else None
+    if bsdf is None or material.get("lined"):
+        return False
+    colour = bsdf.inputs["Base Color"]
+    mix = nt.nodes.new("ShaderNodeMix")
+    mix.data_type, mix.blend_type, mix.label = "RGBA", "MULTIPLY", "lining"
+    nt.links.new(nt.nodes.new("ShaderNodeNewGeometry").outputs["Backfacing"], mix.inputs["Factor"])
+    if colour.links:
+        nt.links.new(colour.links[0].from_socket, mix.inputs[6])
+    else:
+        mix.inputs[6].default_value = colour.default_value
+    mix.inputs[7].default_value = (LINING, LINING, LINING, 1.0)
+    nt.links.new(mix.outputs[2], colour)
+    material["lined"] = True
+    return True
+
+
 class ClayPerson:
     def __init__(self, cid: str, look: dict):
         """`look` is a description from cast.resolve(): body, face, hair, clothes, accessories, seed."""
@@ -125,6 +152,11 @@ class ClayPerson:
         self.posture, self.at, self.yaw, self.arm_pose = "sit", Vector((0, 0)), 0.0, "type"
         self._build_body()
         self._build_head()
+        if look.get("model"):  # (after the head: the face finds the model's paint by its link into Base Color)
+            hand = self.body.get("hand_material")
+            for i, material in enumerate(self.body.data.materials):
+                if material and i != hand:  # (a grafted hand is a closed surface: nothing of it is seen inside)
+                    line_cloth(material)
         self.under = {}     # each hand's underside below its wrist, by shape (_hand_under)
         self.hand_pts = {}  # each hand's surface in its own frame, by shape (_hand_points)
         self.flat_pitch = {}  # how far each hand slopes laid flat (_pitch)
@@ -3135,6 +3167,11 @@ class ClayPerson:
             if ratio > worst:
                 worst, at = ratio, f
         out = {"leg_above_hips": high, "stretch": round(worst, 2), "frame": at}
+        # (the inside of the clothes drawn in shadow, line_cloth: each material but the grafted hands', lined or not)
+        hand = self.body.get("hand_material")
+        out["lined"] = {m.name: bool(m.get("lined")) for i, m in enumerate(me.materials) if m and i != hand}
+        if hand is not None and me.materials[hand].get("lined"):
+            out["lined"]["hand"] = True
         twist = self.__dict__.get("_twist")
         if twist:  # (measured only where a hand's roll was free: a gesture or a point)
             out["wrist_twist"] = {("L" if s > 0 else "R"): list(v) for s, v in sorted(twist.items(), reverse=True)}

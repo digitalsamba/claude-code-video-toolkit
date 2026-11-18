@@ -612,6 +612,11 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertGreaterEqual(checks['face']['glasses']['opening_over_eye'], 1.15)
         self.assertEqual(checks['skin']['leg_above_hips'], 0)           # no hem that tears when the thighs bend
         self.assertLessEqual(checks['skin']['stretch'], 4.0)
+        # the inside of his clothes is drawn in shadow (lit, a palm turned up showed a light torn hole round the
+        # wrist where the cuff opens), and the grafted hands, a closed surface, are left as they are
+        lined = checks['skin']['lined']
+        self.assertTrue(lined and all(lined.values()), lined)
+        self.assertNotIn('hand', lined)
         self.assertLessEqual(checks['grip_open'], 0.75)                 # the hand closes on the door handle
         self.assertGreaterEqual(checks['hands_apart_m'], 0.005)         # the hands never go into each other
         self.assertLessEqual(checks['palm_tilt_deg'], 35)               # and lie palm down on the desk
