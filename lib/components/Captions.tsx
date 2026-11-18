@@ -48,6 +48,9 @@ export interface CaptionsProps {
   pauseMs?: number;
   /** How long the last page lingers after its final word (default 400) */
   holdMs?: number;
+  /** Break pages at phrases (default false): after a comma, colon or semicolon once a page has three words, and
+   * when a page is full, at its last such break rather than mid-phrase */
+  phrases?: boolean;
   /** Distance from the bottom of the frame in px (default 80) */
   bottom?: number;
   fontFamily?: string;
@@ -82,6 +85,7 @@ const paginate = (
   maxChars: number,
   pauseMs: number,
   holdMs: number,
+  phrases = false,
 ): Page[] => {
   const pages: Page[] = [];
   let cur: CaptionWord[] = [];
@@ -91,14 +95,28 @@ const paginate = (
     }
     cur = [];
   };
+  const PHRASE_END = /[,;:]["')\]]*$/;
   for (const w of words) {
     const prev = cur[cur.length - 1];
     const chars = cur.map((c) => c.text).join('').trim().length + w.text.length;
-    if (
+    const full = cur.length >= maxWords || chars > maxChars;
+    if (prev && phrases && full && !SENTENCE_END.test(prev.text.trim())) {
+      // full mid-phrase: end the page at its last phrase break and carry the rest over
+      let j = cur.length - 1;
+      while (j > 0 && !PHRASE_END.test(cur[j - 1].text.trim())) j--;
+      if (j > 0) {
+        const rest = cur.slice(j);
+        cur = cur.slice(0, j);
+        flush();
+        cur = rest;
+      } else {
+        flush();
+      }
+    } else if (
       prev &&
-      (cur.length >= maxWords ||
-        chars > maxChars ||
+      (full ||
         SENTENCE_END.test(prev.text.trim()) ||
+        (phrases && cur.length >= 3 && PHRASE_END.test(prev.text.trim())) ||
         w.startMs - prev.endMs > pauseMs)
     ) {
       flush();
@@ -121,6 +139,7 @@ export const Captions: React.FC<CaptionsProps> = ({
   maxChars = 42,
   pauseMs = 600,
   holdMs = 400,
+  phrases = false,
   bottom = 80,
   fontFamily = 'Inter, system-ui, sans-serif',
   fontSize = 46,
@@ -153,8 +172,8 @@ export const Captions: React.FC<CaptionsProps> = ({
   }, [load]);
 
   const pages = useMemo(
-    () => (words ? paginate(words, maxWords, maxChars, pauseMs, holdMs) : []),
-    [words, maxWords, maxChars, pauseMs, holdMs],
+    () => (words ? paginate(words, maxWords, maxChars, pauseMs, holdMs, phrases) : []),
+    [words, maxWords, maxChars, pauseMs, holdMs, phrases],
   );
 
   const nowMs = (frame / fps) * 1000;
