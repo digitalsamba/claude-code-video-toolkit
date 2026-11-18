@@ -6,7 +6,7 @@ import lecture from '../lecture.json';
 import timeline from '../timeline.json';
 import { CUSTOM } from './custom';
 
-const L = makeLecture(lecture as Lecture, timeline as Timeline, CUSTOM);
+const L = makeLecture(lecture as unknown as Lecture, timeline as Timeline, CUSTOM);
 
 export const RemotionRoot: React.FC = () => (
   <>

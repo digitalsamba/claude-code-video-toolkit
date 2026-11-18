@@ -31,7 +31,10 @@ export type BoardItem = {
    * a video, a code listing). Panes are what the camera goes into in a window. A `video` (public/) plays muted from
    * the pane's `at`, `from` seconds in, and holds its last frame. */
   pane?: { x: number; y: number; w: number; h: number; title: string; source?: string; image?: string; video?: string; from?: number;
-    code?: string; out?: At };
+    code?: string; out?: At;
+    /** In a short: the pane takes the frame (the presenter steps out) and the camera moves inside it, to each
+     * `region` [x, y, w, h] of the picture (`size` its pixels) on its word. */
+    takeover?: { size: [number, number]; label?: string; keys: { at: At; region: [number, number, number, number] }[] } };
   /** One of the project's own drawings (src/custom.tsx), given `at` and these props. */
   component?: string;
   props?: Record<string, unknown>;
@@ -65,7 +68,7 @@ export type Lecture = {
   shorts?: Short[];
 };
 
-export type Short = { id: string; segments: string[]; cover?: [string, number]; captions?: Partial<typeof defaults.short.captions> } & Partial<Omit<typeof defaults.short, 'captions' | 'note'>>;
+export type Short = { id: string; segments: string[]; cover?: [string, number]; board?: Record<string, BoardItem[]>; captions?: Partial<typeof defaults.short.captions> } & Partial<Omit<typeof defaults.short, 'captions' | 'note'>>;
 
 /** A sound laid on a clip's event: one file, or several taken in turn (footsteps). */
 export type Sound = { file?: string; files?: string[]; volume?: number; offset?: number; frames?: number };

@@ -3,7 +3,7 @@
 // lecture.json and timeline.json and gets the compositions back; it writes no code of its own, beyond any
 // drawing it wants that chalk lines and strokes cannot make (src/custom.tsx).
 import React from 'react';
-import { AbsoluteFill, Audio, Img, Loop, OffthreadVideo, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, Easing, Img, Loop, OffthreadVideo, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Captions, captionsFor } from '../components/Captions';
 import { loadFont } from '@remotion/google-fonts/Inter';
 import { Board, BoardDrawn } from './Board';
@@ -57,6 +57,45 @@ const Pane: React.FC<{ item: NonNullable<BoardItem['pane']>; at: number; out?: n
           lineHeight: 1.35, color: '#d9e0dc', whiteSpace: 'pre' }}>{code}</pre>
       ) : null}
       {source ? <div style={{ position: 'absolute', left: 20, bottom: 10 * t, fontSize: 22 * t, color: '#aebbb4' }}>{source}</div> : null}
+    </div>
+  );
+};
+
+/** A short's pane that takes over: the picture fills `box` and the view moves from region to region on its words. */
+const Takeover: React.FC<{ item: NonNullable<BoardItem['pane']>; at: number; out: number; keys: { at: number; region: number[] }[];
+  box: Rect; videoFrames?: number; t: number }> = ({ item, at, out, keys, box, videoFrames, t }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  if (frame < at - 6 || frame > out + 6) return null;
+  const o = interpolate(frame, [at - 6, at, out, out + 6], [0, 1, 1, 0], clamp);
+  const tk = item.takeover!;
+  // the region now: each key eases in over 18 frames from the one before
+  let r = keys[0].region;
+  for (const k of keys.slice(1)) {
+    const e = Easing.inOut(Easing.cubic)(interpolate(frame, [k.at, k.at + 18], [0, 1], clamp));
+    if (e <= 0) break;
+    r = r.map((v, i) => v + (k.region[i] - v) * e);
+  }
+  const s = Math.min(box.w / r[2], box.h / r[3]);
+  const left = (box.w - r[2] * s) / 2 - r[0] * s;
+  const top = -r[1] * s; // (a region wider than the box sits at its top: the space under it is the captions')
+  const pic = { position: 'absolute', left, top, width: tk.size[0] * s, height: tk.size[1] * s } as const;
+  const skip = Math.round((item.from ?? 0) * fps);
+  const last = Math.max(skip, (videoFrames ?? Infinity) - 1);
+  return (
+    <div data-qc="product" style={{ position: 'absolute', left: box.x, top: box.y, width: box.w, height: box.h, overflow: 'hidden', opacity: o, background: '#14161a' }}>
+      {item.image ? <Img src={staticFile(item.image)} style={pic} /> : null}
+      {item.video ? (
+        <Sequence from={frame - Math.min(frame - at + skip, last)} layout="none">
+          <OffthreadVideo src={staticFile(item.video)} muted style={pic} />
+        </Sequence>
+      ) : null}
+      {tk.label ? (
+        // (named while the whole picture is up; gone as the view moves in, so it covers nothing being shown)
+        <div style={{ position: 'absolute', right: 16, bottom: 14, padding: '4px 12px', borderRadius: 4, background: 'rgba(16,18,22,0.85)',
+          fontFamily: SANS, fontSize: 22 * t, color: '#c9d0cc',
+          opacity: keys.length > 1 ? interpolate(frame, [keys[1].at, keys[1].at + 8], [1, 0], clamp) : 1 }}>{tk.label}</div>
+      ) : null}
     </div>
   );
 };
@@ -189,7 +228,9 @@ const shortTray = (L: LectureTimeline, o: Pick<ShortLayout, 'presenter_top' | 'w
  * into a window, the captions between them. Frames inside are the lecture's own, shifted to start at the first
  * segment's clip: every cue, pane and sound is where it is in the long video.
  */
-const makeShort = (L: LectureTimeline, lecture: Lecture, spec: Short, custom: Custom, tone: typeof defaults.room_tone) => {
+const makeShort = (L: LectureTimeline, full: Lecture, spec: Short, custom: Custom, tone: typeof defaults.room_tone) => {
+  // a short can replace a segment's board (its own chalk line, a pane that takes over); the cues stay the lecture's
+  const lecture: Lecture = { ...full, segments: full.segments.map((s) => (spec.board?.[s.id] ? { ...s, board: spec.board[s.id] } : s)) };
   const o: ShortLayout = { ...defaults.short, ...spec, captions: { ...defaults.short.captions, ...(spec.captions ?? {}) } };
   const ids = lecture.segments.map((s) => s.id);
   const idx = spec.segments.map((id) => {
@@ -220,6 +261,15 @@ const makeShort = (L: LectureTimeline, lecture: Lecture, spec: Short, custom: Cu
     ? (lecture.segments.find((x) => x.id === spec.cover![0])?.board ?? []).filter((i) => i.pane)[spec.cover[1]]?.pane
     : undefined;
   if (spec.cover && !cover) throw new Error(`short "${spec.id}": no pane ${spec.cover[1]} in segment "${spec.cover[0]}"`);
+  // panes that take the frame: when, where the view goes, and the frames the presenter steps out for
+  const takeovers = idx.flatMap((n) => (lecture.segments[n].board ?? []).filter((i) => i.pane?.takeover).map((item) => {
+    const p = item.pane!;
+    const at = L.at(n, item.at);
+    const out = p.out !== undefined ? L.at(n, p.out) : L.N(n) - 20;
+    return { item: p, at, out, keys: p.takeover!.keys.map((k) => ({ at: L.at(n, k.at), region: k.region })) };
+  }));
+  const [ty0, ty1] = o.takeover_band;
+  const tbox: Rect = { x: 0, y: ty0, w: o.width, h: ty1 - ty0 };
   const Video: React.FC = () => (
     <AbsoluteFill style={{ background: '#222d2a' }}>
       <ChalkDefs />
@@ -237,7 +287,11 @@ const makeShort = (L: LectureTimeline, lecture: Lecture, spec: Short, custom: Cu
           <Pane item={cover} at={from - 10} out={L.S(n0) - 8} rect={paneRect(cover)} t={o.chrome}
             videoFrames={cover.video ? L.tl.videos?.[cover.video] : undefined} />
         ) : null}
-        {idx.map((n) => (lecture.segments[n].board ?? []).filter((i) => i.pane).map((item, j) => {
+        {takeovers.map((tk, j) => (
+          <Takeover key={`t${j}`} item={tk.item} at={tk.at} out={tk.out} keys={tk.keys} box={tbox} t={o.chrome}
+            videoFrames={tk.item.video ? L.tl.videos?.[tk.item.video] : undefined} />
+        ))}
+        {idx.map((n) => (lecture.segments[n].board ?? []).filter((i) => i.pane && !i.pane.takeover).map((item, j) => {
           const out = item.pane!.out !== undefined ? L.at(n, item.pane!.out) : L.N(n) - 20;
           return (
             // (a pane that would fade out in the short's last frames stays up: the short ends on it)
@@ -252,7 +306,7 @@ const makeShort = (L: LectureTimeline, lecture: Lecture, spec: Short, custom: Cu
         ))}
         <PropSounds L={L} lecture={lecture} />
       </Sequence>
-      <Presenter L={L} box={pbox} k={pk} offset={from} />
+      <Presenter L={L} box={pbox} k={pk} offset={from} hidden={o.takeover_presenter === 'stay' ? [] : takeovers.map((t) => [t.at, t.out] as [number, number])} />
       <Sequence from={-from} layout="none">
         {idx.map((n) => (
           <Sequence key={n} from={L.S(n)} layout="none">

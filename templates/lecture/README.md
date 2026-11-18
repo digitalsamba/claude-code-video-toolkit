@@ -142,7 +142,15 @@ A Short is some consecutive segments of the same lecture, made vertical. It uses
 captions, so nothing is rendered again in Blender and nothing is voiced again:
 
 ```json
-"shorts": [{"id": "own-character", "segments": ["08_capture", "09_photo_to_character"], "cover": ["09_photo_to_character", 3]}]
+"shorts": [{"id": "own-character", "segments": ["08_capture", "09_photo_to_character"], "cover": ["09_photo_to_character", 3],
+  "board": {"08_capture": [
+    {"at": "It starts with photos", "chalk": "8 photos for your 3D double", "x": 80, "y": 370, "size": "l"},
+    {"at": "The toolkit opens a page", "pane": {"x": 60, "y": 290, "w": 1000, "h": 646, "title": "The capture page",
+      "video": "capture/capture.mp4", "out": "The photos stay",
+      "takeover": {"size": [1280, 720], "label": "tools/reference_capture.py", "keys": [
+        {"at": "The toolkit opens a page", "region": [0, 0, 1280, 720]},
+        {"at": "eight poses", "region": [150, 100, 520, 742]},
+        {"at": "keeps the sharpest", "region": [894, 100, 320, 456]}]}}}]}}]
 ```
 
 ```bash
@@ -159,8 +167,14 @@ or the presenter, so the layout is rebuilt:
   puts the board's). They stay in frame through the windows, so there is no inset and the camera does not move.
 - **A pane** goes full width wherever the long video goes into a window, centred between the heading and the
   captions, with its title and source line 1.3 times their size.
-- **The captions** (`<Captions>`, from `public/audio/scenes/*.captions.json`) sit between the pane and the
-  presenter's head. Shorts are watched muted.
+- **A pane that takes over** (`takeover` on the pane) fills the frame under the board's lines: the presenter steps
+  out, and the view moves to each `region` ([x, y, w, h] of the picture, `size` its pixels) on its word. Show the
+  whole thing for a second or two, then punch in on what the narration names, and end it on a word that brings the
+  presenter back. A `label` (the file name) shows while the whole picture is up and goes as the view moves in.
+- **The captions** (`<Captions>` with `phrases`, from `public/audio/scenes/*.captions.json`) stay in one place for
+  the whole short, above the presenter's head, and break at commas, not mid-phrase. Shorts are watched muted.
+- **Its own board:** `"board": {"08_capture": [...]}` on the short replaces that segment's items in the short only,
+  for one line that says what the step is (and a takeover); the long video keeps its own.
 - **Frame 0 is the cover.** The first segment's heading is already written there. `cover` puts one of the short's
   panes (segment id, then the pane's place among that segment's panes, from 0) on frame 0, faded out by the first
   word. Use it when the presenter is mid-turn at the start, as they are after a carried heading turn.

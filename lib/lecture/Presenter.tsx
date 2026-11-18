@@ -81,7 +81,7 @@ export const shadow = (L: LectureTimeline, frame: number, k = 1) => {
 
 /** The presenter in front of the board (inside the camera, above the chalk). A short passes its own `box` (where the
  * clip goes on its frame, `k` times the board's size) and keeps them in frame through the windows. */
-export const Presenter: React.FC<{ L: LectureTimeline; box?: { left: number; top: number; width: number; height: number }; k?: number; offset?: number }> = ({ L, box, k = 1, offset = 0 }) => {
+export const Presenter: React.FC<{ L: LectureTimeline; box?: { left: number; top: number; width: number; height: number }; k?: number; offset?: number; hidden?: [number, number][] }> = ({ L, box, k = 1, offset = 0, hidden = [] }) => {
   const manifest = useManifest();
   // `offset`: the lecture frame of this composition's frame 0 (a short). Not a Sequence shifted back by it: under one
   // shifted thousands of frames back the clip drew nothing (BlenderClip's Freeze counts from the outer sequence)
@@ -90,7 +90,9 @@ export const Presenter: React.FC<{ L: LectureTimeline; box?: { left: number; top
   // In a window the camera is on the left of the board and the presenter is out of frame; a hand could still reach into
   // its edge, so they are not drawn there (back in over the first frames of the move out).
   const win = box ? undefined : L.tl.windows.find((w) => frame >= w.from && frame < w.to + 8);
-  const seen = win ? Math.max(0, (frame - win.to) / 8) : 1;
+  // `hidden`: lecture frames a short gives the whole frame to something else (a pane that takes over), faded over 6
+  const away = hidden.reduce((m, [a, b]) => Math.min(m, interpolate(frame, [a - 6, a, b, b + 6], [1, 0, 0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })), 1);
+  const seen = (win ? Math.max(0, (frame - win.to) / 8) : 1) * away;
   if (seen <= 0) return null;
   const BOX = box ?? presenterBox(L);
   const filter = shadow(L, frame, k);
