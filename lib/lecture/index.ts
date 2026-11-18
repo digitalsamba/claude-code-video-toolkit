@@ -8,7 +8,7 @@
 export { makeLecture, Title } from './Lecture';
 export type { Custom } from './Lecture';
 export { makeTimeline } from './timeline';
-export type { At, BoardItem, Lecture, LectureTimeline, Segment, Timeline } from './timeline';
+export type { At, BoardItem, Lecture, LectureTimeline, Segment, Short, Timeline } from './timeline';
 export { Chalk, Stroke, Tap, Seg, ChalkDefs, SIZE, WHITE, YELLOW, HAND, line, box, arrow, tick, cross, ring, under } from './chalk';
 export { Board, BoardDrawn } from './Board';
 export { Camera, cameraAt } from './Camera';

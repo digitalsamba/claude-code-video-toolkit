@@ -136,6 +136,40 @@ a second, the door opens and the presenter walks in (about 7.8 s); its times are
 - It renders at 1920x1080, opaque: about 14 minutes on an Apple M4 (258 frames at 3.0 to 3.2 s a frame, either
   body) (`render` says before it starts).
 
+## Shorts
+
+A Short is some consecutive segments of the same lecture, made vertical. It uses the same clips, audio and
+captions, so nothing is rendered again in Blender and nothing is voiced again:
+
+```json
+"shorts": [{"id": "own-character", "segments": ["08_capture", "09_photo_to_character"], "cover": ["09_photo_to_character", 3]}]
+```
+
+```bash
+cd projects/my-talk && npm run board      # also writes public/board/bg-short.png, the slate at 1080x1920
+npx remotion render src/index.ts Short-own-character out/short.mp4 && cd ../..
+uv run tools/qc.py --render projects/my-talk/out/short.mp4 --fix
+```
+
+Each short is a 1080x1920 composition, `Short-<id>`. A straight 9:16 crop of the long video cuts either the board
+or the presenter, so the layout is rebuilt:
+- **The board's chalk** is a column at the top: board pixels from x 10 to 1250, scaled to the width (chalk `l`
+  comes out at 54 px and `m` at 39 px, both above the 28 px a phone reads).
+- **The presenter** is below it, full width, over one slate drawn at the vertical size (its tray where their clip
+  puts the board's). They stay in frame through the windows, so there is no inset and the camera does not move.
+- **A pane** goes full width wherever the long video goes into a window, centred between the heading and the
+  captions, with its title and source line 1.3 times their size.
+- **The captions** (`<Captions>`, from `public/audio/scenes/*.captions.json`) sit between the pane and the
+  presenter's head. Shorts are watched muted.
+- **Frame 0 is the cover.** The first segment's heading is already written there. `cover` puts one of the short's
+  panes (segment id, then the pane's place among that segment's panes, from 0) on frame 0, faded out by the first
+  word. Use it when the presenter is mid-turn at the start, as they are after a carried heading turn.
+- It starts at the first segment's clip and ends `tail` frames (12) after the last word. A pane that would fade out
+  in those frames stays up.
+
+Every layout number is under `"short"` in `lib/lecture/defaults.json`, and any of them can be set on one short.
+`qc.py --layout` does not read a lecture: read stills (`npx remotion still ... --frame=N`) instead.
+
 ## What is open
 
 - The presenter does not write: lettering chalks itself in while they point at it.

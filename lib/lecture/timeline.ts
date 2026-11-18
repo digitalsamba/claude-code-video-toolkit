@@ -61,7 +61,11 @@ export type Lecture = {
   staging?: Partial<typeof defaults.staging>;
   sounds?: Record<string, Sound>;
   segments: Segment[];
+  /** Vertical shorts made from some consecutive segments (lib/lecture/defaults.json "short" has the layout). */
+  shorts?: Short[];
 };
+
+export type Short = { id: string; segments: string[]; cover?: [string, number]; captions?: Partial<typeof defaults.short.captions> } & Partial<Omit<typeof defaults.short, 'captions' | 'note'>>;
 
 /** A sound laid on a clip's event: one file, or several taken in turn (footsteps). */
 export type Sound = { file?: string; files?: string[]; volume?: number; offset?: number; frames?: number };

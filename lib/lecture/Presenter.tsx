@@ -79,25 +79,28 @@ export const shadow = (L: LectureTimeline, frame: number, k = 1) => {
   return `drop-shadow(${sh.x * k}px ${sh.y * k}px ${sh.blur * k}px rgba(0,0,0,${(sh.alpha * on).toFixed(3)}))`;
 };
 
-/** The presenter in front of the board (inside the camera, above the chalk). */
-export const Presenter: React.FC<{ L: LectureTimeline }> = ({ L }) => {
+/** The presenter in front of the board (inside the camera, above the chalk). A short passes its own `box` (where the
+ * clip goes on its frame, `k` times the board's size) and keeps them in frame through the windows. */
+export const Presenter: React.FC<{ L: LectureTimeline; box?: { left: number; top: number; width: number; height: number }; k?: number; offset?: number }> = ({ L, box, k = 1, offset = 0 }) => {
   const manifest = useManifest();
-  const frame = useCurrentFrame();
+  // `offset`: the lecture frame of this composition's frame 0 (a short). Not a Sequence shifted back by it: under one
+  // shifted thousands of frames back the clip drew nothing (BlenderClip's Freeze counts from the outer sequence)
+  const frame = useCurrentFrame() + offset;
   if (!manifest) return null;
   // In a window the camera is on the left of the board and the presenter is out of frame; a hand could still reach into
   // its edge, so they are not drawn there (back in over the first frames of the move out).
-  const win = L.tl.windows.find((w) => frame >= w.from && frame < w.to + 8);
+  const win = box ? undefined : L.tl.windows.find((w) => frame >= w.from && frame < w.to + 8);
   const seen = win ? Math.max(0, (frame - win.to) / 8) : 1;
   if (seen <= 0) return null;
-  const BOX = presenterBox(L);
-  const filter = shadow(L, frame);
+  const BOX = box ?? presenterBox(L);
+  const filter = shadow(L, frame, k);
   return (
     <>
       {L.clips.map(({ id, from, until }) => {
         const c = manifest.clips.find((x) => x.id === id);
         if (!c || !has(c.file) || frame < from || frame >= until) return null;
         return (
-          <Sequence key={id} from={from} durationInFrames={until - from} layout="none">
+          <Sequence key={id} from={from - offset} durationInFrames={until - from} layout="none">
             <BlenderClip clip={blenderClip(manifest, id)} volume={0.35}
               style={{ ...BOX, opacity: seen, filter }} />
           </Sequence>

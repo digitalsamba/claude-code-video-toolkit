@@ -4,7 +4,7 @@
   "description": "A lecture at a chalkboard: a fitted presenter rendered in Blender in front of a board Remotion draws, all from lecture.json",
   "scripts": {
     "studio": "npx remotion studio",
-    "board": "npx remotion still BoardBg public/board/bg.png && npx remotion still BoardTitle public/board/title.png",
+    "board": "npx remotion still BoardBg public/board/bg.png && npx remotion still BoardTitle public/board/title.png && npx remotion still BoardShortBg public/board/bg-short.png",
     "timeline": "cd ../.. && uv run tools/lecture.py timeline $INIT_CWD",
     "specs": "cd ../.. && uv run tools/lecture.py specs $INIT_CWD",
     "check": "cd ../.. && uv run tools/lecture.py check $INIT_CWD",

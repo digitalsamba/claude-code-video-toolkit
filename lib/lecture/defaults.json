@@ -227,5 +227,33 @@
    }
   },
   "note_sounds": "laid on the room shot's own events (clips.json), the presenter's clips keep \"sounds\": a step here is a footfall of the walk in, a lamp_stutter a bank of lights starting and lamp_on the frame it holds full"
+ },
+ "short": {
+  "note": "lecture.json \"shorts\": [{\"id\": \"own-character\", \"segments\": [\"08_capture\", \"09_photo_to_character\"]}] makes one 1080x1920 composition a short (Short-<id>) from the same clips and audio: the board's chalk column on top (board pixels `column` [x, y, w] scaled to the width, its top at `top`), the presenter's clip below it (`presenter_top`, full width) over one slate drawn at the vertical size (`npm run board` writes it as board/bg-short.png; its tray sits where the clip puts the board's), a pane full width (`gutter`), centred in `pane_band` (the frame's y from under the heading to above the captions), its title and source line `chrome` times their size, wherever a window would be, captions between them (`captions`, the shared Captions component's props). The camera does not move and there is no inset: the presenter is always in frame. Frame 0 is the cover, so the first segment's heading is already written there. `tail` is the frames kept after the last word. Any key here can be set per short.",
+  "width": 1080,
+  "height": 1920,
+  "column": [
+   10,
+   150,
+   1240
+  ],
+  "top": 110,
+  "presenter_top": 873,
+  "gutter": 30,
+  "pane_band": [
+   235,
+   905
+  ],
+  "chrome": 1.3,
+  "tail": 12,
+  "captions": {
+   "bottom": 925,
+   "fontSize": 46,
+   "maxWords": 6,
+   "maxChars": 30,
+   "maxWidth": "94%",
+   "highlightColor": "#F4D26A",
+   "background": "rgba(16, 22, 20, 0.82)"
+  }
  }
 }

@@ -8,7 +8,9 @@ export const H = 1080;
 export const WOOD = 26;
 export const TRAY = 1032;
 
-export const BoardDrawn: React.FC = () => (
+/** The board drawn. `w`, `h` and `tray` draw it at another size (a short's 1080x1920, its tray where the
+ * presenter's clip puts it); the sticks and the eraser keep their places as shares of the width. */
+export const BoardDrawn: React.FC<{ w?: number; h?: number; tray?: number }> = ({ w: W = 1920, h: H = 1080, tray: TRAY = 1032 }) => (
   <AbsoluteFill style={{ background: '#26332f' }}>
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
       <defs>
@@ -48,11 +50,11 @@ export const BoardDrawn: React.FC = () => (
       <rect x="0" y={TRAY} width={W} height={H - TRAY} fill="url(#wood)" />
       <rect x="0" y={TRAY} width={W} height="6" fill="#a37a52" />
       <rect x="0" y={TRAY + 6} width={W} height="14" filter="url(#grain)" opacity="0.35" />
-      {[[330, 0, '#f1eee4'], [392, -3, '#efd27a'], [1210, 2, '#f1eee4']].map(([x, r, c], i) => (
+      {[[330 * W / 1920, 0, '#f1eee4'], [330 * W / 1920 + 62, -3, '#efd27a'], [1210 * W / 1920, 2, '#f1eee4']].map(([x, r, c], i) => (
         <rect key={i} x={x as number} y={TRAY - 11} width="58" height="13" rx="5" fill={c as string}
           transform={`rotate(${r} ${x} ${TRAY})`} />
       ))}
-      <g transform={`translate(560 ${TRAY - 30})`}>
+      <g transform={`translate(${Math.round(560 * W / 1920)} ${TRAY - 30})`}>
         <rect width="118" height="16" rx="3" fill="#6b4a2f" />
         <rect y="16" width="118" height="15" rx="3" fill="#2a2a2c" />
         <rect y="24" width="118" height="7" rx="3" fill="#c9c6bc" opacity="0.55" />
@@ -61,14 +63,14 @@ export const BoardDrawn: React.FC = () => (
   </AbsoluteFill>
 );
 
-/** The board: the pre-rendered still when it is there, otherwise drawn live. */
-export const Board: React.FC = () => {
-  const has = getStaticFiles().some((f) => f.name === 'board/bg.png');
+/** The board: the pre-rendered still when it is there (`npm run board`), otherwise drawn live. */
+export const Board: React.FC<{ still?: string; w?: number; h?: number; tray?: number }> = ({ still = 'board/bg.png', w = W, h = H, tray }) => {
+  const has = getStaticFiles().some((f) => f.name === still);
   return has ? (
     <AbsoluteFill>
-      <Img src={staticFile('board/bg.png')} style={{ width: W, height: H }} />
+      <Img src={staticFile(still)} style={{ width: w, height: h }} />
     </AbsoluteFill>
   ) : (
-    <BoardDrawn />
+    <BoardDrawn w={w} h={h} tray={tray} />
   );
 };
