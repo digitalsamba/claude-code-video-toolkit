@@ -18,7 +18,8 @@ export const { fontFamily: SANS } = loadFont('normal', { weights: ['400', '600']
 export type Custom = Record<string, React.FC<{ at: number } & Record<string, unknown>>>;
 
 const HX = 70;   // headings' left edge
-const HB = 186;  // a heading's top
+const HB = 205;  // a heading's top. One size and one edge for every heading (l: at xl a heading in a segment with
+                 // a window ran into the pane under it, so the two kinds of segment had two heading sizes)
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 
 /** A pane: a cleaner, darker slate in a plain sans, with a title and a source line, so something real never reads
@@ -71,13 +72,12 @@ const strokePath = (item: BoardItem, seed: number): string => {
 /** One segment's items on the board, chalked on their words, wiped before the next segment. */
 const SegmentBoard: React.FC<{ L: LectureTimeline; lecture: Lecture; n: number; custom: Custom }> = ({ L, lecture, n, custom }) => {
   const seg = lecture.segments[n];
-  const windowed = (seg.windows ?? []).length > 0;
   return (
     <Seg from={n === 0 && L.first > 0 ? L.first : L.S(n) - 12} to={L.N(n) - 20}>
       {/* after the room shots, the title they showed on the wall is still up, and goes with the first segment */}
       {n === 0 && L.first > 0 ? <Title lecture={lecture} /> : null}
       {seg.heading ? (
-        <Chalk x={HX} y={windowed ? 205 : HB} size={windowed ? SIZE.l : SIZE.xl} at={L.S(n) - 4}>{seg.heading}</Chalk>
+        <Chalk x={HX} y={HB} size={SIZE.l} at={L.S(n) - 4}>{seg.heading}</Chalk>
       ) : null}
       {(seg.board ?? []).map((item, k) => {
         const at = L.at(n, item.at);

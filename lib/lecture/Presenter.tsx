@@ -69,6 +69,16 @@ export const Room: React.FC<{ L: LectureTimeline }> = ({ L }) => {
   );
 };
 
+/** The presenter's shadow on the board (staging.shadow), `k` times its size: after an opening it fades in from the
+ * cut, since the room shot shows none on the board and one switched on at the cut read as an outline round the body. */
+export const shadow = (L: LectureTimeline, frame: number, k = 1) => {
+  const sh = L.staging.shadow;
+  const on = L.tl.opening
+    ? interpolate(frame, [L.first, L.first + sh.fade * L.tl.fps], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+    : 1;
+  return `drop-shadow(${sh.x * k}px ${sh.y * k}px ${sh.blur * k}px rgba(0,0,0,${(sh.alpha * on).toFixed(3)}))`;
+};
+
 /** The presenter in front of the board (inside the camera, above the chalk). */
 export const Presenter: React.FC<{ L: LectureTimeline }> = ({ L }) => {
   const manifest = useManifest();
@@ -80,6 +90,7 @@ export const Presenter: React.FC<{ L: LectureTimeline }> = ({ L }) => {
   const seen = win ? Math.max(0, (frame - win.to) / 8) : 1;
   if (seen <= 0) return null;
   const BOX = presenterBox(L);
+  const filter = shadow(L, frame);
   return (
     <>
       {L.clips.map(({ id, from, until }) => {
@@ -88,7 +99,7 @@ export const Presenter: React.FC<{ L: LectureTimeline }> = ({ L }) => {
         return (
           <Sequence key={id} from={from} durationInFrames={until - from} layout="none">
             <BlenderClip clip={blenderClip(manifest, id)} volume={0.35}
-              style={{ ...BOX, opacity: seen, filter: 'drop-shadow(-16px 12px 16px rgba(0,0,0,0.38))' }} />
+              style={{ ...BOX, opacity: seen, filter }} />
           </Sequence>
         );
       })}
@@ -133,7 +144,7 @@ export const Inset: React.FC<{ L: LectureTimeline }> = ({ L }) => {
       {/* their clip, cropped, over the part of the bare board it stands in front of (`tools/lecture.py bg`) */}
       <Sequence from={c.from} durationInFrames={c.until - c.from} layout="none">
         <BlenderClip clip={clip} volume={0} crop={crop} background={bg}
-          clipStyle={{ filter: `drop-shadow(-${8 * shrink}px ${6 * shrink}px ${8 * shrink}px rgba(0,0,0,0.38))` }}
+          clipStyle={{ filter: shadow(L, frame, shrink) }}
           style={{ ...inset, borderRadius: 4, background: '#2a3633' }} />
       </Sequence>
       <div style={{ position: 'absolute', left: 0, top: 0, width: 1920, height: 1080, filter: 'url(#chalkFx)', pointerEvents: 'none' }}>

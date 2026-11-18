@@ -90,7 +90,12 @@ frame (the chalk, the windows, the acting) is looked up from the captions, so no
 `"staging"` and `"rules"` in lecture.json override the defaults in `lib/lecture/defaults.json`:
 where they stand (a board column and metres out from the wall, in the hall's measure), the part of the frame their
 clips cover (`window`), the board camera's lens, the gap between segments, how long a gesture is held, how often they
-look out at the hall, what crosses a join (`carry`: `board` or `still`).
+look out at the hall, what crosses a join (`carry`: `board` or `still`), and their shadow on the board
+(`shadow`: straight down and soft, as the ceiling lights throw it, faded in over two seconds after an opening).
+
+Type on the board: every heading is the `l` size on one edge, so keep a segment's first line at y 360 or lower.
+Keep to three chalk sizes in a video (`xl` for a word or two, `l`, `m`) and nothing said aloud below `m`: with the
+pane's title and source line that is the five sizes a video should hold (the `video-design` skill).
 
 The hall is sized by the presenter: a fitted character of 2.25 m and one of 1.65 m stand at the same size beside
 the board, and `check` fails a clip if the presenter hides more than 10% of the board.

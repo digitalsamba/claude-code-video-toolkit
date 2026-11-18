@@ -76,7 +76,15 @@
    0.62
   ],
   "density": 1.25,
-  "note_table": "the table the chalk goes down on at the close: hidden, in front of the presenter on the chalk hand's side (board pixel column and metres out, size and height in metres, all in the hall's measure)"
+  "note_table": "the table the chalk goes down on at the close: hidden, in front of the presenter on the chalk hand's side (board pixel column and metres out, size and height in metres, all in the hall's measure)",
+  "shadow": {
+   "x": 0,
+   "y": 14,
+   "blur": 30,
+   "alpha": 0.24,
+   "fade": 2.0
+  },
+  "note_shadow": "The presenter's shadow on the board (CSS drop-shadow, board pixels): straight down and soft, as the hall's ceiling lights throw it. After an opening it fades in over `fade` seconds from the cut: the room shot has no shadow on the board, and one switched on at the cut showed as a dark outline round the body."
  },
  "window": {
   "zoom": 1.4,
