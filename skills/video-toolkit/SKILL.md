@@ -339,7 +339,7 @@ to use.
 | Legible text in an image (title card, thumbnail, quote card) | `ideogram4.py --json caption.json` | FLUX or LTX (both garble text) |
 | Text-free background for an overlay | `flux2.py --preset title-bg` | |
 | Motion b-roll, animate a still | `ltx2.py` (`--input` for image-to-video) | |
-| Voiceover | `voiceover.py --provider qwen3 --cloud modal --max-wpm 165` (free, self-hosted), `--provider elevenlabs`, or `--provider 60db` (`sixtydb_tts.py` standalone) | |
+| Voiceover | `voiceover.py --provider qwen3 --cloud modal --max-wpm 165` (free, self-hosted), `--provider elevenlabs`, or `--provider 60db` (`sixtydb_tts.py` standalone); Thai with PD Clone Voice: `pdclone_tts.py --scenes` (batched for a 20 call daily quota) | |
 | Talking head anyone will watch | `soulx.py` (SoulX-FlashHead Pro, Modal only) | `sadtalker.py` is drafts, or when Modal is down |
 | Music | `music_gen.py --variations 3`, then `pick_music.py` to rule takes out and `audition.py` to choose by watching | picking a take by ear alone |
 | Sound effects | `sfx.py` (ElevenLabs, generated) or `sfx_search.py` (real recordings from Freesound via Openverse, free, no key) | |
