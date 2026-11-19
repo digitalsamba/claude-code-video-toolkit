@@ -110,10 +110,11 @@ def _bare_wrist(co, far, flood, skin, col):
             "cut": Vector((tip + axis * (d_best + 0.15 * radius)).tolist())}
 
 
-def find_hand(ob, side: int, col=None) -> dict:
+def find_hand(ob, side: int, col=None, hue_tol: float = 0.1) -> dict:
     """The hand on one side of a model standing in an A-pose (side 1 is +x, the character's left): which
     vertices it is, the middle of the ring where it meets the cuff, the ring's size, and the way the hand
-    leaves the cuff."""
+    leaves the cuff. `hue_tol` is how near the fingertips' hue a vertex must be to count as skin: a sleeve of
+    brown or tan wool is within 0.1 of skin (one was 0.07), and then the hand runs on up the sleeve."""
     co, ed = _arrays(ob)
     if col is None:
         col, _ = _colours(ob)
@@ -124,7 +125,7 @@ def find_hand(ob, side: int, col=None) -> dict:
     region = (x > 0.45 * span) & (co[:, 2] < co[far, 2].mean() + 0.45 * span)  # the forearm and hand, not the head
     # skin by hue, not brightness: the creases between fingers are dark skin, a cuff is another colour
     hue = col / np.maximum(col.sum(axis=1, keepdims=True), 1e-3)
-    like = region & (np.linalg.norm(hue - skin / skin.sum(), axis=1) < 0.1) & (col.sum(axis=1) > 0.25)
+    like = region & (np.linalg.norm(hue - skin / skin.sum(), axis=1) < hue_tol) & (col.sum(axis=1) > 0.25)
     # flood out from the fingertips over skin-coloured vertices: that stops at the cuff
     nb = {}
     for a, b in ed[like[ed[:, 0]] | like[ed[:, 1]]]:
@@ -565,6 +566,7 @@ def tint(hand_img, was, want):
     hand_img.pack()
 
 
+TINT_LIMIT = 1.5  # the most the hands' skin is brightened or darkened, per channel, to match the body's
 NOT_SKIN = 0.45  # a texel this far from skin's hue toward grey (0 skin, 1 no colour at all) is not skin
 
 
@@ -658,7 +660,7 @@ def flatten(piece, centre: Vector, radius: float) -> int:
 
 
 def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None, tuck: float = 0.012,
-          lumps=()):
+          lumps=(), hue_tol: float = 0.1, donor_hue_tol: float | None = None):
     """Replace the body's hands with the donor's. `src` is the body's joints (source_joints). Returns the fingers
     of each side ({"L": {...}, "R": {...}}, in the body's space) and the hand objects, to join to the body once
     it is weighted. Each `tip` joint moves to the knuckles: the hand bone is the palm, and the fingers go on
@@ -674,7 +676,7 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
     donor_col, donor_img = _colours(donor)
     cut = []
     for side in (1, -1):
-        theirs = find_hand(donor, side, donor_col)
+        theirs = find_hand(donor, side, donor_col, hue_tol if donor_hue_tol is None else donor_hue_tol)
         piece = cut_hand(donor, theirs, "hand_piece", faces)
         found = find_fingers(piece, theirs["centre"], theirs["normal"])
         # how well formed it is: fingers that point the same way as each other (a splayed hand can't close on a bar)
@@ -704,7 +706,7 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
     print(f"fit: hands, both from the model's {'left' if best[1]['centre'].x > 0 else 'right'}-arm hand, which is a "
           f"{'left' if best[2]['side'] > 0 else 'right'} hand (form {best[2]['form']:.2f})")
     out, pieces, skins, old, cuts = {}, [], [], np.zeros(len(body.data.vertices), dtype=bool), []
-    own = {side: find_hand(body, side, body_col) for side in (1, -1)}
+    own = {side: find_hand(body, side, body_col, hue_tol) for side in (1, -1)}
     measured = 0.5 * (own[1]["length"] + own[-1]["length"]) / best[1]["length"]
     print(f"fit: hands, the body's own are {50 * (own[1]['length'] + own[-1]['length']):.1f} cm from cuff to "
           f"fingertip and the donor's {100 * best[1]['length']:.1f} cm: "
@@ -762,7 +764,16 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
     grey = skin_only(pieces, donor_img, np.mean([s[1] for s in skins], axis=0))
     print(f"fit: hands, {100 * grey:.2f}% of their texture was not skin's colour (background baked between the "
           "fingers) and was painted skin")
-    tint(donor_img, np.mean([s[1] for s in skins], axis=0), np.mean([s[0] for s in skins], axis=0))
+    was, want = np.mean([s[1] for s in skins], axis=0), np.mean([s[0] for s in skins], axis=0)
+    gain = want / np.maximum(was, 1e-3)
+    if gain.max() > TINT_LIMIT or gain.min() < 1 / TINT_LIMIT:
+        # (two generations of one character have near the same skin: a gain this big means the donor's skin was
+        # read off something else, a sleeve of a colour near skin's, and applied it turns the hands white or black)
+        print(f"fit: WARN hands, the donor's skin read as {np.round(was, 3).tolist()} against the body's "
+              f"{np.round(want, 3).tolist()}: a tint of {np.round(gain, 2).tolist()} would wash the hands out, so they "
+              "keep their own colour")
+    else:
+        tint(donor_img, was, want)
     bm = bmesh.new()  # the body loses its own hands
     bm.from_mesh(body.data)
     bm.verts.ensure_lookup_table()

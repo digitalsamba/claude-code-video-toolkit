@@ -24,7 +24,9 @@ fit.json (metres, in the model's own space; side joints once, for the character'
               "mouth": [x, z], "mouth_width": w, "half_width": w, "moustache": true, "chin": z}}
 Eyes and brows are the character's right, then left, as seen from the front.
 Optional: "joints_right": {"el": [x, y, z], ...}, a right-side joint where the model is not symmetrical, written
-as the left is (x positive). And "hands": {"model": "open_hands.glb", "scale": 0.7, "smooth": [[along, out_of_palm, across, radius]]}
+as the left is (x positive). And "hands": {"model": "open_hands.glb", "scale": 0.7, "smooth": [[along, out_of_palm, across, radius]],
+"hue": 0.05, "donor_hue": 0.1} (hue: how near the fingertips' hue counts as skin, 0.1 unless given; lower it for
+brown or tan sleeves; donor_hue: the same for the hands model, `hue` unless given)
 (hands.py: the donor's hands are sized to the body's own unless `scale` says, the wrist joint moves to the cuff
 whatever `wr` says, and `smooth` flattens a lump on both hands, in cm from the middle of the knuckle row), and in
 "face", "brows_hidden": [0] for a brow under a fringe. "lid": 0.3 rests the upper lids over that share of the eye
@@ -752,7 +754,10 @@ def main():
                   "its hands are looked for")
         fingers, pieces = hand_graft.graft(body, donor, src, int(fit["hands"].get("faces", 9000)),
                                            float(fit["hands"]["scale"]) if "scale" in fit["hands"] else None,
-                                           lumps=fit["hands"].get("smooth", ()))
+                                           lumps=fit["hands"].get("smooth", ()),
+                                           hue_tol=float(fit["hands"].get("hue", 0.1)),
+                                           donor_hue_tol=(float(fit["hands"]["donor_hue"]) if "donor_hue" in fit["hands"]
+                                                          else None))
         D.objects.remove(donor)
     proxy, proxy_rig = clay_proxy(src)
     copy_weights(proxy, body, src)
