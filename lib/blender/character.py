@@ -58,6 +58,7 @@ FACES = {
     "determined": ((1.1, 1.1, 0.75), 1.0, "angry", "frown", 0.9),
     "relieved":   ((1, 1, 1), 1.0, "happy", "smile", 1.0),
     "grin":       ((1, 1, 0.55), 1.0, "happy", "smile", 1.5),
+    "hopeful":    ((1.05, 1.05, 1.05), 1.0, "worry", "smile", 0.6),  # brows still drawn up, the mouth easing
 }
 GLASSES_EYE = (0.35, 0.65)  # how far up its lens opening an eye may sit (0.5 is the middle)
 GLASSES_ROOM = 1.15         # and how much taller than the eye the opening has to be

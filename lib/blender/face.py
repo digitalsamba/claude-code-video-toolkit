@@ -40,12 +40,13 @@ MOUTHS = {
     "determined": (0.0, 0.55, 0.0, 0.0),
     "relieved":   (0.5, 0.0, 0.2, 0.0),
     "grin":       (1.0, 0.0, 0.7, 0.0),
+    "hopeful":    (0.3, 0.0, 0.25, 0.0),  # (a small smile with the lips just apart: a breath let go)
 }
 # a face that keeps its painted lips smiles with them shut: at rest it is the model's own mouth, a smile lifts
 # the painted corners, and teeth are for a grin (or for talking)
 MOUTHS_PAINT = {**MOUTHS, "neutral": (0.0, 0.0, 0.0, 0.0), "happy": (0.8, 0.0, 0.0, 0.0),
                 "content": (0.5, 0.0, 0.0, 0.0), "relieved": (0.45, 0.0, 0.0, 0.0),
-                "worried": (0.0, 1.0, 0.0, 0.0)}
+                "worried": (0.0, 1.0, 0.0, 0.0), "hopeful": (0.3, 0.0, 0.2, 0.0)}
 KEYS = ("smile", "frown", "open", "round")
 SINK = 0.012       # how far behind the lips a kept face's mouth waits while it is shut (m, on a head 0.42 m wide)
 JAW = 0.032        # how far the chin drops with the mouth fully open (m, on a head 0.42 m wide)
