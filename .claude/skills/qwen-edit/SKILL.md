@@ -67,6 +67,12 @@ Use when the user wants to:
   For someone who does wear glasses, name them ("keeps wearing her round glasses"), or a new setting can drop them
 - **Multi-image compositing** - CAN work with explicit identity anchors (see examples.md for prompt patterns). Requires describing distinctive features (hair texture/color, ethnicity, outfit) and using guidance ~2.0
 - **Camera angle changes** - Inconsistent results. Vertical angles (low/high) work better than rotational (three-quarter view)
+- **Colour drift on expression edits** - an expression-only edit of an illustrated portrait (relax the brow, lift a
+  cheek, turn the eyes) kept the face and the drawing but came back greyer and darker, with its warm light gone
+  (Ireland in the Telling, 2026-11). Matching the whole image's mean and spread washed it out. What worked: keep the
+  edit's luminance (Y, matched to the original over the face) and the original's colour (Cb and Cr, blurred a few
+  pixels so small shifts don't show). The expression survives because it lives in light and shade. Judge the
+  expression at the size it will be seen, too: a glance and a relaxed brow read at phone size, a cheek lift barely
 
 ## Quick Reference
 
