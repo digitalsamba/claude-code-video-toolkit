@@ -1263,6 +1263,15 @@ the plates, toward a style frame the owner supplied. The modules are project-lev
 - **A hand keyed onto something on frame 1 arrives on frame 2,** and keys laid before frame 1 do not hold
   (`place` keys the arms on 1). Start the shot on frame 3. The `relaxed` hand shape lifts the fingers off a
   rail; a grip that eases is a shape between `grip` and `hold`, with the wrist a few millimetres higher.
+- **A generated head can be reshaped after the fit, if the marks go with it.** The fitted `.blend` holds one
+  mesh and the face marks the rig reads (`model_body["face"]`: eyes, brows, mouth, chin). Write the change as
+  one function of a point (a longer lower face, a straighter nose, cheekbones, ears), run the head's vertices
+  and every mark through it, and the eyes and mouth stay on the face; anything placed by coordinates (a scar)
+  goes through it too. A young, round generated face took a third more length below the eyes before it read
+  as an adult's. Planes can be painted in as well: smooth each mesh face's normal over its neighbours, score
+  it by which way it turns (front and up light, down and to the side dark), cut the score into three tones
+  and multiply them onto the skin's texels. That is form, not a light, so it holds as the head turns. What
+  this cannot change is what is painted: large eyes stay large.
 - **Stage from the picture's anatomy, not its description.** Which hand is on the rail and which cheek the
   scar is on were read wrongly from the frame at first; the thumb's side and the ear that shows settle both.
   A close shot of someone by the rail cannot also hold a mast on the centreline unless the lens is wide and
