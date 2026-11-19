@@ -194,7 +194,7 @@ thins the mesh inside the islands of its texture, and a face collapsed across a 
 place (shards by an eye). Make the open-hands picture from a hips-up crop so the fingers come out apart. Read the
 fit's output: any line with FAIL (a torn thumb web, faces painted from the wrong place, the inside of a forearm
 moving with the body) is a fault that will show in a close shot. A body's hand read as over 21 cm from cuff to
-fingertip means the sleeve was taken for skin (brown or tan wool): put `"hue": 0.05` in the fit's `hands`. The joints are written for the left and mirrored:
+fingertip means the sleeve was taken for skin (brown or tan wool): put `"hue": 0.05` in the fit's `hands`. To recolour a generated model's costume, work by mesh faces, not by the picture: its texture is hundreds of scattered islands, and a blur over it bleeds one into the next (`docs/blender.md`, "Lit 3D that reads as paint", which also has a painterly look for lit 3D: banded light as an emission, a Kuwahara pass over the frame). The joints are written for the left and mirrored:
 slice both arms of the mesh, and where the right differs give it in `"joints_right"` (a right elbow mirrored 3 cm
 outside the arm left a sheet of skin hanging from it to the hip). The steps and their costs are in `docs/blender.md`.
 **When a fitted character does not read as the person**, make a review sheet before changing anything:

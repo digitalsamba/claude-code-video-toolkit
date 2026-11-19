@@ -1204,6 +1204,70 @@ First tried on "Ireland in the Telling" (the first sight of land from a boat:
 - **Blender 5 keyframes are in layered actions:** `action.fcurves` is gone; read them as `lib/blender/kit.fcurves`
   does (layers, strips, channelbags) to make keys linear.
 
+### Lit 3D that reads as paint
+
+The second half of the same test: the 3D in front of the plates (a character, a deck, the sea) painted like
+the plates, toward a style frame the owner supplied. The modules are project-level
+(`projects/ireland-in-the-telling/sets/look/painterly.py`, `sets/first-sight/style_shot.py`); what they taught:
+
+- **Bands of light, as an emission.** A white diffuse surface with the material's own bump, read back as a
+  colour (Shader to RGB, EEVEE only), its brightness mapped onto 0 to 1 and cut by a colour ramp into a few
+  tones (violet-grey shadow, half tone, warm light), multiplied onto the surface's own colour and put on an
+  emission, so nothing is lit twice. A stretched noise nudges the brightness before the ramp, which breaks
+  the band edges like a brush. A material keeps its texture and its bump.
+- **Set the light range by measuring it.** The ramp only shows bands where the light's values fall across
+  it. Render one still with the mapped light on the emission in place of the colour and read its percentiles
+  over each surface: a face sat between 0.03 and 0.33 of a range written by guess, and a sea inside a tenth of
+  its range, so both came out one flat tone. Each kind of surface gets its own range.
+- **A rim is thin and has a direction.** Layer Weight's facing, as it comes, is a sheen over everything seen
+  at a slant: a deck seen along its length went chalk white and dark hair went brown. Raise it to a power
+  (2 to 3), multiply it by how far the normal turns toward the rim light, and leave it off decks and floors.
+- **Strokes sit in Generated coordinates on anything that bends.** Object coordinates swim through a
+  character as the armature moves it; Generated stays on the skin. Things that do not bend take Object, with
+  the stroke long along the grain.
+- **A glossy layer added over the emission lights the whole surface,** since it has no Fresnel: 0.25 turned
+  dark wet timber pale. 0.05 is a sheen.
+- **The whole frame through the compositor's Kuwahara filter** (anisotropic, about 5 px at 720p) puts one
+  brush over the 3D and the painting, and did more for "this is a painting" than any shader setting. In
+  Blender 5 the compositor's tree is its own data-block: `scene.compositing_node_group =
+  bpy.data.node_groups.new(name, "CompositorNodeTree")`, an output socket made with
+  `tree.interface.new_socket("Image", in_out="OUTPUT", socket_type="NodeSocketColor")`, a `NodeGroupOutput`
+  node, and the filter's settings are inputs (`Size`, `Type`, `Sharpness`), not properties.
+- **Eye patches keep their own shading.** A fitted character's eyes are flat planes in front of the face.
+  Painted like the skin they fall into the shadow band whenever the plane faces away from the key (a violet
+  patch round each eye); painted any fixed tone they show as a box across the eyes. Lit by the scene they
+  follow the light and sit in the face, though the lids come down a little grey in a blink.
+- **A generated model's texture is hundreds of small islands laid side by side,** so a texel's neighbours in
+  the picture are not its neighbours on the body. Recolouring a costume by colour with a blur over the picture
+  to mop up flecks bled each island into the next (grey patches across a maroon mantle). Give each texel to
+  the mesh face that owns it (rasterise the UV triangles), let each face take the cloth most of its texels
+  are, and let a face out of step with its neighbours on the mesh take theirs. Small patches of another class
+  wholly inside a garment are flecks, or the brooch. A second material on the same body (the hands, from
+  another model) has its own picture over the same UV square: only faces showing this picture own its texels.
+  At 1024 px the texture is soft in a close-up; that is the model's, not the look's.
+- **A plate along any direction, and at any size.** Put the plate's middle at a distance along a direction
+  from the first camera position and turn the card by that direction less 90 degrees. Its eye-level row goes
+  on the lens's level; a row is then `scale x eye height / (water row - eye-level row)` metres, and at scale 1
+  the painting is seen as its painter saw it. A near shore painted from the beach filled the frame with
+  trees: at 0.62 it is a coast further off, and the painted sea below eye level is behind the 3D sea anyway.
+  A plate may be mirrored to put its land where the shot wants it. Check both of its edges against the frame
+  through the whole move, and hang the same sky again, larger and further, for what shows past them.
+- **The Ocean modifier's cost is its repeats, not the frame size.** A 40 m tile repeated 20 by 20 took 7 s a
+  frame at 640x360 and at 960x540 alike; 8 by 8 (320 m, all a hazed sea shows) took 2.3 s at 1280x720.
+- **A painted sea is banded light too, not a mirror:** the same bands on the waves, foam from the modifier's
+  foam layer (an Attribute node) broken by a noise, and the haze taking it by about 120 m when mist lies on
+  the water. A hard line where the sea met the mist cards went when the haze came that near.
+- **Give a deck a hull.** A lens that sees over the rail sees the rail's shadow on the water as a ladder with
+  no boat under it. A mast out of frame throws a long dark line across the sea: turn off its shadow.
+- **"Shadow buffer full"** in the log means shadows go missing: `scene.eevee.shadow_pool_size = "1024"`.
+- **A hand keyed onto something on frame 1 arrives on frame 2,** and keys laid before frame 1 do not hold
+  (`place` keys the arms on 1). Start the shot on frame 3. The `relaxed` hand shape lifts the fingers off a
+  rail; a grip that eases is a shape between `grip` and `hold`, with the wrist a few millimetres higher.
+- **Stage from the picture's anatomy, not its description.** Which hand is on the rail and which cheek the
+  scar is on were read wrongly from the frame at first; the thumb's side and the ear that shows settle both.
+  A close shot of someone by the rail cannot also hold a mast on the centreline unless the lens is wide and
+  well aft: work the angles out from the lens before building.
+
 ## A film over several sessions
 
 A film with a character in it is not finished in one sitting, and no session should try. What has worked, on two
