@@ -585,6 +585,14 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    passes 2x the move is spread over the skin round the thumb, each vertex taking the mean of its neighbours,
    until none does (one round took that hand to 1.5x; the fit prints the rounds). The fingers are listed thumb,
    index, middle, ring, little on either hand.
+   **Sleeves near skin's colour.** A hand is found by flooding out from the fingertips over vertices whose hue
+   is within 0.1 of theirs, and it stops at the cuff. Brown or tan wool is nearer than that (a peat-brown tunic
+   was 0.07 from the skin), so the flood runs up the sleeve: the fit reads the body's hand as 25 cm long, puts
+   the wrist joint up the forearm and leaves the model's own hands on the arms beside the new ones. Watch for a
+   body's hand over 21 cm in the fit's output. `"hue": 0.05` in `hands` tightens it for both models,
+   `"donor_hue"` for the open-hands model alone. A hand read wrongly also reads its skin's colour off the sleeve,
+   and the donor's hands are tinted to the body's skin by that colour: a tint over 1.5x on any channel turned one
+   pair of hands white, so the fit now refuses a tint that big (`WARN hands`) and leaves the hands as made.
    **Make the open-hands picture close.** In a full-length picture a hand is about 60 pixels long, and the model
    comes back with fingers joined (one came back with four). Crop the front view to the hips up before the edit
    that opens the hands, and ask for the fingers pointing along the arm with the thumb beside the palm: a thumb
@@ -1142,6 +1150,59 @@ What building them taught, each now in the code, a check or a rule:
 - **Frame the prop clear of the captions.** A pint that matters to the joke stood in the lower third of a 9:16
   frame, where burned captions go. Decide the caption band first (above the Shorts interface, below the faces)
   and aim the camera so the prop and the hands sit above it.
+
+## A painted world: 3D in front of painted plates (experimental)
+
+For a series whose look is a painting (a folklore channel's oil landscapes), the near world is 3D and the far
+world is the painting: a deck, a shore or a doorway the camera moves through, against a painted sky and land.
+First tried on "Ireland in the Telling" (the first sight of land from a boat:
+`projects/ireland-in-the-telling/sets/first-sight/`, a project-level build script, not yet a set kind here).
+
+- **One painting, cut into depth layers.** Paint the whole view once (Ideogram 4 from a JSON caption, with the
+  horizon on a stated row and each landmass in its own box, apart from the others), then cut it: sky, far land,
+  near land. Find the land by walking up from the horizon while each pixel is land (greener than the sky, or
+  yellower, or darker than the brightest sky in its own column: pale far hills are only a few per cent darker
+  than the haze behind them), so cloud above the land is never taken. Close notches in a near outline with a max
+  then a min over the columns. Fill the sky behind the land from the sky round it (a pyramid fill). Below the
+  horizon goes: the sea is 3D. Flatten the layers again for the single-plate version, so both show the same
+  pixels.
+- **Compress the depths, and line the layers up from the first camera position.** At true scale a headland 5 km
+  away does not move while a boat goes 20 m. Hang each layer on a plane at a compressed depth (sky 3 km, far
+  hills 420 m, headland 150 m), sized to span the same angle and with its horizon row on the eye's level, so
+  frame 1 is the painting exactly, and the land shifts against the sky as the camera moves. Parallax comes from
+  travel across the line of sight, not along it: with the boat going 16 m straight at a headland 220 m out, the
+  headland moved 10 px in 1280 against the single plate, which nobody sees. A sideways drift of 1 m/s (a
+  current) and the headland at 150 m made the shift plain and still gentle.
+- **Plates are unlit and the view is Standard.** An emission shader on the picture and `view_transform =
+  "Standard"` keep the painted colours as painted (AgX and a lit plane both change them). Take the world's and
+  the sea's colours from the sky plate just above the horizon, so the 3D meets the painting.
+- **The sea:** the Ocean modifier (it is in the macOS build) over about 800 m, a flat plane beyond it, and the
+  sea's colour mixed toward the horizon colour by view distance (Camera Data), so it fades into the painted
+  haze. A smooth sea mirrors the bright sky as a hard white patch with straight edges (screen-space reflections
+  stop at the frame's edge): roughness 0.26 and `Specular IOR Level` 0.32 soften it. Turn the sun's
+  `specular_factor` to 0: a soft sun (a wide `angle`) mirrored in a rough sea is a broad column with hard
+  vertical edges, which no painting has; the sea still reflects the painted sky.
+- **Mist as cards, not a volume:** banks of fractal noise stretched sideways, on planes at several depths, their
+  alpha keyed down over the shot. They cost almost nothing, they parallax like the land, and the reveal is
+  timed by their keys.
+- **A standing eye sees little of a deck.** At 1.65 m with a 30 mm lens level on the horizon, the bottom of the
+  frame meets the deck 6 m ahead. Use a longer deck, the camera further back, a 26 mm lens, and a move that
+  starts tilted down on the deck and rises to the horizon as the mist thins.
+- **A toolkit character on a set the spec does not know** (Cessair on the boat): build her with the rig's own
+  classes (`ClayPerson(id, cast.resolve(entry, base))`, `place`, then the verbs on the scene's frames), as if
+  the deck's top were the floor, then parent every object she made that has no parent to an empty on the boat
+  at the deck's height, its parent inverse left as identity. Keep that empty in a collection: an object in none
+  is not saved, and everything parented to it falls back to the world origin in the file (she stood a metre
+  under the deck, at the water). Aim each look on its own frame in the deck's measure (the boat moves under
+  her). A hand laid on a rail rides the chest, so a `lean` lifts it off: lay it again every few frames through
+  the lean with `reach`. The hand on the rail and the eyeline are then measured from the bones on every frame
+  (`cessair_shot.check`).
+- **A face and what it looks at cannot both face a camera that sees both.** From behind her, looking at the
+  coast she looks at, the best a camera gets is a lost profile (cheek, brow, the line of the nose): about 130
+  degrees from her face's direction, whatever the lens. Plan a reverse shot for the expression, and check it
+  there.
+- **Blender 5 keyframes are in layered actions:** `action.fcurves` is gone; read them as `lib/blender/kit.fcurves`
+  does (layers, strips, channelbags) to make keys linear.
 
 ## A film over several sessions
 

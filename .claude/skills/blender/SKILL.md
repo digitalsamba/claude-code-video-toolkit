@@ -193,7 +193,8 @@ her painted face kept is `tests/fixtures/blender-bare`. To make a generated mode
 thins the mesh inside the islands of its texture, and a face collapsed across a seam is painted from the wrong
 place (shards by an eye). Make the open-hands picture from a hips-up crop so the fingers come out apart. Read the
 fit's output: any line with FAIL (a torn thumb web, faces painted from the wrong place, the inside of a forearm
-moving with the body) is a fault that will show in a close shot. The joints are written for the left and mirrored:
+moving with the body) is a fault that will show in a close shot. A body's hand read as over 21 cm from cuff to
+fingertip means the sleeve was taken for skin (brown or tan wool): put `"hue": 0.05` in the fit's `hands`. The joints are written for the left and mirrored:
 slice both arms of the mesh, and where the right differs give it in `"joints_right"` (a right elbow mirrored 3 cm
 outside the arm left a sheet of skin hanging from it to the hip). The steps and their costs are in `docs/blender.md`.
 **When a fitted character does not read as the person**, make a review sheet before changing anything:
@@ -270,7 +271,7 @@ Character (`who` defaults to the first cast member):
 |---|---|---|
 | `type` | `speed`: `calm`/`frantic`, `until` | hands typing; a click per key in the sound |
 | `pose` | `pose`, `dur` | `type`, `rest`, `hands_on_head`, `arms_up`, `hands_behind_head` |
-| `expression` | `face`, `dur` | `neutral`, `happy`, `content`, `shocked`, `worried`, `determined`, `relieved`, `grin` |
+| `expression` | `face`, `dur` | `neutral`, `happy`, `content`, `shocked`, `worried`, `determined`, `relieved`, `grin`, `hopeful` (worried brows, a slight smile) |
 | `look` | `target`, `dur` | `screen`, `down`, `ahead`, `camera`, `up`, or degrees of head pitch |
 | `lean` | `amount`, `dur` | `forward`, `none`, `back`, `far_back`, `recoil`, or degrees |
 | `head_bob` / `shake_head` | `until` | idle nod to the work / "no no no" (whoosh each turn) |
