@@ -1277,6 +1277,80 @@ the plates, toward a style frame the owner supplied. The modules are project-lev
   A close shot of someone by the rail cannot also hold a mast on the centreline unless the lens is wide and
   well aft: work the angles out from the lens before building.
 
+### A parametric human (MPFB): a face that can act
+
+A generated model's face is one painted surface, so its brows move millimetres. MPFB, the MakeHuman add-on for
+Blender, is the other kind of character: a human on one fixed mesh, shaped by about 1,100 named sliders, with
+face movements as shape keys. First tried on "Ireland in the Telling"
+(`projects/ireland-in-the-telling/characters/cessair/work/mpfb/`, project-level scripts). It is not prompted:
+nothing reads a picture or a sentence. An agent chooses the slider values, which is where a likeness is lost.
+
+- **Licences (read 2026-11):** the code is GPLv3; the bundled assets and the system asset pack are CC0, and
+  MPFB's licence claims nothing over what you make with it, so renders can be published and monetised. Some
+  other packs are CC-BY (hair02, hair03, the dresses): they need a credit.
+- **Headless:** install it once as an extension (`blender --command extension install mpfb -s -e`, or from the
+  Extensions tab). In a script, turn it on with `bpy.ops.preferences.addon_enable(module=
+  "bl_ext.blender_org.mpfb")` and then import `bl_ext.blender_org.mpfb.services.*`. `addon_utils.enable` alone
+  fails, because its services read its preferences as they load. Do not reset to factory settings in the
+  script: that drops the preference again.
+- **A person:** `HumanService.create_human(macro_detail_dict=...)` takes gender (0 is a woman), age (0.5 is 25,
+  1.0 is 90), muscle, weight, proportions, height and a race mix. Detail is
+  `TargetService.load_target(body, path, weight=w, name=n)` for files named like `nose-greek-incr`,
+  `chin-height-incr`, `l-eye-height2-decr`; `TargetService.target_full_path(name)` finds one.
+- **It ships a bare body.** Skin, eyes, brows, lashes, teeth, tongue and hair are in the CC0 pack
+  `makehuman_system_assets_cc0.zip` (280 MB). Unzip it into `LocationService.get_user_data()`, which is all the
+  add-on's own pack loader does. Then `HumanService.set_character_skin(mhmat, body, skin_type="MAKESKIN")` (a
+  Principled skin, which a painted look can read) and `HumanService.add_mhclo_asset(mhclo, body,
+  asset_type="Eyes")` for each part.
+- **What moves the face:** the pack `faceunits01.zip` (CC0) adds the 52 ARKit movements (`browInnerUp`,
+  `eyeSquintLeft`, `jawOpen`, `mouthSmileLeft`) as targets, loaded the same way. Worried was `browInnerUp` 1.6
+  with a squint and a frown; raise `slider_max` to go past 1. The add-on's own older units
+  (`data/targets/expression/units/<race>/`) work too, but `mouth-part-later` bared the teeth.
+  `target_full_path` returns the first race folder it finds for those, so build their paths yourself.
+- **Brows, lashes and teeth do not follow the face by themselves.** They are separate meshes, each vertex
+  riding three body vertices (the part's `.mhclo`). `FaceService.interpolate_targets` copies shapes across only
+  for its own ARKit and viseme key names; for any other key name, do the same sum with `Mhclo().verts`.
+- **A painted look:** brows and lashes are cards of soft painted hairs with alpha. A shader that ignores
+  alpha turns each into a black block: leave them out of the look, multiply the brow's alpha up to make it
+  solid, and multiply its colour down to darken it. Planes can be put in the skin with a node (the object-space
+  normal against one direction, cut into three tones), since the mesh is smooth and its UVs are one layout.
+- **Its head on a fitted body** works as a still: scale the MPFB head so its eyes are as far apart as the
+  fitted model's face marks, put eye on eye, mask the fitted model's head off above the neck, and keep the MPFB
+  body's vertices above the neck line. The costume stays the generated model's.
+- **Fitting the sliders to a 3D head by measurement** is the way to a likeness, and nearest points are not
+  enough. Every slider is a fixed move of the same mesh, so the face is a base plus a weighted sum, and the
+  weights can be solved by least squares against a target head. Paired by nearest surface point, a nose's tip
+  met the side of the other nose and the fit flattened it; a made head has no eye sockets (its eyes are paint
+  on a swelling), so eye sliders fitted to it bulged the lids. Leave the eyes and the hairline out, trust a
+  pair only when the two surfaces are close and face the same way, and pair named landmarks first.
+
+### A 3D head from one picture (TRELLIS, self-hosted, evaluation)
+
+An image-to-3D model run on Modal as a spike (`projects/ireland-in-the-telling/characters/cessair/work/
+trellis/trellis_spike.py`): one picture in, one textured GLB out. From a style frame's face it gave the
+frame's own head (planes, heavy lids, the scar, loose strands), where a model generated from a character
+sheet had given a round young doll.
+
+- **Licence (read 2026-11): the stock export is for evaluation only.** TRELLIS's code and weights are MIT.
+  Its `to_glb` bakes the texture with nvdiffrast (NVIDIA: research or evaluation, no monetary gain) and, in
+  version 1, an Inria Gaussian renderer (no commercial use). A maintainer says the same in the repository's
+  issue 41: the outputs before that step are MIT. For a published video, save the raw mesh and transfer colour
+  yourself; that export is not built here. TRELLIS.2's default background remover (RMBG-2.0) is CC BY-NC and
+  its DINOv3 encoder is gated: the Hugging Face account must accept its terms first.
+- **The build that worked (version 1):** `nvidia/cuda:12.1.1-devel-ubuntu22.04`, Python 3.10, torch 2.4.0 and
+  xformers 0.0.27.post2 from the cu121 index, `spconv-cu120`, kaolin 0.17.0 from NVIDIA's wheel page for torch
+  2.4.0 cu121, utils3d at the commit in TRELLIS's `setup.sh`. Three things failed first: nvdiffrast's main
+  branch compiles at install and needs torch in the build (pin `-b v0.3.3`, which compiles at first use);
+  Modal's `add_python` names `clang++` as the compiler (set `CC=gcc`, `CXX=g++`); the two rasterisers need
+  `pip install --no-build-isolation`. Set `SPCONV_ALGO=native` and `ATTN_BACKEND=xformers`.
+- **Cost and time on an A10G:** 365 s for the first model (167 s of it loading 4 GB of weights into a volume),
+  177 s for the second: about 5 to 11 cents each. The model itself is 19 to 80 s; the GLB bake is 75 s.
+- **It makes what the picture shows.** A face glancing sideways with a worried mouth comes out glancing and
+  worried, and the light is baked into the texture. Give it a neutral front view (an image edit of the same
+  face) for a head to build on; check the edit did not change the eyes (ours came back wide open).
+- **Output:** about 1.1 million faces raw, 55,000 after `simplify=0.95`, one 2048 px texture in scattered
+  islands, the bust in a unit cube (scale it yourself). The face is one painted surface: it cannot act.
+
 ## A film over several sessions
 
 A film with a character in it is not finished in one sitting, and no session should try. What has worked, on two
