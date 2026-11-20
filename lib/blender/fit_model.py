@@ -26,11 +26,16 @@ Eyes and brows are the character's right, then left, as seen from the front.
 Optional: "joints_right": {"el": [x, y, z], ...}, a right-side joint where the model is not symmetrical, written
 as the left is (x positive). And "hands": {"model": "open_hands.glb", "scale": 0.7, "smooth": [[along, out_of_palm, across, radius]],
 "hue": 0.05, "donor_hue": 0.1} (hue: how near the fingertips' hue counts as skin, 0.1 unless given; lower it for
-brown or tan sleeves; donor_hue: the same for the hands model, `hue` unless given)
+brown or tan sleeves; donor_hue: the same for the hands model, `hue` unless given; "light": 0.6 and "donor_light"
+leave out what is under that share of the fingertips' brightness, for a dark sleeve of skin's own hue; the hands
+model may be the body's own model when its fingers are apart)
 (hands.py: the donor's hands are sized to the body's own unless `scale` says, the wrist joint moves to the cuff
 whatever `wr` says, and `smooth` flattens a lump on both hands, in cm from the middle of the knuckle row), and in
 "face", "brows_hidden": [0] for a brow under a fringe. "lid": 0.3 rests the upper lids over that share of the eye
 (hooded eyes; without it the rig's eyes are wide open at rest).
+"skirt": 0.15 says the model wears a long skirt or dress with its hem at that height: the cloth above the hem
+shares the two legs' weights and is not cut between them (without it the fit parts the legs, and a skirt shows a
+slit up the front and the back).
 "face", "paint": "keep" leaves the painted face on the model and cuts the eyes that move from it (facepaint.py):
 for a face painted nearer to life than a cartoon, where the rig's own eyes would be twice the size and stare.
 """
@@ -650,11 +655,40 @@ def skin(body, head):
     return unweighted
 
 
-def part_legs(body) -> int:
+def skirt_weights(body, hem: float, half: float) -> int:
+    """A long skirt or dress is one cloth round both legs, and the proxy the weights come from has two legs: each
+    side of the cloth took its own leg's weight, with a hard line down the middle, front and back. Above the hem
+    the two legs' weights are shared across the cloth instead, all of a leg's at that leg (`half` out from the
+    middle, the hip joint) and half each on the middle line, so the cloth between the legs spans them as they
+    part. Returns how many vertices were changed."""
+    index = {g.name: g.index for g in body.vertex_groups}
+    pairs = [(index[f"{part}.L"], index[f"{part}.R"]) for part in ("thigh", "shin", "foot")
+             if f"{part}.L" in index and f"{part}.R" in index]
+    changed = 0
+    for v in body.data.vertices:
+        if v.co.z <= hem:
+            continue
+        w = {g.group: g.weight for g in v.groups}
+        t = min(1.0, max(0.0, (v.co.x / half + 1) / 2))
+        t = t * t * (3 - 2 * t)
+        moved = False
+        for left, right in pairs:
+            total = w.get(left, 0.0) + w.get(right, 0.0)
+            if total < 1e-4:
+                continue
+            body.vertex_groups[left].add([v.index], total * t, "REPLACE")
+            body.vertex_groups[right].add([v.index], total * (1 - t), "REPLACE")
+            moved = True
+        changed += moved
+    return changed
+
+
+def part_legs(body, above: float | None = None) -> int:
     """Cut the faces that join one leg to the other. A generator often makes the feet (or knees) touch, and the
     mesh then runs from one shoe into the other: weighted, those faces stretch across the gap the moment a foot
     moves (30x on a stride). A face is cut when one of its corners moves with the left leg and another with the
-    right. Returns how many faces were cut."""
+    right. Under a skirt (`above`, its hem) only what is below the hem is cut: the cloth is meant to join the
+    legs, and cut it showed a slit up the front and the back. Returns how many faces were cut."""
     legs = {}
     for g in body.vertex_groups:
         part, _, sd = g.name.rpartition(".")
@@ -670,7 +704,8 @@ def part_legs(body) -> int:
             side[v.index] = "L" if w["L"] > w["R"] else "R"
     bm = bmesh.new()
     bm.from_mesh(body.data)
-    cut = [f for f in bm.faces if len({side.get(v.index) for v in f.verts} - {None}) > 1]
+    cut = [f for f in bm.faces if len({side.get(v.index) for v in f.verts} - {None}) > 1
+           and (above is None or min(v.co.z for v in f.verts) <= above)]
     if cut:
         bmesh.ops.delete(bm, geom=cut, context="FACES")  # (and the edges and vertices left loose)
         bm.to_mesh(body.data)
@@ -756,6 +791,9 @@ def main():
                                            float(fit["hands"]["scale"]) if "scale" in fit["hands"] else None,
                                            lumps=fit["hands"].get("smooth", ()),
                                            hue_tol=float(fit["hands"].get("hue", 0.1)),
+                                           light=float(fit["hands"].get("light", 0.0)),
+                                           donor_light=(float(fit["hands"]["donor_light"])
+                                                        if "donor_light" in fit["hands"] else None),
                                            donor_hue_tol=(float(fit["hands"]["donor_hue"]) if "donor_hue" in fit["hands"]
                                                           else None))
         D.objects.remove(donor)
@@ -764,7 +802,11 @@ def main():
     D.objects.remove(proxy)
     D.objects.remove(proxy_rig)
     unweighted = skin(body, head_mask(body, fit["clothes"]))
-    parted = part_legs(body)
+    hem = fit.get("skirt")
+    if hem is not None:
+        shared = skirt_weights(body, float(hem), abs(src["hipL"].x) or 0.09)
+        print(f"fit: skirt, {shared} vertices above its hem at {float(hem):.2f} m share the two legs' weights")
+    parted = part_legs(body, None if hem is None else float(hem))
     if parted:
         print(f"fit: the legs touched in the model: {parted} faces joining one to the other were cut")
     for sd, joined in arm_joined(body).items():

@@ -176,6 +176,61 @@ class PaintedFaceTests(unittest.TestCase):
         blank[:] = (0.94, 0.72, 0.63)
         self.assertIsNone(facepaint.measure_eye(blank))                      # bare skin is not an eye
 
+    def ringed_eye(self, wide=0.032, tall=0.009, iris=0.0072, covered=0.4):
+        """A hooded eye with a blue iris in rings (a dark rim, a paler band, a dark ring, the pupil), its top
+        under the lid: the eye the reader took for a pupil-sized iris a radius too high."""
+        import numpy as np
+        step, h, w = 0.0002, 80, 270
+        zz, xx = np.mgrid[0:h, 0:w]
+        x, z = (xx - w / 2) * step, (zz - h / 2) * step
+        P = np.empty((h, w, 3), dtype=np.float32)
+        P[:] = (0.69, 0.53, 0.44)
+        edge = tall / 2 * (1 - (x / (wide / 2)) ** 2)
+        opening = (np.abs(x) < wide / 2) & (np.abs(z) <= edge)
+        P[(np.abs(x) < wide / 2) & (z > edge) & (z < edge + 0.0008)] = (0.33, 0.24, 0.20)
+        P[opening] = (0.84, 0.82, 0.80)
+        centre = tall / 2 + 2 * iris * covered - iris
+        r = np.hypot(x, z - centre)
+        for share, colour in ((1.0, (0.20, 0.36, 0.44)), (0.9, (0.31, 0.56, 0.68)), (0.55, (0.12, 0.19, 0.22)),
+                              (0.4, (0.04, 0.05, 0.06))):
+            P[opening & (r < share * iris)] = colour
+        return P
+
+    def test_an_iris_in_rings_is_read_whole_under_a_heavy_lid(self):
+        import facepaint
+        eye = facepaint.measure_eye(self.ringed_eye())
+        self.assertIsNotNone(eye)
+        self.assertAlmostEqual(eye['iris_r'], 0.0072, delta=0.0006)          # the rim, not the ring round the pupil
+        self.assertAlmostEqual(eye['covered'], 0.4, delta=0.08)              # (read as 0.7 to 0.8 before)
+        self.assertGreater(eye['iris_colour'][2], eye['iris_colour'][0])     # blue
+        import numpy as np
+        h = eye['plates']['data'][..., 1] * 1.5 - 0.5                        # 0 on the upper lid, 1 on the lower
+        opening = eye['plates']['data'][..., 0] > 0.9
+        for x in (70, 135, 200):                                             # in every column, not the tallest alone
+            column = h[:, x][opening[:, x]]
+            self.assertGreater(column.max(), 0.8)
+            self.assertLess(column.min(), 0.2)
+
+    def test_painted_lips_are_read_for_the_line_where_they_meet(self):
+        """A mouth painted with its corners up: the line is a curve the kept mouth opens along."""
+        import numpy as np
+        import facepaint
+        step, h, w = 0.0002, 170, 430
+        zz, xx = np.mgrid[0:h, 0:w]
+        x, z = (xx - w / 2) * step, (zz - h / 2) * step
+        P = np.empty((h, w, 3), dtype=np.float32)
+        P[:] = (0.94, 0.72, 0.63)
+        line = -0.004 + 6.0 * x ** 2
+        thick = 0.004 * (1 - (x / 0.03) ** 2)
+        lips = (np.abs(x) < 0.03) & (np.abs(z - line) < thick)
+        P[lips] = (0.85, 0.45, 0.42)
+        P[lips & (np.abs(z - line) < 0.0005)] = (0.5, 0.22, 0.2)
+        seen = facepaint.measure_lips(P)
+        self.assertAlmostEqual(seen['width'], 0.06, delta=0.003)
+        self.assertAlmostEqual(seen['line'][0], 6.0, delta=1.0)
+        self.assertAlmostEqual(seen['line'][2], -0.004, delta=0.0006)
+        self.assertAlmostEqual(seen['centre'], 0.0, delta=0.001)
+
     def test_eyes_twice_as_tall_as_the_painted_ones_with_no_lid_are_a_stare(self):
         """The face that was sent back: the rig's white ovals were 30 mm tall over painted eyes about half that, wide
         open where the paint has a lid over the iris. A cartoon face whose rig eyes match its paint passes, and

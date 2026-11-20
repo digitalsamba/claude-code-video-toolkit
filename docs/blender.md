@@ -549,15 +549,20 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    the lid over 13% of the iris, and the rig put 40 by 30 mm white ovals with a bare iris over them (2.0).
    For that kind of face put `"paint": "keep"` in the fit's `face`. Nothing is erased, so at rest the face is
    the model's own, texel for texel, and only what has to move is cut from the paint:
-   - each eye is a thin patch 0.3 mm over the painted one, shaded with the body's own normals. It draws the
+   - each eye is a thin patch 0.6 mm over the painted one, shaded with the body's own normals. It draws the
      white with the iris painted out, the painted iris as a disc that slides inside the opening for a glance,
-     and a lid in the skin's colour that comes down from the painted lid line for a blink or a wink. The same
-     controls move it that move the rig's eyes, so no verb changes;
+     and a lid in the skin's colour that comes down from the painted lid line for a blink or a wink, its lash
+     line ending along the whole of the lower lid. The same controls move it that move the rig's eyes, so no
+     verb changes;
    - the brows stay painted and ride the skin: two shapes in the head for each lift and tilt the forehead over
      the eye, driven by the brow control;
-   - the lips stay painted and smile shut (the head's smile and frown shapes move them). The rig's mouth, in the
-     painted lips' colour, waits behind the face and comes forward only when the mouth opens: `happy` is a
-     closed smile on such a face, and teeth are for `grin`, `shocked` and speech.
+   - the lips stay painted and smile shut (the head's smile and frown shapes move them), and they are the lips
+     of the open mouth too. The fit reads the line where they meet as a curve across the mouth, and the jaw
+     takes the whole lower lip down from just under that line, so the painted lips part. Behind them goes only
+     the dark of the mouth and a band of upper teeth, lying on the strip of skin the jaw stretches and moved by
+     the same shapes as the head, so it covers that strip from any side. `happy` is a closed smile on such a
+     face; teeth come into sight once the lips are well apart (`grin`, `shocked`, speech). A round mouth
+     (`shocked`, an o in speech) draws the painted lips in with a `pucker` shape in the head.
    What it cannot do: the eyes open no wider than they were painted (`shocked` is brows and mouth); the shut
    lid is one flat skin colour, right for a blink and plain in a held close-up; a soft painted brow cannot be
    lifted off its skin as a part of its own (cut out by colour it took the lid's crease with it on one face
@@ -567,7 +572,27 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    the brows' furthest tilt makes an edge of the forehead against its length at rest (0.75 on one face; under
    0.5 fails as a crease). The iris is found by the first strong step in brightness going out from its middle,
    not the sharpest: a black liner's outer edge against skin is a sharper step than a brown iris against the
-   white, and read by the sharpest an iris came out twice its size. Keep the rig's
+   white, and read by the sharpest an iris came out twice its size. A coloured iris painted in rings (a dark
+   rim, a paler band, a dark ring round the pupil) has steps inside it as sharp as its rim: one was read as a
+   disc the size of its pupil, a radius too high, with the lid over 68 to 83% of it, and the eye at rest showed
+   a crescent of the wrong iris. Where an iris's sides show against the white, the iris is now the circle
+   through those points (41% on that eye, and clean). Three more things a hooded eye and a kept mouth showed:
+   - **A shut lid is measured column by column.** Against the tallest column alone, the shutting edge kept the
+     upper lid's curve all the way down and met the lower lid in the middle only: a blink left the corners open.
+   - **Under a hooded lid a patch needs finer cells and more room.** At 1 mm cells and 0.3 mm off the skin, the
+     lid's sharp edge came through the shut eye as a row of dark dashes; 0.5 mm cells at 0.6 mm do not.
+   - **A wink's brow dips less on a painted face.** The brow is the skin over the eye and the eye's patch does
+     not move with it: dipped as far as a separate brow, the skin came down through the shut lid.
+   - **A second pair of lips reads as a sticker.** The rig's own lip tubes and a full-width band of white teeth
+     over painted lips were a white bar in a grin on one face and pink tubes on another. Opening the painted
+     lips themselves, with matt teeth in the mouth's shade, reads as a mouth on both.
+   - **The review sheet has to catch a blink shut.** `sheet` took its blink and wink stills 0.3 s after the
+     lid shut, half open again, and a blink that closed read as one that did not. A beat's `at` is the moment
+     the lid is down.
+   For a face you are working on, a loop faster than the whole sheet helps: a 10 s spec of the faces alone,
+   `check` to build it, then `lib/blender/sheet.py` on the built `scene.blend` with your own `views.json` of
+   close stills (about 20 s a turn; `projects/ireland-in-the-telling/characters/cessair/work/v4/face/loop.sh`
+   is one, and it takes any character file, so the same turn runs on a second character). Keep the rig's
    face for cartoon eyes with long painted lashes: the lid line is read between the lashes and a blink comes
    out ragged. The fit refuses `keep` when it finds no painted eye (white beside an iris) where `eyes` says.
    **Hands with fingers** are optional: `"hands": {"model": "lead_open.glb"}` names a second model made from
@@ -612,6 +637,31 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    sleeve or inside the hand, and then the sleeve folds where there is no joint. A nub the generator left on a
    hand is smoothed flat with `"smooth": [[along, out_of_palm, across, radius]]`, in cm on the fitted hand from
    the middle of the knuckle row (the back of the hand is negative out of the palm).
+   **Try the body's own hands first.** When the body's fingers are apart (a cloakless A-pose from Meshy came
+   that way), name the body's own model as the hands model: `"hands": {"model": "body.glb"}`. It costs no
+   generation, the skin already matches, and the hands are the right size. The fit cuts them off, gives every
+   finger its bones and puts them back. If it says it found no fingers, check the tolerance before giving up:
+   with a sleeve near skin's hue the hand ran up the arm and the fingers were lost in it (`"hue": 0.05` found
+   five on a body that gave none at 0.1).
+   **A dark sleeve of skin's own hue.** Dark brown wool was 0.04 from pale skin, nearer than the skin's own
+   spread: at a `hue` of 0.05 the hand ran up the sleeve, and at 0.03 it came back in shreds, since parts of
+   the skin itself were left out. `"light": 0.6` (or `"donor_light"` for the hands model alone) also leaves out
+   any vertex under that share of the fingertips' brightness. Read the colour along the arm before guessing:
+   `projects/ireland-in-the-telling/characters/cessair/work/v4/hands/probe_donor.py` prints it every 2 cm from
+   the fingertips. An open-hands model with clawed fingers that hang down from the palm is still no use: the
+   hand is seated by the way its fingers point, and those came out across the forearm.
+   **Fingers that are free keep their own skin.** Weights across the hand are shared by where a vertex lies
+   between two fingers, which suits a mitten. On fingers free from the knuckles, the side of the index that
+   faces the middle finger went half with the middle finger, and a point left a sheet of the index's skin
+   behind with the curled fingers (the check's skin stretch read 4.1x). The free part of each finger, found
+   where the hand's surface splits, is now all its own, and the step is spread over the web under it.
+   **Dark flecks at the cuff and nicks on a finger** are faces painted from between two patches of the texture
+   (the cap that closes the wrist, slivers left by the reduction), showing the atlas's unpainted ground.
+   Painting texels cannot reach them, so the fit paints each from one texel of plain skin and prints the count.
+   **Look at the hands in every shape.** A loop like the face's: a 10 s spec that holds each hand shape in
+   turn, `check`, then `sheet.py` on the built scene from four sides and a tile of both hands cut out round
+   the wrist joints (`.../cessair/work/v4/hands/loop.sh <name> <cast.json>`, about a minute, any character
+   file). `point` is the shape that shows joined or badly weighted fingers; a fist hides them.
    **Measuring.** Read the joints off the model, not the sheet: render orthographic front and side stills of the
    GLB in Workbench (flat light, texture colour) with a centimetre grid over them, and print horizontal slices of
    the mesh every 2 cm (each slice's runs of x, with their y). The slices give what a still hides: the neck is the
@@ -1348,8 +1398,124 @@ sheet had given a round young doll.
 - **It makes what the picture shows.** A face glancing sideways with a worried mouth comes out glancing and
   worried, and the light is baked into the texture. Give it a neutral front view (an image edit of the same
   face) for a head to build on; check the edit did not change the eyes (ours came back wide open).
+- **Give it several views when one side differs from the other.** From the front view alone, a scar on one
+  cheek came out on both cheeks, at all three seeds tried. Front, both profiles and the back together
+  (`--image a.png,b.png,c.png,d.png`) put it on one cheek, with calmer hair and a ponytail behind. Adding the
+  two three-quarter views did not improve on that, and their sideways glance went into the eyes.
+- **Cropping tighter does not help.** The tool already crops to the subject; a picture of the face alone
+  gives a face with the top and sides of the head cut off.
+- **The same inputs through Meshy (two Premium generations, 2026-11):** the front view gave a head with far
+  more in it than TRELLIS's (strands, a braid, skin detail; 1.2 million faces) and the same doubled scar, in a
+  rounder and more realistic style than the picture, with the eyes wider. The A-pose sheet gave a body whose
+  head holds up in close-up, which TRELLIS's did not. `pose_mode` is refused on MCP for Blender Premium (own
+  Meshy key only): give it a picture already in an A-pose.
+- **Joining a head model to a body model for the fit** (`projects/ireland-in-the-telling/characters/cessair/
+  work/v3/combine.py`): scale and move the bust onto the body's own head by matching the fronts of the two faces
+  (nearest points, scale and shift only; the gap came to 6 mm), cut both, put the two base colours side by side
+  in one image and halve the UVs. A flat cut under the chin showed as a step in the skin's shading and in the
+  cloak. A stepped cut does not: the head keeps its own neck down to the collar inside a cylinder round the
+  neck, and the body keeps all of its cloak. Deleting vertices leaves a crack, so each side keeps 4 mm past the
+  line. The faces' skin matched in colour without a tint (measure it before adding one).
+- **A cloak over the arms fails the fit's forearm check.** The cloak hangs on the sleeves in the generated
+  body, so its vertices sit beside the forearm's (72 and 96 edges, limit 5) and it is dragged up like wings when
+  the arms rise. Small gestures hold. For arms that move freely, make the body without the cloak and the cloak
+  as its own piece.
+  Done that way (an image edit took the cloak off the A-pose sheet, one more generation), the same fit passed
+  with nothing failing and the arms went overhead cleanly.
+- **Without a cloak the join has to sort the head model by colour.** The bust brings its own collar and cloak,
+  and the body its own ponytail. Give each vertex the nearest of a few colours sampled from known places (skin
+  from the cheeks, hair from the crown, cloth from the chest) and keep only the bust's skin and hair, and none
+  of the body's hair. Hair and a dark cloak were 0.02 apart in colour, so hair below the cut is kept only
+  where the ponytail can be. Weld the mesh (`remove_doubles`) before dropping small islands: the importer
+  splits it along the texture's seams, and unwelded, every chart of the texture counted as an island and half
+  the face went. Keep the neck's seam above the dress's neckline.
+- **The neck's seam, so it survives the fit's reduction** (`work/v4/combine.py`). Each side keeping 8 mm past
+  the line left two skins in one place, 7% apart in colour, and reduced they showed through each other as a
+  ragged line with dark flecks. What holds: shape the head's neck onto the body's over 3 cm (each vertex to the
+  nearest point of the body, all the way at the cut, not at all 3 cm up); cut both with a plane
+  (`bmesh.ops.bisect_plane`, a clean edge where deleting vertices leaves a saw); let the head run 4 mm under
+  the body's edge and 0.6 mm inside it; multiply the head's skin toward the body's colour at the cut (draw
+  the neck's triangles into the texture by height to know which texels); fill the holes left where the bust's
+  collar was taken out, each new face taking the texture at its own corners. The bust's collar stands higher
+  behind the ears than in front (its skin ended 1.31 m up in front, 1.35 at the sides, 1.41 at the nape), so
+  a level cut left the nape with no skin from either model: measure where the head's skin ends by angle round
+  the neck and let the cut climb to the nape. A cut that is a height for each place across the neck is still
+  one `bisect_plane`: lower every vertex by the cut's rise where it stands, cut level, raise them again. Put
+  lower, nearer the neckline, the cut ran through the shade of the bust's collar: stay above it.
+- **A long skirt needs `"skirt": <hem height>` in the fit.** The fit parts legs that touch, and the weights
+  come from a body with two legs, so a dress to the ankle got a slit up the front and the back. With the hem
+  given, the cloth above it shares the two legs' weights across its width and is not cut.
+- **A mark the generator will not place (a scar on one cheek) is painted after the fit.** Cast rays at the
+  face from the front along the mark's line, turn each hit into a texel through the face's UVs, and darken
+  those (`work/v4/face/after_fit.py`). The same script sets her resting face: the generated head rested with
+  its mouth turned down and its brows drawn in, and a third of the rig's own smile plus a 3 mm lift of the
+  inner brows, put into the mesh at rest, made it neutral. Whatever the rig reads from the fit (the line
+  where the lips meet, the brows' places) has to go through the same change.
+- **Head and body are separate models.** A full-body A-pose sheet gave a clean body (12,000 faces, arms clear
+  of the cloak) with a face of a few smeared texels: the head is about a tenth of the picture.
+- **Making the views with an image edit model:** Qwen-Image-Edit turned a front bust to either profile and to
+  the back at the first try, but would not turn it to a three-quarter on the unmarked side (it stayed frontal,
+  or blurred). What worked: mirror the good three-quarter (`ffmpeg -vf hflip`), then one edit, "remove the scar
+  from her cheek, change nothing else". For the full body, describe the A-pose in numbers (arms 40 degrees
+  below level, away from the body, feet under the hips) and take a few seeds: one of two came out right. Name
+  the files by what faces the camera (`profile-rightcheek.png`), not by the direction of the turn.
 - **Output:** about 1.1 million faces raw, 55,000 after `simplify=0.95`, one 2048 px texture in scattered
   islands, the bust in a unit cube (scale it yourself). The face is one painted surface: it cannot act.
+
+### A cloak as its own piece of cloth
+
+A generated body that wears a cloak fails the fit (above), and a generated cloak is a thick shell. So the cloak
+is a thin sheet modelled round the fitted character and simulated: Blender's cloth, pinned at the neck,
+colliding with her body, in a wind, baked for each shot. First built on "Ireland in the Telling"
+(`projects/ireland-in-the-telling/sets/look/cloak.py` and `cloak_sim.py`, project-level; the loop that proved
+it is `characters/cessair/work/v4/cloak/loop.sh`). A 5 s shot of 7,650 cloth vertices simulates in about two
+minutes, and the same body and settings reuse the cache.
+
+- **Simulate in a second Blender, from a recording of the body.** The shot's script copies the body as a light
+  collision mesh (Decimate keeps the vertex groups, so the copy still follows the armature), records its
+  vertices on every frame into a file, and starts a second Blender that knows nothing of the rig: the body there
+  is a Mesh Cache (a PC2 file is a 32 byte header and float32 positions), and so is the pinned edge. The result
+  comes back as one more PC2 file on a plain mesh, so nothing is simulated at render time and the lead-in before
+  frame 1 can be as long as it needs, on the simulation's own frame numbers.
+- **The pattern is a cone, and the body grows into it.** A cone hung from a loop round the neck is its own flat
+  pattern, so nothing starts stretched; how steeply it falls sets how much cloth there is (55 degrees below
+  level gave a cape with a few folds). A cone that steep starts inside the shoulders. Rather than model a
+  draped shape, shrink the body toward its own axis for the first second (to 0.4, the head left alone) and let
+  it grow back: it pushes the cloth out and the drape is the simulation's.
+- **From standing to the first frame, through the rig's own poses.** The rig puts a hand on a rail in one frame.
+  Give the cloth a second for it, and read the poses in between from the rig at parts of a frame
+  (`scene.frame_set(1, subframe=0.4)`). A straight line between the two recorded poses squashes an arm that
+  turns, and the cloth fell inside it.
+- **Keep the pinned edge outside the collision margin.** Smoothing a loop draws it inward. With the edge 12 mm
+  off the body and the margins adding up to 14 mm (the body's outer thickness and the cloth's own distance),
+  the cloth beside the pins was pushed at on every step, never came to rest and crept up toward her neck.
+  Smooth the loop, put each point back outside, and repeat; then keep the gap larger than the two margins.
+- **The chest carries the edge as one stiff piece.** Each pin riding its own triangle stretched the edge to
+  three times its length when the head turned: the skin of the nape twists with the neck, and the edge's
+  vertices are 5 mm apart. Fit one turn and move to the chest's vertices on each frame (Kabsch) and give it
+  to the whole edge.
+- **Leave the head and the fingers out of the collision mesh.** A bun that sweeps over the nape as she looks
+  round catches the cloth by its pinned edge and drags it, and cloth hanging by a hand is caught between the
+  fingers and stays caught (edges at five times their length). The palm and the neck's base stay in.
+- **A fast arm needs more steps, not more damping.** Pointing takes her arm from her side to shoulder height
+  in six frames. At 10 steps a frame the cloth tunnelled into the arm and was pushed out as a spike that grew
+  for a second; at 30 (collision quality 8) it lies along the arm and falls back. Air damping, lower friction
+  and an impulse clamp did not help.
+- **Wind strength is in the thousands** for cloth of this weight (mass 0.5 a vertex): 60 did nothing, 1,800 to
+  2,500 is a breeze that moves the hem, 15,000 lifts the whole cape. Key the strength on every frame for gusts.
+  An empty made with `bpy.data.objects.new` has no `field`: add the wind with `bpy.ops.object.effector_add`.
+  On a boat, simulate in the deck's frame and give the wind there.
+- **Measure "inside the body" by counting crossings, not by the nearest normal.** A strand of hair or a fold
+  in a sleeve is a sheet facing anywhere, and the nearest triangle's normal called hundreds of points inside
+  that were not. A point is inside when rays in two directions each cross the mesh an odd number of times.
+  The other checks are the stretch of every edge against the pattern and the fastest point in a frame.
+- **Debug with stills of the simulation itself, lead-in included,** at a third of the cloth's resolution
+  (35 s a run, four runs side by side). Every fault above showed in which frames it began: with the body
+  still, when the head turned, when the arm rose.
+- **In a painted look, wool takes almost no rim.** The rim that picks out a cheek runs along every fold of a
+  cloak and turns it to satin: 0.10 against 0.55 on the skin.
+- **Open:** no collar (the cloth cannot fold over itself at the nape under the bun), no self-collision (off: at
+  5 mm between columns it reads as stretch), and the dress's neckline shows inside the cloak's.
 
 ## A film over several sessions
 

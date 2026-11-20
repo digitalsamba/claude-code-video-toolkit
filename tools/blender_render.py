@@ -706,7 +706,7 @@ def reduce(args) -> int:
 
 SHEET_HEADS = (("front", 0), ("threeq-left", 40), ("threeq-right", -40), ("profile-left", 90), ("profile-right", -90),
                ("back", 180))
-SHEET_FACES = (("rest", 0.5), ("smile", 1.7), ("blink", 2.9), ("glance", 3.8), ("wink", 4.6), ("grin", 5.8),
+SHEET_FACES = (("rest", 0.5), ("smile", 1.7), ("blink", 2.6), ("glance", 3.8), ("wink", 4.5), ("grin", 5.8),
                ("shocked", 6.6))
 SHEET_POSES = (("arms-up", 8.0, 0), ("arms-up-back", 8.0, 160), ("on-head", 9.2, 0), ("on-head-side", 9.2, 70),
                ("behind-head", 10.4, 0), ("behind-head-back", 10.4, 150))

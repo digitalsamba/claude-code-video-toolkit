@@ -110,11 +110,13 @@ def _bare_wrist(co, far, flood, skin, col):
             "cut": Vector((tip + axis * (d_best + 0.15 * radius)).tolist())}
 
 
-def find_hand(ob, side: int, col=None, hue_tol: float = 0.1) -> dict:
+def find_hand(ob, side: int, col=None, hue_tol: float = 0.1, light: float = 0.0) -> dict:
     """The hand on one side of a model standing in an A-pose (side 1 is +x, the character's left): which
     vertices it is, the middle of the ring where it meets the cuff, the ring's size, and the way the hand
     leaves the cuff. `hue_tol` is how near the fingertips' hue a vertex must be to count as skin: a sleeve of
-    brown or tan wool is within 0.1 of skin (one was 0.07), and then the hand runs on up the sleeve."""
+    brown or tan wool is within 0.1 of skin (one was 0.07), and then the hand runs on up the sleeve. `light` is
+    for a dark sleeve of skin's own hue (dark brown wool was 0.04 from pale skin, nearer than the skin's own
+    spread): a vertex under that share of the fingertips' brightness is not skin, whatever its hue."""
     co, ed = _arrays(ob)
     if col is None:
         col, _ = _colours(ob)
@@ -126,6 +128,8 @@ def find_hand(ob, side: int, col=None, hue_tol: float = 0.1) -> dict:
     # skin by hue, not brightness: the creases between fingers are dark skin, a cuff is another colour
     hue = col / np.maximum(col.sum(axis=1, keepdims=True), 1e-3)
     like = region & (np.linalg.norm(hue - skin / skin.sum(), axis=1) < hue_tol) & (col.sum(axis=1) > 0.25)
+    if light > 0:
+        like &= col.sum(axis=1) > light * float(skin.sum())
     # flood out from the fingertips over skin-coloured vertices: that stops at the cuff
     nb = {}
     for a, b in ed[like[ed[:, 0]] | like[ed[:, 1]]]:
@@ -450,12 +454,34 @@ def find_fingers(hand, wrist: Vector, leaves: Vector) -> dict:
     weights = {"hand": np.ones(len(co), dtype=np.float32)}
     on = np.where(is_thumb, 0.0, smooth((h - (knuckle - 0.015)) / 0.03))  # past the knuckle line
     xs = np.array([f["x"] for f in rest])
+    shares = np.ones((len(rest), len(co)), dtype=np.float32)
     for i, f in enumerate(rest):  # across the palm: all of the finger in line, sharing the webs with its neighbours
-        share = np.ones(len(co), dtype=np.float32)
+        share = shares[i]
         if i > 0:
             share = np.where(x < xs[i], np.clip((x - xs[i - 1]) / (xs[i] - xs[i - 1]), 0, 1), share)
         if i < len(rest) - 1:
             share = np.where(x >= xs[i], np.clip((xs[i + 1] - x) / (xs[i + 1] - xs[i]), 0, 1), share)
+        shares[i] = share
+    # A finger's free part is its own, all of it: shared by where it lies across the hand, the side of a free
+    # finger that faces its neighbour went half with the neighbour, and a pointing finger left a sheet of its
+    # skin behind with the curled ones. Where the fingers are free from the knuckles that is most of the finger;
+    # on a mitten it is the tips. The step at each web is spread over a few edges.
+    for i, f in enumerate(rest):
+        shares[:, f["verts"]] = 0.0
+        shares[i, f["verts"]] = 1.0
+    free = np.zeros(len(co), dtype=bool)
+    for f in rest:
+        free[f["verts"]] = True
+    for _ in range(3):
+        total = np.zeros_like(shares)
+        count = np.zeros(len(co), dtype=np.float32)
+        for a_, b_ in ((0, 1), (1, 0)):
+            np.add.at(total, (slice(None), ed[:, a_]), shares[:, ed[:, b_]])
+            np.add.at(count, ed[:, a_], 1.0)
+        mean = total / np.maximum(count, 1.0)
+        shares = np.where(free[None, :], shares, mean)  # (the free part stays whole; the web under it takes the step)
+    for i, f in enumerate(rest):
+        share = shares[i]
         far = smooth(((h - knuckle) / max(1e-4, f["h"] - knuckle) - 0.4) / 0.2)
         weights[f["name"] + ".a"] = (on * share * (1 - far)).astype(np.float32)
         weights[f["name"] + ".b"] = (on * share * far).astype(np.float32)
@@ -568,6 +594,7 @@ def tint(hand_img, was, want):
 
 TINT_LIMIT = 1.5  # the most the hands' skin is brightened or darkened, per channel, to match the body's
 NOT_SKIN = 0.45  # a texel this far from skin's hue toward grey (0 skin, 1 no colour at all) is not skin
+UNPAINTED = 0.3  # a texel under this share of skin's brightness is not skin either: the atlas's own ground
 
 
 def skin_only(pieces, hand_img, skin) -> float:
@@ -575,6 +602,8 @@ def skin_only(pieces, hand_img, skin) -> float:
     has the picture's background baked into the sides of the fingers and the webbing between them, where the
     picture showed background: grey streaks down every finger once the hand is on an arm. Every texel inside a
     face of the hands whose hue is nearer no colour than skin's becomes skin, as light or dark as it was.
+    So does a texel far darker than any crease (the cap that closes a wrist and the odd sliver of a finger are
+    painted from the atlas's unpainted ground, near black: flecks at the cuff and a dark nick on a finger).
     Returns the share of the hands' texels that were painted."""
     w, h = hand_img.size
     px = np.empty(w * h * 4, dtype=np.float32)
@@ -585,12 +614,13 @@ def skin_only(pieces, hand_img, skin) -> float:
     line = grey - hue0
     if float(line @ line) < 1e-4:  # (skin with no colour of its own: nothing to tell it from grey by)
         return 0.0
-    seen = painted = 0
+    seen = painted = moved = 0
     for piece in pieces:
         me = piece.data
         uv = np.empty(len(me.loops) * 2, dtype=np.float32)
         me.uv_layers.active.data.foreach_get("uv", uv)
         uv = uv.reshape(-1, 2) % 1 * (w, h)
+        across = []
         for poly in me.polygons:
             if poly.loop_total != 3:
                 continue
@@ -598,10 +628,14 @@ def skin_only(pieces, hand_img, skin) -> float:
             x0, x1 = int(min(a[0], b[0], c[0])), int(max(a[0], b[0], c[0])) + 1
             y0, y1 = int(min(a[1], b[1], c[1])), int(max(a[1], b[1], c[1])) + 1
             if x1 - x0 > 96 or y1 - y0 > 96:  # (a face across two islands of the atlas: a cap, not skin)
+                across.append(poly.index)
                 continue
             ys, xs = np.mgrid[y0:min(y1 + 1, h), x0:min(x1 + 1, w)]
             det = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
-            if abs(det) < 1e-9:
+            if abs(det) < 1e-9:  # (a face painted from one point of the atlas: that point, if it is unpainted)
+                yy, xx = min(h - 1, int(a[1])), min(w - 1, int(a[0]))
+                if px[yy, xx, :3].sum() < UNPAINTED * float(skin.sum()):
+                    px[max(0, yy - 1):yy + 2, max(0, xx - 1):xx + 2, :3] = skin * 0.6
                 continue
             l1 = ((b[1] - c[1]) * (xs + 0.5 - c[0]) + (c[0] - b[0]) * (ys + 0.5 - c[1])) / det
             l2 = ((c[1] - a[1]) * (xs + 0.5 - c[0]) + (a[0] - c[0]) * (ys + 0.5 - c[1])) / det
@@ -611,11 +645,28 @@ def skin_only(pieces, hand_img, skin) -> float:
             tile = px[y0:y0 + inside.shape[0], x0:x0 + inside.shape[1], :3]
             total = tile.sum(axis=2)
             t = ((tile / np.maximum(total[..., None], 1e-3) - hue0) @ line) / float(line @ line)
-            off = inside & (t > NOT_SKIN) & (total > 0.1)
+            off = inside & (((t > NOT_SKIN) & (total > 0.1)) | (total < UNPAINTED * float(skin.sum())))
             seen += int(inside.sum())
             painted += int(off.sum())
             if off.any():
                 tile[off] = skin * np.clip(total[off] / float(skin.sum()), 0.6, 1.05)[:, None]
+        # A face across two islands shows whatever lies between them in the atlas, often its unpainted ground:
+        # the cap that closes the wrist (dark flecks in the cuff) and the odd sliver of a finger (a dark nick).
+        # Each is painted from one texel of plain skin instead, a little shaded.
+        if across:
+            at = np.minimum((h - 1, w - 1), uv[:, ::-1].astype(int))
+            plain = int(np.argmin(np.abs(px[at[:, 0], at[:, 1], :3] - 0.85 * skin).sum(axis=1)))
+            flat = np.empty(len(me.loops) * 2, dtype=np.float32)
+            me.uv_layers.active.data.foreach_get("uv", flat)
+            flat = flat.reshape(-1, 2)
+            for i in across:
+                poly = me.polygons[i]
+                flat[poly.loop_start:poly.loop_start + 3] = flat[plain]
+            me.uv_layers.active.data.foreach_set("uv", flat.ravel())
+            moved += len(across)
+    if moved:
+        print(f"fit: hands, {moved} faces were painted from between two patches of the texture (the wrist's cap, "
+              "slivers): now plain skin")
     hand_img.pixels.foreach_set(px.ravel())
     hand_img.update()
     return painted / max(1, seen)
@@ -660,7 +711,8 @@ def flatten(piece, centre: Vector, radius: float) -> int:
 
 
 def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None, tuck: float = 0.012,
-          lumps=(), hue_tol: float = 0.1, donor_hue_tol: float | None = None):
+          lumps=(), hue_tol: float = 0.1, donor_hue_tol: float | None = None, light: float = 0.0,
+          donor_light: float | None = None):
     """Replace the body's hands with the donor's. `src` is the body's joints (source_joints). Returns the fingers
     of each side ({"L": {...}, "R": {...}}, in the body's space) and the hand objects, to join to the body once
     it is weighted. Each `tip` joint moves to the knuckles: the hand bone is the palm, and the fingers go on
@@ -676,7 +728,8 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
     donor_col, donor_img = _colours(donor)
     cut = []
     for side in (1, -1):
-        theirs = find_hand(donor, side, donor_col, hue_tol if donor_hue_tol is None else donor_hue_tol)
+        theirs = find_hand(donor, side, donor_col, hue_tol if donor_hue_tol is None else donor_hue_tol,
+                           light if donor_light is None else donor_light)
         piece = cut_hand(donor, theirs, "hand_piece", faces)
         found = find_fingers(piece, theirs["centre"], theirs["normal"])
         # how well formed it is: fingers that point the same way as each other (a splayed hand can't close on a bar)
@@ -706,7 +759,7 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
     print(f"fit: hands, both from the model's {'left' if best[1]['centre'].x > 0 else 'right'}-arm hand, which is a "
           f"{'left' if best[2]['side'] > 0 else 'right'} hand (form {best[2]['form']:.2f})")
     out, pieces, skins, old, cuts = {}, [], [], np.zeros(len(body.data.vertices), dtype=bool), []
-    own = {side: find_hand(body, side, body_col, hue_tol) for side in (1, -1)}
+    own = {side: find_hand(body, side, body_col, hue_tol, light) for side in (1, -1)}
     measured = 0.5 * (own[1]["length"] + own[-1]["length"]) / best[1]["length"]
     print(f"fit: hands, the body's own are {50 * (own[1]['length'] + own[-1]['length']):.1f} cm from cuff to "
           f"fingertip and the donor's {100 * best[1]['length']:.1f} cm: "

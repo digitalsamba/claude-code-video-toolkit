@@ -124,6 +124,47 @@ def _fit_line(xs, vs, at, degree=2):
 
 
 # ------------------------------------------------------------------ reading the paint
+def _iris_circle(P, L, S, skin, dark, white, cz0, cx0, r_in):
+    """The iris as a circle through the points where it meets the white, either side: (cx, cz, r) in samples, or
+    None when too little of its edge shows against the white to say. What is neither white nor skin and joined
+    to the pupil along a row is iris (or lash, or the shade under the lid: those ends are not beside white, or
+    fall off the circle and are dropped)."""
+    h, w = L.shape
+    skin_l, skin_s = float(skin.mean()), float(_sat(skin))
+    pale = ((S < 0.82 * skin_s) & (L > 0.45 * skin_l) & ~dark) | white
+    warm = (L > 0.55 * skin_l) & ((P[..., 0] - P[..., 2]) > 0.45 * (skin[0] - skin[2]))
+    body = ~pale & ~warm
+    pts = []
+    for z in range(max(0, int(cz0 - 3 * r_in)), min(h, int(cz0 + 3 * r_in) + 1)):
+        if not body[z, cx0]:
+            continue
+        for way in (-1, 1):
+            x = cx0
+            while 0 <= x + way < w and body[z, x + way]:
+                x += way
+            beyond = pale[z, x + way:x + 4 * way:way] if way > 0 else pale[z, max(0, x - 3):x]
+            if 0 < x < w - 1 and beyond.size and beyond.all():
+                pts.append((x + 0.5 * way, z))
+    for _ in range(3):
+        if len(pts) < 10:
+            return None
+        a = np.array(pts, dtype=float)
+        m = a.mean(axis=0)
+        u, v = a[:, 0] - m[0], a[:, 1] - m[1]
+        A = np.column_stack([2 * u, 2 * v, np.ones(len(a))])
+        (uc, vc, c), *_ = np.linalg.lstsq(A, u * u + v * v, rcond=None)
+        r = math.sqrt(max(c + uc * uc + vc * vc, 1e-9))
+        off = np.abs(np.hypot(u - uc, v - vc) - r)
+        keep = off <= max(1.0, 2.0 * np.median(off))
+        if keep.all():
+            break
+        pts = [p for p, k in zip(pts, keep) if k]
+    sides = (a[:, 0] < m[0] + uc).sum(), (a[:, 0] > m[0] + uc).sum()
+    if min(sides) < 4 or not 0.9 * r_in <= r <= 4 * r_in or abs(m[0] + uc - cx0) > r or abs(m[1] + vc - cz0) > r:
+        return None
+    return float(m[0] + uc), float(m[1] + vc), float(r)
+
+
 def measure_eye(P, step=STEP):
     """A painted eye, from a patch of the face round it (rows go up, columns to the character's left).
     Returns None when there is no white beside something dark (no painted eye to keep), else a dict:
@@ -178,6 +219,12 @@ def measure_eye(P, step=STEP):
     cols_ = [soft[:, x] for x in range(max(0, int(cx) - 3), min(w, int(cx) + 4))]
     foot = float(np.median([rim(col, cz0, -1) for col in cols_]))
     cz = max(float(cz0), cz0 - foot + r)  # (a lid cuts the top of an iris, not its foot: the centre is a radius up)
+    # a coloured iris has rings of its own (a dark rim, a paler band, a dark ring round the pupil), and the steps
+    # between them are as sharp as its rim: where its sides can be seen against the white, the circle through
+    # those points is the iris
+    round_ = _iris_circle(P, L, S, skin, dark, white, cz0, cx0, r_in)
+    if round_:
+        cx, cz, r = round_
     zz, xx = np.mgrid[0:h, 0:w]
     rad = np.hypot(xx - cx, zz - cz)
     disc = rad <= r
@@ -231,7 +278,12 @@ def measure_eye(P, step=STEP):
     tops = np.interp(np.arange(w), xs, top)
     bots = np.interp(np.arange(w), xs, bot)
     span = float(np.max(top - bot))
-    hh[:] = (tops[None, :] - zz) / span
+    # (each column by its own height: a shutting lid's edge goes from the upper lid's curve to the lower lid's,
+    # and its lash line then lies along the whole of the lower lid. Measured against the tallest column alone,
+    # the edge kept the upper lid's curve all the way down and met the lower lid in the middle only)
+    tall = np.full(w, span)
+    tall[x0:x1 + 1] = np.maximum(tops[x0:x1 + 1] - bots[x0:x1 + 1], 0.25 * span)
+    hh[:] = (tops[None, :] - zz) / tall[None, :]
     opening[:, x0:x1 + 1] = (zz[:, x0:x1 + 1] >= bots[None, x0:x1 + 1]) & (zz[:, x0:x1 + 1] <= tops[None, x0:x1 + 1])
     # the lash line: what is dark just above the opening
     lash_rows = []
@@ -290,7 +342,7 @@ def measure_eye(P, step=STEP):
     pz, px = np.round(sz - half + cz).astype(int), np.round(sx - half + cx).astype(int)
     inside = (pz >= 0) & (pz < h) & (px >= 0) & (px < w)
     real = np.zeros((size, size), dtype=bool)
-    real[inside] = _erode(shown, 1)[pz[inside], px[inside]]
+    real[inside] = _erode(shown, 3)[pz[inside], px[inside]]  # (not the last of it: the lid shades the iris's edge)
     sprite[real] = P[pz[real], px[real], :3]
     return {
         "open": [(x1 - x0 + 1) * step, span * step], "corner": [x0 * step, x1 * step],
@@ -327,10 +379,19 @@ def measure_lips(P, step=STEP):
         lower.append(z - zs.min())
     line = np.array(line, dtype=float)
     mid = slice(len(cols) // 3, 2 * len(cols) // 3 + 1)
+    # where the lips meet, as a curve across the mouth (from the middle of the patch, the fit's mouth mark): the
+    # darkest row of each column, read from the paint a little blurred and with a lone column's jump stepped over
+    soft = _blur(L, 2)
+    met = np.array([zs[int(np.argmin(soft[zs, x]))] for x in cols for zs in [np.where(part[:, x])[0]]], dtype=float)
+    m = max(2, len(cols) // 12)
+    padded = np.pad(met, m, mode="edge")
+    met = np.array([np.median(padded[i:i + 2 * m + 1]) for i in range(len(met))])
+    curve = np.polyfit((cols - w / 2) * step, (met - h / 2) * step, 2)
     colour = np.median(P[part & (L > np.median(L[part]))][:, :3], axis=0)
     return {"width": (cols.max() - cols.min() + 1) * step, "upper": float(np.median(np.array(upper)[mid])) * step,
             "lower": float(np.median(np.array(lower)[mid])) * step, "colour": [float(v) for v in colour],
-            "corners_up": float((line[:3].mean() + line[-3:].mean()) / 2 - np.median(line[mid])) * step}
+            "corners_up": float((line[:3].mean() + line[-3:].mean()) / 2 - np.median(line[mid])) * step,
+            "line": [float(v) for v in curve], "centre": float((cols.max() + cols.min() + 1) / 2 - w / 2) * step}
 
 
 # ------------------------------------------------------------------ what the check says
@@ -467,7 +528,9 @@ def store(seen: dict, placed, scale: float, gamma=None, keep=False) -> dict:
     out = {"seen": {"eyes": [], "lips": None}}
     if seen.get("lips"):
         lips = seen["lips"]
-        out["seen"]["lips"] = {**{k: lips[k] * scale for k in ("width", "upper", "lower", "corners_up")},
+        out["seen"]["lips"] = {**{k: lips[k] * scale for k in ("width", "upper", "lower", "corners_up", "centre")},
+                               # (z for an x, both from the mouth mark: the square term goes by 1 / scale)
+                               "line": [lips["line"][0] / scale, lips["line"][1], lips["line"][2] * scale],
                                "colour": [float(v) for v in tone(np.array(lips["colour"]))]}
     eyes = []
     for i, e in enumerate(seen["eyes"]):
@@ -711,7 +774,9 @@ def eyes(cid, body, paint: dict, path, head, to_parent, controls: dict, lid_open
         _drive(t, "pupil_size", pupil, "SCALE_X")
         _drive(t, "lid_turn", lid, "ROT_X")
         _drive(t, "eye_tall", eye, "SCALE_Z")
-        out[s] = _patch(f"{cid}_eye{s}_paint", body, e["box"], 0.0003, to_parent, head, m)
+        # (0.5 mm cells, 0.6 mm off the skin: under a hooded lid the surface turns back sharply, and a coarser
+        # patch nearer the skin let the lid's edge through it as a row of dark dashes once the eye shut)
+        out[s] = _patch(f"{cid}_eye{s}_paint", body, e["box"], 0.0006, to_parent, head, m, cell=0.0005)
     return out
 
 

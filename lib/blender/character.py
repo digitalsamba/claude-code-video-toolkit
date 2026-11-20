@@ -3216,9 +3216,12 @@ class ClayPerson:
             key(e, "scale", f + hold, (sc[0], sc[1], 0.08))
             key(e, "scale", f + hold + dur, sc)
         at = tuple(b.location)
+        # (a painted brow is the skin over the eye, and the kept eye's patch does not move with it: dipped as far
+        # as a separate brow, the skin came down through the shut lid)
+        dip = 0.006 if getattr(self, "paint", None) else 0.022
         key(b, "location", f - dur, at)
-        key(b, "location", f, (at[0], at[1], at[2] - 0.022))
-        key(b, "location", f + hold, (at[0], at[1], at[2] - 0.022))
+        key(b, "location", f, (at[0], at[1], at[2] - dip))
+        key(b, "location", f + hold, (at[0], at[1], at[2] - dip))
         key(b, "location", f + hold + dur, at)
 
     def glance(self, f0: int, f1: int, yaw: float = 0.0, pitch: float = 0.0):
