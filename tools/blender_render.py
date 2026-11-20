@@ -284,6 +284,9 @@ def check(args) -> int:
             if s["adjusted"]:
                 why = "; ".join(s.get("nominal_issues", [])[:1])
                 fix = f"  [camera {describe_fix(s)}: nominal had {why}]"
+            if s.get("built_only"):  # (built for the acting to run through, never rendered: no exposure to read)
+                print(f"  ----  {s['id']:<12} {s['type']:<14} built, not rendered")
+                continue
             print(f"  {'PASS' if s['passed'] else 'FAIL'}  {s['id']:<12} {s['type']:<14} luma {s['luma']:.2f}{fix}")
             for p in s["problems"]:
                 print(f"        - {p}")
