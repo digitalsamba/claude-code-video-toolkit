@@ -654,7 +654,9 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    between two fingers, which suits a mitten. On fingers free from the knuckles, the side of the index that
    faces the middle finger went half with the middle finger, and a point left a sheet of the index's skin
    behind with the curled fingers (the check's skin stretch read 4.1x). The free part of each finger, found
-   where the hand's surface splits, is now all its own, and the step is spread over the web under it.
+   where the hand's surface splits, is now all its own, and the step is spread over the web under it. On a body whose hands came from a second model with
+   joined fingers (mitten-like, four fingers read), fitting again with this step took `point` from passing to a
+   4.3x stretch: keep such a body's earlier fit, or give it a better open-hands model first.
    **Dark flecks at the cuff and nicks on a finger** are faces painted from between two patches of the texture
    (the cap that closes the wrist, slivers left by the reduction), showing the atlas's unpainted ground.
    Painting texels cannot reach them, so the fit paints each from one texel of plain skin and prints the count.
