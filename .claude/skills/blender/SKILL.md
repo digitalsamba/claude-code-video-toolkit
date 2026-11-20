@@ -181,7 +181,7 @@ at its knee height, keyboard under its hands). `glasses` is the one accessory a 
 lip, teeth and lids on the model's lip line and eyes, with the cheeks and chin moving for a smile or an open
 mouth). If `check` says the rig's eyes are far taller than the ones painted on the model (a stare, on a face
 painted nearer to life than a cartoon), put `"paint": "keep"` in the fit's `face` and fit again: the painted face
-stays, the eyes that move are cut from it, and `happy` becomes a closed smile. With a second model of the same character with open hands the fit gives it fingers: hand shapes, a
+stays, the eyes that move are cut from it, the painted lips part when the mouth opens, and `happy` becomes a closed smile. A model in a long skirt or dress takes `"skirt": <hem height>` in the fit, or the cloth is cut between the legs. A cloak or cape is its own piece of cloth, simulated and baked for each shot, not part of the generated body (`docs/blender.md`, "A cloak as its own piece of cloth"). With a second model of the same character with open hands the fit gives it fingers: hand shapes, a
 grip on a door handle, hands laid flat on the desk, fingertips on the keys. The fit lays a generated thumb in to
 the palm (it stands off it on a thick wedge), so the hands type at a typist's slope. The donor's hands are sized to the body's own, the wrist joint
 is put at the cuff, and the desk, the keys and how far apart the hands lie come from the body's measures, so one spec
@@ -193,7 +193,8 @@ her painted face kept is `tests/fixtures/blender-bare`. To make a generated mode
 thins the mesh inside the islands of its texture, and a face collapsed across a seam is painted from the wrong
 place (shards by an eye). Make the open-hands picture from a hips-up crop so the fingers come out apart. Read the
 fit's output: any line with FAIL (a torn thumb web, faces painted from the wrong place, the inside of a forearm
-moving with the body) is a fault that will show in a close shot. The joints are written for the left and mirrored:
+moving with the body) is a fault that will show in a close shot. A body's hand read as over 21 cm from cuff to
+fingertip means the sleeve was taken for skin (brown or tan wool): put `"hue": 0.05` in the fit's `hands`. To recolour a generated model's costume, work by mesh faces, not by the picture: its texture is hundreds of scattered islands, and a blur over it bleeds one into the next (`docs/blender.md`, "Lit 3D that reads as paint", which also has a painterly look for lit 3D: banded light as an emission, a Kuwahara pass over the frame). The joints are written for the left and mirrored:
 slice both arms of the mesh, and where the right differs give it in `"joints_right"` (a right elbow mirrored 3 cm
 outside the arm left a sheet of skin hanging from it to the hip). The steps and their costs are in `docs/blender.md`.
 **When a fitted character does not read as the person**, make a review sheet before changing anything:
@@ -270,7 +271,7 @@ Character (`who` defaults to the first cast member):
 |---|---|---|
 | `type` | `speed`: `calm`/`frantic`, `until` | hands typing; a click per key in the sound |
 | `pose` | `pose`, `dur` | `type`, `rest`, `hands_on_head`, `arms_up`, `hands_behind_head` |
-| `expression` | `face`, `dur` | `neutral`, `happy`, `content`, `shocked`, `worried`, `determined`, `relieved`, `grin` |
+| `expression` | `face`, `dur` | `neutral`, `happy`, `content`, `shocked`, `worried`, `determined`, `relieved`, `grin`, `hopeful` (worried brows, a slight smile) |
 | `look` | `target`, `dur` | `screen`, `down`, `ahead`, `camera`, `up`, or degrees of head pitch |
 | `lean` | `amount`, `dur` | `forward`, `none`, `back`, `far_back`, `recoil`, or degrees |
 | `head_bob` / `shake_head` | `until` | idle nod to the work / "no no no" (whoosh each turn) |

@@ -58,6 +58,7 @@ FACES = {
     "determined": ((1.1, 1.1, 0.75), 1.0, "angry", "frown", 0.9),
     "relieved":   ((1, 1, 1), 1.0, "happy", "smile", 1.0),
     "grin":       ((1, 1, 0.55), 1.0, "happy", "smile", 1.5),
+    "hopeful":    ((1.05, 1.05, 1.05), 1.0, "worry", "smile", 0.6),  # brows still drawn up, the mouth easing
 }
 GLASSES_EYE = (0.35, 0.65)  # how far up its lens opening an eye may sit (0.5 is the middle)
 GLASSES_ROOM = 1.15         # and how much taller than the eye the opening has to be
@@ -3215,9 +3216,12 @@ class ClayPerson:
             key(e, "scale", f + hold, (sc[0], sc[1], 0.08))
             key(e, "scale", f + hold + dur, sc)
         at = tuple(b.location)
+        # (a painted brow is the skin over the eye, and the kept eye's patch does not move with it: dipped as far
+        # as a separate brow, the skin came down through the shut lid)
+        dip = 0.006 if getattr(self, "paint", None) else 0.022
         key(b, "location", f - dur, at)
-        key(b, "location", f, (at[0], at[1], at[2] - 0.022))
-        key(b, "location", f + hold, (at[0], at[1], at[2] - 0.022))
+        key(b, "location", f, (at[0], at[1], at[2] - dip))
+        key(b, "location", f + hold, (at[0], at[1], at[2] - dip))
         key(b, "location", f + hold + dur, at)
 
     def glance(self, f0: int, f1: int, yaw: float = 0.0, pitch: float = 0.0):

@@ -137,3 +137,5 @@ OpenRouter dependency. Treat *yourself* as the magic-prompt LLM.
 | Text in wrong spot | Add a `bbox` (remember y-first: `[y_min,x_min,y_max,x_max]`, 0–1000) |
 | Mediocre adherence | Add `high_level_description`; name more elements; keep key order |
 | `lowercase hex` ignored | Always `#RRGGBB` uppercase |
+| Fake signature, seal stamp, small figures or birds in a painterly scene | Ban them by name in `background` and the element `desc` ("no people, no birds, no signature, no seal, no text"), then inspect the whole image; corners are where signatures land |
+| Subject must sit in a band (a YouTube banner's visible strip) | Give it a `bbox`: Ideogram honours it, where FLUX ignored "at the vertical middle" in six banners out of six (`docs/youtube-channel-art.md`) |

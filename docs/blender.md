@@ -549,15 +549,20 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    the lid over 13% of the iris, and the rig put 40 by 30 mm white ovals with a bare iris over them (2.0).
    For that kind of face put `"paint": "keep"` in the fit's `face`. Nothing is erased, so at rest the face is
    the model's own, texel for texel, and only what has to move is cut from the paint:
-   - each eye is a thin patch 0.3 mm over the painted one, shaded with the body's own normals. It draws the
+   - each eye is a thin patch 0.6 mm over the painted one, shaded with the body's own normals. It draws the
      white with the iris painted out, the painted iris as a disc that slides inside the opening for a glance,
-     and a lid in the skin's colour that comes down from the painted lid line for a blink or a wink. The same
-     controls move it that move the rig's eyes, so no verb changes;
+     and a lid in the skin's colour that comes down from the painted lid line for a blink or a wink, its lash
+     line ending along the whole of the lower lid. The same controls move it that move the rig's eyes, so no
+     verb changes;
    - the brows stay painted and ride the skin: two shapes in the head for each lift and tilt the forehead over
      the eye, driven by the brow control;
-   - the lips stay painted and smile shut (the head's smile and frown shapes move them). The rig's mouth, in the
-     painted lips' colour, waits behind the face and comes forward only when the mouth opens: `happy` is a
-     closed smile on such a face, and teeth are for `grin`, `shocked` and speech.
+   - the lips stay painted and smile shut (the head's smile and frown shapes move them), and they are the lips
+     of the open mouth too. The fit reads the line where they meet as a curve across the mouth, and the jaw
+     takes the whole lower lip down from just under that line, so the painted lips part. Behind them goes only
+     the dark of the mouth and a band of upper teeth, lying on the strip of skin the jaw stretches and moved by
+     the same shapes as the head, so it covers that strip from any side. `happy` is a closed smile on such a
+     face; teeth come into sight once the lips are well apart (`grin`, `shocked`, speech). A round mouth
+     (`shocked`, an o in speech) draws the painted lips in with a `pucker` shape in the head.
    What it cannot do: the eyes open no wider than they were painted (`shocked` is brows and mouth); the shut
    lid is one flat skin colour, right for a blink and plain in a held close-up; a soft painted brow cannot be
    lifted off its skin as a part of its own (cut out by colour it took the lid's crease with it on one face
@@ -567,7 +572,27 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    the brows' furthest tilt makes an edge of the forehead against its length at rest (0.75 on one face; under
    0.5 fails as a crease). The iris is found by the first strong step in brightness going out from its middle,
    not the sharpest: a black liner's outer edge against skin is a sharper step than a brown iris against the
-   white, and read by the sharpest an iris came out twice its size. Keep the rig's
+   white, and read by the sharpest an iris came out twice its size. A coloured iris painted in rings (a dark
+   rim, a paler band, a dark ring round the pupil) has steps inside it as sharp as its rim: one was read as a
+   disc the size of its pupil, a radius too high, with the lid over 68 to 83% of it, and the eye at rest showed
+   a crescent of the wrong iris. Where an iris's sides show against the white, the iris is now the circle
+   through those points (41% on that eye, and clean). Three more things a hooded eye and a kept mouth showed:
+   - **A shut lid is measured column by column.** Against the tallest column alone, the shutting edge kept the
+     upper lid's curve all the way down and met the lower lid in the middle only: a blink left the corners open.
+   - **Under a hooded lid a patch needs finer cells and more room.** At 1 mm cells and 0.3 mm off the skin, the
+     lid's sharp edge came through the shut eye as a row of dark dashes; 0.5 mm cells at 0.6 mm do not.
+   - **A wink's brow dips less on a painted face.** The brow is the skin over the eye and the eye's patch does
+     not move with it: dipped as far as a separate brow, the skin came down through the shut lid.
+   - **A second pair of lips reads as a sticker.** The rig's own lip tubes and a full-width band of white teeth
+     over painted lips were a white bar in a grin on one face and pink tubes on another. Opening the painted
+     lips themselves, with matt teeth in the mouth's shade, reads as a mouth on both.
+   - **The review sheet has to catch a blink shut.** `sheet` took its blink and wink stills 0.3 s after the
+     lid shut, half open again, and a blink that closed read as one that did not. A beat's `at` is the moment
+     the lid is down.
+   For a face you are working on, a loop faster than the whole sheet helps: a 10 s spec of the faces alone,
+   `check` to build it, then `lib/blender/sheet.py` on the built `scene.blend` with your own `views.json` of
+   close stills (about 20 s a turn; `projects/ireland-in-the-telling/characters/cessair/work/v4/face/loop.sh`
+   is one, and it takes any character file, so the same turn runs on a second character). Keep the rig's
    face for cartoon eyes with long painted lashes: the lid line is read between the lashes and a blink comes
    out ragged. The fit refuses `keep` when it finds no painted eye (white beside an iris) where `eyes` says.
    **Hands with fingers** are optional: `"hands": {"model": "lead_open.glb"}` names a second model made from
@@ -585,6 +610,14 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    passes 2x the move is spread over the skin round the thumb, each vertex taking the mean of its neighbours,
    until none does (one round took that hand to 1.5x; the fit prints the rounds). The fingers are listed thumb,
    index, middle, ring, little on either hand.
+   **Sleeves near skin's colour.** A hand is found by flooding out from the fingertips over vertices whose hue
+   is within 0.1 of theirs, and it stops at the cuff. Brown or tan wool is nearer than that (a peat-brown tunic
+   was 0.07 from the skin), so the flood runs up the sleeve: the fit reads the body's hand as 25 cm long, puts
+   the wrist joint up the forearm and leaves the model's own hands on the arms beside the new ones. Watch for a
+   body's hand over 21 cm in the fit's output. `"hue": 0.05` in `hands` tightens it for both models,
+   `"donor_hue"` for the open-hands model alone. A hand read wrongly also reads its skin's colour off the sleeve,
+   and the donor's hands are tinted to the body's skin by that colour: a tint over 1.5x on any channel turned one
+   pair of hands white, so the fit now refuses a tint that big (`WARN hands`) and leaves the hands as made.
    **Make the open-hands picture close.** In a full-length picture a hand is about 60 pixels long, and the model
    comes back with fingers joined (one came back with four). Crop the front view to the hips up before the edit
    that opens the hands, and ask for the fingers pointing along the arm with the thumb beside the palm: a thumb
@@ -604,6 +637,33 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    sleeve or inside the hand, and then the sleeve folds where there is no joint. A nub the generator left on a
    hand is smoothed flat with `"smooth": [[along, out_of_palm, across, radius]]`, in cm on the fitted hand from
    the middle of the knuckle row (the back of the hand is negative out of the palm).
+   **Try the body's own hands first.** When the body's fingers are apart (a cloakless A-pose from Meshy came
+   that way), name the body's own model as the hands model: `"hands": {"model": "body.glb"}`. It costs no
+   generation, the skin already matches, and the hands are the right size. The fit cuts them off, gives every
+   finger its bones and puts them back. If it says it found no fingers, check the tolerance before giving up:
+   with a sleeve near skin's hue the hand ran up the arm and the fingers were lost in it (`"hue": 0.05` found
+   five on a body that gave none at 0.1).
+   **A dark sleeve of skin's own hue.** Dark brown wool was 0.04 from pale skin, nearer than the skin's own
+   spread: at a `hue` of 0.05 the hand ran up the sleeve, and at 0.03 it came back in shreds, since parts of
+   the skin itself were left out. `"light": 0.6` (or `"donor_light"` for the hands model alone) also leaves out
+   any vertex under that share of the fingertips' brightness. Read the colour along the arm before guessing:
+   `projects/ireland-in-the-telling/characters/cessair/work/v4/hands/probe_donor.py` prints it every 2 cm from
+   the fingertips. An open-hands model with clawed fingers that hang down from the palm is still no use: the
+   hand is seated by the way its fingers point, and those came out across the forearm.
+   **Fingers that are free keep their own skin.** Weights across the hand are shared by where a vertex lies
+   between two fingers, which suits a mitten. On fingers free from the knuckles, the side of the index that
+   faces the middle finger went half with the middle finger, and a point left a sheet of the index's skin
+   behind with the curled fingers (the check's skin stretch read 4.1x). The free part of each finger, found
+   where the hand's surface splits, is now all its own, and the step is spread over the web under it. On a body whose hands came from a second model with
+   joined fingers (mitten-like, four fingers read), fitting again with this step took `point` from passing to a
+   4.3x stretch: keep such a body's earlier fit, or give it a better open-hands model first.
+   **Dark flecks at the cuff and nicks on a finger** are faces painted from between two patches of the texture
+   (the cap that closes the wrist, slivers left by the reduction), showing the atlas's unpainted ground.
+   Painting texels cannot reach them, so the fit paints each from one texel of plain skin and prints the count.
+   **Look at the hands in every shape.** A loop like the face's: a 10 s spec that holds each hand shape in
+   turn, `check`, then `sheet.py` on the built scene from four sides and a tile of both hands cut out round
+   the wrist joints (`.../cessair/work/v4/hands/loop.sh <name> <cast.json>`, about a minute, any character
+   file). `point` is the shape that shows joined or badly weighted fingers; a fist hides them.
    **Measuring.** Read the joints off the model, not the sheet: render orthographic front and side stills of the
    GLB in Workbench (flat light, texture colour) with a centimetre grid over them, and print horizontal slices of
    the mesh every 2 cm (each slice's runs of x, with their y). The slices give what a still hides: the neck is the
@@ -1142,6 +1202,322 @@ What building them taught, each now in the code, a check or a rule:
 - **Frame the prop clear of the captions.** A pint that matters to the joke stood in the lower third of a 9:16
   frame, where burned captions go. Decide the caption band first (above the Shorts interface, below the faces)
   and aim the camera so the prop and the hands sit above it.
+
+## A painted world: 3D in front of painted plates (experimental)
+
+For a series whose look is a painting (a folklore channel's oil landscapes), the near world is 3D and the far
+world is the painting: a deck, a shore or a doorway the camera moves through, against a painted sky and land.
+First tried on "Ireland in the Telling" (the first sight of land from a boat:
+`projects/ireland-in-the-telling/sets/first-sight/`, a project-level build script, not yet a set kind here).
+
+- **One painting, cut into depth layers.** Paint the whole view once (Ideogram 4 from a JSON caption, with the
+  horizon on a stated row and each landmass in its own box, apart from the others), then cut it: sky, far land,
+  near land. Find the land by walking up from the horizon while each pixel is land (greener than the sky, or
+  yellower, or darker than the brightest sky in its own column: pale far hills are only a few per cent darker
+  than the haze behind them), so cloud above the land is never taken. Close notches in a near outline with a max
+  then a min over the columns. Fill the sky behind the land from the sky round it (a pyramid fill). Below the
+  horizon goes: the sea is 3D. Flatten the layers again for the single-plate version, so both show the same
+  pixels.
+- **Compress the depths, and line the layers up from the first camera position.** At true scale a headland 5 km
+  away does not move while a boat goes 20 m. Hang each layer on a plane at a compressed depth (sky 3 km, far
+  hills 420 m, headland 150 m), sized to span the same angle and with its horizon row on the eye's level, so
+  frame 1 is the painting exactly, and the land shifts against the sky as the camera moves. Parallax comes from
+  travel across the line of sight, not along it: with the boat going 16 m straight at a headland 220 m out, the
+  headland moved 10 px in 1280 against the single plate, which nobody sees. A sideways drift of 1 m/s (a
+  current) and the headland at 150 m made the shift plain and still gentle.
+- **Plates are unlit and the view is Standard.** An emission shader on the picture and `view_transform =
+  "Standard"` keep the painted colours as painted (AgX and a lit plane both change them). Take the world's and
+  the sea's colours from the sky plate just above the horizon, so the 3D meets the painting.
+- **The sea:** the Ocean modifier (it is in the macOS build) over about 800 m, a flat plane beyond it, and the
+  sea's colour mixed toward the horizon colour by view distance (Camera Data), so it fades into the painted
+  haze. A smooth sea mirrors the bright sky as a hard white patch with straight edges (screen-space reflections
+  stop at the frame's edge): roughness 0.26 and `Specular IOR Level` 0.32 soften it. Turn the sun's
+  `specular_factor` to 0: a soft sun (a wide `angle`) mirrored in a rough sea is a broad column with hard
+  vertical edges, which no painting has; the sea still reflects the painted sky.
+- **Mist as cards, not a volume:** banks of fractal noise stretched sideways, on planes at several depths, their
+  alpha keyed down over the shot. They cost almost nothing, they parallax like the land, and the reveal is
+  timed by their keys.
+- **A standing eye sees little of a deck.** At 1.65 m with a 30 mm lens level on the horizon, the bottom of the
+  frame meets the deck 6 m ahead. Use a longer deck, the camera further back, a 26 mm lens, and a move that
+  starts tilted down on the deck and rises to the horizon as the mist thins.
+- **A toolkit character on a set the spec does not know** (Cessair on the boat): build her with the rig's own
+  classes (`ClayPerson(id, cast.resolve(entry, base))`, `place`, then the verbs on the scene's frames), as if
+  the deck's top were the floor, then parent every object she made that has no parent to an empty on the boat
+  at the deck's height, its parent inverse left as identity. Keep that empty in a collection: an object in none
+  is not saved, and everything parented to it falls back to the world origin in the file (she stood a metre
+  under the deck, at the water). Aim each look on its own frame in the deck's measure (the boat moves under
+  her). A hand laid on a rail rides the chest, so a `lean` lifts it off: lay it again every few frames through
+  the lean with `reach`. The hand on the rail and the eyeline are then measured from the bones on every frame
+  (`cessair_shot.check`).
+- **A face and what it looks at cannot both face a camera that sees both.** From behind her, looking at the
+  coast she looks at, the best a camera gets is a lost profile (cheek, brow, the line of the nose): about 130
+  degrees from her face's direction, whatever the lens. Plan a reverse shot for the expression, and check it
+  there.
+- **Blender 5 keyframes are in layered actions:** `action.fcurves` is gone; read them as `lib/blender/kit.fcurves`
+  does (layers, strips, channelbags) to make keys linear.
+
+### Lit 3D that reads as paint
+
+The second half of the same test: the 3D in front of the plates (a character, a deck, the sea) painted like
+the plates, toward a style frame the owner supplied. The modules are project-level
+(`projects/ireland-in-the-telling/sets/look/painterly.py`, `sets/first-sight/style_shot.py`); what they taught:
+
+- **Bands of light, as an emission.** A white diffuse surface with the material's own bump, read back as a
+  colour (Shader to RGB, EEVEE only), its brightness mapped onto 0 to 1 and cut by a colour ramp into a few
+  tones (violet-grey shadow, half tone, warm light), multiplied onto the surface's own colour and put on an
+  emission, so nothing is lit twice. A stretched noise nudges the brightness before the ramp, which breaks
+  the band edges like a brush. A material keeps its texture and its bump.
+- **Set the light range by measuring it.** The ramp only shows bands where the light's values fall across
+  it. Render one still with the mapped light on the emission in place of the colour and read its percentiles
+  over each surface: a face sat between 0.03 and 0.33 of a range written by guess, and a sea inside a tenth of
+  its range, so both came out one flat tone. Each kind of surface gets its own range.
+- **A rim is thin and has a direction.** Layer Weight's facing, as it comes, is a sheen over everything seen
+  at a slant: a deck seen along its length went chalk white and dark hair went brown. Raise it to a power
+  (2 to 3), multiply it by how far the normal turns toward the rim light, and leave it off decks and floors.
+- **Strokes sit in Generated coordinates on anything that bends.** Object coordinates swim through a
+  character as the armature moves it; Generated stays on the skin. Things that do not bend take Object, with
+  the stroke long along the grain.
+- **A glossy layer added over the emission lights the whole surface,** since it has no Fresnel: 0.25 turned
+  dark wet timber pale. 0.05 is a sheen.
+- **The whole frame through the compositor's Kuwahara filter** (anisotropic, about 5 px at 720p) puts one
+  brush over the 3D and the painting, and did more for "this is a painting" than any shader setting. In
+  Blender 5 the compositor's tree is its own data-block: `scene.compositing_node_group =
+  bpy.data.node_groups.new(name, "CompositorNodeTree")`, an output socket made with
+  `tree.interface.new_socket("Image", in_out="OUTPUT", socket_type="NodeSocketColor")`, a `NodeGroupOutput`
+  node, and the filter's settings are inputs (`Size`, `Type`, `Sharpness`), not properties.
+- **Eye patches keep their own shading.** A fitted character's eyes are flat planes in front of the face.
+  Painted like the skin they fall into the shadow band whenever the plane faces away from the key (a violet
+  patch round each eye); painted any fixed tone they show as a box across the eyes. Lit by the scene they
+  follow the light and sit in the face, though the lids come down a little grey in a blink.
+- **A generated model's texture is hundreds of small islands laid side by side,** so a texel's neighbours in
+  the picture are not its neighbours on the body. Recolouring a costume by colour with a blur over the picture
+  to mop up flecks bled each island into the next (grey patches across a maroon mantle). Give each texel to
+  the mesh face that owns it (rasterise the UV triangles), let each face take the cloth most of its texels
+  are, and let a face out of step with its neighbours on the mesh take theirs. Small patches of another class
+  wholly inside a garment are flecks, or the brooch. A second material on the same body (the hands, from
+  another model) has its own picture over the same UV square: only faces showing this picture own its texels.
+  At 1024 px the texture is soft in a close-up; that is the model's, not the look's.
+- **A plate along any direction, and at any size.** Put the plate's middle at a distance along a direction
+  from the first camera position and turn the card by that direction less 90 degrees. Its eye-level row goes
+  on the lens's level; a row is then `scale x eye height / (water row - eye-level row)` metres, and at scale 1
+  the painting is seen as its painter saw it. A near shore painted from the beach filled the frame with
+  trees: at 0.62 it is a coast further off, and the painted sea below eye level is behind the 3D sea anyway.
+  A plate may be mirrored to put its land where the shot wants it. Check both of its edges against the frame
+  through the whole move, and hang the same sky again, larger and further, for what shows past them.
+- **The Ocean modifier's cost is its repeats, not the frame size.** A 40 m tile repeated 20 by 20 took 7 s a
+  frame at 640x360 and at 960x540 alike; 8 by 8 (320 m, all a hazed sea shows) took 2.3 s at 1280x720.
+- **A painted sea is banded light too, not a mirror:** the same bands on the waves, foam from the modifier's
+  foam layer (an Attribute node) broken by a noise, and the haze taking it by about 120 m when mist lies on
+  the water. A hard line where the sea met the mist cards went when the haze came that near.
+- **Give a deck a hull.** A lens that sees over the rail sees the rail's shadow on the water as a ladder with
+  no boat under it. A mast out of frame throws a long dark line across the sea: turn off its shadow.
+- **"Shadow buffer full"** in the log means shadows go missing: `scene.eevee.shadow_pool_size = "1024"`.
+- **A hand keyed onto something on frame 1 arrives on frame 2,** and keys laid before frame 1 do not hold
+  (`place` keys the arms on 1). Start the shot on frame 3. The `relaxed` hand shape lifts the fingers off a
+  rail; a grip that eases is a shape between `grip` and `hold`, with the wrist a few millimetres higher.
+- **A generated head can be reshaped after the fit, if the marks go with it.** The fitted `.blend` holds one
+  mesh and the face marks the rig reads (`model_body["face"]`: eyes, brows, mouth, chin). Write the change as
+  one function of a point (a longer lower face, a straighter nose, cheekbones, ears), run the head's vertices
+  and every mark through it, and the eyes and mouth stay on the face; anything placed by coordinates (a scar)
+  goes through it too. A young, round generated face took a third more length below the eyes before it read
+  as an adult's. Planes can be painted in as well: smooth each mesh face's normal over its neighbours, score
+  it by which way it turns (front and up light, down and to the side dark), cut the score into three tones
+  and multiply them onto the skin's texels. That is form, not a light, so it holds as the head turns. What
+  this cannot change is what is painted: large eyes stay large.
+- **Stage from the picture's anatomy, not its description.** Which hand is on the rail and which cheek the
+  scar is on were read wrongly from the frame at first; the thumb's side and the ear that shows settle both.
+  A close shot of someone by the rail cannot also hold a mast on the centreline unless the lens is wide and
+  well aft: work the angles out from the lens before building.
+
+### A parametric human (MPFB): a face that can act
+
+A generated model's face is one painted surface, so its brows move millimetres. MPFB, the MakeHuman add-on for
+Blender, is the other kind of character: a human on one fixed mesh, shaped by about 1,100 named sliders, with
+face movements as shape keys. First tried on "Ireland in the Telling"
+(`projects/ireland-in-the-telling/characters/cessair/work/mpfb/`, project-level scripts). It is not prompted:
+nothing reads a picture or a sentence. An agent chooses the slider values, which is where a likeness is lost.
+
+- **Licences (read 2026-11):** the code is GPLv3; the bundled assets and the system asset pack are CC0, and
+  MPFB's licence claims nothing over what you make with it, so renders can be published and monetised. Some
+  other packs are CC-BY (hair02, hair03, the dresses): they need a credit.
+- **Headless:** install it once as an extension (`blender --command extension install mpfb -s -e`, or from the
+  Extensions tab). In a script, turn it on with `bpy.ops.preferences.addon_enable(module=
+  "bl_ext.blender_org.mpfb")` and then import `bl_ext.blender_org.mpfb.services.*`. `addon_utils.enable` alone
+  fails, because its services read its preferences as they load. Do not reset to factory settings in the
+  script: that drops the preference again.
+- **A person:** `HumanService.create_human(macro_detail_dict=...)` takes gender (0 is a woman), age (0.5 is 25,
+  1.0 is 90), muscle, weight, proportions, height and a race mix. Detail is
+  `TargetService.load_target(body, path, weight=w, name=n)` for files named like `nose-greek-incr`,
+  `chin-height-incr`, `l-eye-height2-decr`; `TargetService.target_full_path(name)` finds one.
+- **It ships a bare body.** Skin, eyes, brows, lashes, teeth, tongue and hair are in the CC0 pack
+  `makehuman_system_assets_cc0.zip` (280 MB). Unzip it into `LocationService.get_user_data()`, which is all the
+  add-on's own pack loader does. Then `HumanService.set_character_skin(mhmat, body, skin_type="MAKESKIN")` (a
+  Principled skin, which a painted look can read) and `HumanService.add_mhclo_asset(mhclo, body,
+  asset_type="Eyes")` for each part.
+- **What moves the face:** the pack `faceunits01.zip` (CC0) adds the 52 ARKit movements (`browInnerUp`,
+  `eyeSquintLeft`, `jawOpen`, `mouthSmileLeft`) as targets, loaded the same way. Worried was `browInnerUp` 1.6
+  with a squint and a frown; raise `slider_max` to go past 1. The add-on's own older units
+  (`data/targets/expression/units/<race>/`) work too, but `mouth-part-later` bared the teeth.
+  `target_full_path` returns the first race folder it finds for those, so build their paths yourself.
+- **Brows, lashes and teeth do not follow the face by themselves.** They are separate meshes, each vertex
+  riding three body vertices (the part's `.mhclo`). `FaceService.interpolate_targets` copies shapes across only
+  for its own ARKit and viseme key names; for any other key name, do the same sum with `Mhclo().verts`.
+- **A painted look:** brows and lashes are cards of soft painted hairs with alpha. A shader that ignores
+  alpha turns each into a black block: leave them out of the look, multiply the brow's alpha up to make it
+  solid, and multiply its colour down to darken it. Planes can be put in the skin with a node (the object-space
+  normal against one direction, cut into three tones), since the mesh is smooth and its UVs are one layout.
+- **Its head on a fitted body** works as a still: scale the MPFB head so its eyes are as far apart as the
+  fitted model's face marks, put eye on eye, mask the fitted model's head off above the neck, and keep the MPFB
+  body's vertices above the neck line. The costume stays the generated model's.
+- **Fitting the sliders to a 3D head by measurement** is the way to a likeness, and nearest points are not
+  enough. Every slider is a fixed move of the same mesh, so the face is a base plus a weighted sum, and the
+  weights can be solved by least squares against a target head. Paired by nearest surface point, a nose's tip
+  met the side of the other nose and the fit flattened it; a made head has no eye sockets (its eyes are paint
+  on a swelling), so eye sliders fitted to it bulged the lids. Leave the eyes and the hairline out, trust a
+  pair only when the two surfaces are close and face the same way, and pair named landmarks first.
+
+### A 3D head from one picture (TRELLIS, self-hosted, evaluation)
+
+An image-to-3D model run on Modal as a spike (`projects/ireland-in-the-telling/characters/cessair/work/
+trellis/trellis_spike.py`): one picture in, one textured GLB out. From a style frame's face it gave the
+frame's own head (planes, heavy lids, the scar, loose strands), where a model generated from a character
+sheet had given a round young doll.
+
+- **Licence (read 2026-11): the stock export is for evaluation only.** TRELLIS's code and weights are MIT.
+  Its `to_glb` bakes the texture with nvdiffrast (NVIDIA: research or evaluation, no monetary gain) and, in
+  version 1, an Inria Gaussian renderer (no commercial use). A maintainer says the same in the repository's
+  issue 41: the outputs before that step are MIT. For a published video, save the raw mesh and transfer colour
+  yourself; that export is not built here. TRELLIS.2's default background remover (RMBG-2.0) is CC BY-NC and
+  its DINOv3 encoder is gated: the Hugging Face account must accept its terms first.
+- **The build that worked (version 1):** `nvidia/cuda:12.1.1-devel-ubuntu22.04`, Python 3.10, torch 2.4.0 and
+  xformers 0.0.27.post2 from the cu121 index, `spconv-cu120`, kaolin 0.17.0 from NVIDIA's wheel page for torch
+  2.4.0 cu121, utils3d at the commit in TRELLIS's `setup.sh`. Three things failed first: nvdiffrast's main
+  branch compiles at install and needs torch in the build (pin `-b v0.3.3`, which compiles at first use);
+  Modal's `add_python` names `clang++` as the compiler (set `CC=gcc`, `CXX=g++`); the two rasterisers need
+  `pip install --no-build-isolation`. Set `SPCONV_ALGO=native` and `ATTN_BACKEND=xformers`.
+- **Cost and time on an A10G:** 365 s for the first model (167 s of it loading 4 GB of weights into a volume),
+  177 s for the second: about 5 to 11 cents each. The model itself is 19 to 80 s; the GLB bake is 75 s.
+- **It makes what the picture shows.** A face glancing sideways with a worried mouth comes out glancing and
+  worried, and the light is baked into the texture. Give it a neutral front view (an image edit of the same
+  face) for a head to build on; check the edit did not change the eyes (ours came back wide open).
+- **Give it several views when one side differs from the other.** From the front view alone, a scar on one
+  cheek came out on both cheeks, at all three seeds tried. Front, both profiles and the back together
+  (`--image a.png,b.png,c.png,d.png`) put it on one cheek, with calmer hair and a ponytail behind. Adding the
+  two three-quarter views did not improve on that, and their sideways glance went into the eyes.
+- **Cropping tighter does not help.** The tool already crops to the subject; a picture of the face alone
+  gives a face with the top and sides of the head cut off.
+- **The same inputs through Meshy (two Premium generations, 2026-11):** the front view gave a head with far
+  more in it than TRELLIS's (strands, a braid, skin detail; 1.2 million faces) and the same doubled scar, in a
+  rounder and more realistic style than the picture, with the eyes wider. The A-pose sheet gave a body whose
+  head holds up in close-up, which TRELLIS's did not. `pose_mode` is refused on MCP for Blender Premium (own
+  Meshy key only): give it a picture already in an A-pose.
+- **Joining a head model to a body model for the fit** (`projects/ireland-in-the-telling/characters/cessair/
+  work/v3/combine.py`): scale and move the bust onto the body's own head by matching the fronts of the two faces
+  (nearest points, scale and shift only; the gap came to 6 mm), cut both, put the two base colours side by side
+  in one image and halve the UVs. A flat cut under the chin showed as a step in the skin's shading and in the
+  cloak. A stepped cut does not: the head keeps its own neck down to the collar inside a cylinder round the
+  neck, and the body keeps all of its cloak. Deleting vertices leaves a crack, so each side keeps 4 mm past the
+  line. The faces' skin matched in colour without a tint (measure it before adding one).
+- **A cloak over the arms fails the fit's forearm check.** The cloak hangs on the sleeves in the generated
+  body, so its vertices sit beside the forearm's (72 and 96 edges, limit 5) and it is dragged up like wings when
+  the arms rise. Small gestures hold. For arms that move freely, make the body without the cloak and the cloak
+  as its own piece.
+  Done that way (an image edit took the cloak off the A-pose sheet, one more generation), the same fit passed
+  with nothing failing and the arms went overhead cleanly.
+- **Without a cloak the join has to sort the head model by colour.** The bust brings its own collar and cloak,
+  and the body its own ponytail. Give each vertex the nearest of a few colours sampled from known places (skin
+  from the cheeks, hair from the crown, cloth from the chest) and keep only the bust's skin and hair, and none
+  of the body's hair. Hair and a dark cloak were 0.02 apart in colour, so hair below the cut is kept only
+  where the ponytail can be. Weld the mesh (`remove_doubles`) before dropping small islands: the importer
+  splits it along the texture's seams, and unwelded, every chart of the texture counted as an island and half
+  the face went. Keep the neck's seam above the dress's neckline.
+- **The neck's seam, so it survives the fit's reduction** (`work/v4/combine.py`). Each side keeping 8 mm past
+  the line left two skins in one place, 7% apart in colour, and reduced they showed through each other as a
+  ragged line with dark flecks. What holds: shape the head's neck onto the body's over 3 cm (each vertex to the
+  nearest point of the body, all the way at the cut, not at all 3 cm up); cut both with a plane
+  (`bmesh.ops.bisect_plane`, a clean edge where deleting vertices leaves a saw); let the head run 4 mm under
+  the body's edge and 0.6 mm inside it; multiply the head's skin toward the body's colour at the cut (draw
+  the neck's triangles into the texture by height to know which texels); fill the holes left where the bust's
+  collar was taken out, each new face taking the texture at its own corners. The bust's collar stands higher
+  behind the ears than in front (its skin ended 1.31 m up in front, 1.35 at the sides, 1.41 at the nape), so
+  a level cut left the nape with no skin from either model: measure where the head's skin ends by angle round
+  the neck and let the cut climb to the nape. A cut that is a height for each place across the neck is still
+  one `bisect_plane`: lower every vertex by the cut's rise where it stands, cut level, raise them again. Put
+  lower, nearer the neckline, the cut ran through the shade of the bust's collar: stay above it.
+- **A long skirt needs `"skirt": <hem height>` in the fit.** The fit parts legs that touch, and the weights
+  come from a body with two legs, so a dress to the ankle got a slit up the front and the back. With the hem
+  given, the cloth above it shares the two legs' weights across its width and is not cut.
+- **A mark the generator will not place (a scar on one cheek) is painted after the fit.** Cast rays at the
+  face from the front along the mark's line, turn each hit into a texel through the face's UVs, and darken
+  those (`work/v4/face/after_fit.py`). The same script sets her resting face: the generated head rested with
+  its mouth turned down and its brows drawn in, and a third of the rig's own smile plus a 3 mm lift of the
+  inner brows, put into the mesh at rest, made it neutral. Whatever the rig reads from the fit (the line
+  where the lips meet, the brows' places) has to go through the same change.
+- **Head and body are separate models.** A full-body A-pose sheet gave a clean body (12,000 faces, arms clear
+  of the cloak) with a face of a few smeared texels: the head is about a tenth of the picture.
+- **Making the views with an image edit model:** Qwen-Image-Edit turned a front bust to either profile and to
+  the back at the first try, but would not turn it to a three-quarter on the unmarked side (it stayed frontal,
+  or blurred). What worked: mirror the good three-quarter (`ffmpeg -vf hflip`), then one edit, "remove the scar
+  from her cheek, change nothing else". For the full body, describe the A-pose in numbers (arms 40 degrees
+  below level, away from the body, feet under the hips) and take a few seeds: one of two came out right. Name
+  the files by what faces the camera (`profile-rightcheek.png`), not by the direction of the turn.
+- **Output:** about 1.1 million faces raw, 55,000 after `simplify=0.95`, one 2048 px texture in scattered
+  islands, the bust in a unit cube (scale it yourself). The face is one painted surface: it cannot act.
+
+### A cloak as its own piece of cloth
+
+A generated body that wears a cloak fails the fit (above), and a generated cloak is a thick shell. So the cloak
+is a thin sheet modelled round the fitted character and simulated: Blender's cloth, pinned at the neck,
+colliding with her body, in a wind, baked for each shot. First built on "Ireland in the Telling"
+(`projects/ireland-in-the-telling/sets/look/cloak.py` and `cloak_sim.py`, project-level; the loop that proved
+it is `characters/cessair/work/v4/cloak/loop.sh`). A 5 s shot of 7,650 cloth vertices simulates in about two
+minutes, and the same body and settings reuse the cache.
+
+- **Simulate in a second Blender, from a recording of the body.** The shot's script copies the body as a light
+  collision mesh (Decimate keeps the vertex groups, so the copy still follows the armature), records its
+  vertices on every frame into a file, and starts a second Blender that knows nothing of the rig: the body there
+  is a Mesh Cache (a PC2 file is a 32 byte header and float32 positions), and so is the pinned edge. The result
+  comes back as one more PC2 file on a plain mesh, so nothing is simulated at render time and the lead-in before
+  frame 1 can be as long as it needs, on the simulation's own frame numbers.
+- **The pattern is a cone, and the body grows into it.** A cone hung from a loop round the neck is its own flat
+  pattern, so nothing starts stretched; how steeply it falls sets how much cloth there is (55 degrees below
+  level gave a cape with a few folds). A cone that steep starts inside the shoulders. Rather than model a
+  draped shape, shrink the body toward its own axis for the first second (to 0.4, the head left alone) and let
+  it grow back: it pushes the cloth out and the drape is the simulation's.
+- **From standing to the first frame, through the rig's own poses.** The rig puts a hand on a rail in one frame.
+  Give the cloth a second for it, and read the poses in between from the rig at parts of a frame
+  (`scene.frame_set(1, subframe=0.4)`). A straight line between the two recorded poses squashes an arm that
+  turns, and the cloth fell inside it.
+- **Keep the pinned edge outside the collision margin.** Smoothing a loop draws it inward. With the edge 12 mm
+  off the body and the margins adding up to 14 mm (the body's outer thickness and the cloth's own distance),
+  the cloth beside the pins was pushed at on every step, never came to rest and crept up toward her neck.
+  Smooth the loop, put each point back outside, and repeat; then keep the gap larger than the two margins.
+- **The chest carries the edge as one stiff piece.** Each pin riding its own triangle stretched the edge to
+  three times its length when the head turned: the skin of the nape twists with the neck, and the edge's
+  vertices are 5 mm apart. Fit one turn and move to the chest's vertices on each frame (Kabsch) and give it
+  to the whole edge.
+- **Leave the head and the fingers out of the collision mesh.** A bun that sweeps over the nape as she looks
+  round catches the cloth by its pinned edge and drags it, and cloth hanging by a hand is caught between the
+  fingers and stays caught (edges at five times their length). The palm and the neck's base stay in.
+- **A fast arm needs more steps, not more damping.** Pointing takes her arm from her side to shoulder height
+  in six frames. At 10 steps a frame the cloth tunnelled into the arm and was pushed out as a spike that grew
+  for a second; at 30 (collision quality 8) it lies along the arm and falls back. Air damping, lower friction
+  and an impulse clamp did not help.
+- **Wind strength is in the thousands** for cloth of this weight (mass 0.5 a vertex): 60 did nothing, 1,800 to
+  2,500 is a breeze that moves the hem, 15,000 lifts the whole cape. Key the strength on every frame for gusts.
+  An empty made with `bpy.data.objects.new` has no `field`: add the wind with `bpy.ops.object.effector_add`.
+  On a boat, simulate in the deck's frame and give the wind there.
+- **Measure "inside the body" by counting crossings, not by the nearest normal.** A strand of hair or a fold
+  in a sleeve is a sheet facing anywhere, and the nearest triangle's normal called hundreds of points inside
+  that were not. A point is inside when rays in two directions each cross the mesh an odd number of times.
+  The other checks are the stretch of every edge against the pattern and the fastest point in a frame.
+- **Debug with stills of the simulation itself, lead-in included,** at a third of the cloth's resolution
+  (35 s a run, four runs side by side). Every fault above showed in which frames it began: with the body
+  still, when the head turned, when the arm rose.
+- **In a painted look, wool takes almost no rim.** The rim that picks out a cheek runs along every fold of a
+  cloak and turns it to satin: 0.10 against 0.55 on the skin.
+- **Open:** no collar (the cloth cannot fold over itself at the nape under the bun), no self-collision (off: at
+  5 mm between columns it reads as stretch), and the dress's neckline shows inside the cloak's.
 
 ## A film over several sessions
 

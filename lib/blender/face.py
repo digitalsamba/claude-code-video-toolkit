@@ -40,12 +40,13 @@ MOUTHS = {
     "determined": (0.0, 0.55, 0.0, 0.0),
     "relieved":   (0.5, 0.0, 0.2, 0.0),
     "grin":       (1.0, 0.0, 0.7, 0.0),
+    "hopeful":    (0.3, 0.0, 0.25, 0.0),  # (a small smile with the lips just apart: a breath let go)
 }
 # a face that keeps its painted lips smiles with them shut: at rest it is the model's own mouth, a smile lifts
 # the painted corners, and teeth are for a grin (or for talking)
 MOUTHS_PAINT = {**MOUTHS, "neutral": (0.0, 0.0, 0.0, 0.0), "happy": (0.8, 0.0, 0.0, 0.0),
                 "content": (0.5, 0.0, 0.0, 0.0), "relieved": (0.45, 0.0, 0.0, 0.0),
-                "worried": (0.0, 1.0, 0.0, 0.0)}
+                "worried": (0.0, 1.0, 0.0, 0.0), "hopeful": (0.3, 0.0, 0.2, 0.0)}
 KEYS = ("smile", "frown", "open", "round")
 SINK = 0.012       # how far behind the lips a kept face's mouth waits while it is shut (m, on a head 0.42 m wide)
 JAW = 0.032        # how far the chin drops with the mouth fully open (m, on a head 0.42 m wide)
@@ -57,10 +58,82 @@ def _smooth(t):
     return t * t * (3 - 2 * t)
 
 
+def _corners(co, marks: dict, corner, cheek=None):
+    """How far each point goes when the corners of the mouth move by `corner` (out, forward, up; on a head 0.42 m
+    wide) and the cheeks by `cheek`: smooth bumps round each corner. `co` is points in the mesh's own space."""
+    cx, cy, cz = marks["mouth"]
+    k = marks["half_width"] / 0.208  # the fields were made on a head this wide
+    half = marks["mouth_width"] / 2
+    x, z = co[:, 0] - cx, co[:, 2] - cz
+    d = np.zeros_like(co)
+    for s in (1, -1):
+        g = np.exp(-((x - s * (half + 0.01 * k)) ** 2 + z ** 2) / (2 * (0.032 * k) ** 2))
+        d += g[:, None] * np.array([s * corner[0], corner[1], corner[2]], dtype=np.float32) * k
+        if cheek:
+            g = np.exp(-((x - s * (half + 0.05 * k)) ** 2 + (z - 0.045 * k) ** 2) / (2 * (0.04 * k) ** 2))
+            d += g[:, None] * np.array([s * cheek[0], cheek[1], cheek[2]], dtype=np.float32) * k
+    return d
+
+
+SMILE = ((0.008, 0.003, 0.014), (0.003, -0.005, 0.008))
+FROWN = ((-0.004, 0.0, -0.012), None)
+GAP = 0.0045  # under kept lips the jaw takes hold within this of the line where they meet (m, on a head 0.42 m wide)
+
+
+class Lips:
+    """Painted lips that are kept (facepaint.measure_lips): the line where they meet as a curve across the mouth,
+    and how the face moves about it. The jaw takes all of the lower lip down with it from just under that line,
+    inside the mouth's own width (at the corners the lips stay joined), so the painted lips part as lips do and
+    what shows between them is the mouth. Without this the jaw eased in over the height of the lower lip: the
+    lip stretched where it should have dropped, and a second pair of lips was laid over it."""
+
+    def __init__(self, marks: dict, lips: dict):
+        self.cx, self.cy, self.cz = marks["mouth"]
+        self.k = marks["half_width"] / 0.208
+        self.curve = lips["line"]
+        self.mid, self.half = self.cx + lips.get("centre", 0.0), lips["width"] / 2
+        self.chin = marks.get("chin", self.cz - 0.115 * self.k)
+
+    def line(self, x):
+        """The height at which the lips meet, at x."""
+        return self.cz + np.polyval(self.curve, x - self.cx)
+
+    def inside(self, x):
+        """1 in the middle of the mouth, 0 from its corners out."""
+        return np.clip(1 - np.abs((x - self.mid) / self.half) ** 2.5, 0.0, 1.0)
+
+    def jaw(self, co):
+        k = self.k
+        x, z = co[:, 0], co[:, 2]
+        ramp = 0.025 * k + (GAP - 0.025) * k * np.sqrt(self.inside(x))
+        down = _smooth((self.line(x) - z) / ramp) * _smooth((z - self.chin + 0.04 * k) / (0.04 * k))
+        wide = np.exp(-((x - self.cx) ** 2) / (2 * (0.075 * k) ** 2))
+        d = np.zeros_like(co)
+        d[:, 2] = -JAW * k * down * wide
+        d[:, 1] = 0.25 * JAW * k * down * wide  # (a jaw swings: the chin goes back a little as it drops)
+        return d
+
+    def pucker(self, co):
+        """A round mouth: the lips drawn in toward the middle, and forward a little."""
+        x, z = co[:, 0] - self.mid, co[:, 2] - self.line(co[:, 0])
+        g = np.exp(-(x / (1.7 * self.half)) ** 4) * np.exp(-(z / (0.05 * self.k)) ** 2)
+        d = np.zeros_like(co)
+        d[:, 0] = -0.3 * x * g
+        d[:, 1] = -0.004 * self.k * g * np.exp(-(x / self.half) ** 2)
+        return d
+
+
+def kept_lips(marks: dict):
+    """The kept lips of a fitted face, or None: a face whose paint is not kept, lips that were not found, or a
+    file fitted before the line where they meet was read."""
+    lips = (marks.get("seen") or {}).get("lips") if marks.get("paint") else None
+    return Lips(marks, lips) if lips and lips.get("line") else None
+
+
 def body_keys(body, marks: dict) -> None:
-    """Add `smile`, `frown` and `jaw` shape keys to a fitted body. `marks` is the fit's face, in the mesh's own
-    space. Only the front of the head moves (the collar under the chin stays), and every field is smooth, so no
-    triangle tears."""
+    """Add `smile`, `frown` and `jaw` shape keys to a fitted body (and `pucker` under kept lips). `marks` is the
+    fit's face, in the mesh's own space. Only the front of the head moves (the collar under the chin stays), and
+    every field is smooth, so no triangle tears."""
     me = body.data
     if me.shape_keys and "smile" in me.shape_keys.key_blocks:
         return
@@ -68,8 +141,7 @@ def body_keys(body, marks: dict) -> None:
     me.vertices.foreach_get("co", co)
     co = co.reshape(-1, 3)
     cx, cy, cz = marks["mouth"]
-    k = marks["half_width"] / 0.208  # the fields were made on a head this wide
-    half = marks["mouth_width"] / 2
+    k = marks["half_width"] / 0.208
     chin = marks.get("chin", cz - 0.115 * k)
     head = np.zeros(len(co), dtype=np.float32)  # 1 where the head bone alone moves the vertex
     group = body.vertex_groups.get("neck")
@@ -83,29 +155,22 @@ def body_keys(body, marks: dict) -> None:
         head[:] = 1.0
     x, y, z = co[:, 0] - cx, co[:, 1] - cy, co[:, 2] - cz
     front = _smooth((0.13 * k - y) / (0.07 * k)) * _smooth((head - 0.9) / 0.1)  # the face, not the back of the head
-
-    def bump(px, pz, sigma):
-        return np.exp(-((x - px) ** 2 + (z - pz) ** 2) / (2 * (sigma * k) ** 2)) * front
-
-    def field(corner, cheek=None):
-        d = np.zeros_like(co)
-        for s in (1, -1):
-            g = bump(s * (half + 0.01 * k), 0.0, 0.032)
-            d += g[:, None] * np.array([s * corner[0], corner[1], corner[2]], dtype=np.float32) * k
-            if cheek:
-                g = bump(s * (half + 0.05 * k), 0.045 * k, 0.04)
-                d += g[:, None] * np.array([s * cheek[0], cheek[1], cheek[2]], dtype=np.float32) * k
-        return d
-
-    # the jaw: nothing above the lips, all of it from just under them to the chin, fading out below the chin
-    down = _smooth(-z / (0.025 * k)) * _smooth((z - (chin - cz) + 0.04 * k) / (0.04 * k))
-    wide = np.exp(-(x ** 2) / (2 * (0.075 * k) ** 2))
-    jaw = np.zeros_like(co)
-    jaw[:, 2] = -JAW * k * down * wide * front
-    jaw[:, 1] = 0.25 * JAW * k * down * wide * front  # (a jaw swings: the chin goes back a little as it drops)
+    lips = kept_lips(marks)
+    if lips:
+        jaw = lips.jaw(co) * front[:, None]
+    else:
+        # the jaw: nothing above the lips, all of it from just under them to the chin, fading out below the chin
+        down = _smooth(-z / (0.025 * k)) * _smooth((z - (chin - cz) + 0.04 * k) / (0.04 * k))
+        wide = np.exp(-(x ** 2) / (2 * (0.075 * k) ** 2))
+        jaw = np.zeros_like(co)
+        jaw[:, 2] = -JAW * k * down * wide * front
+        jaw[:, 1] = 0.25 * JAW * k * down * wide * front  # (a jaw swings: the chin goes back a little as it drops)
+    keys = [("smile", _corners(co, marks, *SMILE) * front[:, None]),
+            ("frown", _corners(co, marks, *FROWN) * front[:, None]), ("jaw", jaw)]
+    if lips:
+        keys.append(("pucker", lips.pucker(co) * front[:, None]))
     body.shape_key_add(name="Basis")
-    for name, d in (("smile", field((0.008, 0.003, 0.014), (0.003, -0.005, 0.008))),
-                    ("frown", field((-0.004, 0.0, -0.012))), ("jaw", jaw)):
+    for name, d in keys:
         kb = body.shape_key_add(name=name)
         kb.data.foreach_set("co", (co + d).ravel())
         kb.value = 0.0
@@ -135,6 +200,9 @@ def mouth(name, body, marks: dict, mats: dict, parent, to_parent, hides: bool = 
     """The mouth object for a fitted face, with its keys. `to_parent` turns a point in the mesh's space into the
     parent's. With `hides` (a face that keeps its painted lips) it has one more key, `shut`, that holds it
     behind the face while the mouth is closed: see `shut_driver`. Returns the object."""
+    lips = kept_lips(marks) if hides else None
+    if lips:
+        return _kept_mouth(name, body, marks, lips, mats, parent, to_parent)
     cx, cy, cz = marks["mouth"]
     k = marks["half_width"] / 0.208
     half = marks["mouth_width"] / 2
@@ -216,25 +284,119 @@ def mouth(name, body, marks: dict, mats: dict, parent, to_parent, hides: bool = 
     return ob
 
 
-def shut_driver(ob) -> None:
-    """A kept face's mouth is behind the face whenever nothing opens it (an expression's `open` or `round`, or
-    speech's own keys once they exist), so shut lips are the painted ones alone."""
-    keys = ob.data.shape_keys
-    if "shut" not in keys.key_blocks:
-        return
-    path = 'key_blocks["shut"].value'
+KEPT_COLS, KEPT_ROWS = 41, 7
+
+
+def _kept_mouth(name, body, marks: dict, lips: Lips, mats: dict, parent, to_parent):
+    """The mouth behind kept lips: the dark between them and a row of upper teeth, and no lips of its own. It lies
+    on the face over the strip of skin just under the line where the lips meet, the strip the jaw stretches as
+    it drops, and it moves by the same fields as the head (`follow_smile`, `follow_frown`, `follow_jaw`, each
+    driven by the head's own key), so from any side it covers that strip and nothing else. `smile`, `frown` and
+    `open` are kept as keys that move nothing (the rig keys them on every face); `round` draws it in with the
+    lips, and the head's `pucker` follows it."""
+    k = lips.k
+    me = body.data
+    verts = [v.co.copy() for v in me.vertices]
+    reach = 1.3 * lips.half
+    polys = [tuple(p.vertices) for p in me.polygons
+             if abs(verts[p.vertices[0]].x - lips.mid) < reach and abs(verts[p.vertices[0]].z - lips.cz) < reach
+             and verts[p.vertices[0]].y < lips.cy + reach]
+    tree = BVHTree.FromPolygons(verts, polys)
+
+    def on_face(x, z, off):
+        hit = tree.ray_cast(Vector((x, lips.cy - 1.0, z)), Vector((0, 1, 0)))[0]
+        return (x, (hit.y if hit else lips.cy) - off, z)
+
+    xs = np.linspace(lips.mid - lips.half, lips.mid + lips.half, KEPT_COLS)
+    inside = lips.inside(xs)
+    top = lips.line(xs) + 0.001 * k  # (tucked just above the line: the upper lip does not move)
+    foot = lips.line(xs) - GAP * k * inside
+    rest = [on_face(x, t + (f - t) * j / (KEPT_ROWS - 1), 0.0025 * k)
+            for j in range(KEPT_ROWS) for x, t, f in zip(xs, top, foot)]
+    n_dark = len(rest)
+    edge = [on_face(x, t, 0.0032 * k) for x, t in zip(xs, top)]
+    rest += edge + edge  # the teeth: a band with no height until the jaw drops
+    rest = np.array(rest, dtype=np.float32)
+
+    def moved(field):
+        return rest + field(rest)
+
+    # the teeth: as tall as teeth are in the middle, never more than half of the gap, none at the corners
+    drop = -lips.jaw(rest[n_dark - KEPT_COLS:n_dark])[:, 2]
+    teeth = rest.copy()
+    teeth[n_dark + KEPT_COLS:, 2] -= np.minimum(
+        0.013 * k * np.clip(1 - np.abs((xs - lips.mid) / (0.8 * lips.half)) ** 3, 0, 1), 0.5 * drop)
+
+    bm = bmesh.new()
+    vs = [bm.verts.new(to_parent(Vector(p))) for p in rest]
+    for j in range(KEPT_ROWS - 1):
+        for i in range(KEPT_COLS - 1):
+            a = j * KEPT_COLS + i
+            bm.faces.new((vs[a], vs[a + 1], vs[a + KEPT_COLS + 1], vs[a + KEPT_COLS])).material_index = 1
+    for i in range(KEPT_COLS - 1):
+        a = n_dark + i
+        bm.faces.new((vs[a], vs[a + 1], vs[a + KEPT_COLS + 1], vs[a + KEPT_COLS])).material_index = 2
+    ob = mesh_obj(name, bm, None, parent)
+    for m in (mats["lip"], mats["mouthin"], mats["teeth"]):
+        ob.data.materials.append(m)
+    ob.visible_shadow = False
+    ob["kept"] = True
+    ob.shape_key_add(name="Basis")
+    shapes = (("smile", rest), ("frown", rest), ("open", rest), ("round", moved(lips.pucker)),
+              ("follow_smile", moved(lambda co: _corners(co, marks, *SMILE))),
+              ("follow_frown", moved(lambda co: _corners(co, marks, *FROWN))),
+              ("follow_jaw", moved(lips.jaw)), ("teeth", teeth),
+              ("shut", rest + np.array([0, SINK * k, 0], dtype=np.float32)))
+    for name_, pts in shapes:
+        kb = ob.shape_key_add(name=name_)
+        for v, p in zip(kb.data, pts):
+            v.co = to_parent(Vector(p))
+        kb.slider_max, kb.value = 2.0, 0.0
+    shut_driver(ob, body)
+    return ob
+
+
+def _sum_driver(keys, name, sources, expression):
+    """A key's value from other keys' values, by an expression of their sum `v` (no script names: it also runs
+    in a file opened with scripts off)."""
+    path = f'key_blocks["{name}"].value'
     if keys.animation_data:
         for fc in list(keys.animation_data.drivers):
             if fc.data_path == path:
                 keys.animation_data.drivers.remove(fc)
     d = keys.driver_add(path).driver
-    names = [n for n in ("open", "round", "talk", "talk_round") if n in keys.key_blocks]
-    for i, n in enumerate(names):
+    for i, (src, n) in enumerate(sources):
         v = d.variables.new()
         v.name, v.type = f"v{i}", "SINGLE_PROP"
-        v.targets[0].id_type, v.targets[0].id = "KEY", keys
+        v.targets[0].id_type, v.targets[0].id = "KEY", src
         v.targets[0].data_path = f'key_blocks["{n}"].value'
-    d.type, d.expression = "SCRIPTED", "1 - min(1, 15 * (" + " + ".join(f"v{i}" for i in range(len(names))) + "))"
+    d.type = "SCRIPTED"
+    d.expression = expression.replace("v", "(" + " + ".join(f"v{i}" for i in range(len(sources))) + ")")
+
+
+def shut_driver(ob, body=None) -> None:
+    """A kept face's mouth is behind the face whenever nothing opens it (an expression's `open` or `round`, or
+    speech's own keys once they exist), so shut lips are the painted ones alone. Behind kept lips it also
+    follows the head's keys (given the body), and the head's `pucker` follows its `round`."""
+    keys = ob.data.shape_keys
+    if "shut" not in keys.key_blocks:
+        return
+    mine = [(keys, n) for n in ("open", "round", "talk", "talk_round") if n in keys.key_blocks]
+    if not ob.get("kept"):
+        _sum_driver(keys, "shut", mine, "1 - min(1, 15 * v)")
+        return
+    if body is None:
+        return
+    head = body.data.shape_keys
+    jaws = [(head, n) for n in ("jaw", "talk_jaw") if n in head.key_blocks]
+    _sum_driver(keys, "follow_jaw", jaws, "v")
+    # (teeth come into sight once the lips are well apart: in a mouth just open they were a white line)
+    _sum_driver(keys, "teeth", jaws, "max(0, min(1.2, v) - 0.3) / 0.7")
+    _sum_driver(keys, "follow_smile", [(head, "smile")], "v")
+    _sum_driver(keys, "follow_frown", [(head, "frown")], "v")
+    _sum_driver(keys, "shut", jaws, "1 - min(1, 15 * v)")  # (it is the jaw that parts kept lips)
+    rounds = [(keys, n) for n in ("round", "talk_round") if n in keys.key_blocks]
+    _sum_driver(head, "pucker", rounds, "min(1.2, v)")
 
 
 def skin_colour(body, point) -> tuple:
@@ -286,7 +448,9 @@ def materials(cid, body, marks, lips=None) -> dict:
     lip = (0.36, 0.13, 0.11)
     if lips:  # (the painted lips' own colour, as stored in the texture)
         lip = tuple(v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in lips["colour"])
-    return {"lip": mat(f"{cid}_lip", lip, 0.45), "teeth": mat(f"{cid}_teeth", (0.86, 0.84, 0.78), 0.3),
+    # (behind kept lips the teeth are a flat band in the mouth's shade: glossy white, they were a bar of light)
+    teeth = ((0.36, 0.33, 0.27), 0.7) if lips else ((0.86, 0.84, 0.78), 0.3)
+    return {"lip": mat(f"{cid}_lip", lip, 0.45), "teeth": mat(f"{cid}_teeth", *teeth),
             "lid": mat(f"{cid}_lid", skin_colour(body, between), 0.55), "lash": mat(f"{cid}_lash", (0.05, 0.035, 0.03), 0.6)}
 
 
@@ -299,7 +463,7 @@ def report(body, mouth_ob, marks: dict, to_mesh) -> dict:
     the model's surface, and how far its corners travel between a frown and a smile."""
     k = marks["half_width"] / 0.208
     share = marks["mouth_width"] / (2 * marks["half_width"])
-    lip = [to_mesh(v.co) for v in mouth_ob.data.vertices[:33 * 8]]
+    lip = [to_mesh(v.co) for v in (mouth_ob.data.vertices if mouth_ob.get("kept") else mouth_ob.data.vertices[:33 * 8])]
     me = body.data  # (the mesh as fitted, whatever pose the scene is in)
     near = [i for i, v in enumerate(me.vertices) if (v.co - Vector(marks["mouth"])).length < 2 * marks["mouth_width"]]
     index = {v: i for i, v in enumerate(near)}
@@ -308,7 +472,8 @@ def report(body, mouth_ob, marks: dict, to_mesh) -> dict:
                                  if all(v in index for v in pl.vertices)])
     off = max((tree.find_nearest(p)[0] - p).length for p in lip)
     keys = mouth_ob.data.shape_keys.key_blocks
-    travel = max((to_mesh(a.co) - to_mesh(b.co)).length for a, b in zip(keys["smile"].data, keys["frown"].data))
+    ends = ("follow_smile", "follow_frown") if mouth_ob.get("kept") else ("smile", "frown")
+    travel = max((to_mesh(a.co) - to_mesh(b.co)).length for a, b in zip(keys[ends[0]].data, keys[ends[1]].data))
     out = {"mouth_share": round(share, 3), "mouth_off_m": round(off, 4), "mouth_travel_m": round(travel, 4)}
     problems = []
     if share < MOUTH_SHARE:

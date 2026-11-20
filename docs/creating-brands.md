@@ -269,3 +269,9 @@ Once saved, use `--brand` to load it automatically:
 ```bash
 uv run tools/voiceover.py --provider qwen3 --brand my-company --scene-dir public/audio/scenes --json
 ```
+
+## YouTube channel art
+
+A brand that has its own channel also needs a banner, an avatar and a video watermark at YouTube's sizes,
+checked where people will see them (the banner's phone crop, the avatar at 24 px, the watermark dimmed over
+footage). See `docs/youtube-channel-art.md`. For a channel that runs a series, see `docs/series.md`.

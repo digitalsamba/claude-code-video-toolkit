@@ -152,6 +152,8 @@ Read the file before using a tool in its row. Each holds the commands, the choic
 | Talking heads (SoulX is the default, SadTalker when Modal is unavailable) | `docs/soulx.md`, `docs/sadtalker.md` |
 | Agent video jobs (`tools/video_job.py`, brief in, MP4 out) | `docs/agent-video-jobs.md` |
 | YouTube upload, publish kit, stats | `docs/youtube-upload.md`, the `youtube-stats` skill |
+| Channel art (banner, avatar, watermark) and what a real channel set taught | `docs/youtube-channel-art.md` |
+| Running a series across sessions (a hub with state and approvals, a bible, a shared library) | `docs/series.md` |
 | Transitions | `lib/transitions/README.md` |
 
 Rules that hold across them:
