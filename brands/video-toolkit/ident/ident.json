@@ -1,0 +1,62 @@
+{
+  "made_by": "examples/blender-ident/build.py",
+  "default": "clap",
+  "idents": {
+    "clap": {
+      "open": {
+        "seconds": 2.0,
+        "frames": 60,
+        "fps": 30,
+        "files": {
+          "16x9": "clap-open-16x9.mp4",
+          "9x16": "clap-open-9x16.mp4",
+          "16x9-alpha": "clap-open-16x9-alpha.webm",
+          "9x16-alpha": "clap-open-9x16-alpha.webm"
+        },
+        "sound": "clap-open.wav",
+        "hit_frame": 20,
+        "title_frame": 51,
+        "hit_checked": true,
+        "alpha_ground": "dark"
+      },
+      "close": {
+        "seconds": 3.5,
+        "frames": 105,
+        "fps": 30,
+        "files": {
+          "16x9": "clap-close-16x9.mp4",
+          "9x16": "clap-close-9x16.mp4",
+          "16x9-alpha": "clap-close-16x9-alpha.webm",
+          "9x16-alpha": "clap-close-9x16-alpha.webm"
+        },
+        "sound": "clap-close.wav",
+        "alpha_ground": "dark"
+      }
+    },
+    "key": {
+      "open": {
+        "seconds": 2.4,
+        "frames": 72,
+        "fps": 30,
+        "files": {
+          "16x9": "key-open-16x9.mp4",
+          "9x16": "key-open-9x16.mp4"
+        },
+        "sound": "key-open.wav",
+        "hit_frame": 22,
+        "title_frame": 59,
+        "hit_checked": true
+      },
+      "close": {
+        "seconds": 3.5,
+        "frames": 105,
+        "fps": 30,
+        "files": {
+          "16x9": "key-close-16x9.mp4",
+          "9x16": "key-close-9x16.mp4"
+        },
+        "sound": "key-close.wav"
+      }
+    }
+  }
+}

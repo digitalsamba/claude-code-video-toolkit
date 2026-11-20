@@ -1,0 +1,22 @@
+{
+  "name": "howto",
+  "version": "1.0.0",
+  "description": "How-to and tutorial episodes: an opening and close built from one mark, chapter cards on a track, ledgers, figures, bars, agent CLI sessions and commands, each on a narration cue; a 9:16 Short per chapter",
+  "scripts": {
+    "studio": "npx remotion studio",
+    "render": "npx remotion render src/index.ts Episode out/episode.mp4",
+    "render:shorts": "node scripts/render-shorts.mjs",
+    "chapters": "uv run scripts/chapters.py",
+    "build": "npx remotion bundle src/index.ts"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.542",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "4.0.542"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}

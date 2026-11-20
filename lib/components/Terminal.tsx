@@ -1,6 +1,10 @@
 /**
  * Terminal for Synthetic Demos
  *
+ * For a session in Claude Code, Codex or another agent CLI (input box, streamed prose, tool calls, pickers, zoom),
+ * use `TerminalSession`; its `shell` skin also covers a plain shell with wrapping and a bundled font. This component
+ * stays as it is for the videos already built with it.
+ *
  * A terminal window that types commands and prints output, each line on a narration cue,
  * the way Stage drives a rebuilt browser screen. Nothing is screen-recorded: the session is
  * data, so a re-timed voice moves every line with it (look frames up with `cue()`).

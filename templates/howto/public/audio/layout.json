@@ -1,0 +1,22 @@
+{
+  "buys": {
+    "gap": 16
+  },
+  "spent": {
+    "gap": 10,
+    "tail": 40
+  },
+  "setup": {
+    "gap": 14,
+    "tail": 40
+  },
+  "close": {
+    "lead": 40,
+    "tail": 120
+  },
+  "hook": {
+    "lead": 14,
+    "gap": 10,
+    "tail": 36
+  }
+}

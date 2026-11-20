@@ -1,0 +1,1720 @@
+{
+ "fps": 30,
+ "scenes": {
+  "hook": {
+   "frames": 423,
+   "phrases": [
+    {
+     "file": "00a_hook",
+     "at": 14,
+     "frames": 170,
+     "words": [
+      {
+       "text": "In",
+       "startMs": 120,
+       "endMs": 180
+      },
+      {
+       "text": " the",
+       "startMs": 220,
+       "endMs": 340
+      },
+      {
+       "text": " first",
+       "startMs": 380,
+       "endMs": 640
+      },
+      {
+       "text": " two",
+       "startMs": 740,
+       "endMs": 880
+      },
+      {
+       "text": " weeks",
+       "startMs": 960,
+       "endMs": 1180
+      },
+      {
+       "text": " of",
+       "startMs": 1220,
+       "endMs": 1320
+      },
+      {
+       "text": " November,",
+       "startMs": 1360,
+       "endMs": 1980
+      },
+      {
+       "text": " we",
+       "startMs": 2280,
+       "endMs": 2380
+      },
+      {
+       "text": " made",
+       "startMs": 2420,
+       "endMs": 2720
+      },
+      {
+       "text": " fifteen",
+       "startMs": 2720,
+       "endMs": 3460
+      },
+      {
+       "text": " video",
+       "startMs": 3460,
+       "endMs": 3760
+      },
+      {
+       "text": " projects",
+       "startMs": 3860,
+       "endMs": 4360
+      },
+      {
+       "text": " with",
+       "startMs": 4400,
+       "endMs": 4520
+      },
+      {
+       "text": " this",
+       "startMs": 4560,
+       "endMs": 4740
+      },
+      {
+       "text": " toolkit.",
+       "startMs": 4800,
+       "endMs": 5340
+      }
+     ]
+    },
+    {
+     "file": "00b_hook",
+     "at": 194,
+     "frames": 125,
+     "words": [
+      {
+       "text": "The",
+       "startMs": 100,
+       "endMs": 180
+      },
+      {
+       "text": " cloud",
+       "startMs": 240,
+       "endMs": 540
+      },
+      {
+       "text": " bill",
+       "startMs": 620,
+       "endMs": 840
+      },
+      {
+       "text": " for",
+       "startMs": 900,
+       "endMs": 1000
+      },
+      {
+       "text": " the",
+       "startMs": 1040,
+       "endMs": 1180
+      },
+      {
+       "text": " AI",
+       "startMs": 1260,
+       "endMs": 1560
+      },
+      {
+       "text": " models",
+       "startMs": 1660,
+       "endMs": 2080
+      },
+      {
+       "text": " came",
+       "startMs": 2200,
+       "endMs": 2400
+      },
+      {
+       "text": " to",
+       "startMs": 2440,
+       "endMs": 2560
+      },
+      {
+       "text": " twenty",
+       "startMs": 2560,
+       "endMs": 2800
+      },
+      {
+       "text": " two",
+       "startMs": 2800,
+       "endMs": 3040
+      },
+      {
+       "text": " dollars.",
+       "startMs": 3040,
+       "endMs": 3280
+      }
+     ]
+    },
+    {
+     "file": "00c_hook",
+     "at": 329,
+     "frames": 58,
+     "words": [
+      {
+       "text": "We",
+       "startMs": 200,
+       "endMs": 280
+      },
+      {
+       "text": " paid",
+       "startMs": 420,
+       "endMs": 760
+      },
+      {
+       "text": " none",
+       "startMs": 980,
+       "endMs": 1180
+      },
+      {
+       "text": " of",
+       "startMs": 1220,
+       "endMs": 1320
+      },
+      {
+       "text": " it.",
+       "startMs": 1400,
+       "endMs": 1600
+      }
+     ]
+    }
+   ]
+  },
+  "free": {
+   "frames": 585,
+   "phrases": [
+    {
+     "file": "01a_free",
+     "at": 18,
+     "frames": 74,
+     "words": [
+      {
+       "text": "Making",
+       "startMs": 100,
+       "endMs": 440
+      },
+      {
+       "text": " the",
+       "startMs": 460,
+       "endMs": 560
+      },
+      {
+       "text": " video",
+       "startMs": 620,
+       "endMs": 1060
+      },
+      {
+       "text": " costs",
+       "startMs": 1220,
+       "endMs": 1640
+      },
+      {
+       "text": " nothing.",
+       "startMs": 1780,
+       "endMs": 2220
+      }
+     ]
+    },
+    {
+     "file": "01b_free",
+     "at": 104,
+     "frames": 91,
+     "words": [
+      {
+       "text": "Remotion",
+       "startMs": 120,
+       "endMs": 720
+      },
+      {
+       "text": " renders",
+       "startMs": 900,
+       "endMs": 1300
+      },
+      {
+       "text": " it",
+       "startMs": 1380,
+       "endMs": 1520
+      },
+      {
+       "text": " on",
+       "startMs": 1640,
+       "endMs": 1760
+      },
+      {
+       "text": " your",
+       "startMs": 1800,
+       "endMs": 1900
+      },
+      {
+       "text": " own",
+       "startMs": 2040,
+       "endMs": 2220
+      },
+      {
+       "text": " machine.",
+       "startMs": 2300,
+       "endMs": 2800
+      }
+     ]
+    },
+    {
+     "file": "01c_free",
+     "at": 207,
+     "frames": 202,
+     "words": [
+      {
+       "text": "Captions,",
+       "startMs": 80,
+       "endMs": 740
+      },
+      {
+       "text": " music",
+       "startMs": 1040,
+       "endMs": 1400
+      },
+      {
+       "text": " from",
+       "startMs": 1440,
+       "endMs": 1560
+      },
+      {
+       "text": " a",
+       "startMs": 1620,
+       "endMs": 1720
+      },
+      {
+       "text": " free",
+       "startMs": 1780,
+       "endMs": 2040
+      },
+      {
+       "text": " API",
+       "startMs": 2100,
+       "endMs": 2540
+      },
+      {
+       "text": " key,",
+       "startMs": 2660,
+       "endMs": 2920
+      },
+      {
+       "text": " and",
+       "startMs": 3100,
+       "endMs": 3240
+      },
+      {
+       "text": " every",
+       "startMs": 3440,
+       "endMs": 3680
+      },
+      {
+       "text": " check",
+       "startMs": 3800,
+       "endMs": 4000
+      },
+      {
+       "text": " and",
+       "startMs": 4040,
+       "endMs": 4120
+      },
+      {
+       "text": " cut-down",
+       "startMs": 4220,
+       "endMs": 4680
+      },
+      {
+       "text": " for",
+       "startMs": 4720,
+       "endMs": 4800
+      },
+      {
+       "text": " Shorts:",
+       "startMs": 4880,
+       "endMs": 5320
+      },
+      {
+       "text": " all",
+       "startMs": 5820,
+       "endMs": 6020
+      },
+      {
+       "text": " free.",
+       "startMs": 6240,
+       "endMs": 6520
+      }
+     ]
+    },
+    {
+     "file": "01d_free",
+     "at": 421,
+     "frames": 134,
+     "words": [
+      {
+       "text": "The",
+       "startMs": 80,
+       "endMs": 140
+      },
+      {
+       "text": " one",
+       "startMs": 220,
+       "endMs": 380
+      },
+      {
+       "text": " thing",
+       "startMs": 480,
+       "endMs": 680
+      },
+      {
+       "text": " you",
+       "startMs": 740,
+       "endMs": 920
+      },
+      {
+       "text": " do",
+       "startMs": 980,
+       "endMs": 1160
+      },
+      {
+       "text": " need",
+       "startMs": 1260,
+       "endMs": 1580
+      },
+      {
+       "text": " is",
+       "startMs": 1720,
+       "endMs": 1800
+      },
+      {
+       "text": " a",
+       "startMs": 1860,
+       "endMs": 1920
+      },
+      {
+       "text": " Claude",
+       "startMs": 1980,
+       "endMs": 2340
+      },
+      {
+       "text": " plan,",
+       "startMs": 2460,
+       "endMs": 2820
+      },
+      {
+       "text": " to",
+       "startMs": 3120,
+       "endMs": 3240
+      },
+      {
+       "text": " run",
+       "startMs": 3280,
+       "endMs": 3460
+      },
+      {
+       "text": " Claude",
+       "startMs": 3560,
+       "endMs": 3840
+      },
+      {
+       "text": " Code.",
+       "startMs": 3940,
+       "endMs": 4300
+      }
+     ]
+    }
+   ]
+  },
+  "thirty": {
+   "frames": 603,
+   "phrases": [
+    {
+     "file": "02a_thirty",
+     "at": 18,
+     "frames": 168,
+     "words": [
+      {
+       "text": "The",
+       "startMs": 120,
+       "endMs": 200
+      },
+      {
+       "text": " AI",
+       "startMs": 340,
+       "endMs": 640
+      },
+      {
+       "text": " models",
+       "startMs": 700,
+       "endMs": 1120
+      },
+      {
+       "text": " run",
+       "startMs": 1220,
+       "endMs": 1360
+      },
+      {
+       "text": " on",
+       "startMs": 1400,
+       "endMs": 1480
+      },
+      {
+       "text": " cloud",
+       "startMs": 1620,
+       "endMs": 1960
+      },
+      {
+       "text": " GPUs,",
+       "startMs": 2020,
+       "endMs": 2900
+      },
+      {
+       "text": " and",
+       "startMs": 3240,
+       "endMs": 3460
+      },
+      {
+       "text": " that's",
+       "startMs": 3520,
+       "endMs": 3820
+      },
+      {
+       "text": " the",
+       "startMs": 3860,
+       "endMs": 3940
+      },
+      {
+       "text": " part",
+       "startMs": 4000,
+       "endMs": 4220
+      },
+      {
+       "text": " you",
+       "startMs": 4260,
+       "endMs": 4340
+      },
+      {
+       "text": " may",
+       "startMs": 4380,
+       "endMs": 4540
+      },
+      {
+       "text": " worry",
+       "startMs": 4600,
+       "endMs": 4820
+      },
+      {
+       "text": " about.",
+       "startMs": 4920,
+       "endMs": 5280
+      }
+     ]
+    },
+    {
+     "file": "02b_thirty",
+     "at": 198,
+     "frames": 190,
+     "words": [
+      {
+       "text": "Modal's",
+       "startMs": 200,
+       "endMs": 600
+      },
+      {
+       "text": " free",
+       "startMs": 700,
+       "endMs": 880
+      },
+      {
+       "text": " Starter",
+       "startMs": 980,
+       "endMs": 1360
+      },
+      {
+       "text": " plan",
+       "startMs": 1440,
+       "endMs": 1720
+      },
+      {
+       "text": " gives",
+       "startMs": 1820,
+       "endMs": 1980
+      },
+      {
+       "text": " you",
+       "startMs": 2040,
+       "endMs": 2160
+      },
+      {
+       "text": " thirty",
+       "startMs": 2260,
+       "endMs": 2560
+      },
+      {
+       "text": " dollars",
+       "startMs": 2640,
+       "endMs": 2900
+      },
+      {
+       "text": " of",
+       "startMs": 2940,
+       "endMs": 3040
+      },
+      {
+       "text": " compute",
+       "startMs": 3060,
+       "endMs": 3480
+      },
+      {
+       "text": " every",
+       "startMs": 3660,
+       "endMs": 3860
+      },
+      {
+       "text": " month,",
+       "startMs": 3980,
+       "endMs": 4320
+      },
+      {
+       "text": " once",
+       "startMs": 4560,
+       "endMs": 4740
+      },
+      {
+       "text": " a",
+       "startMs": 4780,
+       "endMs": 4840
+      },
+      {
+       "text": " card",
+       "startMs": 4880,
+       "endMs": 5120
+      },
+      {
+       "text": " is",
+       "startMs": 5160,
+       "endMs": 5240
+      },
+      {
+       "text": " on",
+       "startMs": 5280,
+       "endMs": 5360
+      },
+      {
+       "text": " the",
+       "startMs": 5400,
+       "endMs": 5460
+      },
+      {
+       "text": " account.",
+       "startMs": 5520,
+       "endMs": 5980
+      }
+     ]
+    },
+    {
+     "file": "02c_thirty",
+     "at": 400,
+     "frames": 173,
+     "words": [
+      {
+       "text": "Idle",
+       "startMs": 120,
+       "endMs": 340
+      },
+      {
+       "text": " apps",
+       "startMs": 480,
+       "endMs": 700
+      },
+      {
+       "text": " scale",
+       "startMs": 780,
+       "endMs": 1100
+      },
+      {
+       "text": " to",
+       "startMs": 1140,
+       "endMs": 1260
+      },
+      {
+       "text": " zero,",
+       "startMs": 1340,
+       "endMs": 1800
+      },
+      {
+       "text": " so",
+       "startMs": 2160,
+       "endMs": 2280
+      },
+      {
+       "text": " you",
+       "startMs": 2320,
+       "endMs": 2500
+      },
+      {
+       "text": " only",
+       "startMs": 2600,
+       "endMs": 2900
+      },
+      {
+       "text": " pay",
+       "startMs": 2940,
+       "endMs": 3160
+      },
+      {
+       "text": " for",
+       "startMs": 3240,
+       "endMs": 3340
+      },
+      {
+       "text": " the",
+       "startMs": 3380,
+       "endMs": 3500
+      },
+      {
+       "text": " seconds",
+       "startMs": 3560,
+       "endMs": 4040
+      },
+      {
+       "text": " a",
+       "startMs": 4160,
+       "endMs": 4240
+      },
+      {
+       "text": " GPU",
+       "startMs": 4280,
+       "endMs": 4840
+      },
+      {
+       "text": " is",
+       "startMs": 4880,
+       "endMs": 5000
+      },
+      {
+       "text": " working.",
+       "startMs": 5060,
+       "endMs": 5520
+      }
+     ]
+    }
+   ]
+  },
+  "buys": {
+   "frames": 442,
+   "phrases": [
+    {
+     "file": "03a_buys",
+     "at": 18,
+     "frames": 77,
+     "words": [
+      {
+       "text": "So",
+       "startMs": 220,
+       "endMs": 440
+      },
+      {
+       "text": " what",
+       "startMs": 620,
+       "endMs": 760
+      },
+      {
+       "text": " does",
+       "startMs": 780,
+       "endMs": 940
+      },
+      {
+       "text": " thirty",
+       "startMs": 940,
+       "endMs": 1430
+      },
+      {
+       "text": " dollars",
+       "startMs": 1430,
+       "endMs": 1920
+      },
+      {
+       "text": " buy?",
+       "startMs": 1920,
+       "endMs": 2220
+      }
+     ]
+    },
+    {
+     "file": "03b_buys",
+     "at": 111,
+     "frames": 106,
+     "words": [
+      {
+       "text": "About",
+       "startMs": 140,
+       "endMs": 380
+      },
+      {
+       "text": " two",
+       "startMs": 380,
+       "endMs": 770
+      },
+      {
+       "text": " hundred",
+       "startMs": 770,
+       "endMs": 1160
+      },
+      {
+       "text": " and",
+       "startMs": 1160,
+       "endMs": 1550
+      },
+      {
+       "text": " fifty",
+       "startMs": 1550,
+       "endMs": 1940
+      },
+      {
+       "text": " AI",
+       "startMs": 1940,
+       "endMs": 2240
+      },
+      {
+       "text": " video",
+       "startMs": 2360,
+       "endMs": 2660
+      },
+      {
+       "text": " clips.",
+       "startMs": 2760,
+       "endMs": 3180
+      }
+     ]
+    },
+    {
+     "file": "03c_buys",
+     "at": 233,
+     "frames": 77,
+     "words": [
+      {
+       "text": "Or",
+       "startMs": 100,
+       "endMs": 260
+      },
+      {
+       "text": " three",
+       "startMs": 260,
+       "endMs": 920
+      },
+      {
+       "text": " thousand",
+       "startMs": 920,
+       "endMs": 1580
+      },
+      {
+       "text": " voice",
+       "startMs": 1580,
+       "endMs": 1840
+      },
+      {
+       "text": " lines.",
+       "startMs": 1920,
+       "endMs": 2380
+      }
+     ]
+    },
+    {
+     "file": "03d_buys",
+     "at": 326,
+     "frames": 86,
+     "words": [
+      {
+       "text": "Or",
+       "startMs": 180,
+       "endMs": 380
+      },
+      {
+       "text": " two",
+       "startMs": 580,
+       "endMs": 720
+      },
+      {
+       "text": " and",
+       "startMs": 740,
+       "endMs": 820
+      },
+      {
+       "text": " a",
+       "startMs": 860,
+       "endMs": 900
+      },
+      {
+       "text": " half",
+       "startMs": 960,
+       "endMs": 1200
+      },
+      {
+       "text": " thousand",
+       "startMs": 1320,
+       "endMs": 1900
+      },
+      {
+       "text": " images.",
+       "startMs": 2020,
+       "endMs": 2540
+      }
+     ]
+    }
+   ]
+  },
+  "spent": {
+   "frames": 725,
+   "phrases": [
+    {
+     "file": "04a_spent",
+     "at": 18,
+     "frames": 144,
+     "words": [
+      {
+       "text": "Here's",
+       "startMs": 100,
+       "endMs": 340
+      },
+      {
+       "text": " our",
+       "startMs": 380,
+       "endMs": 520
+      },
+      {
+       "text": " own",
+       "startMs": 560,
+       "endMs": 740
+      },
+      {
+       "text": " bill:",
+       "startMs": 840,
+       "endMs": 1080
+      },
+      {
+       "text": " everything",
+       "startMs": 1700,
+       "endMs": 2120
+      },
+      {
+       "text": " we",
+       "startMs": 2180,
+       "endMs": 2300
+      },
+      {
+       "text": " ran",
+       "startMs": 2340,
+       "endMs": 2520
+      },
+      {
+       "text": " on",
+       "startMs": 2560,
+       "endMs": 2660
+      },
+      {
+       "text": " Modal,",
+       "startMs": 2740,
+       "endMs": 3100
+      },
+      {
+       "text": " research",
+       "startMs": 3480,
+       "endMs": 3940
+      },
+      {
+       "text": " included.",
+       "startMs": 4000,
+       "endMs": 4600
+      }
+     ]
+    },
+    {
+     "file": "04b_spent",
+     "at": 172,
+     "frames": 67,
+     "words": [
+      {
+       "text": "August,",
+       "startMs": 120,
+       "endMs": 680
+      },
+      {
+       "text": " eleven",
+       "startMs": 680,
+       "endMs": 1080
+      },
+      {
+       "text": " dollars.",
+       "startMs": 1080,
+       "endMs": 1480
+      }
+     ]
+    },
+    {
+     "file": "04c_spent",
+     "at": 249,
+     "frames": 113,
+     "words": [
+      {
+       "text": "September,",
+       "startMs": 80,
+       "endMs": 700
+      },
+      {
+       "text": " our",
+       "startMs": 1140,
+       "endMs": 1360
+      },
+      {
+       "text": " busiest",
+       "startMs": 1400,
+       "endMs": 1840
+      },
+      {
+       "text": " month,",
+       "startMs": 1920,
+       "endMs": 2220
+      },
+      {
+       "text": " twenty",
+       "startMs": 2220,
+       "endMs": 2900
+      },
+      {
+       "text": " six.",
+       "startMs": 2900,
+       "endMs": 3580
+      }
+     ]
+    },
+    {
+     "file": "04d_spent",
+     "at": 372,
+     "frames": 58,
+     "words": [
+      {
+       "text": "October,",
+       "startMs": 60,
+       "endMs": 700
+      },
+      {
+       "text": " fourteen.",
+       "startMs": 700,
+       "endMs": 1660
+      }
+     ]
+    },
+    {
+     "file": "04e_spent",
+     "at": 440,
+     "frames": 156,
+     "words": [
+      {
+       "text": "And",
+       "startMs": 60,
+       "endMs": 140
+      },
+      {
+       "text": " the",
+       "startMs": 180,
+       "endMs": 280
+      },
+      {
+       "text": " first",
+       "startMs": 340,
+       "endMs": 600
+      },
+      {
+       "text": " half",
+       "startMs": 660,
+       "endMs": 860
+      },
+      {
+       "text": " of",
+       "startMs": 920,
+       "endMs": 1020
+      },
+      {
+       "text": " November,",
+       "startMs": 1060,
+       "endMs": 1500
+      },
+      {
+       "text": " twenty",
+       "startMs": 1500,
+       "endMs": 2150
+      },
+      {
+       "text": " two,",
+       "startMs": 2150,
+       "endMs": 2800
+      },
+      {
+       "text": " across",
+       "startMs": 2800,
+       "endMs": 3100
+      },
+      {
+       "text": " fifteen",
+       "startMs": 3100,
+       "endMs": 4019
+      },
+      {
+       "text": " video",
+       "startMs": 4019,
+       "endMs": 4320
+      },
+      {
+       "text": " projects.",
+       "startMs": 4420,
+       "endMs": 5020
+      }
+     ]
+    },
+    {
+     "file": "04f_spent",
+     "at": 606,
+     "frames": 79,
+     "words": [
+      {
+       "text": "Every",
+       "startMs": 100,
+       "endMs": 320
+      },
+      {
+       "text": " month,",
+       "startMs": 420,
+       "endMs": 800
+      },
+      {
+       "text": " inside",
+       "startMs": 1060,
+       "endMs": 1540
+      },
+      {
+       "text": " the",
+       "startMs": 1560,
+       "endMs": 1700
+      },
+      {
+       "text": " free",
+       "startMs": 1720,
+       "endMs": 1880
+      },
+      {
+       "text": " credit.",
+       "startMs": 2020,
+       "endMs": 2480
+      }
+     ]
+    }
+   ]
+  },
+  "extras": {
+   "frames": 540,
+   "phrases": [
+    {
+     "file": "05a_extras",
+     "at": 18,
+     "frames": 118,
+     "words": [
+      {
+       "text": "Two",
+       "startMs": 100,
+       "endMs": 240
+      },
+      {
+       "text": " things",
+       "startMs": 360,
+       "endMs": 660
+      },
+      {
+       "text": " cost",
+       "startMs": 780,
+       "endMs": 1040
+      },
+      {
+       "text": " extra,",
+       "startMs": 1220,
+       "endMs": 1720
+      },
+      {
+       "text": " and",
+       "startMs": 2000,
+       "endMs": 2180
+      },
+      {
+       "text": " both",
+       "startMs": 2340,
+       "endMs": 2700
+      },
+      {
+       "text": " are",
+       "startMs": 2820,
+       "endMs": 2980
+      },
+      {
+       "text": " optional.",
+       "startMs": 3040,
+       "endMs": 3560
+      }
+     ]
+    },
+    {
+     "file": "05b_extras",
+     "at": 148,
+     "frames": 204,
+     "words": [
+      {
+       "text": "ElevenLabs",
+       "startMs": 80,
+       "endMs": 700
+      },
+      {
+       "text": " voices,",
+       "startMs": 760,
+       "endMs": 1380
+      },
+      {
+       "text": " like",
+       "startMs": 1620,
+       "endMs": 1800
+      },
+      {
+       "text": " the",
+       "startMs": 1840,
+       "endMs": 1900
+      },
+      {
+       "text": " one",
+       "startMs": 1960,
+       "endMs": 2100
+      },
+      {
+       "text": " you're",
+       "startMs": 2140,
+       "endMs": 2240
+      },
+      {
+       "text": " hearing",
+       "startMs": 2280,
+       "endMs": 2600
+      },
+      {
+       "text": " now,",
+       "startMs": 2660,
+       "endMs": 2940
+      },
+      {
+       "text": " and",
+       "startMs": 3440,
+       "endMs": 3640
+      },
+      {
+       "text": " Ideogram",
+       "startMs": 3800,
+       "endMs": 4400
+      },
+      {
+       "text": " images,",
+       "startMs": 4500,
+       "endMs": 5020
+      },
+      {
+       "text": " at",
+       "startMs": 5300,
+       "endMs": 5400
+      },
+      {
+       "text": " a",
+       "startMs": 5460,
+       "endMs": 5520
+      },
+      {
+       "text": " few",
+       "startMs": 5560,
+       "endMs": 5720
+      },
+      {
+       "text": " cents",
+       "startMs": 5820,
+       "endMs": 6160
+      },
+      {
+       "text": " each.",
+       "startMs": 6240,
+       "endMs": 6540
+      }
+     ]
+    },
+    {
+     "file": "05c_extras",
+     "at": 364,
+     "frames": 146,
+     "words": [
+      {
+       "text": "Without",
+       "startMs": 80,
+       "endMs": 420
+      },
+      {
+       "text": " them,",
+       "startMs": 480,
+       "endMs": 720
+      },
+      {
+       "text": " free",
+       "startMs": 1080,
+       "endMs": 1280
+      },
+      {
+       "text": " voices",
+       "startMs": 1380,
+       "endMs": 1880
+      },
+      {
+       "text": " and",
+       "startMs": 1900,
+       "endMs": 2000
+      },
+      {
+       "text": " image",
+       "startMs": 2140,
+       "endMs": 2360
+      },
+      {
+       "text": " models",
+       "startMs": 2460,
+       "endMs": 2840
+      },
+      {
+       "text": " run",
+       "startMs": 2960,
+       "endMs": 3120
+      },
+      {
+       "text": " inside",
+       "startMs": 3160,
+       "endMs": 3640
+      },
+      {
+       "text": " your",
+       "startMs": 3680,
+       "endMs": 3820
+      },
+      {
+       "text": " Modal",
+       "startMs": 3880,
+       "endMs": 4160
+      },
+      {
+       "text": " credit.",
+       "startMs": 4260,
+       "endMs": 4700
+      }
+     ]
+    }
+   ]
+  },
+  "setup": {
+   "frames": 575,
+   "phrases": [
+    {
+     "file": "06a_setup",
+     "at": 18,
+     "frames": 86,
+     "words": [
+      {
+       "text": "Setting",
+       "startMs": 120,
+       "endMs": 420
+      },
+      {
+       "text": " up",
+       "startMs": 480,
+       "endMs": 620
+      },
+      {
+       "text": " Modal",
+       "startMs": 680,
+       "endMs": 1100
+      },
+      {
+       "text": " takes",
+       "startMs": 1280,
+       "endMs": 1500
+      },
+      {
+       "text": " one",
+       "startMs": 1740,
+       "endMs": 1920
+      },
+      {
+       "text": " sentence.",
+       "startMs": 2060,
+       "endMs": 2680
+      }
+     ]
+    },
+    {
+     "file": "06b_setup",
+     "at": 118,
+     "frames": 170,
+     "words": [
+      {
+       "text": "Claude",
+       "startMs": 80,
+       "endMs": 380
+      },
+      {
+       "text": " Code",
+       "startMs": 460,
+       "endMs": 820
+      },
+      {
+       "text": " checks",
+       "startMs": 1020,
+       "endMs": 1300
+      },
+      {
+       "text": " what's",
+       "startMs": 1340,
+       "endMs": 1540
+      },
+      {
+       "text": " installed,",
+       "startMs": 1580,
+       "endMs": 2220
+      },
+      {
+       "text": " logs",
+       "startMs": 2580,
+       "endMs": 2800
+      },
+      {
+       "text": " you",
+       "startMs": 2860,
+       "endMs": 2980
+      },
+      {
+       "text": " in,",
+       "startMs": 3060,
+       "endMs": 3220
+      },
+      {
+       "text": " and",
+       "startMs": 3600,
+       "endMs": 3680
+      },
+      {
+       "text": " deploys",
+       "startMs": 3740,
+       "endMs": 4260
+      },
+      {
+       "text": " the",
+       "startMs": 4300,
+       "endMs": 4400
+      },
+      {
+       "text": " toolkit's",
+       "startMs": 4440,
+       "endMs": 4980
+      },
+      {
+       "text": " apps.",
+       "startMs": 5100,
+       "endMs": 5460
+      }
+     ]
+    },
+    {
+     "file": "06c_setup",
+     "at": 302,
+     "frames": 94,
+     "words": [
+      {
+       "text": "You",
+       "startMs": 100,
+       "endMs": 160
+      },
+      {
+       "text": " add",
+       "startMs": 240,
+       "endMs": 420
+      },
+      {
+       "text": " a",
+       "startMs": 460,
+       "endMs": 540
+      },
+      {
+       "text": " card",
+       "startMs": 600,
+       "endMs": 880
+      },
+      {
+       "text": " in",
+       "startMs": 920,
+       "endMs": 1020
+      },
+      {
+       "text": " your",
+       "startMs": 1060,
+       "endMs": 1140
+      },
+      {
+       "text": " browser,",
+       "startMs": 1220,
+       "endMs": 1760
+      },
+      {
+       "text": " and",
+       "startMs": 2000,
+       "endMs": 2100
+      },
+      {
+       "text": " say",
+       "startMs": 2200,
+       "endMs": 2360
+      },
+      {
+       "text": " yes.",
+       "startMs": 2500,
+       "endMs": 2920
+      }
+     ]
+    },
+    {
+     "file": "06d_setup",
+     "at": 410,
+     "frames": 125,
+     "words": [
+      {
+       "text": "Then",
+       "startMs": 120,
+       "endMs": 380
+      },
+      {
+       "text": " the",
+       "startMs": 420,
+       "endMs": 500
+      },
+      {
+       "text": " models",
+       "startMs": 560,
+       "endMs": 840
+      },
+      {
+       "text": " are",
+       "startMs": 880,
+       "endMs": 980
+      },
+      {
+       "text": " ready,",
+       "startMs": 1020,
+       "endMs": 1340
+      },
+      {
+       "text": " and",
+       "startMs": 1640,
+       "endMs": 1740
+      },
+      {
+       "text": " cost",
+       "startMs": 1840,
+       "endMs": 2100
+      },
+      {
+       "text": " nothing",
+       "startMs": 2280,
+       "endMs": 2740
+      },
+      {
+       "text": " until",
+       "startMs": 2800,
+       "endMs": 3100
+      },
+      {
+       "text": " you",
+       "startMs": 3160,
+       "endMs": 3280
+      },
+      {
+       "text": " use",
+       "startMs": 3380,
+       "endMs": 3580
+      },
+      {
+       "text": " them.",
+       "startMs": 3620,
+       "endMs": 3820
+      }
+     ]
+    }
+   ]
+  },
+  "start": {
+   "frames": 279,
+   "phrases": [
+    {
+     "file": "07a_start",
+     "at": 18,
+     "frames": 118,
+     "words": [
+      {
+       "text": "To",
+       "startMs": 100,
+       "endMs": 180
+      },
+      {
+       "text": " begin,",
+       "startMs": 220,
+       "endMs": 640
+      },
+      {
+       "text": " type",
+       "startMs": 1000,
+       "endMs": 1300
+      },
+      {
+       "text": " slash",
+       "startMs": 1300,
+       "endMs": 1500
+      },
+      {
+       "text": " setup",
+       "startMs": 1500,
+       "endMs": 2600
+      },
+      {
+       "text": " in",
+       "startMs": 2760,
+       "endMs": 2880
+      },
+      {
+       "text": " Claude",
+       "startMs": 2980,
+       "endMs": 3280
+      },
+      {
+       "text": " Code.",
+       "startMs": 3380,
+       "endMs": 3720
+      }
+     ]
+    },
+    {
+     "file": "07b_start",
+     "at": 148,
+     "frames": 101,
+     "words": [
+      {
+       "text": "It",
+       "startMs": 120,
+       "endMs": 220
+      },
+      {
+       "text": " tells",
+       "startMs": 280,
+       "endMs": 540
+      },
+      {
+       "text": " you",
+       "startMs": 580,
+       "endMs": 680
+      },
+      {
+       "text": " what's",
+       "startMs": 720,
+       "endMs": 1060
+      },
+      {
+       "text": " free",
+       "startMs": 1100,
+       "endMs": 1540
+      },
+      {
+       "text": " before",
+       "startMs": 1580,
+       "endMs": 2040
+      },
+      {
+       "text": " it",
+       "startMs": 2080,
+       "endMs": 2180
+      },
+      {
+       "text": " spends",
+       "startMs": 2280,
+       "endMs": 2540
+      },
+      {
+       "text": " a",
+       "startMs": 2600,
+       "endMs": 2700
+      },
+      {
+       "text": " cent.",
+       "startMs": 2780,
+       "endMs": 3180
+      }
+     ]
+    }
+   ]
+  },
+  "close": {
+   "frames": 273,
+   "phrases": [
+    {
+     "file": "08a_close",
+     "at": 40,
+     "frames": 113,
+     "words": [
+      {
+       "text": "Next:",
+       "startMs": 100,
+       "endMs": 540
+      },
+      {
+       "text": " the",
+       "startMs": 960,
+       "endMs": 1100
+      },
+      {
+       "text": " whole",
+       "startMs": 1160,
+       "endMs": 1380
+      },
+      {
+       "text": " setup,",
+       "startMs": 1500,
+       "endMs": 2040
+      },
+      {
+       "text": " in",
+       "startMs": 2340,
+       "endMs": 2480
+      },
+      {
+       "text": " one",
+       "startMs": 2540,
+       "endMs": 2680
+      },
+      {
+       "text": " conversation.",
+       "startMs": 2800,
+       "endMs": 3580
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

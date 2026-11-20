@@ -44,7 +44,8 @@ written, QC can judge the result, and there's a cost cap. Offer a `job` when one
 |---|---|---|---|---|
 | A short explainer on a topic (Shorts, Reels, a 16:9 explainer) from a brief | `concept-explainer-short` via `video_job.py` | job | this file | `examples/sky-blue-short` |
 | A post or short video for someone who has a kit (a small business, a coach, a product team) | `video_job.py` with `"kit"`: their photos as `file` scenes, `text` scenes in their colours | job | `kits/README.md` | |
-| A walkthrough, feature demo or release-notes video of an app whose source you can read | synthetic UI: `templates/ds-release-notes`, components `Stage`, `Cursor`, `cues` (`Terminal` for a CLI or Claude Code session) | session | `.claude/skills/synthetic-ui-demo/SKILL.md` | `examples/ds-release-649`, `examples/ds-free-schedule-demo` |
+| A walkthrough, feature demo or release-notes video of an app whose source you can read | synthetic UI: `templates/ds-release-notes`, components `Stage`, `Cursor`, `cues` (`Terminal` for a shell, `TerminalSession` for a Claude Code, Codex or other agent CLI session) | session | `.claude/skills/synthetic-ui-demo/SKILL.md` | `examples/ds-release-649`, `examples/ds-free-schedule-demo` |
+| A how-to or tutorial about a tool or CLI, in chapters, with Shorts cut from it | `templates/howto` (mark-and-track opening and close, ledger, figure, bars, split and `TerminalSession` scenes on narration cues, `facts.json`, chapters from the timeline) | session | `templates/howto/README.md`, `.claude/skills/video-design/SKILL.md` | `templates/howto` itself (Getting started 1) |
 | The same, but you can't read the source | Playwright recording into `product-demo` | session | `.claude/skills/playwright-recording/` | |
 | A marketing or product launch video | `templates/product-demo` | session | the template's README | `examples/digital-samba-skill-demo` |
 | A sprint or monthly review | `templates/sprint-review`, `templates/sprint-review-v2` | session | the template's README | `examples/hello-world` |
@@ -52,6 +53,7 @@ written, QC can judge the result, and there's a cost cap. Offer a `job` when one
 | A fun or holiday video about the user's own group (a release night as an action-show intro, a Christmas ad) starring their photos, or a spoof of a shared topic with an invented cast | Remotion shots + `LivingPhoto`, cast from `image_edit` then `ltx2.py --input` (`ltx_extend.py` for long shots), in-jokes from the group's own chat and docs | session | `.claude/skills/parody-short/SKILL.md` | |
 | A 3D character acting out a gag as a film of its own, or a 3D reveal or character inside another video (the scene turns out to be on a laptop; a character reacts beside the content) | Blender shot spec: `tools/blender_render.py` (`check`, then `render`, or `render --clips --alpha` for `BlenderClip` in Remotion). The cast is described in JSON (build, face, hair, clothes, a seed) and can be kept in a kit's `cast/` folder. Needs Blender on the host: `blender_render.py doctor`. Experimental: a character fitted from a generated 3D model (`blender_render.py fit`), on its feet in a kitchen or a lecture hall, walking, sitting, carrying a mug. A lecture at a chalkboard (a presenter in front of a board, chalk on the narration's words) is `templates/lecture`: write the script and `lecture.json`, then `tools/lecture.py timeline`, `specs`, `check`, `render`; `"opening": {}` in lecture.json starts it on the whole hall in the dark, the presenter switching the lights on as they come in and the camera landing on the board (`"lights": "on"` for a hall lit from the start). For a character of a real person, `tools/reference_capture.py` takes the reference photos at a webcam (the person runs it in a browser; it is not a job step) | session | `.claude/skills/blender/`, `docs/blender.md` | `examples/blender-disk-panic`, `examples/blender-in-remotion`, `examples/blender-kitchen`, `templates/lecture` |
 | An app, a UI or a product shown as a 3D object: a screenshot or a render on a phone or a floating card, or a 3D model (glTF, OBJ, FBX, STL) on a studio stage, with the camera orbiting or pulling back from the screen | Blender shot spec with set kind `studio` and `product`, `orbit`, `reveal` shots; `render` is a film of its own, `--clips` a clip for any build, `--clips --alpha` a transparent clip for a Remotion scene | session | `.claude/skills/blender/`, `docs/blender.md` | `examples/blender-product-shot` |
+| An opening and closing ident from a logo: the SVG built in 3D, its parts moved on beats (a bar that snaps, a shape that grows, a key that is pressed), a sound on the hit, in 16:9 and 9:16; or a check that a logo holds up at small sizes | Blender shot spec with a `logo` prop and an `ident` shot (`render --clips --with-sound`, `--alpha` for a transparent clip); `check` compares the last frame with the flat SVG. `tools/mark_sheet.py --svg mark.svg --brand NAME` needs no Blender: the mark at 512 to 16 px, on each ground, in a circle, as a watermark, with warnings | session | `.claude/skills/blender/`, `.claude/skills/video-design/idents.md`, `docs/blender.md` | `examples/blender-ident` |
 | A sub-30 s ad spot or a brand stinger | moviepy, audio-anchored | session | `.claude/skills/moviepy/` | `examples/quick-spot`, `examples/ds-crt-stinger` |
 | A presenter talking to camera | `soulx.py` (below), placed in a template with `NarratorPiP` | tool, or session | Talking heads, below | |
 | Change an existing video: new voice, music, vertical cut, highlight reel, subtitles, watermark | `redub.py`, `addmusic.py`, `cutdown.py`, `highlights.py`, `captions.py --srt`, `dewatermark.py` | tool | QC, captions, cut-downs, below | |
@@ -59,7 +61,7 @@ written, QC can judge the result, and there's a cost cap. Offer a `job` when one
 **Blender is optional, so check before offering it.** `uv run tools/blender_render.py doctor --no-bench` exits 0
 when the host has it. If it does, suggest a 3D shot wherever one fits while planning any video, not only when the
 user says "3D": its clips are ordinary video files, so one can sit in a Remotion scene, in a moviepy build, or as a
-`file` scene in a `video_job.py` spec. If it doesn't, leave the two Blender routes out of what you offer.
+`file` scene in a `video_job.py` spec. If it doesn't, leave the Blender routes out of what you offer (`mark_sheet.py` still works).
 Say how long it takes before starting: a few seconds of the clay cast is minutes, but a film with a fitted
 character in a room is about 2.2 s a frame with a GPU, two to three hours a session, over a few sessions with the
 person's notes between them (`docs/blender.md`, "A film over several sessions").
@@ -311,7 +313,7 @@ Receipts also append to `MEDIA_SPEND_LOG` (default `logs/media-spend.log` in the
 per paid call, so a runtime that keeps a spend ledger reads single assets and jobs from one file. If your runtime
 sets a workspace, export `VIDEO_JOB_WORKSPACE` to it: the ledger goes to its `logs/`, relative spec paths resolve
 there, and `submit` books the whole estimate at once so a daily cap counts it before the work starts. Prices (`presets`, checked
-against receipts on 2026-11-01): LTX clip ~$0.10, Ideogram image $0.03 to $0.10, FLUX image under a cent,
+against Modal's bill on 2026-11-16): LTX clip ~$0.12, Ideogram image $0.03 to $0.10, FLUX image about a cent,
 Qwen3 voice ~$0.01 a scene, captions ~$0.0001 a second. A 7-scene, 45 s video with two clips and two cards
 lands around $0.40 to $0.55; the first clip after idle pays a Modal cold start on top. Under `--progress json`
 every call prints one `cost` event, failures included ($0).
@@ -324,6 +326,12 @@ Everything below is what `video_job.py` drives for you. Reach for it directly wh
 (an image, a clip, a song), a different template, or a talking head. Add `--progress json` to any cloud tool
 for JSON-lines progress on stderr, and `--json` for a machine-readable result on stdout.
 
+The full reference for each area is in the toolkit's `docs/`: `voiceover.md` (providers, a cloned voice that is
+flat or rushed), `timing.md` (word budgets, TTS drift), `qc.md` (what `qc.py` checks, loudness, sound effects on
+movement), `captions.md`, `image-tools.md` (cloud GPU, FLUX.2 or Ideogram 4, editing, watermarks),
+`music-and-sound.md` and `repurposing.md` (cut-downs, highlights, redub). Read the one for the tool you are about
+to use.
+
 ### Defaults that are current (2026-11-06)
 
 | Need | Use | Not |
@@ -335,9 +343,9 @@ for JSON-lines progress on stderr, and `--json` for a machine-readable result on
 | Talking head anyone will watch | `soulx.py` (SoulX-FlashHead Pro, Modal only) | `sadtalker.py` is drafts, or when Modal is down |
 | Music | `music_gen.py --variations 3`, then `pick_music.py` to rule takes out and `audition.py` to choose by watching | picking a take by ear alone |
 | Sound effects | `sfx.py` (ElevenLabs, generated) or `sfx_search.py` (real recordings from Freesound via Openverse, free, no key) | |
-| Before delivering any render | `qc.py --render out.mp4 --fix` | shipping unchecked |
+| Before delivering any render | `qc.py --render out.mp4 --fix` (on a vertical short it also measures the opening: first movement, first cut, first sound) | shipping unchecked |
 | Captions for a Remotion template | `captions.py public/audio/scenes` (`--srt`/`--vtt` for subtitle files too) | burning the recogniser's own transcript |
-| Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` (`--mode track` keeps a talking head in frame) | |
+| Social cut-downs of a 16:9 render | `cutdown.py --input out.mp4 --platform shorts` (`--mode track` keeps a talking head in frame; `--segment 4-11@0.6,0.4` moves a crop across the frame by hand) | |
 | A highlight reel from a long recording | `highlights.py` (picks final takes from a word-timed transcript), then `cutdown.py --segment` | cutting by eye |
 | Upload to YouTube | `youtube_upload.py` (OAuth, private by default; `--check` first) | |
 | Subtitles and chapters for the upload | `publish_kit.py --project DIR` (one transcription of the render, ~$0.01 a 90 s video) | adding scene caption offsets by hand |

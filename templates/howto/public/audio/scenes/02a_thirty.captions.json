@@ -1,0 +1,107 @@
+[
+ {
+  "text": "The",
+  "startMs": 120,
+  "endMs": 200,
+  "timestampMs": 160,
+  "confidence": null
+ },
+ {
+  "text": " AI",
+  "startMs": 340,
+  "endMs": 640,
+  "timestampMs": 490,
+  "confidence": null
+ },
+ {
+  "text": " models",
+  "startMs": 700,
+  "endMs": 1120,
+  "timestampMs": 910,
+  "confidence": null
+ },
+ {
+  "text": " run",
+  "startMs": 1220,
+  "endMs": 1360,
+  "timestampMs": 1290,
+  "confidence": null
+ },
+ {
+  "text": " on",
+  "startMs": 1400,
+  "endMs": 1480,
+  "timestampMs": 1440,
+  "confidence": null
+ },
+ {
+  "text": " cloud",
+  "startMs": 1620,
+  "endMs": 1960,
+  "timestampMs": 1790,
+  "confidence": null
+ },
+ {
+  "text": " GPUs,",
+  "startMs": 2020,
+  "endMs": 2900,
+  "timestampMs": 2460,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 3240,
+  "endMs": 3460,
+  "timestampMs": 3350,
+  "confidence": null
+ },
+ {
+  "text": " that's",
+  "startMs": 3520,
+  "endMs": 3820,
+  "timestampMs": 3670,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 3860,
+  "endMs": 3940,
+  "timestampMs": 3900,
+  "confidence": null
+ },
+ {
+  "text": " part",
+  "startMs": 4000,
+  "endMs": 4220,
+  "timestampMs": 4110,
+  "confidence": null
+ },
+ {
+  "text": " you",
+  "startMs": 4260,
+  "endMs": 4340,
+  "timestampMs": 4300,
+  "confidence": null
+ },
+ {
+  "text": " may",
+  "startMs": 4380,
+  "endMs": 4540,
+  "timestampMs": 4460,
+  "confidence": null
+ },
+ {
+  "text": " worry",
+  "startMs": 4600,
+  "endMs": 4820,
+  "timestampMs": 4710,
+  "confidence": null
+ },
+ {
+  "text": " about.",
+  "startMs": 4920,
+  "endMs": 5280,
+  "timestampMs": 5100,
+  "confidence": null
+ }
+]

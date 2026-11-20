@@ -8,7 +8,7 @@ Modal is the recommended cloud GPU provider for the toolkit's AI tools. It offer
 
 1. Go to [modal.com](https://modal.com/) and sign up
 2. Choose the **Starter plan** — $30/month free compute, just requires a payment method
-3. Typical toolkit usage is $1-2/month, well within the free allowance
+3. What you spend depends on what you make: see [what a call costs](#cold-starts) below, measured against the bill
 4. All apps scale to zero — no charges when idle
 
 ## Install & Authenticate
@@ -326,6 +326,16 @@ First request after idle triggers a cold start while Modal loads the model:
 | `dewatermark` | ~60-70s | varies by video length |
 
 After 60 seconds of no requests, containers scale back to zero. No charges while idle.
+
+That last minute is billed, and so is a cold start, so what a clip or an image costs depends on how many you make
+in a run. A tool's `Est. cost` line counts the seconds of its own call and nothing else. Measured on 2026-11-16
+against Modal's bill for the hour: three LTX-2.3 clips came to $0.111 each where the tool lines said $0.083, four
+FLUX.2 images to about a cent each where the lines said under half a cent after the first, and ten Qwen3-TTS lines
+in one call to $0.006 each. To quote a price, make a batch and read the bill:
+
+```bash
+uv run --extra modal modal billing report --for today -r h --json    # cost per app, per hour
+```
 
 ## Monitoring & Billing
 

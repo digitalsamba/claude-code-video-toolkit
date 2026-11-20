@@ -137,7 +137,7 @@ Prefer **`/publish`** for finished projects — it derives the title/description
 | `--title` | Required, ≤100 chars |
 | `--description` / `--description-file` | Inline text, or a file (`-` = stdin); ≤5000 chars |
 | `--tags` | Comma-separated; combined length ≤500 chars (overflow is dropped with a warning) |
-| `--category` | Numeric ID string. `22` = People & Blogs, `28` = Science & Tech |
+| `--category` | Numeric ID string. `28` = Science & Tech, `27` = Education, `24` = Entertainment. Left out, it is `22` = People & Blogs, with a note |
 | `--privacy` | `private` (default) / `unlisted` / `public` |
 | `--publish-at` | ISO8601 UTC, e.g. `2026-06-10T09:00:00Z`. Forces `private` at insert, flips public at the time. |
 | `--thumbnail` | Custom thumbnail (≤2MB, 1280×720). Requires a phone-verified channel. |
@@ -150,6 +150,23 @@ Prefer **`/publish`** for finished projects — it derives the title/description
 | `--check` | Read-only setup check: the channel the login belongs to, its scopes, and whether the Data and Analytics APIs are on. Prints the fix for each problem, including the Cloud Console page that switches an API on. ~1 quota unit |
 | `--dry-run` | Builds + prints the request body and checks auth, but uploads nothing |
 | `--json-out` | Emits one machine-readable JSON line on stdout |
+
+### Notes on the metadata
+
+Before it uploads (and in a dry run), the tool reads the title, description, tags and category and prints a note
+for each thing a viewer or YouTube would miss. A note is advice: it never stops the upload. With `--json-out`
+they are in `notes`.
+
+| Note | Why |
+|------|-----|
+| No hashtags in the description | YouTube shows the first three above the title and links each to a topic page |
+| No link in the description | Nothing sends the viewer on to the repository, the site or the full video |
+| None of the tags appears in the title | The title counts for more than the tags in search |
+| No `--category` | The upload falls back to People & Blogs |
+| The file is vertical or square and 3 minutes or less | It becomes a Short. If it is a cut of a longer video, set that as its **Related video** by hand (Studio, Content, Shorts, Details): the API can't, and the field needs the channel's advanced features on |
+
+The notes read the request, not the audience. Whether a video reached anyone is in `youtube_stats.py`
+(see the `youtube-stats` skill): a Short is placed by the feed on how people watch it, not on its tags.
 
 ### JSON output (`--json-out`)
 
@@ -206,6 +223,22 @@ Compare `requestedPrivacy` vs `privacyStatus` to detect the unverified-app force
 
 ---
 
+### Scheduling a video that is already uploaded
+
+`--publish-at` schedules at upload time. For a private video that is already up (uploaded for someone to watch
+first), set the time with `videos.update` on `part=status`, keeping `privacyStatus: private`:
+
+```python
+yt.videos().update(part="status", body={"id": VIDEO_ID, "status": {
+    "privacyStatus": "private", "publishAt": "2026-11-24T15:00:00Z",
+    "embeddable": True, "publicStatsViewable": True, "license": "youtube", "selfDeclaredMadeForKids": False,
+}}).execute()
+```
+
+Two things to know. Send every status field you want kept: an update that leaves out `embeddable` or
+`publicStatsViewable` sets them to false. And a `videos.list` straight after the update can still return the old
+status, so read the update's own response, or wait about 20 seconds before reading back.
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -219,3 +252,54 @@ Compare `requestedPrivacy` vs `privacyStatus` to detect the unverified-app force
 | `errorType: "quota"` | Daily quota hit — wait or request more quota |
 | Video uploaded but stays `private` | Unverified-app lock — verify your OAuth app, or publish manually |
 | `access_denied` in the browser | The Google account isn't a Test user on the consent screen — add it |
+
+## Command reference and stats
+
+Upload a finished render to YouTube via the Data API v3. Use the `/publish` command for the
+guided workflow (it auto-fills title/description/tags from `project.json`), or call the tool directly.
+
+```bash
+# One-time login (opens a browser, caches a refresh token under _internal/.youtube/)
+uv run tools/youtube_upload.py --auth
+
+# Upload privately (the safe default)
+uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
+    --description-file DESCRIPTION.md --tags "ai,agents,explainer" --json-out
+
+# Schedule a public go-live
+uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" \
+    --publish-at 2026-06-10T09:00:00Z --thumbnail out/thumb.png --json-out
+
+# Validate everything without uploading (also reports auth readiness)
+uv run tools/youtube_upload.py --video out/video.mp4 --title "Test" --dry-run --json-out
+
+# Setup check: channel, scopes, Data/Analytics API on or off, with the fix for each (read-only)
+uv run tools/youtube_upload.py --check --account personal
+
+# Subtitles and chapters from the render: one SRT for --captions, chapter lines for the description
+uv run tools/publish_kit.py --project projects/my-video --video out/video.mp4
+```
+
+Before uploading, and in a dry run, the tool prints notes on the metadata (`notes` in the JSON): no hashtags, no
+link, no tag in the title, no `--category`, and a Short that may need its related video set by hand in Studio.
+They are advice and never stop an upload.
+
+The publish kit transcribes the render once (Scribe, about $0.01 for 90 s, or `--engine whisper`) and aligns it to
+the scene scripts, so the subtitles are spelled as written and timed to the render, with no scene offsets to add
+up. Chapters sit at each scene's cut, titled from `project.json` `scenes[].title` or the file names, under
+YouTube's rules (first at 0:00, three or more, 10 s each). Re-runs reuse the saved transcript.
+
+**Setup is OAuth, not an API key** (uploads act on behalf of a channel). See
+`docs/youtube-upload.md` for the one-time Google Cloud Console walkthrough and
+`YOUTUBE_CLIENT_SECRETS_FILE` in `.env`. Key realities:
+- Default quota is 10,000 units/day; `videos.insert` costs ~1,600 units → **~6 uploads/day**.
+- **Unaudited API projects *may* have public uploads force-locked to private**: but this
+  mainly affects uploads to *other* people's channels. First-party uploads (your own project +
+  channel + account) generally publish public/scheduled fine without the audit. The tool reports
+  the actual returned privacy. "Testing"-mode refresh tokens expire after ~7 days (re-run `--auth`).
+- Cached tokens live in `_internal/.youtube/` (gitignored, they grant channel-upload access).
+
+**How it did:** `uv run --extra youtube tools/youtube_stats.py --account personal [--github]` reads views, likes and
+comments with the same token, adds watch time, retention and traffic sources once the token has the Analytics scope
+(`--auth`), and snapshots each run to `_internal/.youtube/stats/` so the next one shows the change. Reading the
+numbers, and what has worked on Shorts, is in `.claude/skills/youtube-stats/`.

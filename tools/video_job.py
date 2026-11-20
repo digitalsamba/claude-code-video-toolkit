@@ -76,7 +76,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = ROOT / "templates" / "concept-explainer-short"
-PRICES_VERSION = "2026-11-01"
+PRICES_VERSION = "2026-11-16"
 
 # ---------------------------------------------------------------------------
 # Unit prices (USD). The one table `estimate` reads. Sources: Ideogram list price
@@ -88,12 +88,16 @@ PRICES_VERSION = "2026-11-01"
 # a median $0.0825 (26 clips, $0.077-0.169 with cold starts), so 0.10, not 0.20; FLUX
 # backgrounds $0.0058 (11), so 0.0075, not 0.01. Ideogram DEFAULT ($0.06) and Scribe
 # (~$0.004 a job) matched the table.
+# 2026-11-16: checked against Modal's bill for the hour, not the receipts. A receipt is the seconds of the call
+# times the GPU rate, and Modal also bills the idle minute before an app scales to zero: three LTX clips billed
+# $0.111 each (receipts $0.083), FLUX images $0.0095 to $0.012 in bursts of four, ten Qwen3 lines $0.006 each.
+# So 0.12 a clip and 0.012 an image; a job's actual_usd, summed from receipts, still reads a little low.
 # ---------------------------------------------------------------------------
 PRICES = {
     "version": PRICES_VERSION,
     "ideogram_image": {"TURBO": 0.03, "DEFAULT": 0.06, "QUALITY": 0.10},
-    "ltx_clip": 0.10,
-    "flux_image": 0.0075,
+    "ltx_clip": 0.12,
+    "flux_image": 0.012,
     "voiceover": {"qwen3": 0.01, "elevenlabs_per_1k_chars": 0.20, "60db": 0.0},
     "captions_per_audio_second": {"scribe": 0.40 / 3600, "whisper": 0.0},
     "music_track": {"acemusic": 0.0, "modal": 0.03, "runpod": 0.03},

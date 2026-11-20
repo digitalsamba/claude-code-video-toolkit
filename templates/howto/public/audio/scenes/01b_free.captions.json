@@ -1,0 +1,51 @@
+[
+ {
+  "text": "Remotion",
+  "startMs": 120,
+  "endMs": 720,
+  "timestampMs": 420,
+  "confidence": null
+ },
+ {
+  "text": " renders",
+  "startMs": 900,
+  "endMs": 1300,
+  "timestampMs": 1100,
+  "confidence": null
+ },
+ {
+  "text": " it",
+  "startMs": 1380,
+  "endMs": 1520,
+  "timestampMs": 1450,
+  "confidence": null
+ },
+ {
+  "text": " on",
+  "startMs": 1640,
+  "endMs": 1760,
+  "timestampMs": 1700,
+  "confidence": null
+ },
+ {
+  "text": " your",
+  "startMs": 1800,
+  "endMs": 1900,
+  "timestampMs": 1850,
+  "confidence": null
+ },
+ {
+  "text": " own",
+  "startMs": 2040,
+  "endMs": 2220,
+  "timestampMs": 2130,
+  "confidence": null
+ },
+ {
+  "text": " machine.",
+  "startMs": 2300,
+  "endMs": 2800,
+  "timestampMs": 2550,
+  "confidence": null
+ }
+]

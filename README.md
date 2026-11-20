@@ -319,7 +319,8 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
 | **Checks** | qc, sync_check, contact_sheet | Before showing a render: freezes and motion that stops dead, loudness, layout, sound effects on their movement |
 | **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
-| **3D (optional)** | blender_render | Character acting, 3D reveals and product shots from a shot spec; does nothing unless Blender is installed |
+| **3D (optional)** | blender_render | Character acting, 3D reveals, product shots and logo idents from a shot spec; does nothing unless Blender is installed |
+| **Brand** | mark_sheet | A logo at every size, on every ground, in a circle and as a watermark, with warnings, before it is used |
 
 ### Cloud GPU (Modal + RunPod)
 
@@ -377,6 +378,13 @@ claude-code-video-toolkit/
 - [Project System](lib/project/README.md) — Multi-session lifecycle, schema, reconciliation
 - [Optional Components](docs/optional-components.md) — Local GPU tools setup
 - [Blender](docs/blender.md): 3D shot specs (optional): setup, what your machine needs, timings, what it has been run on, and how a character film is made over several sessions
+- [Voiceover](docs/voiceover.md): ElevenLabs, Qwen3-TTS and 60db, and fixing a cloned voice that is flat or rushed
+- [Timing](docs/timing.md): word budgets, scene durations, TTS drift and audio-anchored timelines
+- [QC](docs/qc.md): what `qc.py` checks before and after a render, loudness, and sound effects placed on movement
+- [Captions](docs/captions.md): burned word captions, SRT and VTT
+- [Image Tools](docs/image-tools.md): cloud GPU providers, FLUX.2 or Ideogram 4, image editing, upscaling, watermark removal
+- [Music and Sound](docs/music-and-sound.md): ACE-Step music, choosing a take, ducking under speech, stock sound effects
+- [Reusing a Video](docs/repurposing.md): cut-downs to 9:16 and 1:1, transcript highlights, redub, NotebookLM branding
 - [Agent Video Jobs](docs/agent-video-jobs.md) — Brief in, MP4 out for any agent: `video_job.py` submit/status/result, the MCP server, and the `skills/video-toolkit/` skill for OpenClaw, Codex, Hermes and friends
 - [Toolkit Development](_internal/ROADMAP.md) — Roadmap, backlog, changelog
 

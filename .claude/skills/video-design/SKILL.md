@@ -99,6 +99,13 @@ choice, not a default; record one under "Rules turned off" in `design.md`.
 defaults that look generated. Each change on screen lands on the word that names it (`cue()`), so a
 held scene always has a next action, which is what `qc.py --render`'s still-stretch check looks for.
 
+## Marks and idents
+
+A brand's mark and its ident are designed before any scene, and judged small: at 16 px, in a circle, on every
+ground, and as the still an ident ends on. `uv run tools/mark_sheet.py --svg mark.svg --brand <name>` draws all of
+that on one sheet and warns about what it can measure. An ident is one mark, one move and one sound, short, with a
+close that is the open's sibling. The bar and the method for both are in `idents.md`.
+
 ## Workflow
 
 1. **Acts.** Write the video's acts (two to four) and which scenes each holds. This is the most
@@ -120,6 +127,7 @@ held scene always has a next action, which is what `qc.py --render`'s still-stre
 | `sources.md` | Choosing a design source, plugging in another, or listing one for others. |
 | `critique.md` | Reviewing a render from its contact sheet: the passes, the score, the caps. |
 | `palettes.md` | Act palettes that already work on video, mapped to roles, with their sources. |
+| `idents.md` | Making or judging a logo ("Marks": the bar, five directions, `tools/mark_sheet.py`) or an opening and closing ident ("Idents": one mark, one move, one sound; the method). |
 
 Parts of these rules (colour fields as chapters, lightness between neighbours, one accent, two-line
 headlines, five sizes, the critique's score and caps) are adapted for video from

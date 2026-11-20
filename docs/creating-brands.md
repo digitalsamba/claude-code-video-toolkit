@@ -17,7 +17,13 @@ brands/
 └── my-company/
     ├── brand.json
     ├── voice.json
-    └── assets/
+    ├── assets/
+    │   ├── mark.svg           # optional: the flat mark (see "Mark and ident")
+    │   ├── mark-on-dark.svg
+    │   └── mark-white.svg
+    └── ident/                 # optional: the open and close a template plays
+        ├── ident.json
+        └── *.mp4
 ```
 
 ## Creating a New Brand
@@ -59,6 +65,77 @@ brands/
 
 4. **Add brand assets**
    Place logo, background videos, or watermarks in `assets/`.
+
+5. **Optional: a mark and an ident**
+   See "Mark and ident" below. A brand with neither still works everywhere.
+
+## Mark and ident
+
+Both are optional. A template that reads them falls back to its own 2D opening and close when they are missing,
+so a brand needs neither to render.
+
+### The mark: `assets/mark.svg`
+
+The brand's logo as a flat SVG of filled shapes, each with an `id`. Two more files give its colours on other
+grounds; leave them out and the template uses its own ink there.
+
+| File | For |
+|------|-----|
+| `mark.svg` | light grounds |
+| `mark-on-dark.svg` | dark grounds |
+| `mark-white.svg` | one colour, on a coloured ground |
+
+Keep the three the same shapes in the same order: only the fills change. Check a mark before using it:
+
+```bash
+uv run tools/mark_sheet.py --svg brands/my-company/assets/mark.svg --on-dark brands/my-company/assets/mark-on-dark.svg \
+    --mono brands/my-company/assets/mark-white.svg --brand my-company --output mark-sheet.png
+```
+
+It draws the mark at 512 to 16 px, on the brand's grounds, in a circle and as a watermark, and warns about low
+contrast, a part the circle cuts and a part lost at 16 px.
+
+### The ident: `ident/`
+
+An ident is the brand's mark in motion with one sound: an **open** of about two seconds that ends on the mark at
+rest, and a **close** that leaves it. The folder holds the clips and `ident.json`, which says what is there:
+
+```json
+{
+  "default": "clap",
+  "idents": {
+    "clap": {
+      "open":  { "seconds": 2.0, "frames": 60, "fps": 30,
+                 "files": { "16x9": "clap-open-16x9.mp4", "9x16": "clap-open-9x16.mp4" },
+                 "sound": "clap-open.wav", "hit_frame": 20, "title_frame": 51 },
+      "close": { "seconds": 3.5, "frames": 105, "fps": 30,
+                 "files": { "16x9": "clap-close-16x9.mp4", "9x16": "clap-close-9x16.mp4" },
+                 "sound": "clap-close.wav" }
+    }
+  }
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `default` | The ident a template plays when it is not told which. A brand can keep several (a short one and a long one) |
+| `files` | One clip per shape, with the sound in the file. A `-alpha` key is a transparent clip to lay over a scene |
+| `sound` | The same sound alone, for a build that mixes its own audio |
+| `frames`, `fps` | The clip's length. Templates here are 30 fps |
+| `hit_frame` | The frame of the hit, where the sound lands |
+| `title_frame` | The first frame from which the picture is at rest: a title may come in from here |
+| `alpha_ground` | `dark` or `light`: the ground a transparent clip was lit for |
+
+The clips are small, so they are kept in git with the brand. How they are made is up to you: any tool that writes
+an MP4 will do. `examples/blender-ident` builds both from the mark's SVG in Blender (optional), and its `build.py`
+writes this folder and measures `hit_frame` and `title_frame` from the rendered clips. `brands/video-toolkit/ident/`
+is a filled slot to look at.
+
+### Which templates read it
+
+`templates/howto` does. `uv run templates/howto/scripts/ident.py` copies the brand's clips into the template and
+writes `src/ident.json`; an episode then opens and closes with the ident, a Short ends on it, and the mark heads
+the chapter track. `--none` goes back to the template's own 2D mark.
 
 ## Using a Brand in a Project
 

@@ -1,0 +1,58 @@
+[
+ {
+  "text": "About",
+  "startMs": 140,
+  "endMs": 380,
+  "timestampMs": 260,
+  "confidence": null
+ },
+ {
+  "text": " two",
+  "startMs": 380,
+  "endMs": 770,
+  "timestampMs": 575,
+  "confidence": null
+ },
+ {
+  "text": " hundred",
+  "startMs": 770,
+  "endMs": 1160,
+  "timestampMs": 965,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 1160,
+  "endMs": 1550,
+  "timestampMs": 1355,
+  "confidence": null
+ },
+ {
+  "text": " fifty",
+  "startMs": 1550,
+  "endMs": 1940,
+  "timestampMs": 1745,
+  "confidence": null
+ },
+ {
+  "text": " AI",
+  "startMs": 1940,
+  "endMs": 2240,
+  "timestampMs": 2090,
+  "confidence": null
+ },
+ {
+  "text": " video",
+  "startMs": 2360,
+  "endMs": 2660,
+  "timestampMs": 2510,
+  "confidence": null
+ },
+ {
+  "text": " clips.",
+  "startMs": 2760,
+  "endMs": 3180,
+  "timestampMs": 2970,
+  "confidence": null
+ }
+]

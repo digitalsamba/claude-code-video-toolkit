@@ -70,3 +70,31 @@ Copyright (c) 2026 Leonxlnx, MIT License: the colour-fields-as-chapters idea, li
 neighbouring fields, the one-accent rule, the two-line headline and five-size limits, and the critique's
 weighted score and caps. The palettes in `palettes.md` marked "taste" are from its library. The rest is
 the toolkit's own, from making these videos.
+
+## How the toolkit splits design
+
+How a video looks is split in two. A **design source** gives the direction (palette, type, an idea): any design
+skill the user trusts (plug in your own), or ours. **`video-design`** (`.claude/skills/video-design/`) is the toolkit's
+own video layer: it turns that direction into scenes and critiques the render. The project records its source in
+`project.json` (`design.source`) and the decisions in `design.md` (format in `video-design/handoff.md`), so a
+different source changes the file, not the code. Known sources are in the registry's `designSources`; taste-skill
+is the recommended external one today, Anthropic's frontend-design is another, and "ours" (video-design's act
+palettes with the brand) is the default that needs nothing installed. Plug in your own design skill, or use ours.
+
+**Turning a scene in place:** `PageTurns` (`lib/components/PageTurns.tsx`) turns one scene into new pages, each on
+its narration cue: a hard edge sweeps across with the next page behind it, and nothing fades. Use it when the same
+thing is shown again in a new way and the change is the point (one chart in three design sources, a screen before
+and after a fix). Between scenes, use `wipe()` from `@remotion/transitions`: a hard-edged cut is the default for an
+act change in `video-design`, and the effect transitions below are for when the brand calls for them. Sources are installed by the user and never copied into the toolkit.
+
+**Marks and idents:** judge a logo small before building on it. `uv run tools/mark_sheet.py --svg mark.svg --brand
+<name>` draws it at 512 to 16 px, on the brand's grounds, in a circle and as a watermark, and warns about contrast
+under 3:1, a part the circle cuts and a part lost at 16 px. An ident is one mark, one move and one sound; the bar
+and the method for both are in `.claude/skills/video-design/idents.md`. A 3D ident is a Blender `logo` prop
+(optional); the toolkit's own mark is in `brands/video-toolkit/assets/` and its idents in `brands/video-toolkit/ident/`.
+
+## Usage
+- **During scene review** (`/scene-review`): choose "Refine"
+- **Focused sessions** (`/design`): `/design title`, `/design cta`
+- **Whole video:** `uv run tools/contact_sheet.py out/video.mp4` tiles one settled frame per scene for the
+  critique in `video-design/critique.md`

@@ -1,0 +1,33 @@
+{
+  "_about": "Every number this episode shows or says, with its source and the day it was checked. Re-check each before a render that will be published; the narration in public/audio/phrases says these numbers too, so a change here means a re-voiced line.",
+  "toolkitVersion": {
+    "value": "v0.29.1",
+    "source": "git tag, latest release",
+    "checked": "2026-11-15"
+  },
+  "modalStarterCredit": {
+    "value": 30,
+    "note": "modal.com/pricing: Starter plan, $0 + compute, $30 a month free credits; a payment method must be on file (modal.com/docs/guide/billing)",
+    "source": "https://modal.com/pricing and https://modal.com/docs/guide/billing",
+    "checked": "15 Nov 2026"
+  },
+  "prices": {
+    "ltxClip": 0.12,
+    "voiceLine": 0.01,
+    "fluxImage": 0.012,
+    "ideogram": "about 3 to 10 cents an image",
+    "note": "What Modal billed for a measured batch, idle time included: 3 LTX-2.3 clips (1024x576, 121 frames) $0.334, so $0.111 each; 10 Qwen3-TTS lines in one call $0.059, so $0.006 each; FLUX.2 images in bursts of four $0.038 and $0.047, so $0.0095 to $0.012 each. The figures here round up. A clip, line or image made on its own costs more: every call is followed by a minute of idle GPU that is billed.",
+    "source": "uv run --extra modal modal billing report --for today -r h --json, the hour of the batch, per app. Not tools/video_job.py PRICES or a tool's 'Est. cost' line: those count the seconds of the call only, and came out about a quarter low for clips and a third low for images",
+    "checked": "16 Nov 2026",
+    "elevenLabs": "$5 a month",
+    "elevenLabsNote": "The toolkit author's own plan: ElevenLabs Starter, $5 a month, which voiced this episode (Conal, 2026-11-16)"
+  },
+  "bill": {
+    "months": { "Aug": 10.87, "Sep": 25.96, "Oct": 14.43, "Nov": 21.96 },
+    "note": "The toolkit author's Modal workspace, every app including research spikes; modal billing report",
+    "source": "uv run --extra modal modal billing report --start <month> --end <month> --resolution d --json, summed",
+    "checked": "15 Nov 2026",
+    "projectsInNovember": 15,
+    "projectsSource": "projects/ with an out/*.mp4 rendered 2026-11-01 to 2026-11-15, prototypes excluded"
+  }
+}

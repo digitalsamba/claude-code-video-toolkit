@@ -5,7 +5,10 @@ more props a camera can orbit:
 
   * `phone`: a phone standing on the stage with a picture or a video on its screen (a Remotion render),
   * `card`:  a thin floating panel showing a picture or a video: a UI screenshot or a scene with depth,
-  * `model`: any glTF/GLB, OBJ, FBX or STL file, scaled to `size` metres and set down on the floor.
+  * `model`: any glTF/GLB, OBJ, FBX or STL file, scaled to `size` metres and set down on the floor,
+  * `logo`:  an SVG, each filled shape its own extruded part that beats can move (logo.py).
+
+`"stage": "dark"` swaps the sweep for a dark, glossy floor with no wall: the stage an ident plays on.
 
     "set": {"kind": "studio", "palette": {"backdrop": "#EEF1F6"},
             "props": [{"id": "app", "kind": "phone", "screen": {"video": "../out/app.mp4"}},
@@ -24,15 +27,19 @@ import bmesh
 import bpy
 from mathutils import Vector
 
-from kit import R, area_light, box, empty, mat, media, mesh_obj, quad
+from kit import R, area_light, box, color, empty, mat, media, mesh_obj, quad
 
 D = bpy.data
 IMPORTERS = {".glb": "gltf", ".gltf": "gltf", ".obj": "obj", ".fbx": "fbx", ".stl": "stl"}
-PROP_KINDS = ("phone", "card", "model")
+WORLD = 0.55  # the world is lit by the backdrop's colour at this strength (compile.py sets it)
+PROP_KINDS = ("phone", "card", "model", "logo")
+STAGES = ("sweep", "dark")
 
 
 class Prop:
     """Something on the stage: a root empty, the meshes under it, and (for a phone or a card) a screen."""
+
+    kind = "prop"
 
     def __init__(self, pid, root, screen=None):
         self.id, self.root, self.screen = pid, root, screen  # screen: (quad object, width, height)
@@ -108,6 +115,11 @@ class Studio:
     def __init__(self, cfg: dict, base: Path, fps: int, start_frame, strength: float, backdrop: bool = True):
         p = {"backdrop": "#EEF1F6", "accent": "#3771E0", "device": "#1B1D22", **(cfg.get("palette") or {})}
         self.palette, self.events, self.props, self.fps = p, [], {}, fps
+        self.stage = cfg.get("stage", "sweep")
+        # how matt the dark stage's floor is under the prop: 0.22 holds a reflection of something standing on it;
+        # nearer 0.6 for a prop seen from above, where a glossy floor shows the lights themselves
+        self.floor_rough = float((cfg.get("floor") or {}).get("rough", 0.22))
+        self.light_share = {"key": 1.0, "fill": 1.0, "rim": 1.0, **(cfg.get("lights") or {})}
         self.m = {"backdrop": mat("backdrop", p["backdrop"], 0.9), "device": mat("device", p["device"], 0.35, 0.6),
                   "glass": mat("glass", (0.01, 0.01, 0.012), 0.08)}
         x = 0.0
@@ -128,12 +140,15 @@ class Studio:
         hi = Vector([max(q[i] for q in pts) for i in range(3)])
         self.centre, self.radius = (lo + hi) / 2, max((hi - lo).length / 2, 0.01)
         if backdrop:
-            self._backdrop()
+            self._floor() if self.stage == "dark" else self._backdrop()
         self._lights()
 
     # ------------------------------------------------------------ props
     def _prop(self, spec, base, start_frame, strength) -> Prop:
         pid, kind = spec["id"], spec["kind"]
+        if kind == "logo":
+            from logo import build_logo
+            return build_logo(Prop, spec, base, strength, self.palette["accent"])
         root = empty(f"prop_{pid}")
         if kind == "model":
             path = Path(spec["file"])
@@ -209,14 +224,52 @@ class Studio:
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
         mesh_obj("backdrop", bm, self.m["backdrop"])
 
+    def _floor(self):
+        """The dark stage: one glossy floor in the backdrop's colour and nothing behind it, so a prop stands on
+        its own reflection and the world's colour is the wall."""
+        r = self.radius
+        # glossy under the prop and matt far off: a far floor seen edge-on picks up stray reflections of the prop
+        # (screen-space tracing), and a matt floor is not traced
+        nt = self.m["backdrop"].node_tree
+        coord, length, ramp = nt.nodes.new("ShaderNodeTexCoord"), nt.nodes.new("ShaderNodeVectorMath"), nt.nodes.new("ShaderNodeMapRange")
+        length.operation = "LENGTH"
+        ramp.inputs["From Min"].default_value, ramp.inputs["From Max"].default_value = 5 * r, 14 * r
+        ramp.inputs["To Min"].default_value, ramp.inputs["To Max"].default_value = self.floor_rough, 0.9
+        nt.links.new(coord.outputs["Object"], length.inputs[0])
+        nt.links.new(length.outputs["Value"], ramp.inputs["Value"])
+        nt.links.new(ramp.outputs["Result"], nt.nodes["Principled BSDF"].inputs["Roughness"])
+        # and far off it goes into the world's own colour, so there is no line where the floor ends
+        fade = nt.nodes.new("ShaderNodeMapRange")
+        fade.inputs["From Min"].default_value, fade.inputs["From Max"].default_value = 5 * r, 14 * r
+        nt.links.new(length.outputs["Value"], fade.inputs["Value"])
+        nt.links.new(fade.outputs["Result"], nt.nodes["Principled BSDF"].inputs["Emission Strength"])
+        nt.nodes["Principled BSDF"].inputs["Emission Color"].default_value = (*[c * WORLD for c in color(self.palette["backdrop"])], 1)
+        bm = bmesh.new()
+        bm.faces.new([bm.verts.new((sx * r * 60, sy * r * 60, 0.0)) for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1))])
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        floor = mesh_obj("floor", bm, self.m["backdrop"], smooth=False)
+        floor.location = (self.centre.x, self.centre.y, 0.0)
+        opts = getattr(bpy.context.scene.eevee, "ray_tracing_options", None)
+        if opts is not None:  # how thick the tracer takes things to be: its default is for a room, not a 30 cm logo
+            opts.screen_trace_thickness = max(0.002, r * 0.03)
+            opts.screen_trace_quality = 0.5
+
     def _lights(self):
         r = self.radius
         aim = empty("aim", None, self.centre)
         # an area light's reach falls with distance squared, so the energy grows with the stage's size squared
         k = (r / 0.1) ** 2
-        area_light("key", self.centre + Vector((-4 * r, -6 * r, 6 * r)), 6 * k, 5 * r, (1, 0.96, 0.9), aim)
-        area_light("fill", self.centre + Vector((6 * r, -5 * r, 3 * r)), 2.5 * k, 7 * r, (0.85, 0.9, 1.0), aim)
-        area_light("rim", self.centre + Vector((2 * r, 6 * r, 5 * r)), 5 * k, 3 * r, (1, 1, 1), aim)
+        dark = self.stage == "dark"  # white lights on a dark stage: a tint would shift a brand colour
+        # (the dark stage's key is set so a satin part's face reads as its own colour: the mark test measures it)
+        made = {"key": (self.centre + Vector((-4 * r, -6 * r, 6 * r)), (10 if dark else 6) * k, 5 * r,
+                        (1, 1, 1) if dark else (1, 0.96, 0.9)),
+                "fill": (self.centre + Vector((6 * r, -5 * r, 3 * r)), (0.8 if dark else 2.5) * k, 7 * r,
+                         (1, 1, 1) if dark else (0.85, 0.9, 1.0)),
+                "rim": (self.centre + Vector((2 * r, 6 * r, 5 * r)), (0.0 if dark else 5) * k, 3 * r, (1, 1, 1))}
+        self.lights = {}  # name -> (the light, its energy as built): a `light` beat scales it
+        for name, (at, energy, size, tint) in made.items():
+            energy *= float(self.light_share[name])
+            self.lights[name] = (area_light(name, at, energy, size, tint, aim), energy)
 
     def visible_objects(self) -> set:
         return {o for p in self.props.values() for o in p.objects()}

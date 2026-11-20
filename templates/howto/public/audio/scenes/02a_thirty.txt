@@ -1,0 +1,1 @@
+The AI models run on cloud GPUs, and that's the part you may worry about.

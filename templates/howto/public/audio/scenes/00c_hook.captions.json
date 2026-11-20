@@ -1,0 +1,37 @@
+[
+ {
+  "text": "We",
+  "startMs": 200,
+  "endMs": 280,
+  "timestampMs": 240,
+  "confidence": null
+ },
+ {
+  "text": " paid",
+  "startMs": 420,
+  "endMs": 760,
+  "timestampMs": 590,
+  "confidence": null
+ },
+ {
+  "text": " none",
+  "startMs": 980,
+  "endMs": 1180,
+  "timestampMs": 1080,
+  "confidence": null
+ },
+ {
+  "text": " of",
+  "startMs": 1220,
+  "endMs": 1320,
+  "timestampMs": 1270,
+  "confidence": null
+ },
+ {
+  "text": " it.",
+  "startMs": 1400,
+  "endMs": 1600,
+  "timestampMs": 1500,
+  "confidence": null
+ }
+]

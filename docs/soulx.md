@@ -381,3 +381,69 @@ Leave it off.
 - **Lite quality against Pro.** Judged by contact sheet on one subject at
   640x640 and one 16:9 crop at 512x288. Identity held, there were no grid
   artifacts, and lip motion was visible. No side-by-side review by a person yet.
+
+## Choosing a talking-head generator
+
+Two generators, and the deciding factor is **whether a viewer actually watches the shot**.
+
+```bash
+# SoulX-FlashHead Pro — the default. Diffusion, follows the input aspect ratio (Modal only)
+uv run tools/soulx.py --image presenter_16x9.png --audio voiceover.mp3 \
+  --size 768 --output narrator.mp4
+
+# SoulX-FlashHead Lite: drafts only (long-take drift unmeasured). Same endpoint,
+# ~8x faster per chunk, no compile
+uv run tools/soulx.py --image presenter_16x9.png --audio voiceover.mp3 \
+  --model lite --width 512 --height 288 --output draft.mp4
+
+# SadTalker: warp-based, cheap and near-realtime drafts, and the option when Modal is unavailable;
+# square crop unless --preprocess full
+uv run tools/sadtalker.py --image presenter_16x9.png --audio voiceover.mp3 \
+  --preprocess full --still --expression-scale 0.8 --output narrator.mp4
+```
+
+| Need | Use |
+|------|-----|
+| Anything a viewer watches, narrator in frame, held shot, finished video | **soulx** |
+| Throwaway drafts, or many takes to choose between | **soulx --model lite** or **sadtalker** (Lite: drafts only; long-take drift unmeasured) |
+| Non-square source image you don't want to fight | **soulx** (no `--preprocess` needed) |
+| Modal unavailable (RunPod only) | **sadtalker** |
+
+**Identity holds over long takes, which is why this is the default.** Segment-chained
+talking heads re-anchor each segment on the previous segment's output, so the failure is
+*absorbing*: one bad segment poisons everything after it. SoulX is trained with
+Oracle-Guided Bidirectional Distillation against exactly that. Measured at **97% of
+frame-zero sharpness at 70s**, flat across all 72 segments. There is no short-render
+ceiling to design around, so per-scene generation is a choice rather than a workaround.
+
+**Cost:** Pro ~$0.0024 per second of output, Lite ~$0.0004, SadTalker ~$0.0014. Lite is the
+cheapest per second, but it is for drafts only: it has been tested on ~2.6s clips, its
+long-take drift is unmeasured, and the 70s sharpness figure above is Pro's.
+
+**Key flags:**
+- soulx: `--size 768`: aspect follows the image and snaps to the model's grid
+- soulx: `--width`/`--height` for exact dimensions; **Pro needs multiples of 16, Lite multiples
+  of 32** (768x432 is illegal on Lite; 512x288 and 1024x576 are exact 16:9). The tool checks
+  per model; nothing upstream does (an off-grid size floors silently and renders wrong)
+- soulx: `--model lite` never compiles and is unloaded before any Pro render, so mixing the
+  two in one container doesn't eat Pro's VRAM headroom
+- sadtalker: `--preprocess full`: **Critical!** Preserves input dimensions (default `crop`
+  outputs square)
+- sadtalker: `--still` and `--expression-scale 0.8`: calmer, more professional look
+
+**Image requirements (both):** Face 30-70% of frame, front-facing, 16:9 for NarratorPiP, 512px+.
+
+**Gotchas that cost hours** (full list in `docs/soulx.md`):
+- `torch.compile` is on upstream, costs ~600s on a cold container, and **recompiles on every
+  resolution change**. Pick one narrator resolution per project; a batch at one size
+  amortises it, switching size per scene pays it per scene.
+- Width and height must be multiples of 16. `--size` handles this; exact dimensions do not
+  forgive you.
+- `--face-crop` is unconditionally square whatever the target size says, so it throws away a
+  16:9 framing. Leave it off.
+- Don't score talking-head quality with an automated similarity metric. Two have now given
+  confidently wrong answers, one ranked highest a variant with a visible eye defect, the
+  other plateaued straight through a total collapse. Sharpness-over-time plus a contact
+  sheet, or human review.
+
+See `docs/soulx.md` and `docs/sadtalker.md` for detailed options and troubleshooting.

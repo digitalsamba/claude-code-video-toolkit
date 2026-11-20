@@ -62,6 +62,7 @@ import os
 import random
 import re
 import socket
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -128,6 +129,8 @@ RETRIABLE_EXCEPTIONS = (
 TITLE_MAX = 100
 DESCRIPTION_MAX = 5000
 TAGS_COMBINED_MAX = 500
+DEFAULT_CATEGORY = "22"  # People & Blogs: YouTube's own default, and rarely the right one
+SHORT_MAX_SECONDS = 180  # a vertical or square upload this long or shorter becomes a Short
 
 
 class AuthError(Exception):
@@ -318,6 +321,63 @@ def build_request_body(args, description: str, tags: list[str]) -> dict:
         status["publishAt"] = args.publish_at
 
     return {"snippet": snippet, "status": status}
+
+
+# ---------------------------------------------------------------------------
+# Metadata notes: advice before an upload, never a refusal
+# ---------------------------------------------------------------------------
+_HASHTAG = re.compile(r"(?<!\S)#\w+")
+_LINK = re.compile(r"https?://\S+")
+
+
+def probe_shape(video: Optional[str]) -> Optional[dict]:
+    """Width, height and seconds of the file from ffprobe, or None when it can't be read."""
+    if not video:
+        return None
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+             "stream=width,height:format=duration", "-of", "json", str(video)],
+            capture_output=True, text=True, timeout=30, check=True).stdout
+        data = json.loads(out)
+        stream = data["streams"][0]
+        return {"width": int(stream["width"]), "height": int(stream["height"]),
+                "seconds": float(data["format"]["duration"])}
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, IndexError):
+        return None
+
+
+def is_short(shape: Optional[dict]) -> bool:
+    return bool(shape) and shape["height"] >= shape["width"] and shape["seconds"] <= SHORT_MAX_SECONDS
+
+
+def metadata_notes(title: str, description: str, tags: list[str], category: Optional[str],
+                   shape: Optional[dict] = None) -> list[str]:
+    """What a viewer or YouTube would miss in this title, description, tags and category.
+
+    Each note is one thing to consider before the upload; none of them stops it. They cover what
+    can be read from the request alone: whether the video will find its audience is in the stats.
+    """
+    notes: list[str] = []
+    if not _HASHTAG.search(description):
+        notes.append("The description has no hashtags. YouTube shows the first three above the title and "
+                     "links each to its topic page: end the description with two or three, such as #remotion.")
+    if not _LINK.search(description):
+        notes.append("The description has no link. If the video should send people somewhere (a repository, "
+                     "a site, the full video), put the link in the first lines.")
+    lowered = title.lower()
+    if tags and not any(t.lower() in lowered for t in tags):
+        notes.append("None of the tags appears in the title. The title counts for more than the tags in "
+                     "search: name the subject in it, in the words people would type.")
+    if category is None:
+        notes.append(f"No --category given, so this uploads as {DEFAULT_CATEGORY} (People & Blogs). Pick the "
+                     "one that fits: 28 Science & Tech, 27 Education, 24 Entertainment, 26 Howto & Style.")
+    if is_short(shape):
+        notes.append(f"This is {shape['width']}x{shape['height']} and {shape['seconds']:.0f} s, so YouTube "
+                     "makes it a Short. If it is a cut of a longer video, set that video as its related video "
+                     "afterwards, by hand: Studio, Content, Shorts, the video's Details, Related video. The "
+                     "API can't set it, and the field needs the channel's advanced features switched on.")
+    return notes
 
 
 # ---------------------------------------------------------------------------
@@ -705,8 +765,9 @@ Note: until your OAuth app is Google-verified, uploads are force-locked to priva
 
     parser.add_argument("--tags", help="Comma-separated tags (combined <= 500 chars)")
     parser.add_argument(
-        "--category", default="22",
-        help='Numeric category ID as a string (default "22" = People & Blogs; "28" = Science & Tech)',
+        "--category",
+        help='Numeric category ID as a string ("28" = Science & Tech, "27" = Education, "24" = Entertainment; '
+             'left out, it is "22" = People & Blogs, with a note)',
     )
     parser.add_argument(
         "--privacy", choices=VALID_PRIVACY, default="private",
@@ -796,6 +857,7 @@ def main():
         sys.exit(1)
 
     body = None
+    notes: list[str] = []
     if not args.video_id:  # adding to an uploaded video sends no title or description
         description = read_description(args)
         tags = parse_tags(args.tags)
@@ -813,6 +875,11 @@ def main():
                 if args.json_out:
                     emit_json({"success": False, "error": msg, "errorType": "copy", "findings": found})
                 sys.exit(1)
+        notes = metadata_notes(args.title, description, tags, args.category, probe_shape(args.video))
+        for note in notes:
+            log(f"Note: {note}", "warn")
+        if args.category is None:
+            args.category = DEFAULT_CATEGORY
         body = build_request_body(args, description, tags)
 
     # --- Dry run -----------------------------------------------------------------
@@ -839,6 +906,7 @@ def main():
             emit_json({
                 "success": True, "dryRun": True, "authOk": auth_ok, "authError": auth_msg,
                 "missingScopes": missing, "requestBody": body, "account": args.account,
+                "notes": notes,
             })
         sys.exit(0)
 
@@ -945,6 +1013,7 @@ def main():
             "captionsAdded": captions_added,
             "playlistId": args.playlist,
             "uploadStatus": "uploaded",
+            "notes": notes,
         })
 
     sys.exit(0)

@@ -48,6 +48,24 @@ So a note on a film is one of two kinds. "Hold that look a second longer" is the
 the shot again. "The mug goes through the table" is the rig: fix it in `lib/blender`, prove it on two bodies,
 add a check, and then render. Rig work is slower the first time and free ever after.
 
+**The other words, in the order a film uses them.**
+
+- **The shot spec** is one JSON file that describes the film: who is in it, where, what they do and when, and
+  how it is filmed. Everything below is named in it, which is why an agent can direct a film and why the same spec
+  gives the same film every time.
+- **The cast** is the characters. A clay character is a JSON description (build, face, hair, clothes, a seed) and
+  needs nothing else; a fitted one starts as a generated model, as above. Both share the one rig.
+- **A set** is the place: a desk, a kitchen, a lecture hall, or the studio stage for products. It brings its
+  room, furniture and lights, and where people sit or stand.
+- **A prop** is a thing in the scene that a character or the camera deals with: a mug, a phone, a floating card
+  showing a picture or a video, an imported model.
+- **Acting beats** are the verbs on a timeline, in seconds or on a word of the narration (`cue:`).
+- **A shot** is a camera by type (`over_shoulder`, `orbit`, `reveal` and more) that takes its framing from the
+  people and props in it. `check` proves every shot by geometry before anything is rendered.
+- **The engine** draws the frames. EEVEE, the default, is fast and is what the specs are tuned on; Cycles
+  (`--engine cycles`) traces light and is about ten times slower (see
+  [How long a render takes](#how-long-a-render-takes)).
+
 **What is saved.** Every `check` and `render` writes `scene.blend` in the spec's `out/` folder: the built scene
 with its keyed acting, to open and scrub in Blender when a number does not explain what a frame shows. It is
 written again on each run, so copy one aside to keep it. A fitted character's `.blend` holds only its body
@@ -859,6 +877,119 @@ a size in metres. Three shot types film them: `product` (a three-quarter view), 
 prop with a screen is checked for staying readable through the shot. With `--alpha` the backdrop is left out, for a
 clip over a Remotion scene. `examples/blender-product-shot` is the worked example.
 
+## A logo and an ident
+
+A studio prop of kind `logo` is an SVG in 3D: every filled shape becomes its own extruded, bevelled part in its
+own colour, and beats can move the parts. With an `ident` shot, the dark stage and named sounds, that is a brand's
+opening and closing ident from one spec. Like everything here it needs Blender, and nothing else in the toolkit
+needs it. `examples/blender-ident` is the worked example: two idents for this toolkit's own mark.
+
+```json
+"set": {"kind": "studio", "stage": "dark", "palette": {"backdrop": "#0c111f"},
+        "props": [{"id": "mark", "kind": "logo", "file": "assets/mark-parts.svg", "extras": ["caret"]}]},
+"shots": [{"id": "open", "dur": 2.0, "type": "ident", "from": {"az": 14, "back": 1.035}}],
+"beats": [{"at": 0, "do": "shear", "part": "mark.slash", "to": -20},
+          {"at": "open+0.5", "dur": 0.17, "do": "shear", "part": "mark.slash", "to": 0, "ease": "in"},
+          {"at": "open+0.667", "do": "hit", "part": "mark.slash", "sound": "clap"},
+          {"at": "open+0.667", "dur": 0.4, "do": "grow", "part": "mark.play", "to": 1, "ease": "spring"}],
+"sounds": {"clap": [{"file": "sfx/slate.mp3", "gain": 0.9}, {"tones": [98, 147, 196], "decay": 0.55}]}
+```
+
+**The prop.** A part's id is the shape's `id` in the SVG, or `p1`, `p2` in document order; a beat names it as
+`"mark.slash"`. The logo stands on the floor facing the camera with its longest side `size` metres (0.3 unless
+said); `depth` and `bevel` are in metres. `"lay": true` lays it on its back, and `"base": {"kind": "key"}` puts it
+on a keycap in a plate that it can be pressed into. `extras` are parts the film needs and the finished mark does
+not have (a cursor that turns into something): they are left out when the logo is measured and when the last
+frame is compared with the mark. `parts` overrides one part: `{"play": {"color": "#ffffff", "material": "gloss",
+"glow": 0.5}}`. The reader takes flat filled shapes (paths with curves and holes, polygons, rectangles, circles,
+transforms). It does not read strokes, text, gradients or `<use>`, and says so in the check's notes: outline
+strokes and text first.
+
+**Materials** are `satin` (the default), `matte`, `gloss`, `metal` and `flat`. `flat` is the colour exactly,
+whatever the lights do. The others are lit, and the dark stage's lights are set so a satin face reads as its own
+colour.
+
+**Brand colour.** A spec with a logo renders in the Standard view at exposure 0 unless its `look` says otherwise,
+because the default view for films shifts a saturated colour. A part's own light is `glow`, where 1 is its colour
+at full: past 1 a saturated colour clips toward white (the toolkit's blue turns cyan), so a brighter moment comes
+from a `flash`, a `sweep` or `"look": {"bloom": {"strength": 0.6, "threshold": 0.8, "size": 0.5}}`, which adds the
+glow after the render. Bloom is left out of transparent clips.
+
+**Verbs.** A studio set's beats move a part (`"part": "mark.slash"`) or a whole prop (`"part": "mark"`, and a
+phone, a card or a model too), from where it is to `to`, over `dur`, along an `ease`: `linear`, `in` (arrives at
+speed: a fall, a snap), `out`, `in_out` (the default) or `spring` (goes a little past and comes back). A beat with
+no `dur` is a jump, so a beat at 0 sets how the film starts.
+
+| `do` | What it does |
+|---|---|
+| `turn` | Turns on a hinge: `to` degrees, `hinge` a spot on the part's box (`left`, `top`, `bottom_left`, `centre`, or `[u, v]`), `axis` `x` (a flap), `y` (a door) or `z` (in the logo's own plane) |
+| `shear` | Leans one part with an edge staying put: `to` degrees from how it was drawn, `foot` the edge that stays (`bottom` unless said) |
+| `grow` | Scales from a spot: `to` a share (0 is gone, and not drawn), `from` the spot |
+| `move`, `sink` | Moves by `[right, up, toward the viewer]` in metres, or `sink` straight back by `to` metres |
+| `press` | Goes down `depth` metres over `dur`, then springs back over `back` seconds (0 to stay down) |
+| `show`, `hide`, `blink` | Visibility; `blink` goes on and off until `until`, off for `off` seconds of every `every` |
+| `glow` | A part's own light, `to` 0 to 1 |
+| `light` | Scales one of the stage's lights: `"light": "key"`, `"to": 0.2` |
+| `flash` | A light in front of a part that comes on at `at` and dies away over `dur` |
+| `sweep` | A light that crosses the face from `from` (`left` or `right`) over `dur` |
+| `hit` | The moment something lands: a camera shake (`shake`, a share of the prop's width), a `flash`, and a sound |
+| `sound` | Only a sound, at `at`; with `until`, a held tone is cut there |
+
+Any beat can carry `"sound": "name"`. The sound goes on the beat's first frame (a `press` on its last, where the
+key bottoms out), or at `"sound_at"`.
+
+**Sounds.** `"sounds"` gives each name its layers: a recording (`file`, with `gain` and an optional `lowpass` in
+Hz) or a chord (`tones` in Hz, with `attack`, `decay`, `hold`, and `beat`, a ratio such as 1.004 for a second,
+slightly sharp voice). A recording is placed so the middle of its loudest 50 ms is on the event's frame, so a clap
+with a soft lead-in still lands on the hit. The mix is written at one fixed gain (`"mix": {"gain": 0.65}`) and is
+not normalised, so the same sound is the same level in every clip. Find recordings with `tools/sfx_search.py` and
+keep their credit files beside them.
+
+**The `ident` shot** films a prop square on, in the prop's own directions, so a logo lying on its back is filmed
+from above. `az` and `elev` are the resting view (0 and 3 degrees), `"from"` and `"to"` (`{"az", "elev", "back"}`)
+where the camera comes from by `settle` seconds and leaves for after `leave` seconds, `fill` the share of the
+frame's tighter side the prop takes, and `"offset": [right, up]` moves the prop in the frame, as shares of it, to
+leave room for a title or a wordmark. Where the move shows the prop from a side that does not fit the frame, the
+camera stands back for those frames, so one spec works in 16:9 and 9:16.
+
+**The dark stage** (`"stage": "dark"`) is a glossy floor in the backdrop's colour with no wall. `"floor":
+{"rough": 0.6}` makes it matt, which a prop seen from above wants: a glossy floor then shows the lights
+themselves. `"lights": {"key": 1.2, "fill": 0.5}` scales the stage's own lights.
+
+**What `check` adds for a logo.** The frame a viewer is left with is the avatar, the favicon and the watermark, so
+an `ident` shot is tested on it (`"mark": "end"`, the default; `"start"` for a closing ident, which begins on the
+mark; `"none"` to skip):
+
+- every part of the mark is where the flat SVG has it (to 1% of the mark's size) and on screen;
+- no extra is still on screen;
+- the lens is within 8 degrees of square on and the mark is not rolled;
+- each part's face, read from the rendered still, is its own colour to within 10 (CIE76 Delta E): "slash reads
+  #5ac8ff where the mark has #3771e0: lighter or clipped".
+
+**What `render` adds.** Each `hit` is compared with the clip: the frame where the picture changes most, within
+eight frames, should be the hit's own frame, because that is where its sound was put. A hit keyed a few frames
+before what the eye takes as the impact fails, with the number of frames.
+
+**Clips.** `render --clips --with-sound` writes one clip per shot with its sound in the file, for an ident that
+plays by itself. `--clips --alpha` leaves the stage out, for an ident over any ground.
+
+**Method** (how the two idents in the example were made):
+
+1. Draw the mark flat first and test it with `tools/mark_sheet.py`. An ident cannot fix a mark that fails at 16 px.
+2. Decide the move as one sentence with one sound in it ("the bar snaps to its lean and knocks the caret up into
+   the triangle"). Write the timing as beats; put the `hit` on the frame the move lands.
+3. Run `check` until the last frame passes, then render at half size (`--res 960x540`) and read twelve frames
+   round the hit, not one still.
+4. Make the fall heavy with the eases: a slow lean back (`in_out`), a fall that arrives at speed (`in`) a little
+   past its mark, a `spring` back, and the thing it knocks up on a `spring` too.
+5. Keep the hit's light inside what the colour can take: `glow` under 1, a `flash` under 1, bloom for the rest.
+6. Render both shapes from the one spec with `--res`.
+
+Learned while building it: a point light's reflection in a glossy floor is a hard blob, so a flash gives no
+reflection of itself; an area light is dark behind its own plane, which draws a line across the floor as it
+travels, so the sweep is a spot; screen-space reflections put a smudge of the logo on a far floor seen edge on,
+so the dark stage's floor turns matt and takes the world's colour far off.
+
 ## Blender Python or a Blender MCP server?
 
 The toolkit drives Blender with its own Python (`blender -b -P lib/blender/compile.py`), and that is the route to
@@ -1059,11 +1190,68 @@ hear it at all, so each kind of fault has a measure:
 | `qc.py --layout` | text off the canvas, low contrast, type too small for a phone |
 | `sync_check.py --cues` | each sound against the movement it belongs to, within 0.1 s |
 | Reading the frames | the render tiled every few seconds and looked at, and a shot tiled frame by frame where a check or a note points |
+| A blind retelling | what a reader who has not seen the brief says is on the contact sheet, set against the storyboard row by row (below) |
 
 A check that fails and cannot be fixed in the session is not hidden: it is named in the report and the decisions
 file with its number, and the agent can carry it into the next prompt as a suggested note, beside the gap for the
 person's own. What no check covers is taste and sound: whether the music suits it, whether a line lands, whether
 it is too long. Those are what the person's notes are for.
+
+**A second reader who has not seen the brief.** `check` measures what is physically wrong. It does not know
+what a shot was for: that the mug should be in view when the line mentions it, that a shot was meant to look up
+at the character, that the laptop opens before the sip. The agent that wrote the spec is a poor judge of that,
+because it reads the board into the picture. A benchmark of coding agents building multi-shot scenes in Blender
+found the same: agents that inspected their own renders and said they matched made camera-angle errors as often
+as those that made no such claim ([VibePrevisBench](https://arxiv.org/abs/2611.15789), 2026). Its judge retells
+the clip before it is shown the brief, and this borrows that step:
+
+1. Give a fresh reader frames and nothing else: no brief, no board, no spec, no shot names. In Claude Code
+   that is a subagent started with only an image path. Before the render, use the stills in `out/stills/`
+   copied to numbered names, not `contact_sheet.png`: the sheet prints each shot's name ("K4_sit (wide)"), the
+   file names carry it too, and the name gives the intent away. After the render, tile the film evenly,
+   `uv run tools/contact_sheet.py out/film.mp4 --count 18`, so each shot has several frames: one still shows
+   a pose, and a row such as "sit, pull in, set the mug down" is three actions.
+2. Ask it to retell what it sees in time order: who is where, what each person does, what they hold, where the
+   camera is (near or far, above, level or below), and anything it can't make out, said as "unclear".
+3. Set the retelling against the storyboard one row at a time, and mark each row seen, partly seen or not seen.
+   A row is seen only if the retelling named it unprompted.
+4. A row that is not seen is a fault to fix in the spec, or a question for the person if the board asks for
+   something the shot can't show. Write the rows that failed into the decisions file.
+
+Do it after `check` passes and before the render, when a fix is still a line in the spec, and again on the
+finished film. It costs one short model call and no Blender time.
+
+Tried once, on the finished kitchen opening of the toolkit's trailer (27 s, seven storyboard rows, 18 frames
+at one every 1.5 s): the reader named four rows in full and three in part, and none was missing. The parts it
+missed were smaller than the sampling: a chair pulled in, a blink, and a push in to the screen that read as two
+shots. It also said, unasked, that the character's hair looked lighter in the closeup than in the wide shots.
+That film had already been revised twice with its author's notes, so this shows the retelling agrees with a
+film that is right, not yet that it catches one that is wrong. What it catches on the next film goes here.
+
+Tried a second time, on a cut nobody had revised: a 44 s vertical version of the same trailer, cropped from the
+16:9 clips, with four storyboard rows. This time it caught three things, and all three were fixed before anyone
+watched the cut:
+
+- **A character who was never introduced.** The film ends on a close shot of a small computer typing. The reader
+  wrote that the arms in front of its screen were "unexplained" and that it was "unclear whose they are". In the
+  16:9 film a wide two-shot sets the computer on the counter behind the man. The vertical crop had cut it out
+  of every earlier shot, and its author, who knew it was there, had not seen that. The two-shot went back in,
+  with the crop moved until both are in frame.
+- **An end card that named no destination.** The card said to watch the full trailer "on the channel". The
+  reader pointed out that no channel was named, so the step only worked for someone already there. The handle
+  was added.
+- **Small type.** It called the repository address faint and small for a phone; the layout check had passed it
+  (it was over the minimum). It was made larger.
+
+What it did not see was again smaller than the sampling, with one exception worth knowing: it described the man
+as standing when he had sat down, because the chair is outside a 9:16 crop of that shot. A crop can remove the
+thing that tells the viewer what an action is. Two spoken lines and the lid closing fell between frames; 18
+frames over 44 s is one every 2.5 s, so for a cut with shots under 2 s raise `--count` until each shot has a
+frame.
+
+It also listed things that were meant (a title card with only its word on it for a third of a second, a heading
+set at a tilt). Read those as questions, and answer each from the storyboard, not from memory of what was
+intended.
 
 A prompt of this kind, as one session left it for the next:
 
@@ -1095,15 +1283,15 @@ puts a camera depends on the shape of the frame.
 A lecture's presenter does not write (lettering chalks itself in while they point at it), and the close's table
 is placed by hand for each presenter (templates/lecture README). One character per set; the clay cast's hands are one bone; a walk goes through furniture unless it is bent
 round it; the sets are `desk_room`, `desk` (no room, for transparent renders), `lecture_hall`, `kitchen`,
-`living_room`, `pub` and `studio` (props and no character); a `lean` carries hands resting on a table down through it; a standing arm
+`living_room`, `pub` and `studio` (props and no character; a logo's parts and whole props move on beats); a `lean` carries hands resting on a table down through it; a standing arm
 does not reach a low table (sit first); a cartoon style; acting keyed from verbs, with no motion
-capture; studio props stand still while the camera moves. EEVEE cannot render a shadow onto a transparent
+capture. EEVEE cannot render a shadow onto a transparent
 background, so a transparent character or prop has no cast shadow on the Remotion scene. The room's light is dim
 on the darkest skin tones in a `wide` shot: raise `look.exposure` a little or use a `medium`. A `pull_out` passes
 close to the character's hand on its way back, inside the limit the check enforces but large in frame for a
 moment.
 
-The roadmap goes two ways. More from the spec: props that move, a tablet prop, cast shadows on transparent clips,
+The roadmap goes two ways. More from the spec: a tablet prop, cast shadows on transparent clips,
 two characters in a set, hand shapes and props in the hand, a fit that finds the joints and face by itself, and a
 `blender` visual kind in `video_job.py`. And more of Blender
 itself: your own `.blend` as a set, a `script` hook that runs your Python between the build and the checks, and
@@ -1125,3 +1313,56 @@ imported rigs whose actions become verbs.
 | `cast member 'maya': hair.style is one of ...` | A character field that isn't one of its choices. Pick from the list in the message |
 | A studio shot is `FAIL` with "faces the lens" | The orbit turns the screen away for more than half the shot. Narrow `az` to `az_to` |
 | A studio shot fails with `exposure 0.73 outside (0.08, 0.7)` | A light backdrop fills the frame. Darken `palette.backdrop` a step, or raise the shot's `fill` |
+
+## Summary for agents
+
+Optional, and limited by the machine more than by the tool: it needs Blender and renders in minutes with a GPU
+(`doctor` times a frame). The clay cast, the desk sets, the studio stage and clips in Remotion are the settled
+part. Characters fitted from a generated 3D model, the kitchen and the lecture hall are experimental. Before
+proposing a character film, tell the person it is hours of rendering over a few sessions.
+
+A general 3D tool, not a template: 3D scenes, character acting and product shots from a JSON spec: `tools/blender_render.py check|render spec.json`,
+built by `lib/blender/` (a rigged cartoon cast, a set, shots by type, acting beats in seconds or on narration words
+with `cue:`). `check` (about 5 s) verifies every camera by geometry (subject in frame, nothing in the way, a moving
+lens clear of the cast; failing cameras are moved by a solver) and writes a labelled contact sheet to read before
+rendering; sound is placed on the frames the motion was keyed on. `doctor` finds Blender and times a frame on
+this machine (about 1.6 s at 1080p on an M4).
+
+One spec gives a whole film, clips for another build, or both; the uses below mix freely:
+- `render spec.json` is the whole film with sound (`examples/blender-disk-panic`).
+- `render --clips` is one MP4 per shot for any build: a moviepy timeline, a `file` scene in a video job, an editor
+  (`--prores`), or `cutdown.py` for a vertical cut.
+- `render --clips --alpha --to <project>/public/blender` is one clip per shot with a transparent background and a
+  `clips.json` manifest; `BlenderClip` and `blenderClip()` (`lib/components`) play them over a scene's own field,
+  with type behind the character. Set the spec's `fps` to 30.
+- `set.screen.video` puts a Remotion render on the laptop in the scene, and a `pull_out` shot starts with it
+  covering the frame, so a flat scene hard-cuts to itself in 3D and the camera pulls back (`push_in` returns).
+  Render that video at the spec's `fps`; another rate is a spec error.
+- Set kind `studio` is a product stage with no character: a `phone` or a floating `card` showing a picture or a
+  video, and an imported `model` (glTF, OBJ, FBX, STL), filmed with `product`, `orbit` and `reveal` shots that take
+  their distance from the prop's size (`examples/blender-product-shot`).
+- Prop kind `logo` builds an SVG in 3D, each filled shape its own part, and a studio set's beats move the parts
+  (`turn`, `shear`, `grow`, `press`, `glow`, `flash`, `sweep`, `hit`): a brand's opening and closing ident from one
+  spec, with named sounds on the hit and an `ident` shot whose last frame `check` compares with the flat SVG
+  (parts in place, each colour within 10 Delta E). `--clips --with-sound` puts each clip's sound in its file;
+  `--res 1080x1920` is the vertical one (`examples/blender-ident`).
+
+**Cast:** a character is a JSON description (`body`, `face`, `hair`, `clothes`, `accessories`, each a named choice
+or a hex colour, and a `seed` that fills what is left out), so an agent writes one from a sentence or a photo. Keep
+a standing character in `kits/<name>/cast/<id>.json` and name it with `"from"`; fields beside `from` re-costume
+it. All characters share one rig, so every verb works on each. They are caricatures in one cartoon style, not
+likenesses. For a fitted character of a real person, `uv run tools/reference_capture.py --out <folder>` opens a
+local page that talks them through eight poses at a webcam and keeps the sharpest frame of each; the photos stay
+on the machine and out of the repo. A mistake in a spec (an unknown face, pose, shot type or hair style) is a named error listing the
+choices, before anything renders.
+
+Use it when a video needs a consistent, directable character, a 3D reveal, a product or device shot, or acting
+timing that LTX clips can't hold. **Suggest it while planning a video when it is installed**
+(`uv run tools/blender_render.py doctor --no-bench` exits 0); without Blender nothing else changes, so don't
+propose it unless the user asks for 3D. Blender runs headless through its own Python; a Blender MCP server is for trying a look in an open window,
+and what it finds goes back into the spec. Needs Blender 4.2+ (optional): run on 5.3 on macOS and 4.2 LTS on Linux
+(Cycles on a server with no GPU; EEVEE works there on software GL, slowly); Windows is not yet run. Format, verbs
+and the shot grammar are in the `blender` skill, setup and timings in `docs/blender.md`, and there is an example
+of each use: `examples/blender-disk-panic` (a film), `blender-product-shot` (a studio stage),
+`blender-in-remotion` (clips in a Remotion video) and `blender-kitchen` (experimental: a character fitted from a
+generated 3D model, on her feet in a kitchen with a mug).

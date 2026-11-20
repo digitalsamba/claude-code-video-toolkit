@@ -1,0 +1,114 @@
+[
+ {
+  "text": "ElevenLabs",
+  "startMs": 80,
+  "endMs": 700,
+  "timestampMs": 390,
+  "confidence": null
+ },
+ {
+  "text": " voices,",
+  "startMs": 760,
+  "endMs": 1380,
+  "timestampMs": 1070,
+  "confidence": null
+ },
+ {
+  "text": " like",
+  "startMs": 1620,
+  "endMs": 1800,
+  "timestampMs": 1710,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 1840,
+  "endMs": 1900,
+  "timestampMs": 1870,
+  "confidence": null
+ },
+ {
+  "text": " one",
+  "startMs": 1960,
+  "endMs": 2100,
+  "timestampMs": 2030,
+  "confidence": null
+ },
+ {
+  "text": " you're",
+  "startMs": 2140,
+  "endMs": 2240,
+  "timestampMs": 2190,
+  "confidence": null
+ },
+ {
+  "text": " hearing",
+  "startMs": 2280,
+  "endMs": 2600,
+  "timestampMs": 2440,
+  "confidence": null
+ },
+ {
+  "text": " now,",
+  "startMs": 2660,
+  "endMs": 2940,
+  "timestampMs": 2800,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 3440,
+  "endMs": 3640,
+  "timestampMs": 3540,
+  "confidence": null
+ },
+ {
+  "text": " Ideogram",
+  "startMs": 3800,
+  "endMs": 4400,
+  "timestampMs": 4100,
+  "confidence": null
+ },
+ {
+  "text": " images,",
+  "startMs": 4500,
+  "endMs": 5020,
+  "timestampMs": 4760,
+  "confidence": null
+ },
+ {
+  "text": " at",
+  "startMs": 5300,
+  "endMs": 5400,
+  "timestampMs": 5350,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 5460,
+  "endMs": 5520,
+  "timestampMs": 5490,
+  "confidence": null
+ },
+ {
+  "text": " few",
+  "startMs": 5560,
+  "endMs": 5720,
+  "timestampMs": 5640,
+  "confidence": null
+ },
+ {
+  "text": " cents",
+  "startMs": 5820,
+  "endMs": 6160,
+  "timestampMs": 5990,
+  "confidence": null
+ },
+ {
+  "text": " each.",
+  "startMs": 6240,
+  "endMs": 6540,
+  "timestampMs": 6390,
+  "confidence": null
+ }
+]

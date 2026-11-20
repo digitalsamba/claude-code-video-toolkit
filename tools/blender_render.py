@@ -172,6 +172,54 @@ def exposure(png: Path) -> tuple[float, float]:
             sum(a for lu, a in zip(luma, alpha) if lu > 250) / weight)
 
 
+COLOUR_LIMIT = 10.0  # how far a part's face may read from its colour in the mark (CIE76 Delta E)
+
+
+def lab(rgb) -> tuple[float, float, float]:
+    """sRGB (0-255) as CIE L*a*b* under D65, for a colour distance that is roughly what the eye sees."""
+    lin = [(c / 255 / 12.92) if c / 255 <= 0.04045 else ((c / 255 + 0.055) / 1.055) ** 2.4 for c in rgb]
+    x = (0.4124 * lin[0] + 0.3576 * lin[1] + 0.1805 * lin[2]) / 0.95047
+    y = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+    z = (0.0193 * lin[0] + 0.1192 * lin[1] + 0.9505 * lin[2]) / 1.08883
+    f = [t ** (1 / 3) if t > 0.008856 else 7.787 * t + 16 / 116 for t in (x, y, z)]
+    return 116 * f[1] - 16, 500 * (f[0] - f[1]), 200 * (f[1] - f[2])
+
+
+def mark_colours(png: Path, mark: dict) -> list[str]:
+    """The last-frame test's picture half: does each part of a logo read as its own colour in the rendered
+    still? `mark` is the compiler's report (each part's outline in the picture, and its colour). Fills in each
+    part's "seen" and "colour_off", and returns the problems in words."""
+    from PIL import Image, ImageChops, ImageDraw, ImageFilter
+    im = Image.open(png).convert("RGB")
+    w, h = im.size
+    problems = []
+    for part in mark["parts"]:
+        if part.get("off") is None:
+            continue
+        mask = Image.new("L", (w, h), 0)
+        for ring in part["outline"]:  # a second outline inside the first is a hole
+            one = Image.new("L", (w, h), 0)
+            ImageDraw.Draw(one).polygon([(x * w, y * h) for x, y in ring], fill=255)
+            mask = ImageChops.difference(mask, one)
+        inner = mask.filter(ImageFilter.MinFilter(2 * max(2, round(min(w, h) * 0.008)) + 1))  # off the bevel
+        px = [p for p, m in zip(im.getdata(), (inner if inner.getbbox() else mask).getdata()) if m]
+        if not px:
+            problems.append(f'{part["id"]} is too small in the frame to read its colour')
+            continue
+        seen = tuple(sorted(c[i] for c in px)[len(px) // 2] for i in range(3))
+        want = tuple(int(part["color"].lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
+        a, b = lab(seen), lab(want)
+        off = sum((p - q) ** 2 for p, q in zip(a, b)) ** 0.5
+        part["seen"], part["colour_off"] = "#%02x%02x%02x" % seen, round(off, 1)
+        if off > COLOUR_LIMIT:
+            how = ("darker: more light on the stage, or more glow" if a[0] < b[0] - COLOUR_LIMIT / 2 else
+                   "lighter or clipped: less light, or a glow of 1 or less" if a[0] > b[0] + COLOUR_LIMIT / 2 else
+                   "a different hue: a tinted light, or a view transform other than Standard")
+            problems.append(f'{part["id"]} reads {part["seen"]} where the mark has {part["color"]} (off by {off:.0f}, '
+                            f'limit {COLOUR_LIMIT:.0f}): {how}')
+    return problems
+
+
 def contact_sheet(stills: list[tuple[str, Path, list[str]]], dest: Path, cols: int = 2):
     from PIL import Image, ImageDraw
     first = Image.open(stills[0][1])
@@ -259,9 +307,14 @@ def check(args) -> int:
         mean, clipped = exposure(png)
         shot["luma"], shot["clipped"] = round(mean, 3), round(clipped, 4)
         problems = list(shot["issues"])
-        if not LUMA_RANGE[0] <= mean <= LUMA_RANGE[1]:
+        if shot.get("mark"):
+            problems += mark_colours(png, shot["mark"])
+        # (a logo on a dark stage is mostly dark, and alone on a transparent ground it may be mostly white: its
+        # colours have their own test, so the frame's average says nothing more)
+        if not LUMA_RANGE[0] <= mean <= LUMA_RANGE[1] and not shot.get("mark"):
             problems.append(f"exposure {mean:.2f} outside {LUMA_RANGE}")
-        if clipped > CLIP_LIMIT and shot["type"] != "screen_fill" and not own_white:  # a screen's picture may be white
+        # (a screen's picture may be white, and so may a logo: its colours have their own test)
+        if clipped > CLIP_LIMIT and shot["type"] != "screen_fill" and not own_white and not shot.get("mark"):
             problems.append(f"{clipped:.1%} blown out")
         shot["passed"] = not problems
         shot["problems"] = problems
@@ -288,9 +341,16 @@ def check(args) -> int:
                 print(f"  ----  {s['id']:<12} {s['type']:<14} built, not rendered")
                 continue
             print(f"  {'PASS' if s['passed'] else 'FAIL'}  {s['id']:<12} {s['type']:<14} luma {s['luma']:.2f}{fix}")
+            if s.get("mark"):
+                seen = ", ".join(f'{p["id"]} {p.get("seen", "not seen")} (off {p.get("colour_off", "-")})' for p in s["mark"]["parts"])
+                print(f"        mark at frame {s['mark']['frame']}, {s['mark']['facing_deg']} deg off square: {seen}")
             for p in s["problems"]:
                 print(f"        - {p}")
-        print(f"  IK reach error: {checks['ik_max_error_m'] * 1000:.1f} mm (limit 10 mm)")
+        if checks.get("ik_max_error_m") or any(not s.get("mark") and s["type"] not in ("product", "orbit", "reveal", "ident")
+                                               for s in checks["shots"]):
+            print(f"  IK reach error: {checks['ik_max_error_m'] * 1000:.1f} mm (limit 10 mm)")
+        for note in checks.get("notes", []):
+            print(f"  note  {note}")
         for p in checks.get("body_problems", []):  # contact: feet on the floor, hands on things, nothing passed through
             print(f"  FAIL  {p}")
         for p in checks.get("set_problems", []):  # the set itself: faces in one plane, which flicker
@@ -309,7 +369,8 @@ def ffmpeg(*args):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *map(str, args)], check=True)
 
 
-def encode_clips(out: Path, checks: dict, wanted: list[str], prores: bool, sound_on: bool, spec_name: str) -> list[dict]:
+def encode_clips(out: Path, checks: dict, wanted: list[str], prores: bool, sound_on: bool, spec_name: str,
+                 with_sound: bool = False) -> list[dict]:
     """PNG sequences -> one clip per shot (+ its effects as a WAV); returns their manifest entries."""
     import sound
     clips_dir = out / "clips"
@@ -342,6 +403,13 @@ def encode_clips(out: Path, checks: dict, wanted: list[str], prores: bool, sound
             sound.render(out / "events.json", clips_dir / f"{sid}.wav", start=shot["start"],
                          end=shot["start"] + shot["dur"], score=False, room=False)
             entry["sound"] = f"{sid}.wav"
+            if with_sound:  # the clip plays by itself: its sound is in the file as well as beside it
+                tmp = clips_dir / f"{sid}.tmp{Path(name).suffix}"
+                ffmpeg("-i", clips_dir / name, "-i", clips_dir / f"{sid}.wav", "-c:v", "copy",
+                       *(("-c:a", "libopus", "-b:a", "128k") if alpha else ("-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart")),
+                       tmp)
+                os.replace(tmp, clips_dir / name)
+                entry["has_sound"] = True
         made.append(entry)
     return made
 
@@ -456,6 +524,57 @@ def report_flicker(out: Path, videos: dict, size) -> bool:
     return not failed
 
 
+HIT_REACH = 8  # frames either side of a hit that are searched for the picture's biggest change
+
+
+def hit_frames(video: Path, first: int, hits: list[int], size=(160, 90)) -> list[dict]:
+    """For each hit (a frame number in the film), the frame nearby where the picture changes most from the one
+    before it. A hit is seen on the frame of the biggest change, so its sound belongs on that frame; when the
+    two differ the sound will be heard early or late. `first` is the frame number of the video's first frame."""
+    import numpy as np
+    if not hits:
+        return []
+    change, prev = {}, None
+    for i, im in enumerate(gray_frames(video, size)):
+        f = first + i
+        if prev is not None:
+            change[f] = float(np.abs(im - prev).mean())
+        prev = im
+    out = []
+    for h in hits:
+        near = {f: c for f, c in change.items() if abs(f - h) <= HIT_REACH}
+        if not near:
+            continue
+        seen = max(near, key=near.get)
+        out.append({"frame": h, "seen": seen, "change": round(near[seen], 2), "at_hit": round(near.get(h, 0.0), 2),
+                    "passed": abs(seen - h) <= 1})
+    return out
+
+
+def report_hits(out: Path, videos: dict, events: list[dict], fps: int) -> bool:
+    """Check every hit against its clip, print it and add it to render_checks.json; True when all are on time."""
+    found = []
+    for sid, (video, first) in videos.items():
+        hits = [e["frame"] for e in events if e.get("hit") and e.get("shot") == sid]
+        for r in hit_frames(Path(video), first, hits):
+            found.append({"shot": sid, **r})
+    if not found:
+        return True
+    path = out / "render_checks.json"
+    data = json.loads(path.read_text()) if path.exists() else {"passed": True}
+    bad = [r for r in found if not r["passed"]]
+    data["hits"], data["passed"] = found, bool(data.get("passed", True)) and not bad
+    write_json(path, data)
+    for r in found:
+        if r["passed"]:
+            print(f"  hit in {r['shot']} at frame {r['frame']}: the picture's biggest change is on frame {r['seen']}")
+        else:
+            print(f"  FAIL  hit in {r['shot']} is on frame {r['frame']} and the picture changes most on frame {r['seen']} "
+                  f"({(r['seen'] - r['frame']) / fps:+.2f} s): its sound will be heard "
+                  f"{'early' if r['seen'] > r['frame'] else 'late'}. Move the hit, or what follows it")
+    return not bad
+
+
 def render(args) -> int:
     spec, out = out_dir(args)
     need_ffmpeg()
@@ -488,7 +607,7 @@ def render(args) -> int:
     rate = f"{checks['seconds']}s" + (f", {checks['seconds'] / total:.2f} s/frame" if total else "")
     if args.clips:
         source = f"{spec.parent.name}/{spec.name}"  # which spec a clip came from, in a manifest several specs share
-        made = encode_clips(out, checks, wanted, args.prores, not args.no_sound, source)
+        made = encode_clips(out, checks, wanted, args.prores, not args.no_sound, source, args.with_sound)
         merge_clips(out / "clips" / "clips.json", made, source, whole_spec=not args.shots)
         if not args.keep_frames:
             for sid in wanted:
@@ -507,8 +626,10 @@ def render(args) -> int:
         for c in made:
             print(f"  {c['file']:<24} {c['frames']} frames, {c['seconds']}s" + (f", sound {c['sound']}" if c.get("sound") else ""))
         starts = {s["id"]: s["frames"][0] for s in checks["shots"]}
-        clean = report_flicker(out, {c["id"]: (out / "clips" / c["file"], starts[c["id"]]) for c in made},
-                               tuple(checks["resolution"]))
+        videos = {c["id"]: (out / "clips" / c["file"], starts[c["id"]]) for c in made}
+        clean = report_flicker(out, videos, tuple(checks["resolution"]))
+        heard = json.loads((out / "events.json").read_text(encoding="utf-8"))["events"]
+        clean = report_hits(out, videos, heard, checks["fps"]) and clean
         return 0 if clean else 1
     final = out / f"{spec.stem if spec.stem != 'spec' else spec.parent.name}.mp4"  # a folder may be called v1.2
     heard = json.loads((out / "events.json").read_text(encoding="utf-8"))
@@ -524,6 +645,8 @@ def render(args) -> int:
                "-shortest", final)
     print(f"rendered {final} ({total} frames in {rate})")
     clean = report_flicker(out, {s["id"]: (out / "silent.mp4", 1) for s in checks["shots"]}, tuple(checks["resolution"]))
+    clean = report_hits(out, {"film": (out / "silent.mp4", 1)}, [{**e, "shot": "film"} for e in heard["events"]],
+                        checks["fps"]) and clean
     return 0 if clean else 1
 
 
@@ -834,6 +957,8 @@ def main():
     r.add_argument("--to", help="with --clips: also copy the clips and clips.json here (a project's public/blender)")
     r.add_argument("--prores", action="store_true", help="with --clips: also write ProRes 4444 .mov for other editors")
     r.add_argument("--keep-frames", action="store_true", help="with --clips: keep the PNG sequences in out/frames/")
+    r.add_argument("--with-sound", action="store_true",
+                   help="with --clips: put each clip's sound in its file too (an ident that plays by itself)")
     o = sub.add_parser("open", help="open the built scene in Blender to look round it")
     o.add_argument("spec")
     o.add_argument("--out")
@@ -859,8 +984,8 @@ def main():
     d.add_argument("--frames", type=int, default=4, help="frames to time (default 4)")
     d.add_argument("--no-bench", action="store_true", help="only check what is installed")
     args = ap.parse_args()
-    if args.cmd == "render" and not args.clips and (args.shots or args.to or args.prores or args.alpha):
-        ap.error("--alpha, --shots, --to and --prores need --clips (a film is one opaque MP4)")
+    if args.cmd == "render" and not args.clips and (args.shots or args.to or args.prores or args.alpha or args.with_sound):
+        ap.error("--alpha, --shots, --to, --prores and --with-sound need --clips (a film is one opaque MP4)")
     sys.exit({"check": check, "render": render, "open": open_scene, "doctor": doctor, "fit": fit, "reduce": reduce,
               "sheet": sheet}[args.cmd](args))
 

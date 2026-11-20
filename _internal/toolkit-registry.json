@@ -10,9 +10,9 @@
       "status": "stable",
       "upstream": "https://github.com/remotion-dev/skills",
       "created": "2026-02-19",
-      "updated": "2026-11-09",
+      "updated": "2026-11-16",
       "upstreamPath": "skills/remotion-best-practices",
-      "upstreamVersion": "4.0.542"
+      "upstreamVersion": "4.0.544"
     },
     "remotion": {
       "path": ".claude/skills/remotion/",
@@ -449,7 +449,7 @@
     "cutdown": {
       "path": "tools/cutdown.py",
       "description": "Social cut-downs to 9:16 / 1:1 / 4:5, optional highlight segments and subject tracking; FFmpeg for all modes, optional vision extra for --mode track",
-      "usage": "uv run tools/cutdown.py --input input.mp4 --platform shorts [--mode blur|crop|pad|track] [--segment START-END[@FOCUS] ...]",
+      "usage": "uv run tools/cutdown.py --input input.mp4 --platform shorts [--mode blur|crop|pad|track] [--segment START-END[@FOCUS[,FOCUS...]] ...]",
       "status": "beta",
       "category": "utility",
       "requires": "ffmpeg",
@@ -461,7 +461,7 @@
         ],
         "platform": "shorts, reels (9:16, 3 min), tiktok (9:16, 10 min), square (1:1), feed (4:5) - sets the default format and warns past the short-form limit",
         "mode": "blur (fit over a blurred copy, default), crop (fill, cut the sides; --focus 0-1), pad (fit over --pad-color or --brand bgDark); track follows a single face or --box subject, holding position on loss (uv sync --extra vision)",
-        "segments": "--start/--end for one range, repeated --segment for a highlight reel joined with click-free audio fades; @FOCUS sets crop focus per segment",
+        "segments": "--start/--end for one range, repeated --segment for a highlight reel joined with click-free audio fades; @FOCUS sets crop focus per segment, and several values (@0.57,0.7,0.4) move the crop through them across the segment (crop, blur and pad)",
         "extras": [
           "--zoom",
           "--overlay",
@@ -730,7 +730,7 @@
     },
     "qc": {
       "path": "tools/qc.py",
-      "description": "Pre-render QC — missing assets, narration vs scene length, wpm pacing, per-scene and render loudness (integrated LUFS / true peak against YouTube's -14 LUFS, -1 dBTP), the render's frames (still stretches over --max-still seconds, black gaps, empty first frame), and with --layout the text in the page (off canvas, clipped, under 2.6% of the short side, WCAG AA contrast; product UI under data-qc=\"product\" listed apart). --fix normalises loudness; scene originals kept in .qc-backup/",
+      "description": "Pre-render QC — missing assets, narration vs scene length, wpm pacing, per-scene and render loudness (integrated LUFS / true peak against YouTube's -14 LUFS, -1 dBTP), the render's frames (still stretches over --max-still seconds, black gaps, empty first frame), the opening of a short vertical or square render (first movement, length of the first shot, first sound, level of the first 2 s against the whole), and with --layout the text in the page (off canvas, clipped, under 2.6% of the short side, WCAG AA contrast; product UI under data-qc=\"product\" listed apart). --fix normalises loudness; scene originals kept in .qc-backup/",
       "usage": "uv run tools/qc.py --project projects/my-video --render projects/my-video/out/video.mp4",
       "status": "beta",
       "category": "project",
@@ -975,7 +975,8 @@
         ],
         "dryRun": true,
         "jsonOut": true,
-        "multiChannel": "--account NAME"
+        "multiChannel": "--account NAME",
+        "notes": "advice before the upload, never a refusal: no hashtags, no link, no tag in the title, no --category, a Short that may need its related video set in Studio"
       },
       "envVars": [
         "YOUTUBE_CLIENT_SECRETS_FILE",
@@ -984,7 +985,7 @@
       "note": "Uploads require OAuth, not an API key. Default quota 10,000 units/day; videos.insert ~1600 units (~6 uploads/day). Unverified OAuth apps force uploads to private until Google-verified. Cached tokens live in _internal/.youtube/ (gitignored).",
       "documentation": "docs/youtube-upload.md",
       "created": "2026-06-09",
-      "updated": "2026-06-09"
+      "updated": "2026-11-14"
     },
     "publish_kit": {
       "path": "tools/publish_kit.py",
@@ -994,12 +995,21 @@
       "category": "publishing",
       "backend": "ElevenLabs Scribe ($0.40/audio hour) or local whisper",
       "options": {
-        "engine": ["auto", "scribe", "whisper"],
-        "skip": ["--no-captions", "--no-chapters"],
+        "engine": [
+          "auto",
+          "scribe",
+          "whisper"
+        ],
+        "skip": [
+          "--no-captions",
+          "--no-chapters"
+        ],
         "fresh": "--fresh (transcribe again; otherwise a saved transcript newer than the render is reused)",
         "jsonOut": true
       },
-      "envVars": ["ELEVENLABS_API_KEY"],
+      "envVars": [
+        "ELEVENLABS_API_KEY"
+      ],
       "note": "Writes out/publish/ (video.srt, video.captions.json, chapters.txt, kit.json). Chapter titles from project.json scenes[].title or the scene file names. /publish runs it before the dry run.",
       "created": "2026-11-10",
       "updated": "2026-11-10"
@@ -1124,7 +1134,7 @@
         "keep": "prune: newest jobs never pruned (default 10; submit auto-prunes with VIDEO_JOB_KEEP)",
         "older-than": "prune: only jobs finished at least this many days ago"
       },
-      "prices": "PRICES table in the module (presets --json prints it), checked against receipts 2026-11-01: ltx clip 0.10, ideogram image 0.03/0.06/0.10 by speed, flux image 0.0075, qwen3 voice 0.01/scene (actuals booked from the Modal cost event), elevenlabs 0.20/1k chars, scribe captions 0.40/audio hour",
+      "prices": "PRICES table in the module (presets --json prints it), checked against the Modal bill 2026-11-16: ltx clip 0.12, ideogram image 0.03/0.06/0.10 by speed, flux image 0.012, qwen3 voice 0.01/scene (actuals booked from the Modal cost event), elevenlabs 0.20/1k chars, scribe captions 0.40/audio hour",
       "env": [
         "VIDEO_JOB_EXPANDER",
         "VIDEO_JOB_MAX_USD",
@@ -1172,9 +1182,26 @@
       "created": "2026-10-31",
       "updated": "2026-11-06"
     },
+    "data_video": {
+      "path": "tools/data_video.py",
+      "description": "Shared Matplotlib and MoviePy/Pillow chart renderer used by examples/data-viz-chart; calendar-spaced lines, labelled bar periods, one brand data accent, timed author-written headlines and dataset provenance",
+      "usage": "uv run tools/data_video.py --spec chart.json --brand digital-samba --output chart.mp4 [--narration narration.wav] [--dry-run]",
+      "status": "beta",
+      "created": "2026-10-31",
+      "category": "utility",
+      "updated": "2026-11-11",
+      "options": {
+        "brand": "Load colours and font families from brands/<name>/brand.json; default default",
+        "spec": "CSV/JSON chart spec with type, dataset, title, source, headline and dimensions; dataset paths relative to spec",
+        "headlineStartSeconds": "Spec field: author-written headline reveal time, default 0",
+        "headlineFadeSeconds": "Spec field: headline fade duration, default 0.5; 0 reveals immediately",
+        "narration": "Author-provided audio sets duration; headline timing must fit",
+        "dry-run": "Validate and print report without writing outputs"
+      }
+    },
     "blender_render": {
       "path": "tools/blender_render.py",
-      "description": "Shot spec in, Blender film or clips out: builds a 3D scene from a JSON spec (a rigged cartoon cast described as build, face, hair, clothes and a seed; a desk set, or a studio stage with a phone, a card or an imported model; shots by type; acting beats in seconds or on narration words), checks every camera by geometry (subject in frame, nothing blocking, a moving lens clear of the cast) with a solver that moves failing cameras, writes a labelled contact sheet, then renders the film with sound placed on the keyed motion, or one clip per shot (MP4, or transparent WebM if asked) with a clips.json manifest, for Remotion's BlenderClip, a moviepy build, a video job's file scene or an editor",
+      "description": "Shot spec in, Blender film or clips out: builds a 3D scene from a JSON spec (a rigged cartoon cast described as build, face, hair, clothes and a seed; a desk set, or a studio stage with a phone, a card, an imported model or a logo built from an SVG whose parts beats can move (turn, shear, grow, press, glow, flash, hit) for an ident; shots by type; acting beats in seconds or on narration words), checks every camera by geometry (subject in frame, nothing blocking, a moving lens clear of the cast) with a solver that moves failing cameras, writes a labelled contact sheet, then renders the film with sound placed on the keyed motion, or one clip per shot (MP4, or transparent WebM if asked) with a clips.json manifest, for Remotion's BlenderClip, a moviepy build, a video job's file scene or an editor. For a logo it also tests the frame an ident ends on against the flat SVG (parts in place, colours within 10 Delta E) and each hit against the rendered clip (the sound's frame is the picture's biggest change)",
       "usage": "uv run tools/blender_render.py check spec.json && uv run tools/blender_render.py render spec.json [--clips --alpha --to projects/NAME/public/blender]",
       "status": "beta",
       "options": {
@@ -1194,47 +1221,68 @@
         "--engine": "eevee (default) or cycles",
         "--no-sound": "Picture only",
         "--force": "Render even if a check failed",
-        "--json": "Machine-readable check report"
+        "--json": "Machine-readable check report",
+        "--with-sound": "With --clips: put each clip's sound in its file too, for an ident that plays by itself"
       },
       "env": {
         "BLENDER": "Path to the Blender binary if not on PATH or in the usual install folder"
       },
       "documentation": "docs/blender.md",
       "created": "2026-11-11",
-      "updated": "2026-11-11"
+      "updated": "2026-11-16"
     },
-      "lecture": {
-        "path": "tools/lecture.py",
-        "description": "The Blender half of a lecture (templates/lecture): the timeline from the voiced segments and their captions (starts, words by frame, the camera's windows), one presenter clip spec a segment from lecture.json with the acting rules as options (a turn to the board as each heading is chalked, carried across the join so the next clip starts inside it; gestures, board looks and looks at the lens on the narration's words; a board look in a window turned to face the inset), then check (each clip, the share of the board the presenter hides, the pose at every join) and render (one clip at a time)",
-        "usage": "uv run tools/lecture.py timeline|specs|check|render|bg|boards projects/NAME",
-        "status": "experimental",
-        "category": "project",
-        "options": {
-          "timeline": "audio + captions + lecture.json -> timeline.json",
-          "specs": "lecture.json + timeline.json -> blender/presenter/P<nn>.json and index.json; prints every beat it dropped and why",
-          "check": "blender_render.py check on each clip, one at a time; the board share and window; every join compared vertex by vertex (fails over 4 mm)",
-          "render": "the clips into public/blender with --clips --alpha, one at a time, with an estimate first; --draft WxH",
-          "bg": "the inset's backdrop cut from public/board/bg.png",
-          "boards": "the board behind each closer shot (a segment's \"closes\"), one Remotion still each"
-        },
-        "documentation": "docs/blender.md",
-        "created": "2026-11-17"
+    "lecture": {
+      "path": "tools/lecture.py",
+      "description": "The Blender half of a lecture (templates/lecture): the timeline from the voiced segments and their captions (starts, words by frame, the camera's windows), one presenter clip spec a segment from lecture.json with the acting rules as options (a turn to the board as each heading is chalked, carried across the join so the next clip starts inside it; gestures, board looks and looks at the lens on the narration's words; a board look in a window turned to face the inset), then check (each clip, the share of the board the presenter hides, the pose at every join) and render (one clip at a time)",
+      "usage": "uv run tools/lecture.py timeline|specs|check|render|bg|boards projects/NAME",
+      "status": "experimental",
+      "category": "project",
+      "options": {
+        "timeline": "audio + captions + lecture.json -> timeline.json",
+        "specs": "lecture.json + timeline.json -> blender/presenter/P<nn>.json and index.json; prints every beat it dropped and why",
+        "check": "blender_render.py check on each clip, one at a time; the board share and window; every join compared vertex by vertex (fails over 4 mm)",
+        "render": "the clips into public/blender with --clips --alpha, one at a time, with an estimate first; --draft WxH",
+        "bg": "the inset's backdrop cut from public/board/bg.png",
+        "boards": "the board behind each closer shot (a segment's \"closes\"), one Remotion still each"
       },
-      "reference_capture": {
-        "path": "tools/reference_capture.py",
-        "description": "Reference photos of a person for a fitted 3D character, from a webcam: a local page talks the sitter through eight poses (front, both three-quarters, both profiles, a smile, glasses off, full body), counts down aloud, takes a short burst and keeps the sharpest frame. Photos are saved to the output folder and nothing leaves the machine. Needs a person at a browser with a camera, so it is not a step for an unattended job",
-        "usage": "uv run tools/reference_capture.py --out projects/my-character/reference [--port 8765] [--no-open]",
-        "status": "beta",
-        "category": "utility",
-        "options": {
-          "out": "Folder for the photos, one JPEG per pose (default reference-capture)",
-          "port": "Local port (default 8765)",
-          "no-open": "Don't open the browser"
-        },
-        "documentation": "docs/blender.md",
-        "created": "2026-11-12",
-        "updated": "2026-11-14"
-      }
+      "documentation": "docs/blender.md",
+      "created": "2026-11-17"
+    },
+    "mark_sheet": {
+      "path": "tools/mark_sheet.py",
+      "description": "One PNG that shows whether a logo holds up: the SVG at 512 to 16 px with pixel zooms, on a brand's grounds, in a circle crop at 150 and 40 px, and as a one-colour watermark on a video frame. Warns about contrast under 3:1 on a ground, a part the circle cuts and a part lost at 16 px. Reads flat filled shapes with the reader the Blender logo prop uses",
+      "usage": "uv run tools/mark_sheet.py --svg brands/NAME/assets/mark.svg --brand NAME [--on-dark mark-on-dark.svg --mono mark-white.svg]",
+      "options": {
+        "--svg": "The mark, as flat filled shapes",
+        "--on-dark": "The version for dark grounds",
+        "--mono": "The one-colour version",
+        "--brand": "Take the grounds from brands/NAME/brand.json",
+        "--ground": "A ground colour as #rrggbb (repeatable)",
+        "--frame": "A video frame for the watermark (repeatable)",
+        "--output": "Where the sheet goes",
+        "--json": "Print the measurements as JSON",
+        "--strict": "Exit 1 on any warning"
+      },
+      "documentation": ".claude/skills/video-design/idents.md",
+      "status": "beta",
+      "created": "2026-11-16",
+      "updated": "2026-11-16"
+    },
+    "reference_capture": {
+      "path": "tools/reference_capture.py",
+      "description": "Reference photos of a person for a fitted 3D character, from a webcam: a local page talks the sitter through eight poses (front, both three-quarters, both profiles, a smile, glasses off, full body), counts down aloud, takes a short burst and keeps the sharpest frame. Photos are saved to the output folder and nothing leaves the machine. Needs a person at a browser with a camera, so it is not a step for an unattended job",
+      "usage": "uv run tools/reference_capture.py --out projects/my-character/reference [--port 8765] [--no-open]",
+      "status": "beta",
+      "category": "utility",
+      "options": {
+        "out": "Folder for the photos, one JPEG per pose (default reference-capture)",
+        "port": "Local port (default 8765)",
+        "no-open": "Don't open the browser"
+      },
+      "documentation": "docs/blender.md",
+      "created": "2026-11-12",
+      "updated": "2026-11-14"
+    }
   },
   "optionalComponents": {
     "propainter": {
@@ -1497,6 +1545,14 @@
       "updated": "2026-10-28",
       "skill": "synthetic-ui-demo",
       "agentSupport": "session"
+    },
+    "howto": {
+      "path": "templates/howto/",
+      "description": "How-to and tutorial episodes about a tool: one mark (a terminal prompt whose chevron fills into play and whose caret becomes the playhead) carries the opening, the chapter cards and the close; scenes are ledgers, figures, bars, statements, agent CLI sessions, commands and a who-does-what split with counts, each landing on its narration word via cue(); colour by act, every figure from a facts file; a 9:16 Short per chapter with captions; YouTube chapters from the timeline (scripts/chapters.py). Plays a brand's own mark and ident when it has them (brands/<name>/assets/mark.svg and brands/<name>/ident/, read by scripts/ident.py) and its own 2D mark when not. Ships as Getting started 1, What it costs",
+      "status": "beta",
+      "created": "2026-11-15",
+      "skill": "video-design",
+      "agentSupport": "session"
     }
   },
   "transitions": {
@@ -1712,6 +1768,12 @@
       "created": "2026-11-09",
       "updated": "2026-11-09"
     },
+    "TerminalSession": {
+      "path": "lib/components/TerminalSession.tsx",
+      "description": "An agent CLI session drawn the way viewers know it: your prompt typed into the input box and sent, prose streaming in by word, tool calls with their results, a spinner, a question picker or permission prompt in place of the input, a todo list that ticks, a diff. Each on a narration cue. The harness is a skin ('claude-code', 'codex', 'shell', or your own object for Kiro or another CLI). Text wraps with hanging indents; markup colours only what matters (**bold**, `code`, {ok|...}); focus keyframes zoom onto a line by id and highlight lays a band behind it; loadMonoFont() loads a bundled mono font so renders match on every OS. Status lines under the input. Terminal stays for a plain shell",
+      "status": "beta",
+      "created": "2026-11-15"
+    },
     "BlenderClip": {
       "path": "lib/components/BlenderClip.tsx",
       "description": "Plays a Blender render as an element of a Remotion scene: one clip per shot from tools/blender_render.py --clips (transparent with --alpha), played once then held, with the shot's own sound effects. blenderClip(manifest, id) reads clips.json and gives the clip's length and event('alert') frames, so captions and cuts land on the acting. crop shows one part of a clip scaled to fill its box, with an optional background picture behind it, for an inset. Throws if the spec's fps isn't the composition's",
@@ -1860,6 +1922,12 @@
       "description": "12s product stage from one shot spec, with no character: a picture on a floating card and on a phone, and an imported 3D model, filmed with reveal, orbit and product shots that take their distance from each prop's size",
       "complexity": "beginner",
       "created": "2026-11-11"
+    },
+    "blender-ident": {
+      "path": "examples/blender-ident/",
+      "description": "Opening and closing idents from an SVG logo (optional: needs Blender): the mark alone on a dark stage, and the same move on a keycap. A logo prop with parts moved by beats, an ident shot, named sounds on the hit, the last frame checked against the flat mark, 16:9 and 9:16 from one spec",
+      "complexity": "intermediate",
+      "created": "2026-11-16"
     },
     "blender-in-remotion": {
       "path": "examples/blender-in-remotion/",

@@ -1,0 +1,276 @@
+{
+  "title": "Clap: the mark alone on a dark stage",
+  "fps": 30,
+  "resolution": "1920x1080",
+  "set": {
+    "kind": "studio",
+    "stage": "dark",
+    "palette": {
+      "backdrop": "#0c111f"
+    },
+    "props": [
+      {
+        "id": "mark",
+        "kind": "logo",
+        "file": "assets/mark-parts.svg",
+        "extras": [
+          "caret"
+        ],
+        "material": "satin",
+        "bevel": 0.0036
+      }
+    ]
+  },
+  "shots": [
+    {
+      "id": "open",
+      "dur": 2.0,
+      "type": "ident",
+      "from": {
+        "az": 14,
+        "back": 1.035
+      },
+      "offset": [
+        0,
+        0.04
+      ],
+      "fill": 0.56
+    },
+    {
+      "id": "close",
+      "dur": 3.5,
+      "type": "ident",
+      "mark": "start",
+      "to": {
+        "az": -10,
+        "back": 0.973
+      },
+      "leave": 1.33,
+      "offset": [
+        0,
+        0.04
+      ],
+      "fill": 0.56
+    }
+  ],
+  "beats": [
+    {
+      "at": 0,
+      "do": "shear",
+      "part": "mark.slash",
+      "to": -20.02
+    },
+    {
+      "at": 0,
+      "do": "grow",
+      "part": "mark.play",
+      "to": 0,
+      "from": "bottom_left"
+    },
+    {
+      "at": "open+0.133",
+      "do": "hide",
+      "part": "mark.caret"
+    },
+    {
+      "at": "open+0.233",
+      "do": "show",
+      "part": "mark.caret"
+    },
+    {
+      "at": "open+0.267",
+      "dur": 0.233,
+      "do": "shear",
+      "part": "mark.slash",
+      "to": -27
+    },
+    {
+      "at": "open+0.5",
+      "dur": 0.167,
+      "do": "shear",
+      "part": "mark.slash",
+      "to": 1.5,
+      "ease": "in"
+    },
+    {
+      "at": "open+0.667",
+      "dur": 0.3,
+      "do": "shear",
+      "part": "mark.slash",
+      "to": 0,
+      "ease": "spring"
+    },
+    {
+      "at": "open+0.667",
+      "do": "hit",
+      "part": "mark.slash",
+      "shake": 0.014,
+      "flash": 0.7,
+      "sound": "clap"
+    },
+    {
+      "at": "open+0.667",
+      "do": "hide",
+      "part": "mark.caret"
+    },
+    {
+      "at": "open+0.667",
+      "dur": 0.4,
+      "do": "grow",
+      "part": "mark.play",
+      "to": 1,
+      "ease": "spring"
+    },
+    {
+      "at": "open+0.667",
+      "do": "glow",
+      "part": "mark.slash",
+      "to": 0.75
+    },
+    {
+      "at": "open+0.7",
+      "dur": 0.6,
+      "do": "glow",
+      "part": "mark.slash",
+      "to": 0.3,
+      "ease": "out"
+    },
+    {
+      "at": "open+0.667",
+      "do": "glow",
+      "part": "mark.play",
+      "to": 0.6
+    },
+    {
+      "at": "open+0.7",
+      "dur": 0.6,
+      "do": "glow",
+      "part": "mark.play",
+      "to": 0.3,
+      "ease": "out"
+    },
+    {
+      "at": "open+0.9",
+      "dur": 0.8,
+      "do": "sweep",
+      "part": "mark",
+      "strength": 1.0
+    },
+    {
+      "at": "close",
+      "do": "sound",
+      "sound": "hum"
+    },
+    {
+      "at": "close+0.133",
+      "dur": 0.9,
+      "do": "sweep",
+      "part": "mark",
+      "strength": 1.0
+    },
+    {
+      "at": "close+1.5",
+      "dur": 0.267,
+      "do": "grow",
+      "part": "mark.play",
+      "to": 0,
+      "ease": "in"
+    },
+    {
+      "at": "close+1.767",
+      "do": "show",
+      "part": "mark.caret",
+      "sound": "tap"
+    },
+    {
+      "at": "close+1.767",
+      "dur": 0.2,
+      "do": "shear",
+      "part": "mark.slash",
+      "to": -22.5,
+      "ease": "out",
+      "sound": "stand",
+      "sound_at": "close+1.93"
+    },
+    {
+      "at": "close+1.967",
+      "dur": 0.133,
+      "do": "shear",
+      "part": "mark.slash",
+      "to": -20.02
+    },
+    {
+      "at": "close+2.4",
+      "until": "close.end",
+      "do": "blink",
+      "part": "mark.caret",
+      "every": 0.8,
+      "off": 0.27
+    }
+  ],
+  "sounds": {
+    "clap": [
+      {
+        "file": "sfx/slate.mp3",
+        "gain": 0.9
+      },
+      {
+        "file": "sfx/clapper.mp3",
+        "gain": 0.5,
+        "lowpass": 900
+      },
+      {
+        "tones": [
+          98.0,
+          146.8,
+          196.0,
+          293.7
+        ],
+        "gain": 0.22,
+        "attack": 0.004,
+        "decay": 0.55,
+        "beat": 1.004
+      }
+    ],
+    "hum": [
+      {
+        "tones": [
+          98.0,
+          146.8,
+          196.0,
+          293.7
+        ],
+        "gain": 0.3,
+        "attack": 0.5,
+        "decay": 0.5,
+        "hold": 0.5,
+        "beat": 1.004
+      }
+    ],
+    "tap": [
+      {
+        "file": "sfx/key.mp3",
+        "gain": 0.6,
+        "lowpass": 2500
+      }
+    ],
+    "stand": [
+      {
+        "file": "sfx/slate.mp3",
+        "gain": 1.0,
+        "lowpass": 1500
+      }
+    ]
+  },
+  "mix": {
+    "gain": 0.55
+  },
+  "look": {
+    "bloom": {
+      "strength": 0.6,
+      "threshold": 0.8,
+      "size": 0.5
+    }
+  },
+  "samples": 64
+}

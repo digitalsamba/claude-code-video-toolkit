@@ -1,0 +1,46 @@
+{
+ "brand": "video-toolkit",
+ "mark": {
+  "box": [
+   105.5,
+   141.2,
+   301.0,
+   229.6
+  ],
+  "parts": [
+   {
+    "id": "slash",
+    "d": "M105.50,370.80 L156.40,370.80 L240.00,141.20 L189.20,141.20 Z",
+    "light": "#3771e0",
+    "dark": "#93b4f2",
+    "mono": "#ffffff"
+   },
+   {
+    "id": "play",
+    "d": "M181.00,370.80 L264.60,141.20 L406.50,256.00 Z",
+    "light": "#121418",
+    "dark": "#ffffff",
+    "mono": "#ffffff"
+   }
+  ]
+ },
+ "episode": {
+  "name": "clap",
+  "open": {
+   "file": "ident/clap-open-16x9.mp4",
+   "frames": 60,
+   "title_frame": 51
+  },
+  "close": {
+   "file": "ident/clap-close-16x9.mp4",
+   "frames": 105
+  }
+ },
+ "short": {
+  "name": "clap",
+  "close": {
+   "file": "ident/clap-close-9x16.mp4",
+   "frames": 105
+  }
+ }
+}

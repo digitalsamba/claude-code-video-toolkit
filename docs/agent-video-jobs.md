@@ -193,6 +193,12 @@ The table was checked on 2026-11-01 against the receipts of the last ten jobs on
 median $0.0825 (the table said $0.20, now $0.10) and FLUX backgrounds $0.0058 ($0.01, now $0.0075). Estimates
 before that date were roughly double the actual spend.
 
+Checked again on 2026-11-16, against Modal's bill for the hour this time. A receipt is the seconds of the call
+times the GPU rate; Modal also bills the idle minute before an app scales to zero, so the bill is higher: three LTX
+clips came to $0.111 each (receipts $0.083) and FLUX images to about a cent each in bursts of four. The table is
+now $0.12 a clip and $0.012 an image. A job's `actual_usd` is summed from receipts, so it still reads a little
+under the bill.
+
 ## Job state
 
 `jobs/<id>/job.json` is the source of truth (`VIDEO_JOBS_DIR` moves the directory):

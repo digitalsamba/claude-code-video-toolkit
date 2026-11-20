@@ -1,0 +1,58 @@
+[
+ {
+  "text": "To",
+  "startMs": 100,
+  "endMs": 180,
+  "timestampMs": 140,
+  "confidence": null
+ },
+ {
+  "text": " begin,",
+  "startMs": 220,
+  "endMs": 640,
+  "timestampMs": 430,
+  "confidence": null
+ },
+ {
+  "text": " type",
+  "startMs": 1000,
+  "endMs": 1300,
+  "timestampMs": 1150,
+  "confidence": null
+ },
+ {
+  "text": " slash",
+  "startMs": 1300,
+  "endMs": 1500,
+  "timestampMs": 1400,
+  "confidence": null
+ },
+ {
+  "text": " setup",
+  "startMs": 1500,
+  "endMs": 2600,
+  "timestampMs": 2050,
+  "confidence": null
+ },
+ {
+  "text": " in",
+  "startMs": 2760,
+  "endMs": 2880,
+  "timestampMs": 2820,
+  "confidence": null
+ },
+ {
+  "text": " Claude",
+  "startMs": 2980,
+  "endMs": 3280,
+  "timestampMs": 3130,
+  "confidence": null
+ },
+ {
+  "text": " Code.",
+  "startMs": 3380,
+  "endMs": 3720,
+  "timestampMs": 3550,
+  "confidence": null
+ }
+]
