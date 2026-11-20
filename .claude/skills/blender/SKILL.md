@@ -30,6 +30,7 @@ uv run tools/blender_render.py render spec.json --res 640x360                 # 
 uv run tools/blender_render.py render spec.json --engine cycles               # physical light; ~10x slower (17 s/frame)
 uv run tools/blender_render.py render spec.json --clips --alpha --to projects/my-video/public/blender
 uv run tools/blender_render.py open   spec.json                               # the built scene in Blender
+uv run tools/blender_render.py sheet  kits/acme/cast/lead.json --out sheet/   # a character from every angle, in every face and stretching pose
 ```
 
 **Tell the person how long it will take before you start.** A fitted character acting in a room renders at about
@@ -99,6 +100,10 @@ in 9:16. Never hand-edit `scene.blend` as the source of truth; it is rebuilt fro
   "score": [{"from": 0, "to": "S2_alert+0.5", "mood": "calm"}, ...]
 }
 ```
+
+Also in `look`: `"raytracing": false` turns off EEVEE's screen-space ray tracing, for a room whose still surfaces shimmer
+from frame to frame (the flicker check says so). First look for a light that sits inside a shade or beside what it
+lights with a soft shadow: that is the usual cause, and the fix is `use_shadow = False` on that light in the set.
 
 Also at the top level: `"transparent": true` (the same as `--alpha`) and `"voice"` (below), and `"clock"` (seconds): where
 this spec starts on a longer film's timeline, so clips made from several specs breathe in step and join without a
@@ -174,16 +179,37 @@ service, plus a `fit.json` of its joints and face). The model keeps its own shap
 the rig poses it, so the same verbs drive it, and the chair, desk and laptop are placed for its legs and arms (seat
 at its knee height, keyboard under its hands). `glasses` is the one accessory a model takes. Its face is made from its own marks (a lower
 lip, teeth and lids on the model's lip line and eyes, with the cheeks and chin moving for a smile or an open
-mouth), and with a second model of the same character with open hands the fit gives it fingers: hand shapes, a
+mouth). If `check` says the rig's eyes are far taller than the ones painted on the model (a stare, on a face
+painted nearer to life than a cartoon), put `"paint": "keep"` in the fit's `face` and fit again: the painted face
+stays, the eyes that move are cut from it, and `happy` becomes a closed smile. With a second model of the same character with open hands the fit gives it fingers: hand shapes, a
 grip on a door handle, hands laid flat on the desk, fingertips on the keys. The fit lays a generated thumb in to
 the palm (it stands off it on a thick wedge), so the hands type at a typist's slope. The donor's hands are sized to the body's own, the wrist joint
 is put at the cuff, and the desk, the keys and how far apart the hands lie come from the body's measures, so one spec
 runs on characters of different builds (run a spec on two to find a number tuned on one; `docs/blender.md` has the
 method). Head shots aim at a fitted character's own head, whatever its
-proportions. A worked example with an invented character is `tests/fixtures/blender-fitted`. The steps and their costs are in `docs/blender.md`.
+proportions. A worked example with an invented character is `tests/fixtures/blender-fitted`, and one with bare arms and
+her painted face kept is `tests/fixtures/blender-bare`. To make a generated model smaller, use
+`uv run tools/blender_render.py reduce --model in.glb --out out.glb --faces 60000`, never Decimate by hand: it
+thins the mesh inside the islands of its texture, and a face collapsed across a seam is painted from the wrong
+place (shards by an eye). Make the open-hands picture from a hips-up crop so the fingers come out apart. Read the
+fit's output: any line with FAIL (a torn thumb web, faces painted from the wrong place, the inside of a forearm
+moving with the body) is a fault that will show in a close shot. The joints are written for the left and mirrored:
+slice both arms of the mesh, and where the right differs give it in `"joints_right"` (a right elbow mirrored 3 cm
+outside the arm left a sheet of skin hanging from it to the hip). The steps and their costs are in `docs/blender.md`.
+**When a fitted character does not read as the person**, make a review sheet before changing anything:
+`blender_render.py sheet cast.json --photos photos.json` renders the character in even light from every angle, in
+every face and in the poses a walk-in never reaches (arms up, hands on and behind the head, sitting, typing), and
+lays each reference photo beside and over the still from its angle with crown and chin on the same lines.
+Compare proportions as shares of the head's height and colours as lightness against the skin, write each finding
+down (Seen, Wanted, Layer, Measure, Status), and fix the top ones. The fit file takes `"recolour"` (shift the
+model's painted hair, beard or skin to a colour read off a photo, with `fill` for stubble painted as dots) and
+`"lid"` in `face` (hooded eyes: the lids rest part of the way down). Glasses are placed and sized by the eyes.
+The method is in `docs/blender.md`, "Refining a character".
 For a character of a real person, the reference photos come from `uv run tools/reference_capture.py --out <folder>`:
 a local page that talks the sitter through eight poses at a webcam. It needs the person at a browser, so ask
-them to run it; never commit their photos.
+them to run it; never commit their photos. Two things to settle on the character sheet, before any 3D spend: the
+feet under the hips (a wide stance spreads wide trousers or a skirt), and sleeves if close shots show the hands (on
+a bare arm the fit cuts the hand at the wrist, and the join can show).
 
 ### Shots
 
@@ -202,13 +228,18 @@ them to run it; never commit their photos.
 | `full` | character, on their feet | head to toe; `"follow": true` travels with a walk |
 | `feet` | character, on their feet | a low insert on the feet, travelling with them: an entrance before the face |
 | `tilt_up` | character, on their feet | starts on the feet, holds, tilts up to the face (`hold` seconds at each end) |
-| `fixed` | none: the camera is put where the spec says | `"cam"` and `"aim"` are points in the room, `"lens"` is for the whole frame, `"push"` moves it that share of the way to the aim over the shot. `"window": [x0, y0, x1, y1]` (from the left and the bottom) renders only that share of the frame, by lens shift, so a clip of the window lies exactly where it would in the whole frame: set the spec's `resolution` to the window's shape |
+| `fixed` | none: the camera is put where the spec says | `"cam"` and `"aim"` are points in the room (or `"phone"` and `"face"`: see `phone` below), `"dof"` an f-stop and `"shake"` a hand's drift in metres; `"lens"` is for the whole frame, `"push"` moves it that share of the way to the aim over the shot. `"window": [x0, y0, x1, y1]` (from the left and the bottom) renders only that share of the frame, by lens shift, so a clip of the window lies exactly where it would in the whole frame: set the spec's `resolution` to the window's shape |
+| `move` | none: from one framing to another | `"from"` and `"to"` are each `{"cam", "aim", "lens"}`; in a `lecture_hall` a point may be `{"hall": [x, out, z]}` (the hall's measure: x from the board's middle, out from its wall, z up) and `"to"` may be `{"cam": "board"}` (the board camera, `lens` 108 unless given). The camera eases out, comes down before it comes in (a crane, then a push), and arrives along the end framing's own axis; the lens changes on the way. `"start"` and `"arrive"` are seconds into the shot, or `"walk"`: it sets off with the subject's first walk and lands on the frame their last walk ends (the turn at the end in it); `"start": "last_walk"` sets off with their last walk instead (after a stop on the way in, so the camera holds the room while they do something there). Checked on every frame: the lens clear of the set (`nearest_set_m`), the board and the walker in view, and once landed on the board, its corners on the frame's to the pixel and nothing but the subject in front of it (`landing`) |
 | `product` | a studio prop | a three-quarter view of the prop, pushing in a little |
 | `orbit` | a studio prop | the camera travels round the prop from `az` to `az_to` |
 | `reveal` | a studio `phone` or `card` | starts on its screen edge to edge, holds, then pulls back to the `product` view |
 | `ident` | a studio prop, usually a `logo` | square on, in the prop's own directions; `"from"` / `"to"` are where the camera comes from and leaves for; its last frame (or first, `"mark": "start"`) is tested against the flat SVG |
 
-Overrides per shot: `az` (degrees round the subject; 0 = straight in front, + = the subject's left), `dist` (m),
+`"built_only": true` on any shot: it is built (the acting runs through it, so the next shot starts mid-move, or a
+spec runs as long as another) and never rendered, so its exposure is not judged and a lecture's board share leaves
+it out.
+
+Overrides per shot: `dof` (an f-stop: the subject sharp, the room behind soft), `az` (degrees round the subject; 0 = straight in front, + = the subject's left), `dist` (m),
 `h` (camera height above the target, m), `lens` (mm), `push` (fraction of the distance closed during the shot),
 `shake` (handheld jitter, m; ~0.012 for urgency), `side` (`"left"`/`"right"` flips `az`).
 
@@ -254,7 +285,7 @@ Character (`who` defaults to the first cast member):
 | `look_at` | `target`: `[x, y, z]`, `camera` or `screen`, `dur` | head and eyes to a point: the neck turns most of the way, the eyes the rest |
 | `glance` | `yaw`, `pitch`, `dur` | the eyes alone, in degrees (up to about 25) |
 | `reach` | `target`: `[x, y, z]`, `hand`, `dur` | a hand to a point in the room; an error says how far short it is |
-| `point` | `target`: `[x, y, z]`, `camera` or `screen`; `hand`; `back`; `dur` | the arm lifts nearly straight at the target (it reads from across a room), index out, thumb up; held for the beat (1.5 s without `dur`), then back unless `"back": false`. Without `hand`, the one on the target's side. Add a `look_at` to the same target for the eyes. The event gives `aim_deg` |
+| `point` | `target`: `[x, y, z]`, `camera` or `screen`; `hand`; `back`; `dur` | the arm lifts nearly straight at the target (it reads from across a room), index out, thumb up; held for the beat (1.5 s without `dur`), then back unless `"back": false`. Without `hand`, the one on the target's side. Add a `look_at` to the same target for the eyes. The event gives `aim_deg`. A `lights` beat with `"by"` is a point that arrives: the fingertip (a mitten's knuckles) lands on the switch and presses it, checked as a touch (`touch_miss_m`) |
 | `hand` | `shape`: `open`, `relaxed`, `loose`, `grip`, `flat`, `type`, `point`, `fist`; `hand`: `left`/`right`; `dur` | the fingers take a shape (both hands without `hand`). Only a fitted model whose fit found fingers has them: the clay cast's mittens are left as they are. Poses and verbs set shapes themselves (`type` on the keys, flat on the desk, a grip on a door handle, relaxed at the sides), so this is for a point or a fist. `loose` hangs more open than `relaxed`: on a fit whose relaxed hand reads as a fist at the side, set the free hand `loose` at the clip's start (gestures come back to it) |
 
 A presenter on their feet (a `lecture_hall` set for the things that are carried; the rest work anywhere):
@@ -264,13 +295,14 @@ A presenter on their feet (a `lecture_hall` set for the things that are carried;
 | `talk` | `until`, `amount` | the mouth opens and closes on the narration's words between the beat and `until` (the spec's `voice` captions): one opening a syllable, wider for an open vowel, rounder for an o or a u, shut on a pause and on b, m and p; the head dips a little on the longer words. A fitted face only |
 | `blinks` | `until` | blinks every two to five seconds, now and then twice |
 | `whistle` | `until`/`dur` | the lips purse as for a whistle and swell a little on each breath, eased in and out (the sound is yours to lay on: a recording, placed on the same seconds). A fitted face only |
-| `gesture` | `kind`: `open`, `both`, `shrug`, `count`; `hand`; `dur` | a talking gesture held for the beat, then the hands go back: one open hand lifting on a point, both hands opening out, a shrug with the head tipping, a raised index |
+| `gesture` | `kind`: `open`, `both`, `shrug`, `count`; `hand`; `dur` | a talking gesture held for the beat, then the hands go back: one open hand lifting on a point, both hands opening out, a shrug with the head tipping, a raised index. On a fitted body the hand turns on the forearm no further than that body's cuff takes (measured each build; `skin.wrist_twist` in `checks.json`), as in a `point` or a `present` |
 | `present` | `target`: `[x, y, z]` or `screen`; `hand`; `dur` | show something beside or behind them (a board): the chest turns part of the way, the head and eyes go to it and stay for the first half, the arm on that side points; then all come back. Follow it with a `look_at` |
 | `dust_hands` | `dur` | the hands come up palms together and brush past each other |
 | `carry` | `prop`: `cup`; `hand` | from this beat the cup is in a hand held in front of the chest, and that arm stays out of a walk's swing. A mug is held by its handle (the fist closed on it, the mug out past the knuckles); a takeaway cup in a hand round it. The hand goes on carrying through `sit_down` and `pull_in`, level, and lifts the cup clear of the table as it comes under it |
 | `put_down` | `prop`: `cup` or `chalk`; `hand`; `to`: `[x, y, z]`; `lean`; `dur` | the hand takes what it holds to its spot on the table and lets go; an error says how far short the arm is. `lean` is how far the chest bends to it (9 degrees unless given). Someone sitting at a kitchen table leans only as far as the table's edge allows, the hand lies flat beside the laptop afterwards, and the other hand stays where it lies on the table |
 | `pick_up` | `prop`: `chalk` or the kitchen's `cup`; `hand`; `dur` | a hand takes the chalk off the table; it lies along the index finger and the hand keeps hold of it through every later shape. The kitchen's mug is taken by its handle and lifted to where a cup is carried (about half a second after the beat), so `sip` and `put_down` follow; a mug that has stood there since the film began is turned to offer its handle to that hand |
 | `sip` | `hand`; `dur`; `part`: 0 to 1; `stay`: true | the mug in that hand goes up to the mouth, tips, and comes back down by the end of the beat, the elbow rising out to the side over the top half of the way. `part` stops it short (0.5 is half way up); `stay` leaves it up there, for a sip that is interrupted. Needs a `carry` or `pick_up` first |
+| `settle` | `dur` | they stand up straight and the arms come to hang as a placed stance has them (the fingers keep their shape): after a walk in, so a clip that starts placed on the same spot meets this one in the same pose |
 | `hold` | `prop`: `chalk`; `hand` | the chalk is in the hand from this beat (a clip that starts after it was picked up) |
 
 At a kitchen table (a `kitchen` set; `carry` and `put_down` with `"prop": "cup"` work there too, the cup being
@@ -281,6 +313,21 @@ the mug):
 | `open_lid`, `close_lid` | `dur`; `by`: a cast id; `hand` | the laptop's lid swings open or shut (0.6 s unless timed). With `"by"`, that person's fingertips are on its top edge for the move: the hand sets out 0.4 s before the beat, comes to the edge from above, goes with it and rests on it a moment. The chest turns that shoulder to the lid and leans as far as the table's edge lets it, worked out from the reach on each frame: do not add a `lean`. Shutting, a hand on the keys goes to the table beside the laptop first, and both hands end flat there. Events `lid_open` (as it starts) and `lid_close` (as it lands) |
 | `claude_type` | `until`/`dur`; `speed`: `frantic` or `calm` | Claude's hands go up and down on his keyboard, with a `key_click` event for each key (ten a second when frantic) |
 | `claude_turn` | `facing`: degrees; `dur` | he turns on his foot to face that way (0 faces -Y), swinging a little past and back |
+
+On a call, at a table or on a sofa (any set; the pint is the `pub` set's):
+
+| verb | fields | |
+|---|---|---|
+| `phone` | `hand`; `dist`, `drop`, `side` (m); `scale`; `image`; `dur` | that hand holds a phone up in front of the face, its screen to the face, and keeps it there (the arm is out of every later pose). `dist` is how far in front of the eyes, `drop` how far below them (negative is above eye level), `side` how far out toward the holding hand. A short-armed character holds it as far out as the arm goes on that line, and the `phone` event says how far that is (`from_face_m`). The phone is sized to the hand (`scale` sets it by hand: 1 is a real phone). `image` puts a picture on its screen. With no `dur` it is up from the beat's frame |
+| `wag` | `hand`; `dur`; `rate` (a second), `swing` (degrees); `toward`: a point or `phone`; `seen_from`: a point; `shape`; `lift`, `out` | a wagged finger: the forearm comes up, the index up, and swings from the elbow like a metronome, dying down over the last third; then the hand goes back. `toward` is who is being told. `seen_from` (the camera's place) turns the hand so its thumb and index side faces the viewer. `shape` is the hand's shape (`point` unless given; `open` wags the whole hand, for a model whose fingers are joined). `lift` and `out` put the wrist above and outside the shoulder, in arm lengths (0.3 and 0.3 is up beside the face, clear of the chest) |
+| `lap` | `dur` | both hands to the thighs (a hand that holds something stays). A set with no desk starts everyone like this |
+| `pick_up` with `"lift": false` | `prop`: `pint`; `hand`; `dur` | the hand goes to the glass and lies round it where it stands, and stays. A later `pick_up` lifts it from there |
+| `let_go` | `hand`; `dur`; `away` (m) | a hand that lies round a glass comes off it and lies flat on the table beside it, `away` further toward its own side |
+
+`look_at` also takes `"target": "phone"` and `"pint"`. A `fixed` shot takes `"cam": "phone"` and `"aim": "face"`:
+the camera looks back from the phone at the face, which is what the other end of the call sees. Give it a wide
+`lens` (17 to 20), `"clip"` (m: nearer than this is the hand that holds the phone, and is not drawn), `"near"`
+(m toward the face from the phone), `"aim_drop"` (m below the eyes) and `"shake"` (m: a hand is not a tripod).
 
 Poses also has `down` (arms at the sides), which a standing character starts in; arms swing on a walk only from
 `down`. A posture verb used in the wrong state is a named error ("dev is sitting: walk needs them standing
@@ -336,8 +383,10 @@ fewer are listed as notes. It runs on the film and on `--clips`. Points are read
 moving over a surface with a picture on it (a board with writing) is not reported.
 
 Set (`desk_room`): `alert` (popup + red screen light), `work` (`until`: bar drains bad → mid → good),
-`done` (the "after" line pops in), `open_door` / `close_door` (`dur`, `angle`, and `by`: a cast member whose hand
-takes the handle and goes with the door as far as the arm reaches; an error says how far short they stand),
+`done` (the "after" line pops in), `lights` (a `lecture_hall` with `"lights": "off"`: below), `open_door` / `close_door` (`dur`, `angle`, and `by`: a cast member whose hand
+takes the handle and goes with the door as far as the arm reaches; an error says how far short they stand;
+`latch`: seconds before the swing that the handle goes down, from the other side, and clicks: event `latch`, the
+handle springing back up as the door swings),
 `pull_in` (the chair and whoever sits on it come in to the desk: the feet walk it in with short steps and, once
 the desk is in reach, the hands take its edge and pull). The screen's words and numbers come from `set.screen`
 (`title`, `subtitle`, `before`, `after`, `fill_before`, `fill_after`, `alert` [2 lines], `working`).
@@ -355,8 +404,10 @@ of the handle), `open_door` with `"by"`, `walk` in, `walk` to a thigh's length i
 |---|---|
 | `desk_room` (default) | a room: walls, window, posters, rug, desk, chair, laptop, mug, plant. `palette` recolours it (`wall`, `wall2`, `floor`, `desk`, `accent1`, `accent2`, `rug`) |
 | `desk` | the desk, chair and laptop with no room, for `--alpha`: the character sits on whatever the Remotion scene puts behind it |
-| `lecture_hall` | a wall with a board that shows a picture (`"board": {"image": ..., "x0", "x1", "z0", "z1"}`: the rectangle of the wall it covers, the same one a `fixed` camera can frame square on), a `"door"`, and a small table (`"table": {"at", "size", "height", "cup", "chalk"}`) with a takeaway cup and a stick of chalk. `"walls": false` leaves the room out for `--alpha`; `"table": {"hidden": true}` keeps the table to reach for and does not draw it; `"cup_on": true` starts with the cup already on it. The cast stands |
+| `lecture_hall` | a wall with a board that shows a picture (`"board": {"image": ..., "x0", "x1", "z0", "z1"}`: the rectangle of the wall it covers, the same one a `fixed` camera can frame square on), a `"door"`, and a small table (`"table": {"at", "size", "height", "cup", "chalk"}`) with a takeaway cup and a stick of chalk. `"walls": false` leaves the room out for `--alpha`; `"table": {"hidden": true}` keeps the table to reach for and does not draw it; `"cup_on": true` starts with the cup already on it. The cast stands. The hall is sized by a fitted presenter (their height over 1.75 m scales the board, the table and the lights; the clay cast keeps it as built), so name places by the board: `"cam": "board"` on a `fixed` shot frames it edge to edge (`lens`, 108 by default), a target `{"board": [u, v]}` is a board pixel of the 1920x1080 frame, and a cast member's or a table's `"at": {"board": [u, out]}` stands in front of column u, `out` metres from the wall in the hall's measure (a board-placed table's `size` and `height` are in that measure too). With a board camera, `check` reports `board` (the share of the board the presenter hides, failing over 10%; the box they reach; a hand out of the shot's `window`). `"hall": {}` dresses it to be seen wide: 17 m deep, rows of desks and benches on a rake with an aisle down the middle (in line with the board, so the board camera, 12 m out, looks down it clear of the rows), a ceiling with rows of lights, tall windows down one side (`"windows"`: `left`, `right`, `both`, `none`), slatted wood panels on a side without them, panelling, a clock over the door; all in the hall's measure and options (`depth`, `width`, `height`, `seats`, `rows`: `from`, `pitch`, `rise`, `aisle`; `lights`, `colors`). Its own lights reach only the hall (light linking), so a presenter is lit as in every clip. A spot `{"door": out}` is on the door's line, `out` metres into the room, behind it (in the corridor) when negative: a cast member starts there and a `walk` may go to one. `"table": false` leaves the table out (a lecture that never puts its chalk down, with a walk in where it would stand). With `"walls": false` and a `"door"`, the door is built to be opened and not drawn. `"lights": "off"` starts it dark: the windows light the hall (cool), the corridor light comes in at the door (`hall.corridor`, 6 times the lit hall's, throws the doorway across the floor and keeps whoever stands in it in silhouette), a picture on the board is as faint as a board by a window (`hall.board_dark`, 0.06), and a switch plate is on the wall beside the door, on the side away from its hinge, a little above the handle. A `lights` beat (`by`, `hand`, `banks` 3, `stutter` true, `gap` 0.45 s) switches it on: with `by`, their fingertip presses the switch on the beat's frame (event `switch`), then the rows of ceiling lights and the hall's fill under them come on in `banks` groups from the board back, the presenter's key, fill and top lights with the first, each group flashing first when `stutter` (events `lamp_stutter` as a group starts and `lamp_on` as it holds); `"banks": 1, "stutter": false` is everything at once, one click. A light is on or off (keyed as steps), and the frames where it changes are given to the render's flicker check, which leaves out those and no others (`render_checks.json` `not_read`). A spot `{"switch": out}` is in front of the plate, `out` metres into the room; `{"switch": "reach"}` is as far out as the walker, side-on to the wall with that hand's shoulder to it, presses it with a straight arm (their own arm, so any body): walk there with `"facing"` side-on (-90 for a door right of the board and the right hand) |
 | `kitchen` | a home kitchen at night, built round the desk room's table, chair and laptop (so `door`, `chair_out`, `pull_in` and the screen work as they do there): a run of units with a sink under a window, a kettle and a hob, a fridge, a second run on the left wall, a pendant lamp over the table, a clock. `"lid": "closed"` starts the laptop shut. `"mug": {"at": [x, y], "on_table": true, "color", "inside"}` places the mug of tea (`on_table` for a clip that starts after it was put down): 12 cm tall with a handle a hand fits, in the room's accent colour unless given one. `"claude": {"at": [x, y], "facing", "screen": {"video" or "image", "at", "brightness"}, "hat": false}` stands Claude on the worktop: a beige CRT with a face on its screen (bars until you give it a picture or a video at the spec's `fps`), a tinfoil hat and two arms at a keyboard. `palette` adds `units`, `worktop`, `night`, `lamp` |
+| `living_room` | a sofa on a bright afternoon, with no desk and no laptop: whoever sits there has their hands in their lap. A wall of pictures close behind, a floor lamp, a side table, a rug and a low table, a sunny window in the side wall. `"sofa": {"x", "width", "color"}` moves the sofa's middle along from the sitter and sizes it; `palette` takes `wall`, `wall2`, `floor`, `sofa`, `cushion`, `rug`, `wood`, `lamp`, `window` |
+| `pub` | a snug in the afternoon round the kitchen's table and chair places: a dark table on an iron pedestal, timber panelling, a bar with taps and bottles, a fire, brass pendants, a window, and two other customers at the back as plain shapes (give the shot a `dof` so they stay soft). No laptop. The thing to hold is a pint of stout in a glass with no handle, on a beer mat, sized to the hand: `"pint": {"at": [x, y], "side": "left", "scale": 1}`. `pick_up`, `sip` and `put_down` take `"prop": "pint"`; `palette` takes `wall`, `panel`, `floor`, `desk`, `bar`, `accent1`, `lamp`, `window` |
 | `studio` | a product stage: a backdrop curving from floor to wall, soft lights sized to the props, no character and no beats. `palette.backdrop` colours it; with `--alpha` the backdrop is left out |
 
 An evening at the kitchen table, from the door to the screen (the character starts in the hall, a forearm
@@ -554,6 +605,14 @@ In a video of many clips (a presenter clip per segment, room shots, a Remotion b
 
 The order to build in when the screen shows the video's own scene: render the Remotion scene
 (`npx remotion render ... Screen out/screen.mp4`), then the Blender clips, then the video.
+
+**A lecture (a presenter at a chalkboard) is already built:** `templates/lecture`, with `lib/lecture` for the
+board and `tools/lecture.py` for the presenter (`timeline`, `specs`, `check`, `render`, `bg`, `boards`). Write the script and
+`lecture.json` (headings, chalk on cue words, windows, acting as `[words, gesture|show|look|beat, ...]`, and `closes`:
+cuts to a `closeup` or a `medium` on the presenter from one phrase to another) and copy no
+code. The generator joins the clips inside a move (the turn to the next heading starts in the old clip; the new one
+starts mid-turn from a lead-in shot it is not rendered from), and `check` compares the pose at every join, vertex
+by vertex. Its README is the walkthrough; `docs/blender.md` "A lecture" is what it learned.
 
 ## Extending
 

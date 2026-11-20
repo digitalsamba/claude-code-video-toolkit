@@ -1,0 +1,18 @@
+{"title": "Screen test, a call over a pint", "fps": 24, "resolution": "1920x1080", "engine": "eevee",
+ "set": {"kind": "pub"},
+ "cast": [{"id": "mara", "from": "mara.json"}],
+ "shots": [{"id": "C1_call", "dur": 4.5, "type": "medium", "az": 30, "dof": 2.8},
+           {"id": "C2_phone", "dur": 2.0, "type": "fixed", "cam": "phone", "aim": "face", "lens": 17, "clip": 0.08},
+           {"id": "C3_pint", "dur": 6.0, "type": "medium", "az": 30, "dof": 2.8}],
+ "beats": [
+  {"at": 0, "do": "pose", "pose": "rest", "dur": 0.0},
+  {"at": 0.2, "do": "phone", "hand": "right", "dist": 0.6, "drop": 0.0, "dur": 0.6},
+  {"at": 1.0, "do": "look_at", "target": "phone", "dur": 0.3},
+  {"at": 1.6, "do": "wag", "hand": "left", "dur": 1.8, "toward": "phone"},
+  {"at": "C2_phone+0.3", "do": "expression", "face": "happy", "dur": 0.3},
+  {"at": "C3_pint+0.2", "do": "look_at", "target": "pint", "dur": 0.3},
+  {"at": "C3_pint+0.3", "do": "pick_up", "prop": "pint", "hand": "left", "lift": false, "dur": 0.5},
+  {"at": "C3_pint+1.2", "do": "pick_up", "prop": "pint", "hand": "left", "dur": 0.7},
+  {"at": "C3_pint+2.6", "do": "sip", "hand": "left", "dur": 2.0},
+  {"at": "C3_pint+5.0", "do": "put_down", "prop": "pint", "hand": "left", "dur": 0.7}
+ ]}

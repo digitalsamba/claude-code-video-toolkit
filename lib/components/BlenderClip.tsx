@@ -10,6 +10,10 @@
  * The spec's `fps` must be the composition's: a clip plays frame for frame, so its acting stays on the frames
  * the spec put it on, and `clip.event('alert')` is the frame to hang a caption or a cut on.
  *
+ * Place it in a Sequence that starts at the clip's frame in the composition. Inside a Sequence shifted thousands
+ * of frames back (a short cut from a long video, `<Sequence from={-5580}>`), it drew nothing: shift its own
+ * Sequence's `from` instead (lib/lecture's Presenter takes an `offset` for that).
+ *
  * @example
  * ```tsx
  * import manifest from '../public/blender/clips.json';

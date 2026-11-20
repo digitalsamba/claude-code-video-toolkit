@@ -1,0 +1,7 @@
+# a fitted character's .blend is made by `blender_render.py fit` (see README), and the renders are build output
+cast/*.blend
+cast/*.blend1
+public/blender/
+blender/logs/
+blender/presenter/out/
+public/board/*.png

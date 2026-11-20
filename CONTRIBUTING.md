@@ -14,6 +14,9 @@ Thank you for your interest in contributing! This toolkit is designed to help pe
 - New templates
 - New skills or commands
 - Documentation updates
+- Blender work: a set, an acting verb, a fix to the rig or the fit, with the method written into
+  `docs/blender.md` in the same change. That page is how the next agent knows what yours found out, so
+  what you learned is as welcome as the code
 
 ## Development Setup
 

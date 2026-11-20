@@ -131,7 +131,7 @@
     },
     "blender": {
       "path": ".claude/skills/blender/",
-      "description": "3D scenes, character acting and product shots from a shot spec, as a film, as clips for any build, or as elements of a Remotion video: spec format, the cast schema (build, face, hair, clothes, accessories, seed, a character file per kit), sets (desk_room, desk, lecture_hall, kitchen with a mug carried by its handle, picked up and drunk from, a lid opened by hand and Claude the CRT, studio with phone, card and model props), shot types and camera moves, acting verbs, narration cues, the check/contact-sheet loop, BlenderClip compositing, brief-to-beats shot grammar, Blender Python vs MCP, Blender 5 gotchas",
+      "description": "3D scenes, character acting and product shots from a shot spec, as a film, as clips for any build, or as elements of a Remotion video: spec format, the cast schema (build, face, hair, clothes, accessories, seed, a character file per kit), sets (desk_room, desk, lecture_hall with an optional dressed hall of rows, windows and lights, kitchen with a mug carried by its handle, picked up and drunk from, a lid opened by hand and Claude the CRT, living_room with a sofa, pub with a pint held, let go of and drunk from, a phone held up for a video call with a camera that looks back from it, a finger wag, studio with phone, card and model props), shot types and camera moves (a move from one framing to another, keyed to a walk), acting verbs, narration cues, the check/contact-sheet loop, BlenderClip compositing, brief-to-beats shot grammar, Blender Python vs MCP, Blender 5 gotchas",
       "status": "beta",
       "created": "2026-11-11"
     }
@@ -1209,6 +1209,9 @@
         "check": "Build, verify shots, measure exposure, write stills + contact_sheet.png (exit 1 on a failed check, 2 on a spec error)",
         "render": "Check, then render the film with sound",
         "open": "Open the built scene.blend in Blender to look round it",
+        "fit": "Experimental: bind a generated 3D character (GLB) to the cast's rig from a fit.json",
+        "sheet": "A review sheet of one character in even light: six angles, seven faces, the poses that stretch a body most, sitting and typing, with its proportions as numbers; --photos pairs each reference photo with the still from its angle",
+        "reduce": "Experimental: a smaller copy of a generated model to keep in a repository, thinned inside the islands of its texture so no face is painted from the wrong place (--faces, --texture)",
         "--clips": "One clip per shot in out/clips/ with clips.json and each shot's effects as a WAV, instead of one film",
         "--alpha": "Transparent background: clips are WebM (VP9 with alpha)",
         "--prores": "Also ProRes 4444 .mov per clip, for other editors",
@@ -1227,6 +1230,23 @@
       "documentation": "docs/blender.md",
       "created": "2026-11-11",
       "updated": "2026-11-16"
+    },
+    "lecture": {
+      "path": "tools/lecture.py",
+      "description": "The Blender half of a lecture (templates/lecture): the timeline from the voiced segments and their captions (starts, words by frame, the camera's windows), one presenter clip spec a segment from lecture.json with the acting rules as options (a turn to the board as each heading is chalked, carried across the join so the next clip starts inside it; gestures, board looks and looks at the lens on the narration's words; a board look in a window turned to face the inset), then check (each clip, the share of the board the presenter hides, the pose at every join) and render (one clip at a time)",
+      "usage": "uv run tools/lecture.py timeline|specs|check|render|bg|boards projects/NAME",
+      "status": "experimental",
+      "category": "project",
+      "options": {
+        "timeline": "audio + captions + lecture.json -> timeline.json",
+        "specs": "lecture.json + timeline.json -> blender/presenter/P<nn>.json and index.json; prints every beat it dropped and why",
+        "check": "blender_render.py check on each clip, one at a time; the board share and window; every join compared vertex by vertex (fails over 4 mm)",
+        "render": "the clips into public/blender with --clips --alpha, one at a time, with an estimate first; --draft WxH",
+        "bg": "the inset's backdrop cut from public/board/bg.png",
+        "boards": "the board behind each closer shot (a segment's \"closes\"), one Remotion still each"
+      },
+      "documentation": "docs/blender.md",
+      "created": "2026-11-17"
     },
     "mark_sheet": {
       "path": "tools/mark_sheet.py",
@@ -1474,6 +1494,15 @@
     }
   },
   "templates": {
+    "lecture": {
+      "path": "templates/lecture/",
+      "description": "A lecture at a chalkboard: a fitted presenter rendered in Blender (one transparent clip a segment, joined pose to pose) in front of a board Remotion draws, with chalk written on the narration's words, windows the camera goes into, and an inset of the presenter while it is in one; optionally an opening on the whole hall (a fade from black, a walk in at the door, a camera move down the dressed hall that lands on the board camera's framing as the walk ends, a match cut to the board). The whole lecture is lecture.json, the voiced script and the timeline tools/lecture.py writes; the code is lib/lecture. Ships as the opening of \"Introducing Blender support\" with Mara, the invented fitted character. Needs Blender (optional)",
+      "status": "experimental",
+      "created": "2026-11-17",
+      "updated": "2026-11-17",
+      "skill": "blender",
+      "agentSupport": "session"
+    },
     "sprint-review": {
       "path": "templates/sprint-review/",
       "description": "Sprint review videos with demos, stats, and voiceover",
@@ -1617,6 +1646,12 @@
     }
   },
   "components": {
+    "lecture": {
+      "path": "lib/lecture/",
+      "description": "A lecture as data: makeLecture(lecture.json, timeline.json, custom) gives the compositions (the video, the bare board, the titled board). Chalk lettering and strokes written on cue words, panes for real things (a picture, a code listing) in a plain sans, windows the camera goes into, the presenter's Blender clips in front of the board, an inset of them while the camera is in a window, room shots before the board, and sounds laid on the clips' own event frames. Rule defaults in defaults.json, shared with tools/lecture.py",
+      "status": "experimental",
+      "created": "2026-11-17"
+    },
     "AnimatedBackground": {
       "path": "lib/components/AnimatedBackground.tsx",
       "description": "Floating shapes background with variants (subtle, tech, warm, dark)",

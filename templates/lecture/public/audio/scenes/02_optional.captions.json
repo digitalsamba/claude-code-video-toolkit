@@ -1,0 +1,352 @@
+[
+ {
+  "text": "First,",
+  "startMs": 100,
+  "endMs": 480,
+  "timestampMs": 290,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 820,
+  "endMs": 940,
+  "timestampMs": 880,
+  "confidence": null
+ },
+ {
+  "text": " honest",
+  "startMs": 1000,
+  "endMs": 1220,
+  "timestampMs": 1110,
+  "confidence": null
+ },
+ {
+  "text": " part.",
+  "startMs": 1320,
+  "endMs": 1600,
+  "timestampMs": 1460,
+  "confidence": null
+ },
+ {
+  "text": " Blender",
+  "startMs": 2200,
+  "endMs": 2480,
+  "timestampMs": 2340,
+  "confidence": null
+ },
+ {
+  "text": " support",
+  "startMs": 2560,
+  "endMs": 2940,
+  "timestampMs": 2750,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 3080,
+  "endMs": 3300,
+  "timestampMs": 3190,
+  "confidence": null
+ },
+ {
+  "text": " optional:",
+  "startMs": 3380,
+  "endMs": 3800,
+  "timestampMs": 3590,
+  "confidence": null
+ },
+ {
+  "text": " nothing",
+  "startMs": 4360,
+  "endMs": 4660,
+  "timestampMs": 4510,
+  "confidence": null
+ },
+ {
+  "text": " else",
+  "startMs": 4720,
+  "endMs": 4900,
+  "timestampMs": 4810,
+  "confidence": null
+ },
+ {
+  "text": " in",
+  "startMs": 4940,
+  "endMs": 5000,
+  "timestampMs": 4970,
+  "confidence": null
+ },
+ {
+  "text": " the",
+  "startMs": 5040,
+  "endMs": 5120,
+  "timestampMs": 5080,
+  "confidence": null
+ },
+ {
+  "text": " toolkit",
+  "startMs": 5160,
+  "endMs": 5540,
+  "timestampMs": 5350,
+  "confidence": null
+ },
+ {
+  "text": " needs",
+  "startMs": 5660,
+  "endMs": 5880,
+  "timestampMs": 5770,
+  "confidence": null
+ },
+ {
+  "text": " it.",
+  "startMs": 5940,
+  "endMs": 6060,
+  "timestampMs": 6000,
+  "confidence": null
+ },
+ {
+  "text": " To",
+  "startMs": 6620,
+  "endMs": 6720,
+  "timestampMs": 6670,
+  "confidence": null
+ },
+ {
+  "text": " render",
+  "startMs": 6760,
+  "endMs": 7020,
+  "timestampMs": 6890,
+  "confidence": null
+ },
+ {
+  "text": " in",
+  "startMs": 7040,
+  "endMs": 7160,
+  "timestampMs": 7100,
+  "confidence": null
+ },
+ {
+  "text": " minutes,",
+  "startMs": 7220,
+  "endMs": 7560,
+  "timestampMs": 7390,
+  "confidence": null
+ },
+ {
+  "text": " you",
+  "startMs": 7840,
+  "endMs": 7900,
+  "timestampMs": 7870,
+  "confidence": null
+ },
+ {
+  "text": " need",
+  "startMs": 7940,
+  "endMs": 8100,
+  "timestampMs": 8020,
+  "confidence": null
+ },
+ {
+  "text": " Blender",
+  "startMs": 8140,
+  "endMs": 8420,
+  "timestampMs": 8280,
+  "confidence": null
+ },
+ {
+  "text": " four",
+  "startMs": 8420,
+  "endMs": 8767,
+  "timestampMs": 8593,
+  "confidence": null
+ },
+ {
+  "text": " point",
+  "startMs": 8767,
+  "endMs": 9113,
+  "timestampMs": 8940,
+  "confidence": null
+ },
+ {
+  "text": " two",
+  "startMs": 9113,
+  "endMs": 9460,
+  "timestampMs": 9286,
+  "confidence": null
+ },
+ {
+  "text": " or",
+  "startMs": 9460,
+  "endMs": 9540,
+  "timestampMs": 9500,
+  "confidence": null
+ },
+ {
+  "text": " later,",
+  "startMs": 9660,
+  "endMs": 10020,
+  "timestampMs": 9840,
+  "confidence": null
+ },
+ {
+  "text": " and",
+  "startMs": 10360,
+  "endMs": 10600,
+  "timestampMs": 10480,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 10720,
+  "endMs": 10780,
+  "timestampMs": 10750,
+  "confidence": null
+ },
+ {
+  "text": " graphics",
+  "startMs": 10820,
+  "endMs": 11240,
+  "timestampMs": 11030,
+  "confidence": null
+ },
+ {
+  "text": " card",
+  "startMs": 11280,
+  "endMs": 11560,
+  "timestampMs": 11420,
+  "confidence": null
+ },
+ {
+  "text": " or",
+  "startMs": 11680,
+  "endMs": 11760,
+  "timestampMs": 11720,
+  "confidence": null
+ },
+ {
+  "text": " an",
+  "startMs": 11800,
+  "endMs": 11920,
+  "timestampMs": 11860,
+  "confidence": null
+ },
+ {
+  "text": " Apple",
+  "startMs": 12000,
+  "endMs": 12200,
+  "timestampMs": 12100,
+  "confidence": null
+ },
+ {
+  "text": " Silicon",
+  "startMs": 12320,
+  "endMs": 12660,
+  "timestampMs": 12490,
+  "confidence": null
+ },
+ {
+  "text": " Mac.",
+  "startMs": 12740,
+  "endMs": 13000,
+  "timestampMs": 12870,
+  "confidence": null
+ },
+ {
+  "text": " A",
+  "startMs": 13580,
+  "endMs": 13660,
+  "timestampMs": 13620,
+  "confidence": null
+ },
+ {
+  "text": " film",
+  "startMs": 13700,
+  "endMs": 13900,
+  "timestampMs": 13800,
+  "confidence": null
+ },
+ {
+  "text": " like",
+  "startMs": 13940,
+  "endMs": 14100,
+  "timestampMs": 14020,
+  "confidence": null
+ },
+ {
+  "text": " this",
+  "startMs": 14160,
+  "endMs": 14320,
+  "timestampMs": 14240,
+  "confidence": null
+ },
+ {
+  "text": " one",
+  "startMs": 14380,
+  "endMs": 14600,
+  "timestampMs": 14490,
+  "confidence": null
+ },
+ {
+  "text": " is",
+  "startMs": 14660,
+  "endMs": 14740,
+  "timestampMs": 14700,
+  "confidence": null
+ },
+ {
+  "text": " still",
+  "startMs": 14840,
+  "endMs": 15000,
+  "timestampMs": 14920,
+  "confidence": null
+ },
+ {
+  "text": " hours",
+  "startMs": 15300,
+  "endMs": 15640,
+  "timestampMs": 15470,
+  "confidence": null
+ },
+ {
+  "text": " of",
+  "startMs": 15680,
+  "endMs": 15780,
+  "timestampMs": 15730,
+  "confidence": null
+ },
+ {
+  "text": " rendering,",
+  "startMs": 15820,
+  "endMs": 16219,
+  "timestampMs": 16019,
+  "confidence": null
+ },
+ {
+  "text": " over",
+  "startMs": 16520,
+  "endMs": 16720,
+  "timestampMs": 16620,
+  "confidence": null
+ },
+ {
+  "text": " a",
+  "startMs": 16780,
+  "endMs": 16840,
+  "timestampMs": 16810,
+  "confidence": null
+ },
+ {
+  "text": " few",
+  "startMs": 16880,
+  "endMs": 17040,
+  "timestampMs": 16960,
+  "confidence": null
+ },
+ {
+  "text": " sessions.",
+  "startMs": 17140,
+  "endMs": 17620,
+  "timestampMs": 17380,
+  "confidence": null
+ }
+]

@@ -1,0 +1,20 @@
+{"title": "Screen test, standing", "fps": 24, "resolution": "1920x1080", "engine": "eevee",
+ "set": {"kind": "desk_room"},
+ "cast": [{"id": "mara", "from": "mara.json", "posture": "stand", "at": [1.9, 1.2], "facing": 0}],
+ "shots": [{"id": "T1_arms", "dur": 6.0, "type": "full"},
+           {"id": "T2_talk", "dur": 4.0, "type": "medium"},
+           {"id": "T3_call", "dur": 5.0, "type": "medium", "az": 25}],
+ "beats": [
+  {"at": "T1_arms+0.4", "do": "pose", "pose": "arms_up", "dur": 0.5},
+  {"at": "T1_arms+1.6", "do": "pose", "pose": "hands_on_head", "dur": 0.5},
+  {"at": "T1_arms+2.8", "do": "pose", "pose": "hands_behind_head", "dur": 0.6},
+  {"at": "T1_arms+4.2", "do": "pose", "pose": "down", "dur": 0.6},
+  {"at": "T1_arms+5.0", "do": "turn", "facing": 30, "dur": 0.8},
+  {"at": "T2_talk+0.2", "do": "gesture", "kind": "shrug", "dur": 1.0},
+  {"at": "T2_talk+1.6", "do": "point", "target": "camera", "dur": 1.2},
+  {"at": "T2_talk+3.0", "do": "gesture", "kind": "both", "dur": 0.8},
+  {"at": "T3_call+0.2", "do": "phone", "hand": "right", "dur": 0.6},
+  {"at": "T3_call+0.9", "do": "look_at", "target": "phone", "dur": 0.3},
+  {"at": "T3_call+1.5", "do": "wag", "hand": "left", "dur": 1.8, "toward": "phone"},
+  {"at": "T3_call+3.6", "do": "expression", "face": "grin", "dur": 0.3}
+ ]}

@@ -209,6 +209,62 @@ def area_light(name, loc, energy, size, c, target):
     return o
 
 
+class Lamps:
+    """Lights and lamp panels that come on over time from a beat (`lights`): a set puts each of its lights (their
+    energy) and each glowing material (its emission strength) in a bank, front to back, and the beat keys every
+    bank from off to full, each on its own frame. A light is on or off, so every key holds until the next one (a
+    step, not a fade), and a fluorescent tube stutters before it holds: a short pattern of flashes, its own for
+    each bank (seeded), about half a second. `changes` lists the first and last frame of each change, so the
+    render's flicker check can leave out those frames and no others."""
+
+    # a tube starting: (when, in frames at 24 fps from the bank's frame, and its share of full)
+    STUTTER = ((0, 0.55), (2, 0.0), (5, 0.8), (6, 0.08), (9, 0.65), (10, 0.0))
+
+    def __init__(self):
+        self.banks: list[list] = []          # per bank: [(owner of the curves, thing, path, full, dark)]
+        self.changes: list[list[int]] = []   # [first, last] frame of each change of light
+
+    def add(self, bank: int, thing, dark: float = 0.0):
+        """A light object (its energy) or a glowing material (its emission strength) into bank `bank`. `dark` is
+        its share of full while the bank is off (a picture on a board, faint by the windows' light, not black)."""
+        while len(self.banks) <= bank:
+            self.banks.append([])
+        if isinstance(thing, bpy.types.Object):
+            self.banks[bank].append((thing.data, thing.data, "energy", thing.data.energy, dark))
+        else:
+            sock = thing.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"]
+            self.banks[bank].append((thing.node_tree, sock, "default_value", sock.default_value, dark))
+
+    def level(self, bank: int, f: int, share: float):
+        """Bank `bank` at `share` of full from frame f, held until its next key."""
+        for owner, thing, path, full, dark in self.banks[bank]:
+            setattr(thing, path, full * (dark + (1 - dark) * share))
+            thing.keyframe_insert(path, frame=f)
+            for fc in fcurves(owner):
+                for kp in fc.keyframe_points:
+                    kp.interpolation = "CONSTANT"
+
+    def off(self, f: int = 0):
+        for b in range(len(self.banks)):
+            self.level(b, f, 0.0)
+
+    def on(self, bank: int, f: int, stutter: bool = True, seed: int = 0) -> int:
+        """Bank `bank` comes on at frame f (with `stutter`, a few flashes first, a pattern of its own for each
+        `seed`: banks given one seed flash together); returns the frame it holds full from."""
+        import random
+        rng = random.Random(seed)
+        last = f
+        if stutter:
+            t = 0.0
+            for dt, share in self.STUTTER:
+                t = dt * (1 + rng.uniform(-0.2, 0.2))
+                self.level(bank, f + (n(t) if t else 0), min(1.0, share + rng.uniform(-0.1, 0.1)) if share else 0.0)
+            last = f + n(t + 2 + rng.uniform(0, 2))
+        self.level(bank, last, 1.0)
+        self.changes.append([f, last])
+        return last
+
+
 # ---------------------------------------------------------------- keyframes
 def fcurves(ob):
     """An object's animation curves, wherever this Blender keeps them (layered actions from 4.4)."""
@@ -273,7 +329,7 @@ def cycles_gpu():
 
 
 def setup_render(fps, res, engine="eevee", exposure=-0.9, look="AgX - Punchy", samples=32, world=(0.05, 0.055, 0.07),
-                 view="AgX", transparent=False):
+                 view="AgX", transparent=False, raytracing=True):
     global FPS
     FPS = fps
     sc = scene()
@@ -291,7 +347,7 @@ def setup_render(fps, res, engine="eevee", exposure=-0.9, look="AgX - Punchy", s
     else:
         names = bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items.keys()
         sc.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in names else "BLENDER_EEVEE"
-        for a, v in (("taa_render_samples", samples), ("use_raytracing", True)):
+        for a, v in (("taa_render_samples", samples), ("use_raytracing", bool(raytracing))):
             if hasattr(sc.eevee, a):
                 setattr(sc.eevee, a, v)
     try:

@@ -24,6 +24,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import bpy  # noqa: E402
+import numpy as np  # noqa: E402
+from mathutils import Vector  # noqa: E402
 
 import acting  # noqa: E402
 import cameras  # noqa: E402
@@ -35,20 +37,22 @@ import svg  # noqa: E402
 from character import FACES, LEANS, LOOKS, POSES, POSTURES, TYPING, ClayPerson  # noqa: E402
 
 HAND_SHAPES = tuple(ClayPerson.HAND_SHAPES)
-from hall import LectureHall  # noqa: E402
+from hall import STATURE as HALL_STATURE, LectureHall, board_floor, board_rect, door_floor  # noqa: E402
 from kitchen import Kitchen  # noqa: E402
+from lounge import LivingRoom  # noqa: E402
+from pub import Pub  # noqa: E402
 from sets import DeskRoom, confetti, title3d  # noqa: E402
 import studio as studio_set  # noqa: E402
 from studio import PROP_KINDS, STAGES, Studio  # noqa: E402
 from timeline import SpecError, Timeline  # noqa: E402
 
-SET_KINDS = ("desk_room", "desk", "studio", "lecture_hall", "kitchen")
+SET_KINDS = ("desk_room", "desk", "studio", "lecture_hall", "kitchen", "living_room", "pub")
 PROPS = ("cup", "chalk")  # what a lecture hall has to carry and put down
 SCORE_MOODS = ("calm", "tension", "resolve")
 CHAR_VERBS = {"type", "pose", "expression", "look", "lean", "head_bob", "shake_head", "gulp", "blink", "sweat",
-              "tremble", "tap", "celebrate", "hold_arms", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
+              "tremble", "tap", "celebrate", "hold_arms", "settle", "stand_up", "sit_down", "walk", "turn", "wink", "glance",
               "look_at", "reach", "hand", "point", "talk", "blinks", "gesture", "dust_hands", "carry", "put_down",
-              "pick_up", "hold", "present", "whistle", "sip"}
+              "pick_up", "hold", "present", "whistle", "sip", "phone", "wag", "lap", "let_go"}
 # how far (m) each kind of contact may be out before the check fails and says where (see ClayPerson.contacts)
 CONTACT_LIMITS = {"hand_in_body": 0.03, "through": 0.03, "foot_slide": 0.03, "touch_miss": 0.03, "snap": 0.02}
 HANDS_APART = 0.005  # nearer than this the two hands are into each other (m)
@@ -60,10 +64,11 @@ CARRIED_TILT = 12.0     # a mug in the hand is level to within this (degrees; th
 CARRIED_THROUGH = 0.006  # and no deeper than this in a table or a door (m)
 GRIP_OPEN = 0.75  # a hand holding something has its fingertips within this share of a finger's length of it
 SKIN_LIMITS = {"leg_above_hips": 50, "stretch": 4.0}  # a fitted model's weights (character.skin_report)
+BOARD_COVER = 0.10  # the most of a lecture hall's board its presenter may hide from the board camera
 SET_VERBS = {"alert", "work", "done", "open_door", "close_door", "pull_in", "open_lid", "close_lid", "claude_type",
-             "claude_turn"}
+             "claude_turn", "lights"}
 KITCHEN_VERBS = ("open_lid", "close_lid", "claude_type", "claude_turn")  # verbs only a kitchen has
-LOOK_AT = ("camera", "screen")  # things a look_at or a reach can name in place of a point
+LOOK_AT = ("camera", "screen", "phone", "pint")  # things a look_at or a reach can name in place of a point
 FX_VERBS = {"confetti", "title"}
 
 
@@ -84,6 +89,163 @@ def _point(v):
     return isinstance(v, (list, tuple)) and len(v) == 2 and all(_number(x) for x in v)
 
 
+def _board_ref(v):
+    """A place named by the lecture hall's board: {"board": [u, v]} in board pixels (a spot on the floor takes
+    [u, metres out from the wall])."""
+    return isinstance(v, dict) and set(v) == {"board"} and _point(v["board"])
+
+
+def tl_time_ok(b, spec):
+    """The most seconds a latch can come before its door swings: back to the spec's start (a beat timed by a cue
+    is checked when it is placed)."""
+    return float(b["at"]) if _number(b.get("at")) else 99.0
+
+
+def _door_ref(v):
+    """A spot named by a lecture hall's door: {"door": out}, on the door's line, `out` metres (the hall's measure)
+    into the room from it, or behind it (in the corridor) when negative."""
+    return isinstance(v, dict) and set(v) == {"door"} and _number(v["door"])
+
+
+def _switch_ref(v):
+    """A spot named by a dark lecture hall's light switch: {"switch": out}, on the floor in front of the plate,
+    `out` metres (the hall's measure) into the room from its wall, or {"switch": "reach"}: as far out as the
+    walker, side-on to the wall, presses it with a straight arm (their own arm's length, so any body)."""
+    return isinstance(v, dict) and set(v) == {"switch"} and ((_number(v["switch"]) and v["switch"] > 0)
+                                                              or v["switch"] == "reach")
+
+
+def _hall_ref(v):
+    """A point named in a lecture hall's own measure: {"hall": [x, out, z]}, x from the board's middle, out from
+    its wall, z up from the floor."""
+    return isinstance(v, dict) and set(v) == {"hall"} and isinstance(v["hall"], (list, tuple)) and len(v["hall"]) == 3 \
+        and all(_number(x) for x in v["hall"])
+
+
+def _framing(v, end=False):
+    """One end of a move: {"cam", "aim", "lens"}, points in metres or {"hall": [...]}; the far end may be
+    {"cam": "board"} (and a lens)."""
+    if not isinstance(v, dict):
+        return False
+    if end and v.get("cam") == "board":
+        return set(v) <= {"cam", "lens"} and _number(v.get("lens", 108))
+    pt = lambda x: (isinstance(x, list) and len(x) == 3 and all(_number(c) for c in x)) or _hall_ref(x)  # noqa: E731
+    return set(v) == {"cam", "aim", "lens"} and pt(v["cam"]) and pt(v["aim"]) and _number(v["lens"]) and v["lens"] > 0
+
+
+def _board_cover(room, p, spec, tl, cams):
+    """How much of the board the presenter hides from each "board" camera, every half second: the share of the
+    board's pixels behind them (their mesh cast onto the board from the lens, on a grid of 10 board pixels), the
+    box they ever reach in board pixels, where their head is at the start, and whether they stay inside the
+    shot's window (a clip of part of the frame cuts off a hand that reaches out of it)."""
+    shots = [s for s in spec.get("shots", []) if s.get("board_cam") and not s.get("built_only")]
+    if not shots:
+        return None
+    from hall import WALL_Y
+    sc = kit.scene()
+    b = room.board
+    gw, gh = 192, 108
+    objs = [o for o in p.visible_objects() if o.type == "MESH"]
+    out = {"share": 0.0, "frame": None, "box_px": None, "head_px": None, "outside_window": 0}
+    for s in shots:
+        cam = next(c for f0, f1, c in cams if c.name == s["id"])
+        f0, f1 = tl.frame(tl.shots[s["id"]][0]), tl.frame(tl.shots[s["id"]][1]) - 1
+        win = s.get("window")
+        for f in sorted(set(range(f0, f1 + 1, max(1, round(tl.fps / 2)))) | {f1}):
+            sc.frame_set(f)
+            dg = bpy.context.evaluated_depsgraph_get()
+            pts = []
+            for o in objs:
+                ev = o.evaluated_get(dg)
+                mesh = ev.to_mesh()
+                co = np.empty(len(mesh.vertices) * 3, dtype=np.float64)
+                mesh.vertices.foreach_get("co", co)
+                ev.to_mesh_clear()
+                mw = np.array(o.matrix_world)
+                co = co.reshape(-1, 3) @ mw[:3, :3].T + mw[:3, 3]
+                pts.append(co)
+            P = np.concatenate(pts)
+            c = np.array(cam.matrix_world.translation)
+            t = (WALL_Y - 0.03 - c[1]) / (P[:, 1] - c[1])
+            on = c + (P - c) * t[:, None]
+            u = (on[:, 0] - b["x0"]) / (b["x1"] - b["x0"]) * 1920
+            v = (b["z1"] - on[:, 2]) / (b["z1"] - b["z0"]) * 1080
+            if f == f0 and out["head_px"] is None:
+                hu, hv = room.board_px(c + (np.array(p.head.matrix_world.translation) - c)
+                                       * ((WALL_Y - 0.03 - c[1]) / (p.head.matrix_world.translation.y - c[1])))
+                out["head_px"] = [round(hu), round(hv)]
+            box = [float(u.min()), float(v.min()), float(u.max()), float(v.max())]
+            out["box_px"] = box if out["box_px"] is None else [min(out["box_px"][0], box[0]), min(out["box_px"][1], box[1]),
+                                                               max(out["box_px"][2], box[2]), max(out["box_px"][3], box[3])]
+            if win:  # (the window is shares of the frame from the left and the bottom; what is off the frame
+                # is cut off by the frame anyway, legs below its bottom edge included)
+                wx0, wy0, wx1, wy1 = win
+                seen = [max(0.0, box[0]), max(0.0, box[1]), min(1920.0, box[2]), min(1080.0, box[3])]
+                if (seen[0] < wx0 * 1920 - 1 or seen[2] > wx1 * 1920 + 1 or seen[1] < (1 - wy1) * 1080 - 1
+                        or seen[3] > (1 - wy0) * 1080 + 1):
+                    out["outside_window"] += 1
+            inside = (u >= 0) & (u < 1920) & (v >= 0) & (v < 1080)
+            grid = np.zeros((gh, gw), bool)
+            grid[(v[inside] / 1080 * gh).astype(int), (u[inside] / 1920 * gw).astype(int)] = True
+
+            def grow(g):
+                h = g.copy()
+                h[1:] |= g[:-1]
+                h[:-1] |= g[1:]
+                h[:, 1:] |= g[:, :-1]
+                h[:, :-1] |= g[:, 1:]
+                return h
+            grid = ~grow(~grow(grid))  # (closed: the gaps between projected vertices filled, the outline kept)
+            share = float(grid.mean())
+            if share > out["share"]:
+                out["share"], out["frame"] = round(share, 4), f
+    out["box_px"] = [round(x) for x in out["box_px"]]
+    return out
+
+
+def _resolve_board(spec, room, cast):
+    """Turn the places a lecture spec names by the board into the hall's metres, now that the hall is sized: a
+    cast member's spot, a walk's end, a beat's target, and a "board" camera (square on, edge to edge with the
+    shot's lens, 108 mm unless it says)."""
+    for b in spec.get("beats", []):
+        if _board_ref(b.get("target")):
+            b["target"] = room.board_point(*b["target"]["board"])
+        if b.get("do") == "walk" and _board_ref(b.get("to")):
+            b["to"] = room.board_floor(*b["to"]["board"])
+        if b.get("do") == "walk" and _door_ref(b.get("to")):
+            b["to"] = room.door_floor(b["to"]["door"])
+        if b.get("do") == "walk" and _switch_ref(b.get("to")):
+            out, along = b["to"]["switch"], 0.0
+            if out == "reach":  # (with the hand their lights beat presses it with, a step toward the door from it)
+                who = b.get("who", spec["cast"][0]["id"])
+                hand = next((x.get("hand", "right") for x in spec.get("beats", [])
+                             if x.get("do") == "lights" and x.get("by") == who), "right")
+                along = room.SWITCH_ALONG
+                out = cast[who].press_reach(hand, room.switch_point(), along * room.scale) / room.scale
+            b["to"] = room.switch_floor(out, along)
+    for s in spec.get("shots", []):
+        if s.get("type") == "move":  # (a move's two framings, in the hall's own measure or on the board)
+            for end in ("from", "to"):
+                fr = dict(s[end])
+                if fr.get("cam") == "board":
+                    fr["lens"] = float(fr.get("lens", 108))
+                    fr["cam"], fr["aim"] = room.board_camera(fr["lens"])
+                    fr["board"] = True
+                for k in ("cam", "aim"):
+                    if _hall_ref(fr.get(k)):
+                        fr[k] = room.hall_point(*fr[k]["hall"])
+                s[end] = fr
+        if s.get("cam") == "board":
+            s["lens"] = float(s.get("lens", 108))
+            s["cam"], s["aim"] = room.board_camera(s["lens"])
+            s["board_cam"] = True
+            # (a long lens stands the camera well back, behind the room's front wall: the wall still lights the
+            # room and is not drawn for the camera)
+            front = bpy.data.objects.get("wall_front")
+            if front is not None:
+                front.visible_camera = False
+
+
 def validate(spec, base=None):
     """Everything about a spec that can be wrong without Blender: a clear SpecError now, not a traceback later."""
     base = Path(base or ".")
@@ -99,6 +261,28 @@ def validate(spec, base=None):
     studio = kind == "studio"
     if st.get("door") is not None and (not isinstance(st["door"], dict) or kind not in ("desk_room", "lecture_hall", "kitchen")):
         raise SpecError('"door" is an object (it may be empty: {}), and only a desk_room has a wall to put it in')
+    if st.get("hall") is not None and (kind != "lecture_hall" or not isinstance(st["hall"], dict)):
+        raise SpecError('"hall" dresses a lecture_hall (rows, windows, lights): an object, which may be empty: {}')
+    if isinstance(st.get("hall"), dict):
+        from hall import HALL
+        unknown = set(st["hall"]) - set(HALL)
+        if unknown:
+            raise SpecError(f'"hall" takes {", ".join(HALL)} (not {", ".join(sorted(unknown))})')
+    # (a studio stage's "lights" is its own: shares of its key, fill and rim, checked with the stage below)
+    if kind == "studio":
+        pass
+    elif st.get("lights", "on") not in ("on", "off") or (st.get("lights", "on") == "off" and kind != "lecture_hall"):
+        raise SpecError('"lights" is "on" (the default) or "off": a lecture_hall that starts dark, lit by its windows '
+                        'until a "lights" beat switches it on')
+    if kind != "studio" and any(b.get("do") == "lights" for b in spec.get("beats", [])) and st.get("lights") != "off":
+        raise SpecError('a "lights" beat switches on a hall that starts dark: give the set "lights": "off" '
+                        '(a lecture_hall\'s, for now)')
+    if st.get("table") is False and kind == "lecture_hall" and any(b.get("do") in ("put_down", "pick_up")
+                                                                   for b in spec.get("beats", [])):
+        raise SpecError('"table": false leaves the table out, and put_down and pick_up need it')
+    tab = (st.get("table") or {}).get("at") if isinstance(st.get("table"), dict) else None
+    if tab is not None and not (_point(tab) or (kind == "lecture_hall" and _board_ref(tab))):
+        raise SpecError('"table": "at" is a spot on the floor as [x, y] in metres, or {"board": [u, out]}')
     if not _number(st.get("chair_out", 0)):
         raise SpecError('"chair_out" is how far the chair starts pulled back from the desk, in metres')
     spec.setdefault("cast", [])
@@ -113,9 +297,12 @@ def validate(spec, base=None):
         if c.get("posture", "sit") not in POSTURES:
             raise SpecError(f'cast member {c.get("id")!r}: "posture" is one of {", ".join(POSTURES)}, '
                             f'not {c["posture"]!r}')
-        if not _point(c.get("at", [0, 0])) or not _number(c.get("facing", 0)):
-            raise SpecError(f'cast member {c.get("id")!r}: "at" is a spot on the floor as [x, y] in metres and '
-                            f'"facing" a number of degrees (0 faces -Y, positive turns to their left)')
+        at_ok = _point(c.get("at", [0, 0])) or (kind == "lecture_hall" and (_board_ref(c.get("at")) or (
+            _door_ref(c.get("at")) and st.get("door") is not None)))
+        if not at_ok or not _number(c.get("facing", 0)):
+            raise SpecError(f'cast member {c.get("id")!r}: "at" is a spot on the floor as [x, y] in metres (in a '
+                            f'lecture_hall also {{"board": [u, out]}}: in front of board pixel column u, out metres '
+                            f'from the wall) and "facing" a number of degrees (0 faces -Y, positive turns to their left)')
     props = st.get("props") or [] if studio else []
     for p in props:
         if not isinstance(p.get("id"), str) or p.get("kind") not in PROP_KINDS:
@@ -191,8 +378,26 @@ def validate(spec, base=None):
                 'a studio set (props)' if on_prop else 'a desk set (a character or its laptop)') + f', not {kind}')
         if subject != "screen" and subject not in ids:
             raise SpecError(f'shot {s.get("id")!r}: unknown subject {subject!r} (have: screen, {", ".join(ids)})')
+        if not isinstance(s.get("built_only", False), bool):
+            raise SpecError(f'shot {s.get("id")!r}: "built_only" is true for a shot that is built and not rendered '
+                            f'(the acting runs up to the next shot, or on after it)')
         if s.get("side") not in (None, "left", "right"):
             raise SpecError(f'shot {s.get("id")!r}: "side" is "left" or "right"')
+        if s.get("cam") == "board" and (kind != "lecture_hall" or s["type"] != "fixed"):
+            raise SpecError(f'shot {s.get("id")!r}: "cam": "board" is a fixed shot square on to a lecture_hall\'s board')
+        if s["type"] == "move":
+            if not (_framing(s.get("from")) and _framing(s.get("to"), end=True)):
+                raise SpecError(f'shot {s.get("id")!r}: a move needs "from" and "to", each {{"cam": [x, y, z], "aim": '
+                                f'[x, y, z], "lens": mm}} (points may be {{"hall": [x, out, z]}} in a lecture_hall, and '
+                                f'"to" may be {{"cam": "board"}}, the board camera, with a "lens")')
+            if kind != "lecture_hall" and any(_hall_ref(s[e].get(k)) for e in ("from", "to") for k in ("cam", "aim")) \
+                    or (s["to"].get("cam") == "board" and kind != "lecture_hall"):
+                raise SpecError(f'shot {s.get("id")!r}: "hall" points and "cam": "board" are a lecture_hall\'s')
+            for k in ("start", "arrive"):
+                v = s.get(k)
+                if v is not None and v not in ("walk", "last_walk") and not (_number(v) and 0 <= v <= float(s.get("dur", 0))):
+                    raise SpecError(f'shot {s.get("id")!r}: "{k}" is seconds into the shot (0 to its "dur"), "walk" '
+                                    f'or (to set off) "last_walk"')
         if "mark" in s or s["type"] == "ident":
             if s.get("mark", "end") not in ("start", "end", "none"):
                 raise SpecError(f'shot {s.get("id")!r}: "mark" is where the finished logo is checked against its SVG: '
@@ -227,16 +432,29 @@ def validate(spec, base=None):
             raise SpecError(f'beat at {b["at"]!r}: claude_turn needs "facing", a number of degrees (0 faces -Y)')
         if verb in ("claude_type", "claude_turn") and st.get("claude") is None:
             raise SpecError(f'beat at {b["at"]!r}: {verb} needs Claude in the kitchen: give the set "claude": {{}}')
-        if verb in ("open_door", "close_door", "open_lid", "close_lid") and b.get("by") is not None and b["by"] not in ids:
+        if verb == "open_door" and b.get("latch") is not None and not (
+                _number(b["latch"]) and 0.2 <= b["latch"] <= tl_time_ok(b, spec)):
+            raise SpecError(f'beat at {b["at"]!r}: "latch" is how many seconds before the door swings its handle goes '
+                            f'down (0.2 or more, and not before the spec starts)')
+        if verb == "lights":
+            if not (_number(b.get("banks", 3)) and b.get("banks", 3) >= 1 and isinstance(b.get("stutter", True), bool)
+                    and _number(b.get("gap", 0.45)) and b.get("gap", 0.45) >= 0):
+                raise SpecError(f'beat at {b["at"]!r}: lights takes "banks" (how many groups come on, front to back: 3), '
+                                f'"stutter" (true: each flashes before it holds), "gap" (seconds between groups: 0.45)')
+            if b.get("by") is not None and st.get("door") is None:
+                raise SpecError(f'beat at {b["at"]!r}: the light switch is beside the door: give the set "door": {{}}')
+            if b.get("hand", "right") not in ("left", "right"):
+                raise SpecError(f'beat at {b["at"]!r}: "hand" is "left" or "right"')
+        if verb in ("open_door", "close_door", "open_lid", "close_lid", "lights") and b.get("by") is not None and b["by"] not in ids:
             raise SpecError(f'beat at {b["at"]!r}: "by" is who opens the door, and nobody in the cast is called '
                             f'{b["by"]!r} (have: {", ".join(ids)})')
         if verb in CHAR_VERBS and b.get("who", ids[0]) not in ids:
             raise SpecError(f'beat at {b["at"]!r}: nobody in the cast is called {b["who"]!r} (have: {", ".join(ids)})')
         if verb in ("carry", "put_down", "pick_up", "hold", "dust_hands", "talk", "blinks", "gesture"):
-            if kind not in ("lecture_hall", "kitchen") and verb in ("carry", "put_down", "pick_up", "hold"):
-                raise SpecError(f'beat at {b["at"]!r}: {verb} needs a set with things to hold (set kind lecture_hall '
-                                f'or kitchen)')
-            have = ("cup",) if kind == "kitchen" else PROPS
+            if kind not in ("lecture_hall", "kitchen", "pub") and verb in ("carry", "put_down", "pick_up", "hold"):
+                raise SpecError(f'beat at {b["at"]!r}: {verb} needs a set with things to hold (set kind lecture_hall, '
+                                f'kitchen or pub)')
+            have = ("cup",) if kind == "kitchen" else ("pint", "cup") if kind == "pub" else PROPS
             if verb in ("carry", "put_down", "pick_up", "hold") and b.get("prop") not in have:
                 raise SpecError(f'beat at {b["at"]!r}: {verb} needs "prop", one of {", ".join(have)}')
             if b.get("hand", "left") not in ("left", "right"):
@@ -253,10 +471,14 @@ def validate(spec, base=None):
             _one_of(b, "target", LOOKS, numbers=True, default="screen")
         elif verb == "lean":
             _one_of(b, "amount", LEANS, numbers=True, default="none")
-        elif verb == "walk" and (not _point(b.get("to")) or not _number(b.get("facing", 0))
+        elif verb == "walk" and (not (_point(b.get("to")) or (kind == "lecture_hall" and (_board_ref(b.get("to")) or (
+                _door_ref(b.get("to")) and st.get("door") is not None) or (
+                _switch_ref(b.get("to")) and st.get("door") is not None and st.get("lights") == "off")))) or not _number(b.get("facing", 0))
                                  or not _number(b.get("heading", 0)) or not isinstance(b.get("curve", False), bool)
                                  or not (_number(b.get("stride", 0.5)) and 0.3 <= b.get("stride", 0.5) <= 0.85)):
-            raise SpecError(f'beat at {b["at"]!r}: walk needs "to", a spot on the floor as [x, y] in metres (and '
+            raise SpecError(f'beat at {b["at"]!r}: walk needs "to", a spot on the floor as [x, y] in metres (in a '
+                            f'lecture_hall also {{"board": [u, out]}}, {{"door": out}}, or {{"switch": out}} in one '
+                            f'that starts dark) (and '
                             f'takes "facing", degrees, for the way they end up looking; "curve": true for a bend '
                             f'in place of a line, with "heading", degrees, for the way they are going as they arrive; "stride", 0.3 to '
                             f'0.85 of a leg, for the length of a step)')
@@ -270,9 +492,11 @@ def validate(spec, base=None):
         elif verb == "point" and not isinstance(b.get("back", True), bool):
             raise SpecError(f'beat at {b["at"]!r}: point takes "back": true or false (the arm goes back after)')
         elif verb in ("look_at", "reach", "point", "present") and not (b.get("target") in LOOK_AT or (
-                isinstance(b.get("target"), list) and len(b["target"]) == 3 and all(_number(x) for x in b["target"]))):
+                isinstance(b.get("target"), list) and len(b["target"]) == 3 and all(_number(x) for x in b["target"]))
+                or (kind == "lecture_hall" and _board_ref(b.get("target")))):
             raise SpecError(f'beat at {b["at"]!r}: {verb} needs "target": a point in the room as [x, y, z] in metres'
-                            f', or one of {", ".join(LOOK_AT)}')
+                            f', or one of {", ".join(LOOK_AT)}' + (' (or {"board": [u, v]}, a board pixel)'
+                                                                   if kind == "lecture_hall" else ''))
         elif verb == "glance" and not (_number(b.get("yaw", 0)) and _number(b.get("pitch", 0))):
             raise SpecError(f'beat at {b["at"]!r}: glance takes "yaw" and "pitch" in degrees')
         elif verb == "turn" and not _number(b.get("facing")):
@@ -314,6 +538,8 @@ def build_studio(spec, st, tl, base, fps, exposure, sc):
             raise SpecError(str(e))
         sc.timeline_markers.new(s["id"], frame=f0).camera = cam
         cams.append((f0, f1, cam))
+        if s.get("built_only"):
+            rep["built_only"] = True
         where = s.get("mark", "end" if s["type"] == "ident" else "none")
         if where != "none" and getattr(prop, "kind", "") == "logo":
             # the frame a viewer is left with is the avatar: is it the flat mark?
@@ -343,7 +569,8 @@ def build(spec, args):
     kit.setup_render(fps, res, engine=args.engine or spec.get("engine", "eevee"),
                      exposure=exposure, look=look.get("look", "AgX - Punchy"), view=look.get("view", "AgX"),
                      samples=16 if args.mode == "check" else int(spec.get("samples", 32)),
-                     transparent=bool(args.alpha or spec.get("transparent")))
+                     transparent=bool(args.alpha or spec.get("transparent")),
+                     raytracing=look.get("raytracing", True))
     sc = kit.scene()
     kit.notes = []
     if look.get("bloom"):
@@ -377,7 +604,7 @@ def build(spec, args):
         if cast:
             raise SpecError("prototype supports one character per set")
         cast[c["id"]] = ClayPerson(c["id"], casting.resolve(c, base))
-        if any(k in c for k in ("posture", "at", "facing")):
+        if any(k in c for k in ("posture", "at", "facing")) and not (_board_ref(c.get("at")) or _door_ref(c.get("at"))):
             cast[c["id"]].place(c.get("posture", "sit"), c.get("at", (0, 0)), float(c.get("facing", 0)))
     if not cast:
         raise SpecError("spec needs a cast")
@@ -389,9 +616,29 @@ def build(spec, args):
             picture = Path(picture) if Path(picture).is_absolute() else base / picture
             if not picture.exists():
                 raise SpecError(f"board image not found: {picture}")
+        # (the hall is sized by its presenter, as a desk is by whoever sits at it: hall.py)
+        who = next(iter(cast.values()))
+        scale = round(who.stature() / HALL_STATURE, 4) if who.desc.get("model") else 1.0
+        rect = board_rect(st.get("board"), scale)
+        for c in spec.get("cast", []):  # (a spot named by the board or its door is a place once the board is sized)
+            if _board_ref(c.get("at")):
+                cast[c["id"]].place(c.get("posture", "stand"), board_floor(rect, scale, *c["at"]["board"]),
+                                    float(c.get("facing", 0)))
+            elif _door_ref(c.get("at")):
+                cast[c["id"]].place(c.get("posture", "stand"), door_floor(rect, scale, door, c["at"]["door"]),
+                                    float(c.get("facing", 0)))
         room = LectureHall(st.get("palette"), walls=bool(st.get("walls", True)), door=door, board=st.get("board"),
                            image=picture, strength=float((st.get("board") or {}).get("brightness", 1.0)) * 2 ** -exposure,
-                           table=st.get("table"))
+                           table=st.get("table"), scale=scale, hall=st.get("hall"), lights=st.get("lights", "on"))
+        _resolve_board(spec, room, cast)
+        kit.hall = {"scale": scale, "stature_m": round(who.stature(), 3),
+                    "board_m": {k: round(v, 3) for k, v in room.board.items()}}
+    elif kind == "pub":
+        who = next(iter(cast.values()))
+        room = Pub(st.get("palette"), fit=who.furniture(), pint=st.get("pint"),
+                   hand=who._breadth() if who.fingers.get(1) else 0.085)
+    elif kind == "living_room":
+        room = LivingRoom(st.get("palette"), fit=next(iter(cast.values())).furniture(), sofa=st.get("sofa"))
     elif kind == "kitchen":
         cl = st.get("claude")
         cl_media = cl_start = None
@@ -428,9 +675,12 @@ def build(spec, args):
     for p in cast.values():  # (hands with fingers are put on the keys where they are in the room)
         p.keys = bpy.data.objects.get("lap_keys")
         p.table = getattr(room, "desk_top", None)  # (a lean stops at its edge; a hand on it stays on it)
+        if getattr(room, "rest_pose", None) == "lap" and p.posture == "sit" and p.foot_t:
+            p.lap(1)  # (a set with no desk: the hands start on the thighs)
     default_who = next(iter(cast))
 
     fx_events, at_camera, point_camera = [], [], []
+    walked = {}  # each character's walks, (first frame, the frame they stand still at the end)
     F = tl.frame
     for b in sorted(spec.get("beats", []), key=lambda b: tl.time(b["at"])):
         verb = b.get("do")
@@ -465,6 +715,11 @@ def build(spec, args):
                 p.tap(f0)
             elif verb == "celebrate":
                 p.celebrate(f0, f1)
+            elif verb == "settle":
+                try:
+                    p.settle(f0, f1 if "until" in b or "dur" in b else f0 + kit.n(10))
+                except ValueError as e:
+                    raise SpecError(f'beat at {b["at"]!r}: {e}')
             elif verb == "hold_arms":
                 p.hold_arms(f0)
             elif verb == "wink":
@@ -477,6 +732,31 @@ def build(spec, args):
                 t1 = tl.time(b["until"]) if "until" in b else tl.duration
                 said = [w for w in tl.words if t0 - 0.01 <= w[1] < t1]
                 acting.talk(p, said, F, fps, float(b.get("amount", 1.5)), seed=f0)
+            elif verb in ("phone", "wag", "lap", "let_go"):
+                try:
+                    if verb == "phone":
+                        img = b.get("image")
+                        if img:
+                            img = Path(img) if Path(img).is_absolute() else base / img
+                            if not img.exists():
+                                raise SpecError(f"phone image not found: {img}")
+                        acting.phone(p, f0, f1 if "until" in b or "dur" in b else f0, b.get("hand", "left"),
+                                     float(b.get("dist", 0.36)), float(b.get("drop", 0.07)), float(b.get("side", 0.06)),
+                                     img, float(b.get("brightness", 1.0)) * 2 ** -exposure, b.get("scale"))
+                    elif verb == "wag":
+                        toward = b.get("toward")
+                        if toward == "phone":
+                            toward = acting.phone_point(p, f0)
+                        acting.wag(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(36), b.get("hand", "right"),
+                                   float(b.get("rate", 3.0)), float(b.get("swing", 16.0)), toward, b.get("seen_from"),
+                                   b.get("shape", "point"), float(b.get("lift", -0.08)), float(b.get("out", -0.04)))
+                    elif verb == "let_go":
+                        acting.let_go(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(14), b.get("hand", "left"),
+                                      getattr(room, "beside_laptop", None), float(b.get("away", 0.0)))
+                    else:
+                        p.lap(f0, f1)
+                except ValueError as e:
+                    raise SpecError(f'beat at {b["at"]!r}: {e}')
             elif verb == "whistle":
                 acting.whistle(p, f0, f1 if "until" in b or "dur" in b else f0 + kit.n(60), seed=f0)
             elif verb == "blinks":
@@ -507,6 +787,8 @@ def build(spec, args):
                         elif verb == "hold":
                             on_table.scale = (0, 0, 0)
                             acting.hold_small(p, in_hand, f0, hand or "right")
+                        elif verb == "pick_up" and not small and kind == "pub":
+                            acting.take_up(p, in_hand, on_table, f0, end, hand or "left", lift=bool(b.get("lift", True)))
                         elif verb == "pick_up":
                             acting.pick_up(p, in_hand, on_table, f0, end, hand or ("right" if small else "left"))
                         elif small:
@@ -529,13 +811,18 @@ def build(spec, args):
                         p.point(f0, f1 if timed else f0 + kit.n(36), point, b.get("hand"), b.get("back", True))
                     elif verb in ("look_at", "reach"):
                         point = room.screen_center() if b["target"] == "screen" else b["target"]
+                        if point == "phone":
+                            point = acting.phone_point(p, f1)
+                        elif point == "pint":
+                            point = list(room.prop("pint")[2])
                         if verb == "look_at":
                             p.look_at(f0, f1, point)
                         else:
                             p.reach(f0, f1, point, b.get("hand", "right"))
                     elif verb == "walk":  # (untimed, a walk takes what its steps need)
-                        p.walk(f0, f1 if timed else None, b["to"], b.get("facing"), bool(b.get("curve")), b.get("heading"),
-                               float(b.get("stride", 0.5)))
+                        end = p.walk(f0, f1 if timed else None, b["to"], b.get("facing"), bool(b.get("curve")),
+                                     b.get("heading"), float(b.get("stride", 0.5)))
+                        walked.setdefault(p.id, []).append((f0, end))  # (a move can set off and land on them)
                     elif verb == "turn":
                         p.turn(f0, f1 if timed else f0 + kit.n(20), b["facing"])
                     elif verb == "stand_up":
@@ -567,13 +854,21 @@ def build(spec, args):
                         room.claude_type(f0, f1 if timed else f0 + kit.n(48), b.get("speed", "frantic"))
                     elif verb == "claude_turn":
                         room.claude_turn(f0, f1 if timed else f0 + kit.n(14), float(b["facing"]))
+                    elif verb == "lights":  # (with "by", their hand reaches the switch on the beat's frame)
+                        if b.get("by"):
+                            # (a point that arrives: the fingertip on the switch on the beat's frame, and back)
+                            cast[b["by"]].point(f0 - kit.n(10), f0 + kit.n(4), list(room.switch_point()),
+                                                b.get("hand", "right"), touch="light switch")
+                        room.lights(f0, int(b.get("banks", 3)), bool(b.get("stutter", True)),
+                                    float(b.get("gap", 0.45)) * 24, pressed=bool(b.get("by")))
                     elif verb == "pull_in":  # whoever sits on the chair comes in to the desk with it
                         end = f1 if timed else f0 + kit.n(34)
                         room.events.append({"frame": f0, "kind": "chair"})
                         cast[b.get("who", default_who)].scoot(f0, end, (0, 0), rides=[room.chair], grip=room.desk_edge)
                     else:
                         end = f1 if timed else f0 + kit.n(18)
-                        room.open_door(f0, end, float(b.get("angle", 100)) if verb == "open_door" else 0.0)
+                        latch = F(t0 - float(b["latch"])) if verb == "open_door" and b.get("latch") is not None else None
+                        room.open_door(f0, end, float(b.get("angle", 100)) if verb == "open_door" else 0.0, latch)
                         if b.get("by"):  # someone's hand is on the handle as it goes
                             who = cast[b["by"]]
                             bpy.context.scene.frame_set(f0)
@@ -602,12 +897,45 @@ def build(spec, args):
         subj = s.get("subject", default_who)
         sub = cameras.screen_subject(room) if subj == "screen" else cameras.character_subject(cast[subj])
         f0, f1 = F(tl.shots[s["id"]][0]), F(tl.shots[s["id"]][1]) - 1
+        if s["type"] == "fixed" and (s.get("cam") == "phone" or s.get("aim") == "face"):
+            # a camera that looks back from the phone at the face: what the other end of the call sees
+            who, mid = cast[subj], (f0 + f1) // 2
+            s = dict(s)
+            try:
+                if s.get("cam") == "phone":
+                    s["cam"] = list(acting.phone_point(who, mid, float(s.get("near", 0.03))))
+            except ValueError as e:
+                raise SpecError(f'shot {s["id"]!r}: {e}')
+            if s.get("aim") == "face":
+                sc.frame_set(mid)
+                bpy.context.view_layer.update()
+                s["aim"] = list(who.head.matrix_world @ Vector((0, -0.3, float(s.get("aim_drop", 0.0)))))
+        scenery, board = (), None
+        if s["type"] == "move":
+            s = dict(s)
+            walks = walked.get(subj, [])
+            for k, at, pick in (("start", f0, 0), ("arrive", f1, 1)):
+                v = s.get(k)
+                if v in ("walk", "last_walk"):
+                    if not walks:
+                        raise SpecError(f'shot {s["id"]!r}: "{k}": "{v}" needs {subj} to walk in the shot')
+                    # (a move sets off with their first walk, or with their last: after a stop on the way in)
+                    s[k + "_frame"] = (walks[-1] if v == "last_walk" else walks[0])[0] if pick == 0 else walks[-1][1]
+                elif v is not None:
+                    s[k + "_frame"] = f0 + round(float(v) * fps)
+                else:
+                    s[k + "_frame"] = at
+            scenery = [o for o in sc.objects if o.type == "MESH" and not o.hide_render and o.visible_camera
+                       and o not in people and abs(o.matrix_world.determinant()) > 1e-12]
+            board = room if kind == "lecture_hall" and getattr(room, "board_face", None) is not None else None
         try:
-            cam, rep = cameras.solve(s, sub, f0, f1, seed=i, fps=fps, avoid=people)
+            cam, rep = cameras.solve(s, sub, f0, f1, seed=i, fps=fps, avoid=people, scenery=scenery, board=board)
         except ValueError as e:
             raise SpecError(str(e))
         sc.timeline_markers.new(s["id"], frame=f0).camera = cam
         cams.append((f0, f1, cam))
+        if s.get("built_only"):
+            rep["built_only"] = True
         reports.append(rep)
     sc.camera = cams[0][2]
     for person, a, b in at_camera:  # a look into the lens of whichever shot it happens in
@@ -638,6 +966,8 @@ def build(spec, args):
     kit.face = p.face_report()
     kit.skin = p.skin_report(range(1, tl.frames, max(1, tl.frames // 14)))
     kit.fighting = cameras.fighting(cams)  # faces in one plane that a camera sees: they would flicker
+    kit.lamps = getattr(room, "lamps", None)  # (lights that change on purpose: the flicker check leaves them out)
+    kit.board = _board_cover(room, p, spec, tl, cams) if kind == "lecture_hall" else None
     return tl, cams, reports, ik, events
 
 
@@ -746,13 +1076,13 @@ def main():
             checks["body_problems"] = checks.get("body_problems", []) + face["problems"]
     grips = getattr(kit, "grips", None)
     if grips:  # a hand with fingers that took hold of something: did it close on it
-        worst = max(grips, key=lambda g: g["open"])
-        checks["grip_open"] = worst["open"]
-        if worst["open"] > GRIP_OPEN:
+        loosest = max(grips, key=lambda g: g["open"])
+        checks["grip_open"] = loosest["open"]
+        if loosest["open"] > GRIP_OPEN:
             checks["passed"] = False
             checks["body_problems"] = checks.get("body_problems", []) + [
-                f'{worst["hand"]} hand is open on the {worst["what"]} at {(worst["frame"] - 1) / tl.fps:.2f} s (fingertips '
-                f'{worst["open"]:.2f} of a finger\'s length from it): it should close on what it holds']
+                f'{loosest["hand"]} hand is open on the {loosest["what"]} at {(loosest["frame"] - 1) / tl.fps:.2f} s (fingertips '
+                f'{loosest["open"]:.2f} of a finger\'s length from it): it should close on what it holds']
     walks = getattr(kit, "walks", None)
     if walks:  # each walk's path: how far it bows, how far it turns, how the body leans as it does
         checks["walks"] = walks
@@ -804,6 +1134,21 @@ def main():
         if said_skin:
             checks["passed"] = False
             checks["body_problems"] = checks.get("body_problems", []) + said_skin
+    board = getattr(kit, "board", None)
+    if board is not None:  # a lecture: the hall's size, and how much of the board the presenter hides
+        hall = getattr(kit, "hall", None)
+        checks["board"] = {**(hall or {}), **board, "limit": BOARD_COVER}
+        said_board = []
+        if board["share"] > BOARD_COVER:
+            said_board.append(f'the presenter hides {100 * board["share"]:.0f}% of the board at '
+                              f'{(board["frame"] - 1) / tl.fps:.2f} s (limit {100 * BOARD_COVER:.0f}%): stand them further '
+                              f'from the board, or nearer its edge')
+        if board["outside_window"]:
+            said_board.append(f'the presenter reaches out of the shot\'s window on {board["outside_window"]} of the '
+                              f'frames looked at (board pixels {board["box_px"]}): a clip of the window cuts them off')
+        if said_board:
+            checks["passed"] = False
+            checks["body_problems"] = checks.get("body_problems", []) + said_board
     fights = getattr(kit, "fighting", None) or []
     if fights:  # two faces in one plane, seen by a camera: the strip flickers between them as things move
         checks["passed"] = False
@@ -833,7 +1178,11 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=str(out / "scene.blend"))
     if args.mode == "render" and not args.bench:  # where still surfaces are in each frame: read against the render
         wanted_cams = [c for c in cams if not args.shots or c[2].name in [x.strip() for x in args.shots.split(",")]]
-        (out / "still_points.json").write_text(json.dumps(cameras.still_points(wanted_cams)))
+        found = cameras.still_points(wanted_cams)
+        lamps = getattr(kit, "lamps", None)
+        if lamps is not None and lamps.changes:  # (the frames where lights change on purpose: not flicker)
+            found["light_changes"] = [list(c) for c in sorted({tuple(c) for c in lamps.changes})]
+        (out / "still_points.json").write_text(json.dumps(found))
 
     if args.bench:
         import time
@@ -859,6 +1208,9 @@ def main():
             move = cameras.SHOT_TYPES[next(s["type"] for s in spec["shots"] if s["id"] == cam.name)].get("move")
             tilt = cameras.SHOT_TYPES[next(s["type"] for s in spec["shots"] if s["id"] == cam.name)].get("tilt")
             f = f1 if move == "out" or tilt else f0 if move == "in" else (f0 + f1) // 2
+            changed = [b for a, b in getattr(getattr(kit, "lamps", None), "changes", []) if f0 <= a <= f1]
+            if changed:  # (a hall that starts dark is judged once its lights hold, not part way through them)
+                f = min(f1, max(f, max(changed) + 1))
             f = next((r["mark"]["frame"] for r in reports if r["id"] == cam.name and r.get("mark")), f)
             sc.frame_set(f)
             sc.camera = cam

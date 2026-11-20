@@ -1,0 +1,1 @@
+So how does it work? One file describes the film: who is in it, the set, the shots, and every move, timed to the words I'm saying. Here is a piece of mine. Before anything renders, the toolkit checks every camera against the acting. Then Blender draws the frames, overnight if it has to.

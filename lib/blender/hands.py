@@ -62,6 +62,54 @@ def _arrays(ob):
     return co.reshape(-1, 3), ed.reshape(-1, 2)
 
 
+BARE_REACH = 0.30  # skin running further than this from the fingertips (m) is a bare arm, not a hand in a cuff
+
+
+def _bare_wrist(co, far, flood, skin, col):
+    """A hand on a bare arm (a vest top, a sleeveless dress): the skin runs on from the fingertips up to the
+    shoulder, so there is no cuff to cut at. The cut is the wrist instead: the narrowest slice of the arm between
+    a hand's length and a forearm's from the fingertips, across the line the hand and forearm make. Returns what
+    find_hand returns, or None when the skin stops within a hand's reach (a cuff)."""
+    tip = co[far].mean(axis=0)
+    dist = np.linalg.norm(co - tip, axis=1)
+    if dist[flood].max() < BARE_REACH:
+        return None
+    arm = flood & (dist < 0.40)  # the hand and the forearm
+    P = co[arm]
+    centre_all = P.mean(axis=0)
+    axis = np.linalg.svd(P - centre_all, full_matrices=False)[2][0]
+    if (centre_all - tip) @ axis < 0:
+        axis = -axis  # from the fingertips toward the elbow
+    t = (co - tip) @ axis
+    slices = []
+    for d in np.arange(0.09, 0.30, 0.005):
+        slab = arm & (np.abs(t - d) < 0.006)
+        if slab.sum() < 12:
+            continue
+        c = co[slab].mean(axis=0)
+        rel = co[slab] - c
+        radial = np.linalg.norm(rel - np.outer(rel @ axis, axis), axis=1)
+        slices.append((float(np.median(radial)), c, slab, d))
+    if not slices:
+        return None
+    # (a forearm can be as narrow for some centimetres above the wrist as at it, and which slice of that stretch
+    # measures narrowest changes with the mesh: the wrist is the end of the stretch nearest the hand)
+    narrow = min(sl[0] for sl in slices)
+    *best, d_best = next(sl for sl in slices if sl[0] <= 1.05 * narrow)
+    radius, centre, slab = best
+    # (the skin's colour is read at the wrist, where the two models meet with nothing over the join: fingertips
+    # are paler or pinker than a forearm, and matched by them the hand ends in a line of another colour)
+    skin = np.median(col[slab], axis=0)
+    normal = -axis  # the way the hand leaves the wrist
+    hand = flood & (t < d_best + 0.15 * radius)
+    length = float(((co[hand] - centre) @ normal).max())
+    print(f"hands: a bare arm (skin runs {100 * dist[flood].max():.0f} cm from the fingertips), cut at the wrist "
+          f"{100 * d_best:.1f} cm up from them, {100 * radius:.1f} cm across")
+    return {"verts": hand, "centre": Vector(centre.tolist()), "normal": Vector(normal.tolist()), "radius": radius,
+            "skin": skin, "length": length, "bare": True,
+            "cut": Vector((tip + axis * (d_best + 0.15 * radius)).tolist())}
+
+
 def find_hand(ob, side: int, col=None) -> dict:
     """The hand on one side of a model standing in an A-pose (side 1 is +x, the character's left): which
     vertices it is, the middle of the ring where it meets the cuff, the ring's size, and the way the hand
@@ -92,6 +140,9 @@ def find_hand(ob, side: int, col=None) -> dict:
                 stack.append(u)
     flood = np.zeros(len(co), dtype=bool)
     flood[list(seen)] = True
+    bare = _bare_wrist(co, far, flood, skin, col)
+    if bare is not None:
+        return bare
     ring = np.array([int(v) for v in seen if any(not flood[u] for u in nb.get(v, ()))])
     if len(ring) < 8:
         raise SystemExit(f"hands: no cuff found on the {'left' if side > 0 else 'right'} arm (the hand's colour "
@@ -132,6 +183,97 @@ def find_hand(ob, side: int, col=None) -> dict:
             "skin": skin, "length": length}
 
 
+def seam_verts(ob) -> np.ndarray:
+    """The vertices of a welded mesh that sit on a seam of its texture: those whose face corners do not all
+    carry the same UV."""
+    me = ob.data
+    vi = np.empty(len(me.loops), dtype=np.int64)
+    me.loops.foreach_get("vertex_index", vi)
+    uv = np.empty(len(me.loops) * 2, dtype=np.float64)
+    me.uv_layers.active.data.foreach_get("uv", uv)
+    rows = np.unique(np.column_stack([vi, np.round(uv.reshape(-1, 2) * 65536)]).astype(np.int64), axis=0)
+    return np.nonzero(np.bincount(rows[:, 0], minlength=len(me.vertices)) > 1)[0]
+
+
+def reduce(ob, faces: int) -> int:
+    """Thin a welded mesh to about `faces` faces without touching the seams of its texture. A generated model's
+    texture is an atlas of hundreds of small islands, and an edge collapsed across the border of two leaves a
+    face with corners in both: it is painted with whatever lies between them in the atlas, a shard of the wrong
+    colour (by an eye, down the side of a finger). So the vertices on a seam are held out of the reduction and
+    the faces come off the insides of the islands. Returns how many vertices were held."""
+    if len(ob.data.polygons) <= faces:
+        return 0
+    held = seam_verts(ob)
+    group = ob.vertex_groups.new(name="reduce")
+    group.add(list(range(len(ob.data.vertices))), 1.0, "REPLACE")
+    group.add([int(i) for i in held], 0.0, "REPLACE")
+    mod = ob.modifiers.new("Decimate", "DECIMATE")
+    mod.ratio = faces / len(ob.data.polygons)
+    mod.vertex_group = group.name
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+    ob.vertex_groups.remove(ob.vertex_groups["reduce"])
+    return len(held)
+
+
+def paint_lost(ob, was: dict) -> float:
+    """The share of a reduced mesh's faces that are painted from the wrong part of the texture: the middle of
+    each face is looked up in the texture where its own corners put it, and where the nearest point of the mesh
+    as it was (`was`, from `surface`) had it. A face inside one island of the atlas agrees with the model to
+    within its own size; a face left with corners in two islands reads from between them."""
+    from mathutils.bvhtree import BVHTree
+    me = ob.data
+    n = len(me.polygons)
+    if not n or any(p.loop_total != 3 for p in me.polygons):
+        return 0.0
+    co = np.empty(len(me.vertices) * 3, dtype=np.float32)
+    me.vertices.foreach_get("co", co)
+    vi = np.empty(n * 3, dtype=np.int32)
+    me.loops.foreach_get("vertex_index", vi)
+    uv = np.empty(n * 6, dtype=np.float32)
+    me.uv_layers.active.data.foreach_get("uv", uv)
+    P = co.reshape(-1, 3)[vi].reshape(n, 3, 3)
+    mid, now = P.mean(axis=1), uv.reshape(n, 3, 2).mean(axis=1)
+    size = np.linalg.norm(P - np.roll(P, 1, axis=1), axis=2).max(axis=1)  # each face's longest edge (m)
+    tree = BVHTree.FromPolygons([tuple(v) for v in was["co"]], [tuple(t) for t in was["tris"]])
+    hit = [tree.find_nearest(tuple(m)) for m in mid]
+    at = np.array([h[0] for h in hit], dtype=np.float64)
+    tri = np.array([h[2] for h in hit])
+    a, b, c = (was["co"][was["tris"][tri, k]].astype(np.float64) for k in range(3))
+    e1, e2, p = b - a, c - a, at - a
+    d11, d12, d22 = (e1 * e1).sum(1), (e1 * e2).sum(1), (e2 * e2).sum(1)
+    p1, p2 = (p * e1).sum(1), (p * e2).sum(1)
+    det = np.where(np.abs(d11 * d22 - d12 * d12) < 1e-20, 1e-20, d11 * d22 - d12 * d12)
+    v, w = (d22 * p1 - d12 * p2) / det, (d11 * p2 - d12 * p1) / det
+    then = was["uv"][tri, 0] * (1 - v - w)[:, None] + was["uv"][tri, 1] * v[:, None] + was["uv"][tri, 2] * w[:, None]
+    # how much texture a metre of the model's surface covers (the middle value over its faces)
+    A, U = was["co"][was["tris"]], was["uv"]
+    per_m = float(np.median(np.linalg.norm(U[:, 1] - U[:, 0], axis=1)
+                            / np.maximum(np.linalg.norm(A[:, 1] - A[:, 0], axis=1), 1e-7)))
+    return float((np.linalg.norm(now - then, axis=1) > 2 * per_m * size + 2e-3).mean())
+
+
+def surface(ob) -> dict:
+    """A mesh's surface and paint as they are now (triangles, their UVs, the texture), to hold a reduced copy
+    against with `paint_lost`."""
+    me = ob.data
+    n = len(me.polygons)
+    co = np.empty(len(me.vertices) * 3, dtype=np.float32)
+    me.vertices.foreach_get("co", co)
+    vi = np.empty(len(me.loops), dtype=np.int32)
+    me.loops.foreach_get("vertex_index", vi)
+    uv = np.empty(len(me.loops) * 2, dtype=np.float32)
+    me.uv_layers.active.data.foreach_get("uv", uv)
+    start = np.empty(n, dtype=np.int32)
+    me.polygons.foreach_get("loop_start", start)
+    corners = start[:, None] + np.arange(3)[None, :]  # (a face with more corners is read by its first three)
+    img = _colours(ob)[1]
+    w, h = img.size
+    px = np.empty(w * h * 4, dtype=np.float32)
+    img.pixels.foreach_get(px)
+    return {"co": co.reshape(-1, 3), "tris": vi[corners], "uv": uv.reshape(-1, 2)[corners], "px": px.reshape(h, w, 4)}
+
+
 def cut_hand(ob, found: dict, name: str, faces: int):
     """A copy of one hand as its own object, the wrist closed with a cap, thinned to about `faces` faces."""
     new = ob.copy()
@@ -142,18 +284,25 @@ def cut_hand(ob, found: dict, name: str, faces: int):
     bm.from_mesh(new.data)
     bm.verts.ensure_lookup_table()
     keep = found["verts"]
-    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not keep[v.index]], context="VERTS")
+    kept = {v for v in bm.verts if keep[v.index]}
+    if found.get("bare"):
+        # (a hand on a bare arm is cut off with a plane: taken vertex by vertex, its wrist is the ragged edge of
+        # whatever triangles ended there, and with no cuff over it that edge shows as shards round the wrist)
+        at, normal, radius = found["cut"], found["normal"], found["radius"]
+        near = [v for v in bm.verts if (v.co - at).length < 4 * radius]
+        across = {f for v in near for f in v.link_faces}
+        edges = {e for f in across for e in f.edges}
+        cut = bmesh.ops.bisect_plane(bm, geom=[*near, *edges, *across], dist=1e-6, plane_co=at, plane_no=normal)
+        kept |= {v for v in cut["geom_cut"] if isinstance(v, bmesh.types.BMVert)
+                 and any(e.other_vert(v) in kept for e in v.link_edges)}
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v not in kept], context="VERTS")
     loose = [e for e in bm.edges if e.is_boundary]
     if loose:
         bmesh.ops.holes_fill(bm, edges=loose, sides=0)
     bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
     bm.to_mesh(new.data)
     bm.free()
-    if len(new.data.polygons) > faces:
-        mod = new.modifiers.new("Decimate", "DECIMATE")
-        mod.ratio = faces / len(new.data.polygons)
-        bpy.context.view_layer.objects.active = new
-        bpy.ops.object.modifier_apply(modifier=mod.name)
+    reduce(new, faces)
     for poly in new.data.polygons:
         poly.use_smooth = True
     return new
@@ -325,9 +474,13 @@ def find_fingers(hand, wrist: Vector, leaves: Vector) -> dict:
     laid = lay_thumb(hand, co, ed, wrist, axis, normal, thumb, rest, knuckle, length, a + b_)
     return {"palm": normal, "axis": axis, "knuckles": wrist + axis * knuckle + normal * (centre - wrist).dot(normal),
             "side": side, "weights": weights, "thumb": laid,
-            "fingers": [{"name": f["name"], "joints": f["joints"]} for f in [thumb] + rest]}
+            # (thumb first, then index to little whichever hand it is: across the palm a right hand runs the other way)
+            "fingers": [{"name": f["name"], "joints": f["joints"]}
+                        for f in [thumb] + sorted(rest, key=lambda f: NAMES.index(f["name"]))]}
 
 
+THUMB_STRETCH_LIMIT = 3.0  # an edge of the thumb's web stretched more than this by laying the thumb in has torn
+THUMB_SPREAD_TO = 2.0  # laying the thumb in is spread over more of the web until no edge is stretched past this
 THUMB_DEPTH = 0.08  # how far the thumb's root lies out of the palm, as a share of the hand's length (wrist to tip)
 THUMB_DEPTH_LIMIT = 0.20  # the fit fails if the root still stands further off than this share
 
@@ -351,7 +504,7 @@ def lay_thumb(hand, co, ed, wrist: Vector, axis: Vector, normal: Vector, thumb: 
     thumb's joints; returns the depth before and after and the most an edge was stretched and squashed."""
     before = thumb_depth(thumb["joints"][0], rest, normal)
     target = THUMB_DEPTH * length
-    out = {"depth_before": before, "depth": before, "length": length, "stretch": 1.0, "squash": 1.0}
+    out = {"depth_before": before, "depth": before, "length": length, "stretch": 1.0, "squash": 1.0, "spread": 0}
     if before <= target:
         return out
     w_, a_, n_ = np.array(wrist), np.array(axis), np.array(normal)
@@ -365,9 +518,32 @@ def lay_thumb(hand, co, ed, wrist: Vector, axis: Vector, normal: Vector, thumb: 
     w = np.clip((off - front) / max(1e-4, before - front), 0, 1)
     w *= smooth((h - 0.05 * knuckle) / (0.6 * knuckle))  # none at the cuff ring, all from part way up the palm
     w = np.maximum(w, held)  # the thumb moves whole
-    new = co - np.outer(w * (before - target), n_)
     made = np.linalg.norm(co[ed[:, 0]] - co[ed[:, 1]], axis=1)
-    ratio = np.linalg.norm(new[ed[:, 0]] - new[ed[:, 1]], axis=1) / np.maximum(made, 1e-6)
+
+    def pressed(w):
+        new = co - np.outer(w * (before - target), n_)
+        return new, np.linalg.norm(new[ed[:, 0]] - new[ed[:, 1]], axis=1) / np.maximum(made, 1e-6)
+
+    new, ratio = pressed(w)
+    # A thumb that was made near the palm has a thin web and no wedge to thin: the thumb moves whole, the skin
+    # beside its root hardly at all, and the edges between them are pulled to several times their length (the
+    # web folds over itself, a torn patch at the thumb's root). So the move is spread out over the skin round
+    # the thumb, each vertex taking the mean of its neighbours, until no edge is stretched past THUMB_SPREAD_TO.
+    # The cuff ring and the fingers past the knuckles still do not move, and the thumb still moves whole.
+    stays = smooth((h - 0.05 * knuckle) / (0.6 * knuckle)) * (1 - smooth((h - knuckle) / (0.25 * (length - knuckle))))
+    count = np.zeros(len(co))
+    np.add.at(count, ed[:, 0], 1)
+    np.add.at(count, ed[:, 1], 1)
+    rounds = 0
+    while np.percentile(ratio, 99.9) > THUMB_SPREAD_TO and rounds < 60:
+        for _ in range(5):
+            total = np.zeros(len(co))
+            np.add.at(total, ed[:, 0], w[ed[:, 1]])
+            np.add.at(total, ed[:, 1], w[ed[:, 0]])
+            w = np.maximum(held, np.minimum(stays, total / np.maximum(count, 1)))
+        new, ratio = pressed(w)
+        rounds += 1
+    out["spread"] = rounds
     hand.data.vertices.foreach_set("co", new.astype(np.float32).ravel())
     hand.data.update()
     thumb["joints"] = [j - normal * (before - target) for j in thumb["joints"]]
@@ -387,6 +563,60 @@ def tint(hand_img, was, want):
     hand_img.pixels.foreach_set(px.ravel())
     hand_img.update()
     hand_img.pack()
+
+
+NOT_SKIN = 0.45  # a texel this far from skin's hue toward grey (0 skin, 1 no colour at all) is not skin
+
+
+def skin_only(pieces, hand_img, skin) -> float:
+    """Paint out what is not skin in the texture the hands use. A model generated from a picture of open hands
+    has the picture's background baked into the sides of the fingers and the webbing between them, where the
+    picture showed background: grey streaks down every finger once the hand is on an arm. Every texel inside a
+    face of the hands whose hue is nearer no colour than skin's becomes skin, as light or dark as it was.
+    Returns the share of the hands' texels that were painted."""
+    w, h = hand_img.size
+    px = np.empty(w * h * 4, dtype=np.float32)
+    hand_img.pixels.foreach_get(px)
+    px = px.reshape(h, w, 4)
+    skin = np.array(skin, dtype=np.float32)
+    hue0, grey = skin / max(float(skin.sum()), 1e-3), np.full(3, 1 / 3, dtype=np.float32)
+    line = grey - hue0
+    if float(line @ line) < 1e-4:  # (skin with no colour of its own: nothing to tell it from grey by)
+        return 0.0
+    seen = painted = 0
+    for piece in pieces:
+        me = piece.data
+        uv = np.empty(len(me.loops) * 2, dtype=np.float32)
+        me.uv_layers.active.data.foreach_get("uv", uv)
+        uv = uv.reshape(-1, 2) % 1 * (w, h)
+        for poly in me.polygons:
+            if poly.loop_total != 3:
+                continue
+            a, b, c = uv[poly.loop_start:poly.loop_start + 3]
+            x0, x1 = int(min(a[0], b[0], c[0])), int(max(a[0], b[0], c[0])) + 1
+            y0, y1 = int(min(a[1], b[1], c[1])), int(max(a[1], b[1], c[1])) + 1
+            if x1 - x0 > 96 or y1 - y0 > 96:  # (a face across two islands of the atlas: a cap, not skin)
+                continue
+            ys, xs = np.mgrid[y0:min(y1 + 1, h), x0:min(x1 + 1, w)]
+            det = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
+            if abs(det) < 1e-9:
+                continue
+            l1 = ((b[1] - c[1]) * (xs + 0.5 - c[0]) + (c[0] - b[0]) * (ys + 0.5 - c[1])) / det
+            l2 = ((c[1] - a[1]) * (xs + 0.5 - c[0]) + (a[0] - c[0]) * (ys + 0.5 - c[1])) / det
+            inside = (l1 > -0.35) & (l2 > -0.35) & (l1 + l2 < 1.35)  # (and a texel's width round it: filtering)
+            if not inside.any():
+                continue
+            tile = px[y0:y0 + inside.shape[0], x0:x0 + inside.shape[1], :3]
+            total = tile.sum(axis=2)
+            t = ((tile / np.maximum(total[..., None], 1e-3) - hue0) @ line) / float(line @ line)
+            off = inside & (t > NOT_SKIN) & (total > 0.1)
+            seen += int(inside.sum())
+            painted += int(off.sum())
+            if off.any():
+                tile[off] = skin * np.clip(total[off] / float(skin.sum()), 0.6, 1.05)[:, None]
+    hand_img.pixels.foreach_set(px.ravel())
+    hand_img.update()
+    return painted / max(1, seen)
 
 
 def _mirrored(piece, theirs: dict, found: dict):
@@ -458,17 +688,22 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
     laid = best[2]["thumb"]  # (the hand's length is wrist to fingertip, so the depth reads the same at any size)
     print(f"fit: hands, thumb root {100 * laid['depth'] / laid['length']:.0f}% of the hand's length out of the palm "
           f"(made {100 * laid['depth_before'] / laid['length']:.0f}%), edges stretched {laid['stretch']:.2f}x and "
-          f"squashed {laid['squash']:.2f}x at most")
+          f"squashed {laid['squash']:.2f}x at most"
+          + (f" (the move spread over the web in {laid['spread']} rounds)" if laid["spread"] else ""))
     if laid["depth"] > THUMB_DEPTH_LIMIT * laid["length"]:
         print(f"fit: FAIL hands, the thumb's root stands {100 * laid['depth'] / laid['length']:.0f}% of the hand's "
               f"length off the palm (limit {100 * THUMB_DEPTH_LIMIT:.0f}%): the hand will rest on its thumb")
+    if laid["stretch"] > THUMB_STRETCH_LIMIT:
+        print(f"fit: FAIL hands, laying the thumb in stretched an edge of its web {laid['stretch']:.1f}x (limit "
+              f"{THUMB_STRETCH_LIMIT:.0f}x): the skin there folds over itself and shows as a torn patch at the "
+              "thumb's root in a close shot. Make the open-hands model again with the thumb nearer the palm")
     for piece, _t, _f in cut:
         if piece is not best[0]:
             D.objects.remove(piece)
     cut = [best if best[2]["side"] == side else _mirrored(*best) for side in (1, -1)]
     print(f"fit: hands, both from the model's {'left' if best[1]['centre'].x > 0 else 'right'}-arm hand, which is a "
           f"{'left' if best[2]['side'] > 0 else 'right'} hand (form {best[2]['form']:.2f})")
-    out, pieces, skins, old = {}, [], [], np.zeros(len(body.data.vertices), dtype=bool)
+    out, pieces, skins, old, cuts = {}, [], [], np.zeros(len(body.data.vertices), dtype=bool), []
     own = {side: find_hand(body, side, body_col) for side in (1, -1)}
     measured = 0.5 * (own[1]["length"] + own[-1]["length"]) / best[1]["length"]
     print(f"fit: hands, the body's own are {50 * (own[1]['length'] + own[-1]['length']):.1f} cm from cuff to "
@@ -516,24 +751,162 @@ def graft(body, donor, src: dict, faces: int = 9000, scale: float | None = None,
         out[sd] = {"palm": list(spin @ found["palm"]), "axis": list(spin @ found["axis"]),
                    "fingers": [{"name": f["name"], "joints": [m @ j for j in f["joints"]]} for f in found["fingers"]]}
         skins.append((mine["skin"], theirs["skin"]))
+        if mine.get("bare"):  # (no cuff over the join: `seal` closes the arm's end onto the hand, once it has weights)
+            piece["bare_cut"] = [*mine["cut"], *mine["normal"], mine["radius"]]
+            cuts.append((mine["cut"], mine["normal"], mine["radius"]))
         old |= mine["verts"]
         pieces.append(piece)
         print(f"fit: hands, {sd} {len(found['fingers'])} fingers ({', '.join(f['name'] for f in found['fingers'])}), "
               f"{len(piece.data.polygons)} faces, wrist {mine['radius'] * 100:.1f} cm against the donor's "
               f"{theirs['radius'] * 100:.1f} cm")
+    grey = skin_only(pieces, donor_img, np.mean([s[1] for s in skins], axis=0))
+    print(f"fit: hands, {100 * grey:.2f}% of their texture was not skin's colour (background baked between the "
+          "fingers) and was painted skin")
     tint(donor_img, np.mean([s[1] for s in skins], axis=0), np.mean([s[0] for s in skins], axis=0))
     bm = bmesh.new()  # the body loses its own hands
     bm.from_mesh(body.data)
     bm.verts.ensure_lookup_table()
-    bmesh.ops.delete(bm, geom=[v for v in bm.verts if old[v.index]], context="VERTS")
+    gone = {v for v in bm.verts if old[v.index]}
+    for at, normal, radius in cuts:
+        # a bare arm is cut across with a plane, so its end is a clean ring: taking the hand's vertices away
+        # leaves the edge of whatever triangles straddled the wrist, a ragged ring with nothing over it
+        near = [v for v in bm.verts if (v.co - at).length < 4 * radius]
+        faces = {f for v in near for f in v.link_faces}
+        edges = {e for f in faces for e in f.edges}
+        bmesh.ops.bisect_plane(bm, geom=[*near, *edges, *faces], dist=1e-6, plane_co=at, plane_no=normal)
+        past = lambda v: (v.co - at).dot(normal) > 1e-5 and (v.co - at).length < 0.3  # noqa: E731
+        stack = [v for v in gone if past(v)]
+        while stack:  # (and the creases and flecks beyond the plane that were not skin's colour)
+            v = stack.pop()
+            for e in v.link_edges:
+                u = e.other_vert(v)
+                if u not in gone and past(u):
+                    gone.add(u)
+                    stack.append(u)
+    bmesh.ops.delete(bm, geom=list(gone), context="VERTS")
     bm.to_mesh(body.data)
     bm.free()
     return out, pieces
 
 
-def join(body, pieces):
-    """The hands become part of the body mesh (a second material: their own texture)."""
+SEAL_BAND = 0.03  # how far up a bare arm from its cut the skin is drawn in to meet the hand (m)
+
+
+def seal(body, pieces) -> list:
+    """Close the end of a bare arm onto the hand that was put in it (after the body has its weights, before the
+    hands are joined to it). A hand in a cuff is tucked up the sleeve and the cloth hides the join; a bare arm
+    ends in an open ring a few millimetres wider than the donor's wrist, with the hand's stub loose inside it.
+    Each vertex of that ring goes to the nearest point of the hand's skin and takes the weights the hand has
+    there, so the join stays shut when the wrist bends; the arm above it follows, less and less, over
+    SEAL_BAND. Returns, for each bare arm, the widest gap between ring and hand before and after (m)."""
+    from mathutils.kdtree import KDTree
+    names = {g.index: g.name for g in body.vertex_groups}
+    out = []
+    for piece in pieces:
+        if "bare_cut" not in piece.keys():
+            continue
+        c = list(piece["bare_cut"])
+        at, normal, radius = Vector(c[:3]), Vector(c[3:6]), c[6]
+        to_piece = piece.matrix_world.inverted() @ body.matrix_world
+        back = to_piece.inverted()
+        up = lambda v: -(v.co - at).dot(normal)  # noqa: E731  (how far up the arm from the cut)
+        band = [v for v in body.data.vertices if -1e-4 < up(v) < SEAL_BAND and (v.co - at).length < 4 * radius]
+        ring = [v for v in band if up(v) < 1e-4]
+        if len(ring) < 6:
+            continue
+        move, takes, before = {}, {}, 0.0
+        tree, ring_at = KDTree(len(ring)), [v.index for v in ring]
+        # the hand is cut across on the arm's own plane, so it has a ring of vertices where the arm ends, and
+        # its stub above that is drawn in to half its width: a donor's wrist is not the arm's shape, and where
+        # it was the wider its end stood over the arm like the cuff of a glove
+        bm = bmesh.new()
+        bm.from_mesh(piece.data)
+        p_at, p_no = to_piece @ at, (to_piece.to_3x3() @ normal).normalized()
+        bmesh.ops.bisect_plane(bm, geom=[*bm.verts, *bm.edges, *bm.faces], dist=1e-6, plane_co=p_at, plane_no=p_no)
+        flat = lambda v: abs((v.co - p_at).dot(p_no)) < 1e-5  # noqa: E731
+        on = [v.co.copy() for v in bm.verts if flat(v)]
+        middle = sum(on, Vector()) / max(1, len(on))
+        dv = bm.verts.layers.deform.verify()
+        gname = {g.index: g.name for g in piece.vertex_groups}
+        rim = [(back @ e.verts[0].co, back @ e.verts[1].co, *({gname[k]: w for k, w in v[dv].items()} for v in e.verts))
+               for e in bm.edges if flat(e.verts[0]) and flat(e.verts[1])]
+        for v in bm.verts:
+            rise = -(v.co - p_at).dot(p_no)
+            if rise > 1e-5:
+                out_ = (v.co - middle) - p_no * (v.co - middle).dot(p_no)
+                v.co = v.co - out_ * 0.5
+        bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
+        bm.to_mesh(piece.data)
+        bm.free()
+        piece.data.update()
+        for i, v in enumerate(ring):  # (onto the hand's own ring: the nearest point of its rim, edge by edge)
+            best = None
+            for a, b, wa, wb in rim:
+                t = max(0.0, min(1.0, (v.co - a).dot(b - a) / max((b - a).length_squared, 1e-12)))
+                d = (a.lerp(b, t) - v.co).length
+                if best is None or d < best[0]:
+                    best = (d, a.lerp(b, t), {k: wa.get(k, 0.0) * (1 - t) + wb.get(k, 0.0) * t for k in set(wa) | set(wb)})
+            before = max(before, best[0])
+            move[i], takes[i] = best[1] - v.co, best[2]
+            tree.insert(v.co, i)
+        tree.balance()
+        plan = []
+        for v in band:
+            _co, i, _d = tree.find(v.co)
+            k = 1 - up(v) / SEAL_BAND
+            plan.append((v.index, i, max(0.0, k) ** 2 * (3 - 2 * max(0.0, k))))
+        for index, i, k in plan:
+            v = body.data.vertices[index]
+            v.co = v.co + move[i] * k
+            own = {names[g.group]: g.weight for g in v.groups}
+            for name in set(own) | set(takes[i]):
+                if name not in body.vertex_groups:
+                    body.vertex_groups.new(name=name)
+                    names = {g.index: g.name for g in body.vertex_groups}
+                body.vertex_groups[name].add([index], own.get(name, 0.0) * (1 - k) + takes[i].get(name, 0.0) * k, "REPLACE")
+        after = max(min((a.lerp(b, max(0.0, min(1.0, (body.data.vertices[k].co - a).dot(b - a) / max((b - a).length_squared, 1e-12))))
+                         - body.data.vertices[k].co).length for a, b, _wa, _wb in rim) for k in ring_at)
+        out.append((before, after))
+    body.data.update()
+    return out
+
+
+def join(body, pieces) -> int:
+    """The hands become part of the body mesh (a second material: their own texture). On a bare arm the two
+    meet with nothing over the join, and they are still two surfaces there: each shades by its own normals, so
+    the light breaks along the ring and the join shows as a line however well the colours match. The vertices
+    of both on the ring are given one normal between them (the mean of those within a few millimetres), and
+    the mesh keeps those normals. Returns how many vertices were given a shared normal."""
+    from mathutils.kdtree import KDTree
+    cuts = [(Vector(list(p["bare_cut"])[:3]), Vector(list(p["bare_cut"])[3:6]), list(p["bare_cut"])[6])
+            for p in pieces if "bare_cut" in p.keys()]
     for o in bpy.context.view_layer.objects:
         o.select_set(o in pieces or o is body)
     bpy.context.view_layer.objects.active = body
     bpy.ops.object.join()
+    if not cuts:
+        return 0
+    me = body.data
+    normals = [v.normal.copy() for v in me.vertices]
+    ring = [v.index for v in me.vertices
+            if any(abs((v.co - at).dot(no)) < RING_NEAR and (v.co - at).length < 4 * radius for at, no, radius in cuts)]
+    tree = KDTree(len(ring))
+    for i, index in enumerate(ring):
+        tree.insert(me.vertices[index].co, i)
+    tree.balance()
+    shared = {}
+    for index in ring:
+        total = Vector()
+        for _co, i, _d in tree.find_range(me.vertices[index].co, RING_SHARE):
+            total += me.vertices[ring[i]].normal
+        if total.length > 1e-6:
+            shared[index] = total.normalized()
+    for index, n in shared.items():
+        normals[index] = n
+    me.normals_split_custom_set_from_vertices([tuple(n) for n in normals])
+    me.update()
+    return len(shared)
+
+
+RING_NEAR = 0.0015   # a vertex this near a bare arm's cut plane (m) is on the ring where arm and hand meet
+RING_SHARE = 0.004   # and shares its normal with the ring's vertices within this (m)

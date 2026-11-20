@@ -58,6 +58,14 @@ from source as static React, driven by the `Stage` cursor and camera, with sente
 pace and pitch. Ships as the finished release 650 build, so it renders as is; for a new release keep the kits and
 replace `src/scenes/` and the voice phrases. Method in the `synthetic-ui-demo` skill.
 
+### lecture
+A presenter at a chalkboard (experimental, needs Blender): a fitted character rendered as one transparent clip a
+segment, standing at a board Remotion draws, with chalk written on the narration's words and windows the camera goes
+into. A lecture is its script, `lecture.json` and the timeline `tools/lecture.py timeline` writes; the code is
+`lib/lecture` and `tools/lecture.py`, so a new lecture copies none. `"opening": {}` starts it on the whole hall, a
+segment's `"closes"` cut to a closer second camera on the presenter, and `"shorts"` cut vertical Shorts from
+segments. The README is the walkthrough; `docs/blender.md` "A lecture" is the method.
+
 ### howto
 Tutorial episodes about a tool, in chapters, with a 9:16 Short cut from each. One mark carries the series: a
 terminal prompt whose chevron fills into a play triangle and whose caret becomes the playhead on a track with a
@@ -81,7 +89,7 @@ from a JSON shot spec. It needs Blender 4.2 or later and nothing else in the too
   exits 0). Without Blender, don't propose it unless the user asks for 3D.
 - Before proposing a character film, tell the person it is hours of rendering over a few sessions.
 - The clay cast, the desk sets, the studio stage and clips in Remotion are settled. Characters fitted from a
-  generated 3D model, the kitchen and the lecture hall are experimental.
+  generated 3D model, the kitchen, the lecture hall, the living room and the pub are experimental.
 - Characters are caricatures in one cartoon style, not likenesses. Reference photos of a real person stay on the
   machine and out of the repo.
 

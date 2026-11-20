@@ -1,0 +1,268 @@
+{
+ "title": "Introducing Blender support",
+ "fps": 30,
+ "presenter": {
+  "cast": "cast/presenter.json"
+ },
+ "opening": {},
+ "staging": {},
+ "rules": {},
+ "segments": [
+  {
+   "id": "01_hello",
+   "heading": "Blender support",
+   "board": [
+    {
+     "at": "a 3D model",
+     "chalk": "a 3D model",
+     "x": 80,
+     "y": 380,
+     "size": "l"
+    },
+    {
+     "at": "with joints",
+     "stroke": "arrow",
+     "points": [
+      420,
+      425,
+      520,
+      425
+     ]
+    },
+    {
+     "at": "with joints",
+     "chalk": "joints, a face, fingers",
+     "x": 545,
+     "y": 392,
+     "size": "m"
+    },
+    {
+     "at": "one file",
+     "chalk": "one file",
+     "x": 80,
+     "y": 560,
+     "size": "xl",
+     "color": "yellow"
+    },
+    {
+     "at": "one file",
+     "stroke": "under",
+     "points": [
+      80,
+      560,
+      96,
+      380
+     ]
+    },
+    {
+     "at": "Nobody animated",
+     "chalk": "nothing animated by hand",
+     "x": 80,
+     "y": 760,
+     "size": "m",
+     "weight": 400
+    }
+   ],
+   "acting": [
+    [
+     "fitted to its rig",
+     "show",
+     [
+      300,
+      420
+     ]
+    ],
+    [
+     "one file",
+     "show",
+     [
+      250,
+      610
+     ]
+    ],
+    [
+     "Nobody animated",
+     "look",
+     "content"
+    ]
+   ]
+  },
+  {
+   "id": "02_optional",
+   "heading": "Optional",
+   "board": [
+    {
+     "at": "nothing else",
+     "chalk": "nothing else needs it",
+     "x": 80,
+     "y": 370,
+     "size": "l"
+    },
+    {
+     "at": "you need Blender",
+     "chalk": "Blender 4.2 or later",
+     "x": 80,
+     "y": 520,
+     "size": "m"
+    },
+    {
+     "at": "a graphics card",
+     "chalk": "a GPU, or Apple Silicon",
+     "x": 80,
+     "y": 600,
+     "size": "m"
+    },
+    {
+     "at": "you need Blender",
+     "stroke": "tick",
+     "points": [
+      600,
+      528,
+      34
+     ]
+    },
+    {
+     "at": "a graphics card",
+     "stroke": "tick",
+     "points": [
+      690,
+      608,
+      34
+     ]
+    },
+    {
+     "at": "hours of rendering",
+     "chalk": "hours, not minutes",
+     "x": 80,
+     "y": 740,
+     "size": "xl",
+     "color": "yellow"
+    }
+   ],
+   "acting": [
+    [
+     "optional",
+     "show",
+     [
+      300,
+      400
+     ]
+    ],
+    [
+     "a graphics card",
+     "gesture",
+     "both"
+    ],
+    [
+     "hours of rendering",
+     "look",
+     "worried"
+    ]
+   ]
+  },
+  {
+   "id": "03_one_file",
+   "heading": "One file is the film",
+   "board": [
+    {
+     "at": "who is in it",
+     "chalk": "cast · set · shots · beats",
+     "x": 80,
+     "y": 360,
+     "size": "l"
+    },
+    {
+     "at": "Here is a piece",
+     "pane": {
+      "x": 60,
+      "y": 330,
+      "w": 1080,
+      "h": 420,
+      "title": "This clip's spec (a piece of it)",
+      "source": "blender/presenter/P03.json, written by tools/lecture.py specs",
+      "code": "\"cast\": [{\"posture\": \"stand\",\n          \"at\": {\"board\": [1600, 1.0]}}],\n\"beats\": [\n  {\"at\": 5.717, \"do\": \"gesture\", \"kind\": \"count\"},\n  {\"at\": 9.333, \"do\": \"present\",\n   \"target\": {\"board\": [400, 400]}}\n]",
+      "out": {
+       "cue": "against the acting",
+       "edge": "end"
+      }
+     }
+    },
+    {
+     "at": {
+      "cue": "against the acting",
+      "edge": "end",
+      "offset": 12
+     },
+     "chalk": "check: every camera",
+     "x": 80,
+     "y": 560,
+     "size": "l"
+    },
+    {
+     "at": "Then Blender",
+     "stroke": "arrow",
+     "points": [
+      120,
+      660,
+      120,
+      740
+     ]
+    },
+    {
+     "at": "Then Blender",
+     "chalk": "render",
+     "x": 80,
+     "y": 760,
+     "size": "xl",
+     "color": "yellow"
+    },
+    {
+     "at": "overnight",
+     "chalk": "(overnight)",
+     "x": 400,
+     "y": 790,
+     "size": "m",
+     "weight": 400,
+     "tilt": -4
+    }
+   ],
+   "windows": [
+    {
+     "in": "Here is a piece",
+     "out": {
+      "cue": "against the acting",
+      "edge": "end"
+     }
+    }
+   ],
+   "acting": [
+    [
+     "who is in it",
+     "gesture",
+     "count"
+    ],
+    [
+     "timed to the words",
+     "show",
+     [
+      400,
+      400
+     ]
+    ],
+    [
+     "Then Blender",
+     "show",
+     [
+      250,
+      790
+     ]
+    ],
+    [
+     "overnight",
+     "look",
+     "content"
+    ]
+   ]
+  }
+ ]
+}

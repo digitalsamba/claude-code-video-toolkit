@@ -137,6 +137,61 @@ class CastTests(unittest.TestCase):
         cast.resolve({'id': 'maya', 'from': str(ROOT / 'kits' / 'example' / 'cast' / 'maya.json')})
 
 
+class PaintedFaceTests(unittest.TestCase):
+    """Reading a model's painted face (lib/blender/facepaint.py): plain numpy, no Blender needed."""
+
+    def painted_eye(self, wide=0.032, tall=0.018, iris=0.0095, covered=0.15):
+        """A patch of a face with an eye painted on it, 0.2 mm a sample: skin, a white almond between two lid
+        lines, a lash line over it, a brown iris with a dark pupil whose top the upper lid covers."""
+        import numpy as np
+        step, h, w = 0.0002, 225, 320
+        zz, xx = np.mgrid[0:h, 0:w]
+        x, z = (xx - w / 2) * step, (zz - h / 2) * step
+        P = np.empty((h, w, 3), dtype=np.float32)
+        P[:] = (0.94, 0.72, 0.63)
+        edge = tall / 2 * (1 - (x / (wide / 2)) ** 2)                       # the lid lines: two arcs, corner to corner
+        opening = (np.abs(x) < wide / 2) & (np.abs(z) <= edge)
+        P[(np.abs(x) < wide / 2) & (z > edge) & (z < edge + 0.0016)] = (0.30, 0.18, 0.14)   # the lash line
+        P[opening] = (0.86, 0.84, 0.83)
+        centre = tall / 2 + 2 * iris * covered - iris                        # the lid over `covered` of the iris
+        r = np.hypot(x, z - centre)
+        P[opening & (r < iris)] = (0.32, 0.21, 0.15)
+        P[opening & (r < 0.45 * iris)] = (0.04, 0.03, 0.03)
+        return P
+
+    def test_a_painted_eye_is_read_for_its_size_its_iris_and_its_lid(self):
+        import facepaint
+        eye = facepaint.measure_eye(self.painted_eye())
+        self.assertIsNotNone(eye)
+        self.assertAlmostEqual(eye['open'][0], 0.032, delta=0.002)
+        self.assertAlmostEqual(eye['open'][1], 0.018, delta=0.002)
+        self.assertAlmostEqual(eye['iris_r'], 0.0095, delta=0.001)
+        self.assertAlmostEqual(eye['covered'], 0.15, delta=0.07)             # the lid rests over the top of the iris
+        self.assertLess(eye['pupil_r'], 0.7 * eye['iris_r'])
+        self.assertGreater(eye['iris_colour'][0], eye['iris_colour'][2])     # brown, not the pupil's black
+        for plate in ('fill', 'iris', 'data'):                               # what a kept face's eye is cut from
+            self.assertEqual(eye['plates'][plate].ndim, 3)
+        import numpy as np
+        blank = np.empty((225, 320, 3), dtype=np.float32)
+        blank[:] = (0.94, 0.72, 0.63)
+        self.assertIsNone(facepaint.measure_eye(blank))                      # bare skin is not an eye
+
+    def test_eyes_twice_as_tall_as_the_painted_ones_with_no_lid_are_a_stare(self):
+        """The face that was sent back: the rig's white ovals were 30 mm tall over painted eyes about half that, wide
+        open where the paint has a lid over the iris. A cartoon face whose rig eyes match its paint passes, and
+        so does the same face once its paint is kept."""
+        import facepaint
+        eye = {k: v for k, v in facepaint.measure_eye(self.painted_eye()).items() if k != 'plates'}
+        seen = {'eyes': [eye, eye]}
+        stared = facepaint.stare(seen, [0.04, 0.03], kept=False)
+        self.assertGreater(stared['eye_tall'], 1.5)
+        self.assertIn('stares', ' '.join(stared['problems']))
+        self.assertIn('"paint": "keep"', ' '.join(stared['problems']))
+        self.assertNotIn('problems', facepaint.stare(seen, [0.04, 0.03], kept=True))
+        self.assertNotIn('problems', facepaint.stare(seen, [0.034, 0.02], kept=False))
+        self.assertEqual(facepaint.stare({'eyes': [None, None]}, [0.04, 0.03], kept=False), {})
+
+
 class HostSideTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -551,8 +606,17 @@ class BlenderCheckTests(unittest.TestCase):
             checks = blender_render.run_compiler(self.conal() / 'enter.json', Path(tmp) / 'out', 'check', '480x270', None)
         self.assertTrue(checks['passed'], checks.get('body_problems'))
         self.assertGreaterEqual(checks['face']['mouth_share'], 0.18)   # a mouth wide enough to read
+        # his glasses are placed by his eyes: each eye in the middle of its lens with room round it (placed at a
+        # set height on the head they sat 0.78 of the way up, against the top rim)
+        self.assertAlmostEqual(checks['face']['glasses']['eye_in_opening'], 0.5, delta=0.1)
+        self.assertGreaterEqual(checks['face']['glasses']['opening_over_eye'], 1.15)
         self.assertEqual(checks['skin']['leg_above_hips'], 0)           # no hem that tears when the thighs bend
         self.assertLessEqual(checks['skin']['stretch'], 4.0)
+        # the inside of his clothes is drawn in shadow (lit, a palm turned up showed a light torn hole round the
+        # wrist where the cuff opens), and the grafted hands, a closed surface, are left as they are
+        lined = checks['skin']['lined']
+        self.assertTrue(lined and all(lined.values()), lined)
+        self.assertNotIn('hand', lined)
         self.assertLessEqual(checks['grip_open'], 0.75)                 # the hand closes on the door handle
         self.assertGreaterEqual(checks['hands_apart_m'], 0.005)         # the hands never go into each other
         self.assertLessEqual(checks['palm_tilt_deg'], 35)               # and lie palm down on the desk
@@ -566,6 +630,118 @@ class BlenderCheckTests(unittest.TestCase):
         for kind in ('hand_in_body_m', 'through_m', 'foot_slide_m', 'touch_miss_m'):
             self.assertLessEqual(checks[kind], 0.03, kind)
         self.assertLessEqual(checks['snap_m'], 0.02)                    # nothing jumps in a single frame
+
+    def test_a_lecture_hall_is_sized_by_its_presenter_and_a_free_hand_keeps_inside_its_cuff(self):
+        """The lecture screen test on the author's body (2.25 m as fitted): the hall's board is scaled to him, so he
+        hides a sensible share of it from the board camera; staged in the hall's own metres, as the first lecture
+        was, he hides 15% and the check fails. A gesture or a point turns the hand on the forearm no further than
+        this body's cuff takes (it went 168 degrees, stretching the skin 6.7 times)."""
+        spec = json.loads((ROOT / 'tests' / 'fixtures' / 'blender-fitted' / 'screen-lecture.json').read_text())
+        spec['cast'][0].update(id='conal', **{'from': str(self.conal() / 'conal.json')})
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'spec.json').write_text(json.dumps(spec))
+            checks = blender_render.run_compiler(Path(tmp) / 'spec.json', Path(tmp) / 'out', 'check', '480x270', None)
+            old = json.loads(json.dumps(spec))
+            old['set']['board'] = {'x0': -2.3, 'x1': 1.7, 'z0': 0.55, 'z1': 2.8}   # the hall as built, in metres
+            old['set']['table'] = {'at': [1.66, 1.29], 'hidden': True, 'cup_on': True}
+            old['cast'][0]['at'] = [1.02, 1.88]
+            (Path(tmp) / 'old.json').write_text(json.dumps(old))
+            before = blender_render.run_compiler(Path(tmp) / 'old.json', Path(tmp) / 'old', 'check', '480x270', None)
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        board = checks['board']
+        self.assertGreater(board['scale'], 1.2)                               # his height over a lecturer's
+        self.assertLessEqual(board['share'], 0.10)
+        self.assertEqual(board['outside_window'], 0)
+        self.assertGreater(before['board']['share'], 0.10)                    # the first lecture's staging
+        self.assertFalse(before['passed'])
+        self.assertTrue(any('hides' in p for p in before['body_problems']))
+        self.assertLessEqual(checks['skin']['stretch'], 4.0)
+        for lo, hi in checks['skin']['wrist_twist'].values():                  # measured on this body, each hand
+            self.assertTrue(-130 < lo < -40 and 40 < hi < 130, (lo, hi))
+        self.assertGreater(sum(checks['skin']['twist_held'].values()), 0)     # and the points did want more
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({'shots': [{'id': 'A', 'dur': 2, 'type': 'fixed', 'cam': 'board'}], 'beats': []})
+        self.assertIn('lecture_hall', str(ctx.exception))
+
+    def test_a_move_comes_down_a_dressed_hall_and_lands_on_the_board_as_the_walk_ends(self):
+        """The lecture's opening on the clay cast: the hall dressed (rows on a rake, an aisle down the middle,
+        windows, lights), someone presses the door's handle behind it, opens it and walks to their mark, and the
+        camera sets off with the walk, comes down the aisle and lands on the board camera's framing on the frame
+        the walk ends (keyed on it, not typed). Every frame is checked: the lens clear of the set, the board and
+        the walker in view, and once landed the board fills the frame to the pixel with nobody but them in front."""
+        spec = {'fps': 30, 'set': {'kind': 'lecture_hall', 'door': {}, 'hall': {}, 'table': False},
+                'cast': [{'id': 'dev', 'posture': 'stand', 'at': {'door': -0.33}, 'facing': 0}],
+                'shots': [{'id': 'E1', 'dur': 7.0, 'type': 'move',
+                           'from': {'cam': {'hall': [0.8, 16.2, 5.0]}, 'aim': {'hall': [0, 0, 1.7]}, 'lens': 26},
+                           'to': {'cam': 'board'}, 'start': 'walk', 'arrive': 'walk'}],
+                'beats': [{'at': 1.5, 'do': 'open_door', 'dur': 0.8, 'by': 'dev', 'hand': 'right', 'latch': 1.0},
+                          {'at': 2.4, 'do': 'walk', 'to': {'board': [1600, 1.0]}, 'facing': -8, 'curve': True,
+                           'heading': -80, 'until': 6.5}]}   # (the clay's arms miss a 0.8 stride's swing)
+        checks, events = self.compile(spec)
+        self.assertTrue(checks['passed'], (checks.get('body_problems'), checks['shots'][0]['issues']))
+        move = checks['shots'][0]
+        self.assertEqual(move['sets_off'], 73)                          # the walk's first frame (2.4 s)
+        self.assertEqual(move['lands'], 196)                            # its last (6.5 s), the turn at the end in it
+        self.assertEqual(move['lens'], [26, 108.0])                     # the board camera's own lens
+        self.assertLess(move['landing']['corner_error_px'], 0.5)        # its framing, to the pixel
+        self.assertEqual(move['landing']['board_hidden_by_set'], 0.0)   # down the aisle, over the rows
+        self.assertGreater(move['nearest_set_m'], 0.12)
+        kinds = {e['kind']: e['frame'] for e in reversed(events['events'])}
+        self.assertLess(kinds['latch'], kinds['door_open'])             # the handle goes down before the door moves
+        for bad, said in (({'type': 'move', 'from': spec['shots'][0]['from']}, '"from" and "to"'),
+                          ({'type': 'move', 'from': spec['shots'][0]['from'], 'to': {'cam': 'board'}, 'arrive': 'later'},
+                           '"arrive"')):
+            with self.assertRaises(RuntimeError) as ctx:
+                self.compile({**spec, 'shots': [{'id': 'E1', 'dur': 7.0, **bad}]})
+            self.assertIn(said, str(ctx.exception))
+        with self.assertRaises(RuntimeError) as ctx:
+            self.compile({'set': {'kind': 'desk_room', 'hall': {}}, 'shots': [{'id': 'A', 'dur': 2, 'type': 'wide'}]})
+        self.assertIn('"hall" dresses a lecture_hall', str(ctx.exception))
+
+    def test_a_dark_hall_is_switched_on_by_hand_and_its_lights_come_on_in_banks(self):
+        """The lecture's opening with the lights off: the hall starts dark, someone opens the door, steps in to
+        side-on at the wall where their own arm presses the switch straight ({"switch": "reach"}), presses it on
+        the beat's frame with the tip of a finger, and the ceiling lights come on in three banks from the board
+        back, each stuttering first; then they walk to their mark and the camera, set off by that last walk, lands
+        on the board."""
+        spec = {'fps': 30, 'set': {'kind': 'lecture_hall', 'door': {}, 'hall': {}, 'table': False, 'lights': 'off'},
+                'cast': [{'id': 'dev', 'posture': 'stand', 'at': {'door': -0.3}, 'facing': 0}],
+                'shots': [{'id': 'E1', 'dur': 8.6, 'type': 'move',
+                           'from': {'cam': {'hall': [0.8, 16.2, 5.0]}, 'aim': {'hall': [0, 0, 1.7]}, 'lens': 26},
+                           'to': {'cam': 'board'}, 'start': 'last_walk', 'arrive': 'walk'}],
+                'beats': [{'at': 1.6, 'do': 'open_door', 'dur': 0.8, 'by': 'dev', 'hand': 'right'},
+                          {'at': 2.4, 'do': 'walk', 'to': {'switch': 'reach'}, 'facing': -90, 'curve': True,
+                           'heading': -90, 'until': 3.6},
+                          {'at': 4.0, 'do': 'lights', 'by': 'dev', 'hand': 'right'},
+                          {'at': 4.75, 'do': 'walk', 'to': {'board': [1600, 1.0]}, 'facing': -8, 'curve': True,
+                           'heading': -50, 'until': 8.1},
+                          {'at': 8.1, 'do': 'settle', 'dur': 0.3}]}
+        checks, events = self.compile(spec)
+        self.assertTrue(checks['passed'], (checks.get('body_problems'), checks['shots'][0]['issues']))
+        self.assertLess(checks['touch_miss_m'], 0.02)                     # the fingertip on the switch
+        move = checks['shots'][0]
+        self.assertEqual(move['sets_off'], 143)                          # with the last walk (4.75 s), not the first
+        ev = [e for e in events['events'] if e['kind'] in ('switch', 'lamp_stutter', 'lamp_on')]
+        self.assertEqual(ev[0], {**ev[0], 'kind': 'switch', 'frame': 121})   # on the beat's frame
+        stutters = [e for e in ev if e['kind'] == 'lamp_stutter']
+        held = [e for e in ev if e['kind'] == 'lamp_on']
+        self.assertEqual([e['bank'] for e in stutters], [0, 1, 2])           # from the board back
+        self.assertTrue(all(a['frame'] < b['frame'] for a, b in zip(stutters, stutters[1:])))
+        self.assertTrue(all(s_['frame'] < h['frame'] for s_, h in zip(stutters, held)))
+        self.assertLess(held[0]['frame'], move['lands'] - 60)               # the presenter's lights well before the cut
+        all_at_once = {**spec, 'beats': [{**b, 'banks': 1, 'stutter': False} if b['do'] == 'lights' else b
+                                         for b in spec['beats']]}
+        _, events = self.compile(all_at_once)
+        kinds = [e['kind'] for e in events['events'] if e['kind'] in ('switch', 'lamp_stutter', 'lamp_on')]
+        self.assertEqual(kinds, ['switch', 'lamp_on'])                     # one click, everything on at once
+        for bad, said in (({'set': {**spec['set'], 'lights': 'on'}}, '"lights": "off"'),
+                          ({'set': {**spec['set'], 'lights': 'dim'}}, '"lights" is "on"'),
+                          ({'beats': [{'at': 1, 'do': 'lights', 'banks': 0}]}, '"banks"'),
+                          ({'set': {'kind': 'desk_room', 'lights': 'off'}, 'shots': [{'id': 'A', 'dur': 2, 'type': 'wide'}],
+                            'beats': [], 'cast': [{'id': 'dev'}]}, 'lecture_hall')):
+            with self.assertRaises(RuntimeError) as ctx:
+                self.compile({**spec, **bad})
+            self.assertIn(said, str(ctx.exception))
 
     def test_the_kitchen_example_passes_on_its_second_character(self):
         """examples/blender-kitchen has a film for each fitted character in the repo; this is the author's."""
@@ -625,6 +801,65 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertLessEqual(checks['hand_in_body_m'], 0.03)
         self.assertLessEqual(checks['snap_m'], 0.02)
 
+    def test_a_pint_is_held_where_it_stands_let_go_of_taken_up_and_drunk_from_on_a_call(self):
+        """Someone at a pub table holds a phone up for a video call in one hand; the other lies round a pint
+        that stands on the table (no handle: the hand goes round the glass), comes off it, takes it up and
+        drinks. The phone and the glass are sized to the hand that holds them, a hand round a glass is on its
+        side on purpose (not a hand rolled off the table), the glass stays level in the hand, and a camera can
+        look back from the phone at the face."""
+        cast = self.conal() / 'conal.json'
+        spec = {'fps': 30, 'resolution': '1080x1920', 'set': {'kind': 'pub'}, 'cast': [{'id': 'conal', 'from': str(cast)}],
+                'shots': [{'id': 'P0', 'dur': 1.0, 'type': 'medium', 'az': 30},
+                          {'id': 'A', 'dur': 2.0, 'type': 'fixed', 'cam': 'phone', 'aim': 'face', 'lens': 17, 'clip': 0.08},
+                          {'id': 'B', 'dur': 4.5, 'type': 'medium', 'az': 30, 'dof': 2.8}],
+                'beats': [{'at': 0, 'do': 'pose', 'pose': 'rest', 'dur': 0.0},
+                          {'at': 0, 'do': 'phone', 'hand': 'right', 'dist': 0.6, 'drop': 0.0},
+                          {'at': 0.05, 'do': 'pick_up', 'prop': 'pint', 'hand': 'left', 'lift': False, 'dur': 0.3},
+                          {'at': 0.7, 'do': 'look_at', 'target': 'phone', 'dur': 0.2},
+                          {'at': 'A+0.5', 'do': 'let_go', 'hand': 'left', 'dur': 0.7},
+                          {'at': 'B+0.2', 'do': 'look_at', 'target': 'pint', 'dur': 0.3},
+                          {'at': 'B+0.3', 'do': 'pick_up', 'prop': 'pint', 'hand': 'left', 'dur': 0.7},
+                          {'at': 'B+1.9', 'do': 'sip', 'hand': 'left', 'dur': 2.0}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'spec.json').write_text(json.dumps(spec))
+            checks = blender_render.run_compiler(Path(tmp) / 'spec.json', Path(tmp) / 'out', 'check', '270x480', None)
+            events = json.loads((Path(tmp) / 'out' / 'events.json').read_text())
+        kinds = [e['kind'] for e in events['events']]
+        self.assertEqual([k for k in kinds if k in ('phone', 'touch', 'pick_up', 'sip')], ['phone', 'touch', 'pick_up', 'sip'])
+        held = next(e for e in events['events'] if e['kind'] == 'phone')
+        self.assertGreater(held['from_face_m'], 0.15)                  # as far out as a short arm holds it
+        self.assertTrue(all(s['passed'] for s in checks['shots']), checks['shots'])
+        self.assertLessEqual(checks['carried_tilt_deg'], 12.0)
+        self.assertLessEqual(checks.get('carried_through_m', 0.0), 0.006)
+        self.assertLessEqual(checks['palm_tilt_deg'], 35)              # the hand round the glass is not counted
+        self.assertLessEqual(checks['hand_in_body_m'], 0.03)
+        self.assertLessEqual(checks['through_m'], 0.03)
+        self.assertLessEqual(checks['snap_m'], 0.02)
+
+    def test_someone_on_a_sofa_holds_a_phone_and_wags_a_finger_with_hands_that_start_in_the_lap(self):
+        """A living room has no desk: the hands start on the thighs. One lifts a phone for a call and the other
+        wags a finger at it; a hand that holds something can't be the one that wags, and the error says so."""
+        cast = self.conal() / 'conal.json'
+        spec = {'fps': 30, 'resolution': '1080x1920', 'set': {'kind': 'living_room'}, 'cast': [{'id': 'conal', 'from': str(cast)}],
+                'shots': [{'id': 'A', 'dur': 4.0, 'type': 'medium', 'az': -24, 'dof': 2.2}],
+                'beats': [{'at': 0.3, 'do': 'phone', 'hand': 'left', 'dur': 0.6},
+                          {'at': 1.0, 'do': 'look_at', 'target': 'phone', 'dur': 0.3},
+                          {'at': 1.6, 'do': 'wag', 'hand': 'right', 'dur': 1.6, 'toward': 'phone'}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'spec.json').write_text(json.dumps(spec))
+            checks = blender_render.run_compiler(Path(tmp) / 'spec.json', Path(tmp) / 'out', 'check', '270x480', None)
+            events = json.loads((Path(tmp) / 'out' / 'events.json').read_text())
+            self.assertTrue(all(s['passed'] for s in checks['shots']), checks['shots'])
+            self.assertIn('phone', [e['kind'] for e in events['events']])
+            self.assertLessEqual(checks['hand_in_body_m'], 0.03)       # the lap hands lie on the legs, not in them
+            self.assertLessEqual(checks['through_m'], 0.03)            # and the body is on the sofa, not in it
+            self.assertLessEqual(checks['snap_m'], 0.02)
+            spec['beats'][2]['hand'] = 'left'
+            (Path(tmp) / 'spec.json').write_text(json.dumps(spec))
+            with self.assertRaises(RuntimeError) as ctx:
+                blender_render.run_compiler(Path(tmp) / 'spec.json', Path(tmp) / 'out2', 'check', '270x480', None)
+            self.assertIn('holding something', str(ctx.exception))
+
     MARA = ROOT / 'tests' / 'fixtures' / 'blender-fitted'
 
     def test_an_invented_model_is_fitted_with_a_face_and_fingers_and_acts(self):
@@ -653,10 +888,15 @@ class BlenderCheckTests(unittest.TestCase):
             self.assertLessEqual(int(depth.group(1)), 10)                  # laid in from the generator's 20%
             self.assertGreater(int(depth.group(2)), int(depth.group(1)))
             self.assertIn('legs touched', said)                            # her shoes are one piece in the model
-            sized = re.search(r"scaled (\d\.\d+)x to match", said)             # the donor's hands are a fifth too long
+            # the donor's hands are a fifth too long: the fit brings the donor to the body's arm span first, then
+            # sizes the hands, and the two together are the hand's scale
+            sized = re.search(r"scaled (\d\.\d+)x to match", said)
             self.assertIsNotNone(sized, said)
-            self.assertLess(float(sized.group(1)), 0.95)
+            span = re.search(r"the hands model is (\d\.\d+)x the body's arm span", said)
+            total = float(sized.group(1)) / (float(span.group(1)) if span else 1.0)
+            self.assertLess(total, 0.95, said)
             self.assertIn('wrist joint moved', said)                       # read off a still, it was up the sleeve
+            self.assertEqual(len(re.findall(r'fit: painted face, (?:right|left) eye opens', said)), 2, said)
             checks = blender_render.run_compiler(tmp / 'spec.json', tmp / 'out', 'check', '480x270', None)
             events = json.loads((tmp / 'out' / 'events.json').read_text())
             enter = blender_render.run_compiler(tmp / 'enter.json', tmp / 'enter', 'check', '480x270', None)
@@ -683,6 +923,8 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertTrue(checks['passed'], checks.get('body_problems'))
         self.assertGreaterEqual(checks['face']['mouth_share'], 0.18)
         self.assertGreater(checks['face']['mouth_travel_m'], 0.005)        # the mouth moves for the faces
+        self.assertLessEqual(checks['face']['eye_tall'], 1.5)              # the rig's eyes are the size of her painted ones
+        self.assertFalse(checks['face']['paint_kept'])
         self.assertEqual(checks['skin']['leg_above_hips'], 0)
         self.assertLessEqual(checks['skin']['stretch'], 4.0)
         self.assertGreaterEqual(checks['hands_apart_m'], 0.005)
@@ -722,6 +964,222 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertIn('short of the lid', str(cannot_shut.exception))     # her arm is too short to shut it
         self.assertIn('leave out "by"', str(cannot_shut.exception))
         self.assertIn('sit them down first', str(too_low.exception))      # a standing arm can't reach a table
+
+    def test_a_face_fitted_to_keep_its_paint_acts_with_its_own_eyes(self):
+        """The same model fitted with "paint": "keep": nothing is erased, each eye is a patch cut from the paint
+        with its images packed in the fitted file, and the face pulls its expressions, blinks, winks and
+        glances without the rig's own eyes. A face with no painted eye where the fit says is refused."""
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            fit = json.loads((self.MARA / 'fit.json').read_text())
+            fit.pop('hands', None)
+            fit['face']['paint'] = 'keep'
+            (tmp / 'fit.json').write_text(json.dumps(fit))
+            shutil.copy(self.MARA / 'mara.json', tmp / 'mara.json')
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(mock.Mock(model=str(self.MARA / 'mara.glb'), fit=str(tmp / 'fit.json'),
+                                                    out=str(tmp / 'mara-fitted.blend'), preview=None))
+            self.assertEqual(code, 0, said.getvalue())
+            spec = {'title': 'Kept face', 'fps': 24, 'resolution': '1280x720', 'engine': 'eevee',
+                    'set': {'kind': 'desk_room'}, 'cast': [{'id': 'mara', 'from': 'mara.json'}],
+                    'shots': [{'id': 'F', 'dur': 4.0, 'type': 'closeup'}],
+                    'beats': [{'at': 0.1, 'do': 'look_at', 'target': 'camera', 'dur': 0.3},
+                              {'at': 0.6, 'do': 'expression', 'face': 'happy', 'dur': 0.3},
+                              {'at': 1.2, 'do': 'expression', 'face': 'worried', 'dur': 0.3},
+                              {'at': 1.8, 'do': 'expression', 'face': 'grin', 'dur': 0.3},
+                              {'at': 2.4, 'do': 'blink'}, {'at': 2.8, 'do': 'wink'},
+                              {'at': 3.2, 'do': 'glance', 'yaw': 20, 'dur': 0.2}]}
+            (tmp / 'face.json').write_text(json.dumps(spec))
+            checks = blender_render.run_compiler(tmp / 'face.json', tmp / 'out', 'check', '480x270', None)
+            off = json.loads(json.dumps(fit))
+            off['face']['eyes'] = [[x, z + 0.12] for x, z in off['face']['eyes']]   # in her hair: no eye there
+            (tmp / 'off.json').write_text(json.dumps(off))
+            refused = io.StringIO()
+            with contextlib.redirect_stdout(refused), contextlib.redirect_stderr(refused):
+                code = blender_render.fit(mock.Mock(model=str(self.MARA / 'mara.glb'), fit=str(tmp / 'off.json'),
+                                                    out=str(tmp / 'off.blend'), preview=None))
+        self.assertTrue(checks['face']['paint_kept'])
+        self.assertNotIn('eye_tall', checks['face'])                       # her own eyes: nothing to hold them against
+        for shot in checks['shots']:
+            self.assertTrue(shot['passed'], shot)
+        self.assertNotEqual(code, 0)
+        self.assertIn('needs a painted eye', refused.getvalue())
+
+    NELL = ROOT / 'tests' / 'fixtures' / 'blender-bare'
+
+    def test_paint_is_shifted_to_a_photos_colours_and_lids_rest_part_way_down(self):
+        """A generated model's hair came out lighter than the person's: `recolour` in the fit moves every texel
+        near the colour of a patch to a colour read off a photo, keeping each strand's shading, and `lid` in the
+        face rests the upper lids part of the way down (hooded eyes), which the check reports. A rule whose
+        patch has nothing in it is an error that names it."""
+        import contextlib
+        import io
+        import re
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            for name in ('spec.json', 'mara.json', 'mara.glb', 'mara_hands.glb'):
+                shutil.copy(self.MARA / name, tmp / name)
+            fit = json.loads((self.MARA / 'fit.json').read_text())
+            fit['face']['lid'] = 0.3
+            fit['recolour'] = [{'name': 'hair', 'sample': [-0.03, 0.05, 1.58, 1.62], 'to': '#2B1D14',
+                                'tolerance': 0.15, 'above': 1.36, 'fill': 3}]
+            (tmp / 'fit.json').write_text(json.dumps(fit))
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(mock.Mock(model=str(tmp / 'mara.glb'), fit=str(tmp / 'fit.json'),
+                                                    out=str(tmp / 'mara-fitted.blend'), preview=None))
+            said = said.getvalue()
+            self.assertEqual(code, 0, said)
+            moved = re.search(r'fit: recolour hair: (\d+) texels', said)
+            self.assertIsNotNone(moved, said)
+            self.assertGreater(int(moved.group(1)), 5000, said)            # her hair, not a stray patch
+            checks = blender_render.run_compiler(tmp / 'spec.json', tmp / 'out', 'check', '480x270', None)
+            self.assertAlmostEqual(checks['face']['lid_rest'], 0.3, delta=0.01)
+            self.assertNotIn('glasses', checks['face'])                    # she wears none
+            fit['recolour'][0]['sample'] = [2.0, 2.1, 1.58, 1.62]          # off the model
+            (tmp / 'fit.json').write_text(json.dumps(fit))
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(mock.Mock(model=str(tmp / 'mara.glb'), fit=str(tmp / 'fit.json'),
+                                                    out=str(tmp / 'off.blend'), preview=None))
+            self.assertEqual(code, 2)
+            self.assertIn('recolour hair: nothing on the model', said.getvalue())
+
+    def test_a_bare_armed_model_is_cut_at_the_wrist_sealed_and_keeps_its_painted_face(self):
+        """Nell (tests/fixtures/blender-bare, made up) has no cuffs: each hand is found by the wrist's own
+        narrowing, the arm's end is drawn onto the hand's ring and the two share their normals there, the hands'
+        texture is cleared of the picture's background, and a hands model made from a closer picture is brought
+        to the body's size first. Her face is painted nearer to life, so it is kept: both painted eyes are read
+        (one has a liner whose outer edge is a sharper step than the iris's), and she pulls faces, blinks,
+        glances and winks with them."""
+        import contextlib
+        import io
+        import re
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            for name in ('spec.json', 'nell.json'):
+                shutil.copy(self.NELL / name, tmp / name)
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(mock.Mock(model=str(self.NELL / 'nell.glb'), fit=str(self.NELL / 'fit.json'),
+                                                    out=str(tmp / 'nell-fitted.blend'), preview=None))
+            said = said.getvalue()
+            self.assertEqual(code, 0, said)
+            checks = blender_render.run_compiler(tmp / 'spec.json', tmp / 'out', 'check', '480x270', None)
+        self.assertEqual(len(re.findall(r'fit: hands, [LR] 5 fingers \(thumb, index, middle, ring, little\)', said)), 2, said)
+        sealed = re.findall(r"a bare arm's end drawn in onto the hand: the ring stood ([\d.]+) mm off the hand's "
+                            r"skin, now ([\d.]+) mm", said)
+        self.assertEqual(len(sealed), 2, said)                             # both arms, with no cuff over the join
+        for before, after in sealed:
+            self.assertGreater(float(before), 1.0)
+            self.assertLessEqual(float(after), 0.1)
+        self.assertRegex(said, r'\d+ vertices on the ring where a bare arm meets its hand share their normals')
+        self.assertRegex(said, r"the hands model is 1\.\d+x the body's arm span")
+        grey = re.search(r"([\d.]+)% of their texture was not skin's colour", said)
+        self.assertIsNotNone(grey, said)
+        self.assertLess(float(grey.group(1)), 2.0)
+        stretch = re.search(r'edges stretched ([\d.]+)x', said)
+        self.assertLessEqual(float(stretch.group(1)), 3.0, said)           # the thumb's web is not torn
+        eyes = re.findall(r'(?:right|left) eye opens ([\d.]+) x ([\d.]+) mm, iris ([\d.]+) mm', said)
+        self.assertEqual(len(eyes), 2, said)
+        for wide, tall, iris in eyes:                                      # (misread, the left iris came out 42 mm)
+            self.assertLess(float(iris), 25.0, said)
+            self.assertLess(float(tall), 0.6 * float(wide), said)          # a lidded eye, wider than it is tall
+        self.assertNotIn(' FAIL ', said)
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        self.assertTrue(checks['face']['paint_kept'])
+        self.assertGreaterEqual(checks['face']['brow_squeeze'], 0.5)       # the brows do not crease the skin
+        for kind in ('hand_in_body_m', 'through_m'):
+            self.assertLessEqual(checks[kind], 0.03, kind)
+
+    def test_an_arm_off_its_mirrored_elbow_is_failed_and_its_own_joint_frees_it(self):
+        """Nell's right arm hangs 3 cm nearer her body than her left. With the elbow mirrored from the left, the
+        inside of her right forearm moved with her spine: skin hung from the arm to the hip, and typing, the
+        forearm sagged 3.2 cm into the desk. The fit fails that by counting edges from forearm straight to body
+        (none on a free arm). With `joints_right` the arm is free; the forearm keeps none of the hip's weight,
+        and it stays out of the desk through the walk-in's typing."""
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            fit = json.loads((self.NELL / 'fit.json').read_text())
+            mirrored = {k: v for k, v in fit.items() if k != 'joints_right'}
+            (tmp / 'mirrored.json').write_text(json.dumps(mirrored))
+            shutil.copy(self.NELL / 'nell_hands.glb', tmp / 'nell_hands.glb')
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                blender_render.fit(mock.Mock(model=str(self.NELL / 'nell.glb'), fit=str(tmp / 'mirrored.json'),
+                                             out=str(tmp / 'mirrored.blend'), preview=None))
+            self.assertIn('the inside of the right forearm moves with the body', said.getvalue())
+            self.assertNotIn('the inside of the left forearm', said.getvalue())
+            for name in ('enter.json', 'nell.json'):
+                shutil.copy(self.NELL / name, tmp / name)
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(mock.Mock(model=str(self.NELL / 'nell.glb'), fit=str(self.NELL / 'fit.json'),
+                                                    out=str(tmp / 'nell-fitted.blend'), preview=None))
+            self.assertEqual(code, 0, said.getvalue())
+            self.assertNotIn(' FAIL ', said.getvalue())
+            enter = blender_render.run_compiler(tmp / 'enter.json', tmp / 'enter', 'check', '480x270', None)
+        self.assertFalse([p for p in enter.get('body_problems', []) if 'desk' in p or 'lap_base' in p], enter.get('body_problems'))
+        self.assertLessEqual(enter['through_m'], 0.03)
+        self.assertLessEqual(enter['typing']['into_m'], 0.003)
+
+    def test_a_model_is_made_smaller_without_painting_faces_from_the_wrong_place(self):
+        """`reduce` thins a model inside the islands of its texture: half of Mara's faces, with next to none of
+        them left reading the texture from across a seam (0.04%; reduced across the seams it is 1.08%). Not a
+        third: a body of 20,000 faces is coarser than any the rig keeps, and there the measure reads 0.22% even
+        with every seam held, because a face's nearest point on the model lands in the next island."""
+        import contextlib
+        import io
+        import re
+        with tempfile.TemporaryDirectory() as tmp:
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.reduce(mock.Mock(model=str(self.MARA / 'mara.glb'), out=str(Path(tmp) / 'small.glb'),
+                                                       faces=30000, texture=512))
+            self.assertEqual(code, 0, said.getvalue())
+            self.assertTrue((Path(tmp) / 'small.glb').exists())
+        got = re.search(r'REDUCED (\d+) to (\d+) faces, (\d+) vertices .* ([\d.]+)% of the faces painted', said.getvalue())
+        self.assertIsNotNone(got, said.getvalue())
+        self.assertLess(int(got.group(2)), 0.55 * int(got.group(1)))
+        self.assertGreater(int(got.group(3)), 100)
+        self.assertLess(float(got.group(4)), 0.2)
+
+    def test_a_deep_chest_reaches_from_its_own_shoulder_and_a_hand_on_the_lap_stays_on_the_leg(self):
+        """Mara fitted again with her shoulder joints 4.5 cm behind the chest (a deep chest, as a third body
+        had): a reach is measured from the joint where it is, so sitting down her hands come to her thighs
+        with the arm they have; and pulling in, a hand waiting on her lap rides the leg while the chest leans
+        over it. Measured from in front of the joint, the wrist missed its target; held to the chest, the hand
+        went near 3 cm into the thigh."""
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            shutil.copy(self.MARA / 'mara.json', tmp / 'mara.json')
+            fit = json.loads((self.MARA / 'fit.json').read_text())
+            fit['joints']['sh'][1] += 0.045
+            fit['hands']['model'] = str(self.MARA / fit['hands']['model'])
+            (tmp / 'fit.json').write_text(json.dumps(fit))
+            args = mock.Mock(model=str(self.MARA / 'mara.glb'), fit=str(tmp / 'fit.json'),
+                             out=str(tmp / 'mara-fitted.blend'), preview=None)
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said):
+                code = blender_render.fit(args)
+            self.assertEqual(code, 0, said.getvalue())
+            (tmp / 'sit.json').write_text(json.dumps({
+                'fps': 24, 'resolution': '960x540', 'engine': 'eevee', 'set': {'kind': 'desk_room', 'chair_out': 0.75},
+                'cast': [{'id': 'mara', 'from': 'mara.json', 'posture': 'stand', 'at': [0, 0.41], 'facing': 0}],
+                'shots': [{'id': 'A', 'dur': 4.5, 'type': 'wide'}],
+                'beats': [{'at': 'A+0.2', 'do': 'sit_down', 'dur': 1.8}, {'at': 'A+2.3', 'do': 'pull_in', 'dur': 1.5}]}))
+            checks = blender_render.run_compiler(tmp / 'sit.json', tmp / 'out', 'check', '480x270', None)
+        self.assertTrue(checks['passed'], checks.get('body_problems'))
+        self.assertLessEqual(checks['ik_max_error_m'], 0.001)    # (3.4 mm with the reach measured from the chest)
+        self.assertLessEqual(checks['hand_in_body_m'], 0.015)    # (2.8 cm with the hand held to the chest)
+        self.assertLessEqual(checks['snap_m'], 0.02)
 
     def test_flicker_is_a_still_point_that_jumps_for_a_frame_and_comes_back(self):
         """The render check reads still points of the set out of the frames: one that jumps and comes back on
@@ -785,6 +1243,45 @@ class BlenderCheckTests(unittest.TestCase):
         self.assertNotIn('board_face', by)
         self.assertTrue(by['board_patch']['fails'])
         self.assertEqual(by['board_patch']['frames'], [11, 21, 31, 41, 51])
+
+    def test_lights_coming_on_are_not_flicker_and_flicker_beside_them_still_fails(self):
+        """A stutter is a jump that comes back: exactly what the flicker check looks for. The frames where lights
+        change on purpose (still_points.json "light_changes", from a lights beat) are left out, one frame either
+        side, and only those: the same stutter outside them still fails, as does a fight on another surface."""
+        import numpy as np
+        frames = [np.full((40, 40), 60.0, dtype=np.float32) for _ in range(40)]
+        for f in (10, 12, 14, 16, 18):
+            for fr in frames[f:f + 1]:
+                fr[:, :] += 50.0                     # the whole hall: banks stuttering on, frames 10 to 18
+        for f in range(19, 40):
+            frames[f][:, :] += 80.0                  # and held on
+        for f in (24, 27, 30, 33, 36):
+            frames[f][8:13, 8:13] += 30.0            # the door frame fights with the wall after the lights hold
+        rows = [[f, k, x, y, x, y, x, y] for f in range(1, 41) for k, (x, y) in enumerate(((0.25, 0.25), (0.75, 0.75)))]
+        found = {}
+        for changes in ([[11, 19]], []):
+            with tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp)
+                points = {'objects': ['door_frame', 'wall'], 'shots': {'A': {'frames': [1, 40], 'points': rows}}}
+                if changes:
+                    points['light_changes'] = changes
+                (out / 'still_points.json').write_text(json.dumps(points))
+                (out / 'A.mp4').write_bytes(b'')
+                real = blender_render.gray_frames
+                blender_render.gray_frames = lambda video, size: iter(frames)
+                try:
+                    found[bool(changes)] = {r['object']: r for r in blender_render.flicker(out, {'A': (out / 'A.mp4', 1)}, (40, 40))}
+                    clean = blender_render.report_flicker(out, {'A': (out / 'A.mp4', 1)}, (40, 40))
+                    saved = json.loads((out / 'render_checks.json').read_text())
+                finally:
+                    blender_render.gray_frames = real
+            if changes:
+                self.assertFalse(clean)                                   # the fight after them still fails
+                self.assertEqual(saved['not_read']['frames'], [[11, 19]])  # and it says what it did not read
+        self.assertNotIn('wall', found[True])                              # the stutter is not flicker
+        self.assertEqual(found[True]['door_frame']['frames'], [25, 28, 31, 34, 37])
+        self.assertTrue(found[True]['door_frame']['fails'])
+        self.assertTrue(found[False]['wall']['fails'])                     # unexcused, the same stutter fails
 
     def test_mistakes_with_postures_are_named(self):
         shots = [{'id': 'A', 'dur': 3, 'type': 'wide'}]

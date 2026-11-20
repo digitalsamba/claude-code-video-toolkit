@@ -41,7 +41,13 @@ MOUTHS = {
     "relieved":   (0.5, 0.0, 0.2, 0.0),
     "grin":       (1.0, 0.0, 0.7, 0.0),
 }
+# a face that keeps its painted lips smiles with them shut: at rest it is the model's own mouth, a smile lifts
+# the painted corners, and teeth are for a grin (or for talking)
+MOUTHS_PAINT = {**MOUTHS, "neutral": (0.0, 0.0, 0.0, 0.0), "happy": (0.8, 0.0, 0.0, 0.0),
+                "content": (0.5, 0.0, 0.0, 0.0), "relieved": (0.45, 0.0, 0.0, 0.0),
+                "worried": (0.0, 1.0, 0.0, 0.0)}
 KEYS = ("smile", "frown", "open", "round")
+SINK = 0.012       # how far behind the lips a kept face's mouth waits while it is shut (m, on a head 0.42 m wide)
 JAW = 0.032        # how far the chin drops with the mouth fully open (m, on a head 0.42 m wide)
 LID_OPEN, LID_SHUT = -52.0, 62.0  # degrees the lid shell is turned: resting above the eye, and down over it
 
@@ -125,9 +131,10 @@ def _surface(body, marks):
     return lambda x: float(np.interp(x, xs[good], ys[good]))
 
 
-def mouth(name, body, marks: dict, mats: dict, parent, to_parent):
+def mouth(name, body, marks: dict, mats: dict, parent, to_parent, hides: bool = False):
     """The mouth object for a fitted face, with its keys. `to_parent` turns a point in the mesh's space into the
-    parent's. Returns the object."""
+    parent's. With `hides` (a face that keeps its painted lips) it has one more key, `shut`, that holds it
+    behind the face while the mouth is closed: see `shut_driver`. Returns the object."""
     cx, cy, cz = marks["mouth"]
     k = marks["half_width"] / 0.208
     half = marks["mouth_width"] / 2
@@ -136,7 +143,7 @@ def mouth(name, body, marks: dict, mats: dict, parent, to_parent):
     ts = [-1 + 2 * i / (cols - 1) for i in range(cols)]
     upper = not marks.get("moustache")
 
-    def shape(smile=0.0, frown=0.0, open_=0.0, round_=0.0):
+    def shape(smile=0.0, frown=0.0, open_=0.0, round_=0.0, back=0.0):
         """Every vertex, in one fixed order: lip rings, then the dark, the teeth, and an upper lip if there is one."""
         hw = half * (1 + 0.14 * smile - 0.10 * frown - 0.42 * round_)
         corner = cz + (-0.003 + 0.014 * smile - 0.014 * frown + 0.002 * round_) * k
@@ -171,7 +178,7 @@ def mouth(name, body, marks: dict, mats: dict, parent, to_parent):
                 for j in range(ring):
                     u = 2 * math.pi * j / ring
                     out.append((x, y - 0.0035 * k + 0.6 * r * math.sin(u), zu + 0.8 * r * math.cos(u)))
-        return [to_parent(Vector(p)) for p in out]
+        return [to_parent(Vector(p) + Vector((0, back, 0))) for p in out]
 
     base = shape()
     bm = bmesh.new()
@@ -201,7 +208,33 @@ def mouth(name, body, marks: dict, mats: dict, parent, to_parent):
         for v, p in zip(kb.data, shape(*args)):
             v.co = p
         kb.value = 0.0
+    if hides:
+        kb = ob.shape_key_add(name="shut")
+        for v, p in zip(kb.data, shape(back=SINK * k)):
+            v.co = p
+        shut_driver(ob)
     return ob
+
+
+def shut_driver(ob) -> None:
+    """A kept face's mouth is behind the face whenever nothing opens it (an expression's `open` or `round`, or
+    speech's own keys once they exist), so shut lips are the painted ones alone."""
+    keys = ob.data.shape_keys
+    if "shut" not in keys.key_blocks:
+        return
+    path = 'key_blocks["shut"].value'
+    if keys.animation_data:
+        for fc in list(keys.animation_data.drivers):
+            if fc.data_path == path:
+                keys.animation_data.drivers.remove(fc)
+    d = keys.driver_add(path).driver
+    names = [n for n in ("open", "round", "talk", "talk_round") if n in keys.key_blocks]
+    for i, n in enumerate(names):
+        v = d.variables.new()
+        v.name, v.type = f"v{i}", "SINGLE_PROP"
+        v.targets[0].id_type, v.targets[0].id = "KEY", keys
+        v.targets[0].data_path = f'key_blocks["{n}"].value'
+    d.type, d.expression = "SCRIPTED", "1 - min(1, 15 * (" + " + ".join(f"v{i}" for i in range(len(names))) + "))"
 
 
 def skin_colour(body, point) -> tuple:
@@ -246,11 +279,14 @@ def eyelid(name, eye, skin, lash):
     return pivot
 
 
-def materials(cid, body, marks) -> dict:
+def materials(cid, body, marks, lips=None) -> dict:
     # the model's skin, for the lids: from the cheek under an eye (the eye sockets themselves were painted over)
     eye = marks["eyes"][0]
     between = [eye[0], eye[1] + 0.01, eye[2] - 1.6 * marks["eye_size"][1]]
-    return {"lip": mat(f"{cid}_lip", (0.36, 0.13, 0.11), 0.45), "teeth": mat(f"{cid}_teeth", (0.86, 0.84, 0.78), 0.3),
+    lip = (0.36, 0.13, 0.11)
+    if lips:  # (the painted lips' own colour, as stored in the texture)
+        lip = tuple(v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in lips["colour"])
+    return {"lip": mat(f"{cid}_lip", lip, 0.45), "teeth": mat(f"{cid}_teeth", (0.86, 0.84, 0.78), 0.3),
             "lid": mat(f"{cid}_lid", skin_colour(body, between), 0.55), "lash": mat(f"{cid}_lash", (0.05, 0.035, 0.03), 0.6)}
 
 

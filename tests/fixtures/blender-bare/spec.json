@@ -1,0 +1,18 @@
+{
+ "title": "Bare arms", "fps": 24, "resolution": "1280x720", "engine": "eevee",
+ "set": {"kind": "desk_room"},
+ "cast": [{"id": "nell", "from": "nell.json", "posture": "stand", "at": [1.6, 1.6], "facing": 0}],
+ "shots": [{"id": "A", "dur": 4.0, "type": "full"}, {"id": "B", "dur": 4.0, "type": "closeup"}],
+ "beats": [
+  {"at": "A+0.3", "do": "hand", "shape": "open", "dur": 0.3},
+  {"at": "A+0.9", "do": "hand", "shape": "fist", "dur": 0.3},
+  {"at": "A+1.5", "do": "point", "target": [3.2, -1.0, 2.0], "dur": 1.2},
+  {"at": "A+1.5", "do": "look_at", "target": [3.2, -1.0, 2.0], "dur": 0.4},
+  {"at": "B+0.1", "do": "look_at", "target": "camera", "dur": 0.4},
+  {"at": "B+0.6", "do": "expression", "face": "worried", "dur": 0.3},
+  {"at": "B+1.4", "do": "expression", "face": "determined", "dur": 0.3},
+  {"at": "B+2.2", "do": "blink"},
+  {"at": "B+2.8", "do": "glance", "yaw": 20, "dur": 0.2},
+  {"at": "B+3.4", "do": "wink"}
+ ]
+}

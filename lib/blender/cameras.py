@@ -59,6 +59,10 @@ SHOT_TYPES = {
     # "window": [x0, y0, x1, y1] renders only that share of the frame (from the left and from the bottom): set
     # the spec's resolution to the window's shape
     "fixed":         dict(fixed=True, lens=50, check="face"),
+    # from one framing to another along a smooth path, the lens changing on the way: "from" and "to" are each
+    # {"cam", "aim", "lens"} ("to" may be {"cam": "board"} in a lecture hall); "start" and "arrive" are seconds
+    # into the shot, or "walk" (the subject's first walk sets it off; the end of their last walk is where it lands)
+    "move":          dict(between=True, check="face"),
     # a prop on a studio set: the distance comes from the prop's size (`fill` is the share of the frame it takes)
     "product":       dict(prop=True, az=-28, elev=14, lens=60, fill=0.7, push=0.06, check="prop"),
     "orbit":         dict(prop=True, az=-55, az_to=55, elev=12, lens=60, fill=0.7, push=0.0, check="prop"),
@@ -475,19 +479,205 @@ def _solve_fixed(shot, spec, f0, f1):
     if push:  # a slow move toward what it looks at, by this share of the distance over the shot
         key(cam, "location", f0, Vector(shot["cam"]))
         key(cam, "location", f1, Vector(shot["cam"]).lerp(Vector(shot["aim"]), push))
+    if shot.get("clip"):  # (a camera in a hand: nearer than this is the hand itself)
+        cd.clip_start = float(shot["clip"])
+    if shot.get("dof"):  # sharp at what it looks at, soft behind: an f-stop
+        cd.dof.use_dof, cd.dof.focus_object, cd.dof.aperture_fstop = True, aim, float(shot["dof"])
+    shake = float(shot.get("shake", 0.0))
+    if shake:  # held in a hand: it drifts a little, slowly (m)
+        rng = random.Random(f0)
+        here = lambda f: Vector(shot["cam"]).lerp(Vector(shot["aim"]), push * (f - f0) / max(1, f1 - f0))  # noqa: E731
+        for f in [f0, *ticks(f0 + n(8), f1, 9), f1]:
+            key(cam, "location", f, here(f) + Vector([rng.uniform(-shake, shake) for _ in range(3)]))
     return cam, report
 
 
-def solve(shot, sub, f0, f1, seed=0, fps=24, avoid=(), shakes=()):
+def _smoother(t):
+    """Eased in and out (cubic: a quintic held the first second and a half of a 4.4 s move nearly still)."""
+    t = max(0.0, min(1.0, t))
+    return t * t * (3 - 2 * t)
+
+
+LENS_LAG = 1.0    # >1 changes the lens later than the camera moves (1: in step, which read best on the opening)
+SCENERY_NEAR = 0.12  # a moving lens stays this far (m) from the set, or it is in a bench or a ceiling light
+
+
+def between_path(a: dict, b: dict, f0: int, f1: int):
+    """Where a camera moving from framing `a` to framing `b` (each {"cam", "aim", "lens"}) is on frame f, between
+    f0 (it sets off) and f1 (it lands): (cam, aim, lens). The camera eases out and in; on the way it comes down
+    before it comes in (a crane, then a push), and it arrives along the end framing's own axis, so the last part of
+    the move is straight in at what it lands on. The lens changes in step with the move (LENS_LAG)."""
+    P0, P3, A0, A3 = (Vector(x) for x in (a["cam"], b["cam"], a["aim"], b["aim"]))
+    axis = (A3 - P3).normalized()
+    reach = (P3 - P0).length
+    P1 = P0 + Vector((P3.x - P0.x, P3.y - P0.y, 0)) * 0.3 + Vector((0, 0, (P3.z - P0.z) * 0.75))
+    P2 = P3 - axis * (reach * 0.35)
+    l0, l1 = math.log(a["lens"]), math.log(b["lens"])
+
+    def at(f):
+        t = (f - f0) / max(1, f1 - f0)
+        s = _smoother(t)
+        u = 1 - s
+        cam = P0 * u ** 3 + P1 * (3 * s * u * u) + P2 * (3 * s * s * u) + P3 * s ** 3
+        return cam, A0.lerp(A3, s), math.exp(l0 + (l1 - l0) * _smoother(max(0.0, min(1.0, t)) ** LENS_LAG))
+    return at
+
+
+def _inside_or_near(dg, point, objects):
+    """The nearest surface of the set to a point and its object, and whether the point is inside that object."""
+    best = (1e9, "", False)
+    for ob in objects:
+        ev = ob.evaluated_get(dg)
+        if abs(ev.matrix_world.determinant()) < 1e-12:
+            continue
+        local = ev.matrix_world.inverted() @ point
+        ok, loc, _nor, _i = ev.closest_point_on_mesh(local)
+        if ok:
+            d = (ev.matrix_world @ loc - point).length
+            if d < best[0]:
+                # inside if a ray straight up meets a face from behind (the normal at the nearest point says
+                # nothing on an edge: the lens half a metre over a step read as inside it)
+                up = (ev.matrix_world.inverted().to_3x3() @ Vector((0, 0, 1))).normalized()
+                hit, _l, n_up, _f = ev.ray_cast(local, up)
+                best = (d, ob.name, bool(hit) and n_up.dot(up) > 0)
+    return best
+
+
+def _seen(sc, dg, origin, way, reach):
+    """What a ray from the lens meets first among the things a render draws (a set piece that is there to be
+    reached for and not drawn, such as a lecture hall's hidden table, is passed through)."""
+    d = way.normalized()
+    start, left = origin.copy(), reach
+    for _ in range(8):
+        hit, at, _n, _i, ob, _m = sc.ray_cast(dg, start, d, distance=left)
+        if not hit:
+            return None
+        if not ob.original.hide_render and ob.original.visible_camera:
+            return ob.original
+        step = (at - start).length + 1e-4
+        start, left = at + d * 1e-4, left - step
+    return None
+
+
+def _solve_between(shot, spec, sub, f0, f1, fps, avoid=(), scenery=(), board=None):
+    """A camera from framing "from" to framing "to", setting off at "start" and landing at "arrive" (frames),
+    keyed on every frame and checked on every frame: the lens clear of the set and the cast, the board in frame
+    and not hidden by the set, the subject (once in the room) in frame and in view, and from the landing on, the
+    board filling the frame with nothing but the subject in front of it (when it lands on the board)."""
+    a, b = shot["from"], shot["to"]
+    s0, s1 = int(shot.get("start_frame", f0)), int(shot.get("arrive_frame", f1))
+    if not f0 <= s0 < s1 <= f1:
+        raise ValueError(f'shot {shot["id"]}: the move sets off at frame {s0} and lands at {s1}, which have to be in '
+                         f'order inside the shot (frames {f0} to {f1}): the walk it is keyed on is outside it?')
+    sc = bpy.context.scene
+    cd = D.cameras.new(shot["id"])
+    cd.clip_start, cd.clip_end, cd.sensor_fit = 0.05, 200.0, "HORIZONTAL"
+    cam = link(D.objects.new(shot["id"], cd))
+    tgt = empty(shot["id"] + "_tgt", None, a["aim"])
+    cam.constraints.new("TRACK_TO").target = tgt
+    path = between_path(a, b, s0, s1)
+    for f in range(f0, f1 + 1):
+        c, aim, lens = path(min(max(f, s0), s1))
+        key(cam, "location", f, c)
+        key(tgt, "location", f, aim)
+        cd.lens = lens
+        cd.keyframe_insert("lens", frame=f)
+    if shot.get("dof"):  # soft round the subject as it sets off, sharp all through by the time it lands
+        cd.dof.use_dof, cd.dof.focus_object = True, sub.focus
+        for f in range(f0, f1 + 1):
+            t = _smoother((min(max(f, s0), s1) - s0) / max(1, s1 - s0))
+            cd.dof.aperture_fstop = math.exp(math.log(float(shot["dof"])) * (1 - t) + math.log(64.0) * t)
+            cd.dof.keyframe_insert("aperture_fstop", frame=f)
+    issues = []
+    near_set, near_cast, worst_px, hidden = 9.9, 9.9, 0.0, 0.0
+    person = getattr(sub, "person", None)
+    from hall import WALL_Y
+    for f in range(f0, f1 + 1):
+        sc.frame_set(f)
+        bpy.context.view_layer.update()
+        dg = bpy.context.evaluated_depsgraph_get()
+        here = cam.matrix_world.translation.copy()
+        d, who, inside = _inside_or_near(dg, here, scenery)
+        near_set = min(near_set, d)
+        if inside or d < SCENERY_NEAR:
+            issues.append(f"f{f}: lens {'inside' if inside else f'{d:.2f} m from'} {who}")
+        if avoid:
+            dc, whoc = _nearest(dg, here, avoid)
+            near_cast = min(near_cast, dc)
+            if dc < CLEARANCE:
+                issues.append(f"f{f}: lens {dc:.2f} m from {whoc}")
+        if board is not None:
+            pts = board.screen_points()
+            off = [world_to_camera_view(sc, cam, p) for p in pts]
+            if any(v.z <= 0 or not (0 <= v.x <= 1 and 0 <= v.y <= 1) for v in off):
+                issues.append(f"f{f}: the board is off the frame")
+            blocked, culprit = 0, ""
+            for p in pts:
+                way = p - here
+                ob = _seen(sc, dg, here, way, way.length + 0.05)
+                if ob is not None and ob is not board.board_face and ob not in set(avoid):
+                    blocked, culprit = blocked + 1, ob.name
+            if blocked >= BLOCKED_LIMIT:
+                issues.append(f"f{f}: the board is behind {culprit}")
+        if person is not None and person.head.matrix_world.translation.y < WALL_Y - 0.3:  # (in the room)
+            for p in sub.points_fn():
+                v = world_to_camera_view(sc, cam, p)
+                if v.z <= 0 or not (MARGIN <= v.x <= 1 - MARGIN and MARGIN <= v.y <= 1 - MARGIN):
+                    issues.append(f"f{f}: {person.id} off the frame ({v.x:.2f}, {v.y:.2f})")
+                    break
+            blocked, culprit = 0, ""
+            for p in sub.points_fn():
+                way = p - here
+                ob = _seen(sc, dg, here, way, way.length + 0.05)
+                if ob is not None and ob not in sub.visible:
+                    blocked, culprit = blocked + 1, ob.name
+            if blocked >= BLOCKED_LIMIT:
+                issues.append(f"f{f}: {person.id} is behind {culprit}")
+        if board is not None and b.get("board") and f >= s1:  # landed: the frame is the board, and whoever is at it
+            bb = board.board
+            corners = [Vector((x, WALL_Y - 0.03, z)) for x, z in ((bb["x0"], bb["z0"]), (bb["x1"], bb["z1"]))]
+            vs = [world_to_camera_view(sc, cam, p) for p in corners]
+            res = sc.render.resolution_x
+            worst_px = max(worst_px, abs(vs[0].x) * res, abs(vs[0].y) * res, abs(1 - vs[1].x) * res, abs(1 - vs[1].y) * res)
+            grid, other, culprit = 0, 0, ""
+            for i in range(24):
+                for j in range(14):
+                    p = Vector((bb["x0"] + (i + 0.5) / 24 * (bb["x1"] - bb["x0"]), WALL_Y - 0.03,
+                                bb["z0"] + (j + 0.5) / 14 * (bb["z1"] - bb["z0"])))
+                    way = p - here
+                    ob = _seen(sc, dg, here, way, way.length + 0.05)
+                    grid += 1
+                    if ob is not None and ob is not board.board_face and ob not in sub.visible:
+                        other, culprit = other + 1, ob.name
+            hidden = max(hidden, other / grid)
+            if other:
+                issues.append(f"f{f}: landed, {other / grid:.0%} of the board is behind {culprit}")
+    lens = [round(a["lens"], 1), round(b["lens"], 1)]
+    speeds = [(path(f + 1)[0] - path(f)[0]).length * fps for f in range(s0, s1)]
+    report = {"id": shot["id"], "type": shot["type"], "frames": [f0, f1], "passed": not issues, "issues": issues[:12],
+              "adjusted": False, "swing": 0, "rise": 0, "back": 1.0, "sets_off": s0, "lands": s1, "lens": lens,
+              "travel_m": round((Vector(b["cam"]) - Vector(a["cam"])).length, 2),
+              "drop_m": round(a["cam"][2] - b["cam"][2], 2), "top_speed_ms": round(max(speeds, default=0), 2),
+              "nearest_set_m": round(near_set, 3), "nearest_cast_m": round(near_cast, 3)}
+    if b.get("board"):
+        report["landing"] = {"corner_error_px": round(worst_px, 2), "board_hidden_by_set": round(hidden, 4)}
+    if len(issues) > 12:
+        report["issues"].append(f"... and {len(issues) - 12} more")
+    return cam, report
+
+
+def solve(shot, sub, f0, f1, seed=0, fps=24, avoid=(), scenery=(), board=None, shakes=()):
     """Create the shot's camera, choose a placement that passes the checks, key its move. Returns (cam, report)."""
     spec = {**SHOT_TYPES[shot["type"]],
-            **{k: shot[k] for k in ("dist", "az", "az_to", "h", "lens", "push", "elev", "hold", "fill") if k in shot}}
+            **{k: shot[k] for k in ("dist", "az", "az_to", "h", "lens", "push", "elev", "hold", "fill", "dof") if k in shot}}
     if spec.get("ident"):
         return _solve_ident(shot, spec, sub, f0, f1, fps, shakes)
     if spec.get("prop"):
         return _solve_prop(shot, spec, sub, f0, f1)
     if spec.get("fixed"):
         return _solve_fixed(shot, spec, f0, f1)
+    if spec.get("between"):
+        return _solve_between(shot, spec, sub, f0, f1, fps, avoid, scenery, board)
     if shot["type"] == "reveal":  # the far end is the product view of the prop the screen belongs to
         prop = getattr(sub, "prop", None)
         if sub.kind != "screen" or prop is None:
@@ -679,7 +869,8 @@ def fighting(cams, every: int = 4, gap: float = 0.0002) -> list:
 LIMB_NEAR = 0.3  # a moving part of a character this near a still point puts its shadow on it (m)
 
 
-def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pixels: float = 0.002) -> dict:
+def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pixels: float = 0.002,
+                 far: float = 0.12) -> dict:
     """Points on flat surfaces, and where each is in the picture on every frame it is seen and standing still
     (the frame before and after too). A render's pixels at such a point change smoothly or not at all: a jump
     for one frame is flicker. `blender_render.py` reads this beside the clips it has rendered.
@@ -688,7 +879,11 @@ def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pi
     in clear view and at least `pixels` of the picture's width across: the reader averages a few pixels, and an
     edge, a thin leg or something passing in front would look like a jump. A point is also left out on frames
     when part of a character is moving within `LIMB_NEAR` of it: fingers passing over a desk put a shadow on a
-    point for one frame and take it off the next, which is the picture changing and not flicker."""
+    point for one frame and take it off the next, which is the picture changing and not flicker.
+
+    A second set of points stands on surfaces at least half a metre across, each flat for `far` metres round it:
+    from the back of a lecture hall (16 m, a 26 mm lens) a 2 cm patch is a fraction of a pixel, and the fine
+    points alone left the whole wide part of a shot unread."""
     sc = bpy.context.scene
     pts = []
     for o in sc.objects:
@@ -701,22 +896,25 @@ def still_points(cams, step: float = 0.12, most: int = 8, flat: float = 0.02, pi
             continue
         for ax in range(3):
             u, v = (i for i in range(3) if i != ax)
-            if size[u] < 3 * flat or size[v] < 3 * flat:
-                continue
-            nu, nv = (max(1, min(most, int(size[k] / step))) for k in (u, v))
-            for side in (0, 1):
-                for i in range(nu):
-                    for j in range(nv):
-                        p = Vector((0, 0, 0))
-                        p[ax] = hi[ax] if side else lo[ax]
-                        p[u], p[v] = lo[u] + size[u] * (i + 0.5) / nu, lo[v] + size[v] * (j + 0.5) / nv
-                        round_it = []
-                        for k, way in ((u, 1), (u, -1), (v, 1), (v, -1)):
-                            q = p.copy()
-                            q[k] += way * flat
-                            round_it.append(q)
-                        if all((o.closest_point_on_mesh(q)[1] - q).length < 5e-4 for q in [p] + round_it):
-                            pts.append((o, p, round_it))
+            for fl, need in ((flat, 3 * flat), (far, 0.5)):  # (fine points, and far ones on big surfaces)
+                if size[u] < need or size[v] < need:
+                    continue
+                nu, nv = (max(1, min(most, int(size[k] / step))) for k in (u, v))
+                if fl == far:  # (a few, between the fine ones: they are for wide shots)
+                    nu, nv = max(1, nu // 2), max(1, nv // 2)
+                for side in (0, 1):
+                    for i in range(nu):
+                        for j in range(nv):
+                            p = Vector((0, 0, 0))
+                            p[ax] = hi[ax] if side else lo[ax]
+                            p[u], p[v] = lo[u] + size[u] * (i + 0.5) / nu, lo[v] + size[v] * (j + 0.5) / nv
+                            round_it = []
+                            for k, way in ((u, 1), (u, -1), (v, 1), (v, -1)):
+                                q = p.copy()
+                                q[k] += way * fl
+                                round_it.append(q)
+                            if all((o.closest_point_on_mesh(q)[1] - q).length < 5e-4 for q in [p] + round_it):
+                                pts.append((o, p, round_it))
     out = {"objects": [o.name for o, _p, _r in pts], "shots": {}}
     rigs = [o for o in sc.objects if o.type == "ARMATURE"]
 

@@ -8,6 +8,13 @@ kitchen and the lecture hall are experimental: they have made two finished films
 wants its joints read off a picture by hand, and Windows is untested. Their checks also pass on Linux with
 Blender 4.2.
 
+**This page is written as the work is done.** When an agent or a person works out how to do something in
+Blender here (a cuff that tears, a camera that lands on a board, a hand that will not point), the method goes into
+this page or the `blender` skill in the same change as the code, with what was tried and what it measured. The
+next agent reads it and starts from there, so nothing is found twice. Your Blender work can go in the same way: a
+set, a verb, a fix to the fit, or just what you learned making a film. Run `/contribute`, or open a pull request
+with the method written here beside the code.
+
 With it installed, a JSON **shot spec** becomes a 3D scene: a rigged cartoon character acting at a desk, or a product stage with a phone, a floating card
 or an imported model. The render is a finished film, a set of clips for another build (a Remotion video, a
 moviepy timeline, a video job, an editor), or both from the same spec.
@@ -17,6 +24,7 @@ moviepy timeline, a video job, an editor), or both from the same spec.
 - **Blender clips inside a Remotion video:** `examples/blender-in-remotion`
 - **A product stage with no character:** `examples/blender-product-shot`
 - **A fitted character on her feet in a kitchen (experimental):** `examples/blender-kitchen`
+- **A presenter at a chalkboard, a lecture as data (experimental):** `templates/lecture`
 
 ## Model, rig and render
 
@@ -208,6 +216,205 @@ It works in the other direction too. A spec's `set.screen.video` puts a Remotion
 scene, and a `pull_out` shot starts with that picture covering the frame, so a flat scene can cut to itself in 3D.
 `examples/blender-in-remotion` does both.
 
+## A lecture: a presenter at a board (experimental)
+
+`templates/lecture` is a presenter rendered in Blender standing at a chalkboard Remotion draws: the board, the
+chalk and the windows the camera goes into are `lib/lecture`, and the presenter is one transparent clip a segment
+from `tools/lecture.py`. A lecture is its script, `lecture.json` (per segment: a heading, what is chalked on which
+words, the windows, the acting) and the timeline the tool writes from the audio; the template's README is the
+walkthrough. It was lifted out of a nine-minute sprint review and made generic in one session; what that took:
+
+- **The hall is sized by its presenter**, as a desk is by whoever sits at it. A fitted model's height over a
+  lecturer's (1.75 m) scales the board, the table and the lights (the clay cast, which the hall was built round,
+  keeps it as built). In the first lecture the author's body, 2.25 m as fitted, stood in an unscaled hall and hid
+  15% of the board from the board camera; Mara, 1.65 m, hid 5%. Scaled, they hide 7.8% and 6.0%, and `check`
+  fails a clip over 10% (`board` in `checks.json`: `share`, the `box_px` the presenter ever reaches, `head_px`,
+  `outside_window` for a hand that leaves the clip's window). Place things by the board, not in metres:
+  `"cam": "board"` frames the board edge to edge, `{"board": [u, v]}` is a board pixel for a target, and a cast
+  member's `"at": {"board": [u, out]}` stands them in front of column u, `out` metres from the wall in the hall's
+  measure. The same numbers then stage any body.
+- **Joins inside a move, not on a stance.** The first lecture's fourteen clips each began and ended in the same
+  neutral stance, looking at the lens, so every join read as a reset. Now the turn to the next heading starts in the
+  old clip and the new clip starts inside it: both clips key the same beat at the same frames of the film (each
+  spec's `clock` is the film's), and the held part of a turn depends only on its target, so both poses agree.
+  A character's stance is keyed on a spec's first frame, so a move cannot start before it: a clip that starts
+  mid-move has a lead-in shot (`pre`) that is built and not rendered (`render --shots`). `tools/lecture.py check`
+  compares every body vertex and the face at each join: 0.2 to 1.2 mm on two bodies. When the next segment opens in a window, the
+  carried move is a gesture to the hall (a turn would show the inset a profile), and a gesture says nothing of the
+  head: the first lecture to do this left each clip's head where its own earlier beats put it, 72 mm apart. Both
+  clips now look at the lens as well, twice (a look aims from where the head is, which the neck moves), the second
+  landing on the join's frame, and the join measures 0.0 mm.
+- **A free hand turns no further than its cuff takes.** See the next section.
+
+### Opening on the hall
+
+`"opening": {}` in lecture.json makes the lecture start on the whole hall: a fade from black, the door opens, the
+presenter walks to their mark, and the camera comes down the hall and lands on the board camera's framing as the
+walk ends, then cuts to the board. What it took:
+
+- **A hall worth seeing wide** is the set's `"hall": {}`: deeper (17 m in the hall's measure), rows of desks and
+  benches on a rake, a ceiling with lights, windows down one side, slatted panels on the other, all scaled by the
+  presenter like the board. Its own lights reach only the hall (light linking: EEVEE honours it in Blender 5.3;
+  not yet tried on 4.2 LTS), so the presenter is lit as in every clip.
+- **The board camera stands 12 m out**, in the hall's measure (a 108 mm lens framing a 4 m board), so the hall is
+  deep enough to hold it, with an aisle down the middle in line with the board. With a 2 m aisle the end panels of
+  the front rows showed at the foot of the landed frame (0.6% of the board); at 2.6 m nothing does. The landing
+  check casts a grid of rays at the board from the lens on every landed frame and fails on anything but the
+  presenter in front of it.
+- **A move from one framing to another** (`"type": "move"`) eases out, comes down before it comes in, and arrives
+  along the end framing's axis, so the last of it is straight in. Ending on the board camera itself, and not on a
+  shorter lens at the same framing, keeps the presenter the size the board clips draw them: a 50 mm lens at the
+  same framing makes a presenter a metre off the wall 12% bigger. So the lens does much of the framing change
+  (26 to 108 mm) and the move gives the parallax: the rows rising past as it comes down.
+- **The cut is a match by construction.** The room shot's spec is the first clip's own (cast, beats, clock), with
+  the hall drawn; the first clip keeps the walk in as its lead-in, built and not rendered (`"built_only": true`).
+  `tools/lecture.py check` measures the join like any other: 0.0 mm.
+- **The arrival is keyed to the walk** (`"start"` and `"arrive"`: `"walk"`). One curved walk from behind the door
+  to the mark: a stop inside the door and a second walk into an 80-degree bend took a foot 22 mm past its reach.
+- **The later clips start placed on the mark**, so the walk in has to end in a placed stance. Two things did
+  not: a walk ends with the knees soft (the hips 12 mm under a placed stance), and the arms came out of the walk
+  and the door at another turn of the wrist (the fingers 7 cm off on Mara, 1 cm on the author's body). The opening
+  ends with `settle` (they stand up straight and the arms hang as a placed stance's do) and puts the door hand
+  back to `loose`; the join after the first clip went from 75 mm to 0.7 mm. (Standing every walk up straight on
+  its last step did it too, and changed the clay cast's walk: `settle` keeps it to the specs that ask.)
+- The opening walks at Jasmina's stride, 0.8 of a leg, which fitted bodies take cleanly; the clay cast's arms miss
+  that swing by 4 to 7 cm (`ik_max_error_m`), so a clay presenter walks at the default 0.5.
+- The window panes fought their frames (flicker) in a hall at the clay cast's scale and not at the author's: a
+  pane now runs on under its frame, inside its depth.
+- The lecture's hidden table (only there for the close) stood on the walk's path, and the body went 3 cm into
+  it: with an opening and no close, the clips have no table (`"table": false`).
+- With the hall lit from the start (`"lights": "on"` in the opening), the latch clicks on black, before the
+  picture: the handle goes down behind the shut door (`open_door`'s `latch`) and the event is keyed on it; the
+  door swings once the hall has been still for a second.
+
+#### The hall in the dark
+
+The opening's default since 2026-11-17: the hall fades in dark, lit by its windows; the door opens onto the
+presenter in silhouette; they step in, press the switch beside the door, and the ceiling lights come on in three
+banks from the board back, each with a fluorescent stutter; then the walk to the mark, the camera coming down
+the hall as before. 9 s to the cut. In a spec it is the set's `"lights": "off"` and a `lights` beat
+(the `blender` skill has the options). What it took:
+
+- **Lights that change are events.** `kit.Lamps` holds a set's lights (their energy) and glowing materials
+  (their strength) in banks; a `lights` beat keys each bank off, through its stutter, to full, as steps (a tube is
+  on or off). Each bank's start and hold are events (`lamp_stutter`, `lamp_on`) and the switch is one
+  (`switch`), so sounds go on those frames. The hall is split into banks only when it starts dark, so a hall lit
+  from the start builds as it did, and the lecture writes the same specs as before with `"lights": "on"`.
+- **The dark has to read.** The window light (light-linked to the hall) stays on; the presenter's own lights come
+  on with the front bank, more than three seconds before the cut, so the match cut is unchanged. A picture on
+  the board glows by itself, so in the dark it is held at 6% (`hall.board_dark`). A check's still is taken once
+  the lights hold: on a frame mid-stutter the hall measured 0.06 against the 0.08 floor.
+- **Where to stand to press it.** On the door's line the switch was 11 to 16 cm out of reach on every body; a
+  fixed spot in front of it put the shoulder 18 cm from it, and the arm could not fold back onto it. A press
+  reads with the arm as straight as a point, and arm length against height differs from body to body, so
+  `{"switch": "reach"}` is worked out from the walker's own arm: side-on to the wall, a step toward the door
+  from the switch (so from the back of the hall they stand in front of the bright doorway, in silhouette).
+- **A press is a point that arrives**, not a handle. With the door's grip the hand turned on the forearm and
+  stretched the cuff 4.6 to 7.2 times; as a point (`touch`), the cuff stayed at 2.6 to 3.5 on all four bodies.
+  The pointing index sits about 14 degrees off the hand's own line, so the hand aims along the line from the
+  shoulder and the wrist is moved by what the fingertip missed: aimed from the wrist, each correction turned
+  the hand again and the tip stayed 7 cm off.
+- **Two walks, not one.** In at the door with one bend to the switch, then a walk to the mark. The stop works
+  where it failed before because the second walk's bend is small: arriving at heading -80 left a 72-degree turn
+  on the spot in about a second, and a hand brushed the body on Mara and Nell; at -50 all four pass. The second
+  walk sets off after the pressing hand is home (0.6 s after the press). The step in is the stroll stride taken
+  slowly (1.7 s, five steps on three bodies, seven on the tallest): in 1.2 s it was seven steps 0.15 s apart, a
+  shuffle, and a longer stride swung a hand into the body in the bend (3 to 8 cm on three bodies). The camera sets off with the last walk
+  (`"start": "last_walk"`), so it holds the whole hall as its lights come on.
+- **The doorway.** The corridor light is six times brighter in a dark hall, and a warm panel in the opening
+  (`hall.spill`) comes up as the door opens, so the floor inside the door catches the light. At 250 W it
+  blew out the open leaf and lit the presenter's front in the doorway by bounce; 120 keeps the silhouette.
+- **The shadow pool.** A row of fill lights to a bank, each with its own shadows, ran EEVEE's shadow pool out
+  at its 512 MB default: as the camera moved, shadows on the floor and the wall by the door popped between two
+  states, 20 to 40 levels from frame to frame (the far still points caught it; it was seen first as noise from
+  the bright doorway, and switching the bounce light to ambient occlusion did not clear it on the second body).
+  A drawn hall that starts dark sets the pool to 1024 MB, which clears both bodies.
+- **Finding a flicker's cause.** Re-render only the flagged frames from the render's own `scene.blend` with one
+  setting changed at a time (`blender -b out/<shot>/scene.blend --python ...`, a few minutes each) and read the
+  same still points: guessing pointed the wrong way once here. A level that flips between two fixed values
+  (113, 90, 113) is a shadow popping (the shadow pool); a level that wanders is noise (EEVEE's screen-space
+  bounce light: ray tracing off steadies it). Frames in Blender count from 1 and in a video from 0: Blender's
+  frame 133 is the video's frame 132.
+- **A place worked out while the set is built** reads an object's `.location`: its world matrix is not updated
+  until the view layer is, and a spot taken from it put the walk at the room's middle, 1.9 m off.
+- **Orla's hand** was 2 cm short of the handle from the lit opening's start (0.33 m behind the door); the dark
+  opening starts them at 0.30.
+
+### Closer shots and a line over the walk in
+
+A lecture filmed by one camera for four minutes reads as a slide deck with a figure in the corner. A segment's
+`"closes"` cut to a second camera on the presenter (`closeup` or `medium`) from one phrase to another, and
+`"opening": {"voice": ...}` says a line over the walk in. What it took on "Introducing Blender support":
+
+- **A second camera, not a bigger crop.** Zooming the flat frame 2x on the presenter (the board camera is a 108 mm
+  lens 12 m out, so a crop is geometrically right) left them at the frame's right edge against half a frame of
+  empty board, and soft. A `closeup` 15 degrees round shows the board's edge, the wall and the door's side going
+  back behind them: it reads as another shot, and it is the 30 degrees a cut wants between two sizes.
+- **The close is the clip's own spec seen by another camera.** `tools/lecture.py specs` copies the segment's
+  spec (cast, beats, clock), draws the hall, and gives it three shots: the clip's frames before the close and
+  after it as `"built_only"`, and the close between them. So the body is in the same pose either side of the cut
+  by construction, as at the opening's match cut, and only the close's own frames render (48 to 193 frames each
+  here, 3 to 4 s a frame at 1920x1080 on an Apple M4, 31 minutes for six).
+- **They are on the new lens as it cuts in.** A look into the lens is aimed at the camera of the shot the look
+  *ends* in. Started on the cut, the head whipped round in the close's first three frames with the eyes shut for
+  the blink a turn carries. The turn now starts 0.35 s before the cut, in the frames that are not rendered, and
+  ends on the close's first frame.
+- **No looks out at the hall in a close.** The clip's look round (every 6.5 s) held the face off the lens through
+  half of a five-second close-up. The close's spec leaves out a look at the hall that would be held as it cuts in
+  or would start in it; the wide clip keeps its own.
+- **The board behind them is the board then.** `tools/lecture.py boards` renders one Remotion still a close (the
+  `BoardAt` composition: chalk and panes, no presenter) for that shot's hall to hang on its wall.
+- **Where a close cannot go** is refused by `timeline`, with the reason: while the camera is in a window (the
+  presenter is the inset there), while the heading goes up (they are turned to the board), past the segment's
+  last word (the turn to the next heading), under 1.5 s, or within 2 s of another. Do not put one on a line about
+  the presenter being a transparent clip in front of a drawn board: the close is neither.
+- **Look at the hands before framing them.** A ten-second spec that holds each hand shape in turn, with stills
+  of both hands from four sides, showed this presenter's `open`, `loose` and `relaxed` holding up and `fist`,
+  `grip` and `point` rough at the knuckles (the hands are from a second model). So the closes are head and
+  shoulders, and the one `medium` is on an open-handed shrug.
+- **The first words in the first second.** The opening is nine seconds of hall, door, lights and walk before
+  anyone speaks. `"voice": {"id": "00_hook", "at": 0.7}` plays a line over it (the presenter says it on the way
+  in, mouth and all, since the room shot and the first clip share their beats), and the first segment was
+  reworded so it does not say it twice.
+- **Voice one segment again without rendering the rest.** Every clip's `clock` is its place in the film (the
+  breathing is in phase with it), so a segment that changes length moves every later clip and they all render
+  again. Give the changed segment a `"gap_after"` that puts the next segment back on its old start (old next
+  start, less this one's start and new length): `timeline` then prints the same frames for the rest, their specs
+  are unchanged, and only the changed clip, the room shot and the closes render.
+
+### The cuff on gestures and points
+
+A fitted model's cuff is one band of skin shared by the forearm and the hand, so any turn of the hand on the
+forearm lands in it. A point at the board behind the presenter turned the hand 150 to 180 degrees on the forearm
+(its palm kept "to the body's middle") and stretched the cuff 5.5 to 6.7 times on all four bodies, past the check's
+4; the gestures took the author's body to 4.8. Measured at rest, by the check's own measure, stretch rises
+smoothly with the turn, and each body takes a different amount before it reaches 3: about 68 degrees each way on
+the author's, 85 on Mara's and Orla's, 100 on Nell's. So the rig measures that range on each hand of each body
+(`twist_range`, once a build) and a hand whose roll is a choice (a gesture, a point) keeps inside it: the way the
+fingers point is kept and the palm rolls back toward the forearm's own. A hand that has to sit on a thing (a
+handle, a mug, the keys) is left alone. On the lecture screen test (`tests/fixtures/blender-fitted/screen-lecture.json`,
+two points at the board, every gesture and a dust) the four bodies went from 5.5 to 6.7 times to 3.2 to 3.9, and
+up close the point reads better: the index along the line, where the old one turned its knuckles to the camera.
+`skin` in `checks.json` has `wrist_twist` (the range, each hand) and `twist_held` (how often a turn was held back).
+A sip is not a free hand, and still stretches a sleeve 4.7 to 7.5 times (below).
+
+**The inside of the cuff.** With the turn held, the first lecture still showed a fault on every open palm: the
+far side of the cuff opened toward the camera and showed a light, ragged band round the wrist. The stretch read
+3.73, inside the limit, because it was not stretch. Rendered with the sleeve's back faces painted red, the band was
+the inside of the sleeve: a generated model's clothes are one sheet of surface, and its inside was drawn lit, in
+the cloth's own colour, so the opening read as a torn hole. Two other fixes were tried and dropped. Dual
+quaternion skinning changed nothing. A cuff bone that follows the hand's bend but not its turn (the sleeve's hand
+weight moved onto it) smoothed the rim a little, and on a point opened a black gap over the wrist. The fix is
+in the shading: `line_cloth` draws every face of a fitted model's clothes seen from behind at 0.45 of its colour
+(`LINING`), so the inside of a cuff, a collar or a hem reads as the shade inside a real one. The grafted hands are
+left as they are. At 0.12 the dark-green cuff was right, but an orange one showed a black notch at the wrist that
+read as a hole. It is done after the head is built, since the face finds the model's paint by its link into Base
+Color. `skin.lined` in `checks.json` lists each material and whether it is lined. Proof: the four walk-ins and
+lecture screen tests give the same checks as before on all four bodies, and the clay cast is unchanged. What it
+does not change: the sleeve rim still takes 40 to 85% of the hand's weight past the wrist and 10 to 16% up the
+forearm, so it turns with the palm, and on a point the skin between hand and sleeve folds. The weights are the
+next piece of rig work.
+
 ## In other builds
 
 `render --clips` without `--alpha` writes an ordinary H.264 `.mp4` per shot, so a Blender shot goes wherever a
@@ -282,6 +489,18 @@ on it stepped the reading a pixel at a time across the letters, and the lecture 
 flickering on 104 frames with nothing to see; a surface with a picture on it is now read as smoothly as a
 plain one, and two faces in one plane are caught as before.
 
+Lights coming on are a jump that comes back: exactly what the render check looks for. The frames where a `lights`
+beat changes the light are written beside the still points (`light_changes`), and only those frames, with one
+either side, are not read; `render_checks.json` lists them under `not_read`. Everywhere else a stutter still
+fails, and a fight between two faces beside them is still caught (`tests/python/test_blender_spec.py`).
+
+A still point is read only where the flat patch round it covers enough of the picture, and from the back of the
+lecture hall (16 m, a 26 mm lens) the 2 cm patches cover a fraction of a pixel: the first 203 frames of the
+opening had no points at all, lit or dark, so nothing in the wide part was ever read. Big surfaces (half a metre
+or more) now also carry far points with a 12 cm patch. Proven on the room shot as rendered: a patch of wall made
+to flicker on frames 31 to 91 now fails (it passed before), and the lit opening still passes. They found a real
+fault at once (below, the shadow pool).
+
 ### A character from a generated 3D model (experimental)
 
 The clay cast is built from a description. A fitted model is a 3D character made elsewhere, put on the same
@@ -295,20 +514,62 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    aloud so they can look away from the screen, and keeps the sharpest frame of a short burst. It needs a browser
    and a camera, the photos stay on the machine, and the person in them decides where they go next: keep them
    out of a public repository.
+   To choose a style, make a few first: `image_edit.py` with the full-body photo and a front photo as its two
+   inputs (`--input full-body.jpg front.jpg`), one prompt that says "image 2 for the face" and describes the
+   person, the clothes and the A-pose, and only the style line changed between runs (an animated feature, a clay
+   puppet, a game hero, toon shading), all at one seed. Lay them side by side and let the person pick. Then make
+   the side, back and open-hands views from the one they picked with `flux2.py --input picked.png`:
+   Qwen-Image-Edit restyles well but cannot turn a figure round. Ask for the feet under the hips, not wide apart:
+   a wide stance spreads wide trousers or a skirt with the legs. The rig measures how far a hanging arm has to
+   clear the hip with each leg swung in under its hip, as the character stands, but cloth that was generated
+   spread out stays wider than it would hang.
 2. **A model.** Any image-to-3D service that returns one textured GLB. Through the Blender MCP server's
    `generate_3d` it is one generation, a minute or three, and may cost a credit on that service: check before
-   you run it.
+   you run it. With MCP for Blender Premium, Premium being on is not enough: tick **Meshy** in its sidebar (N in
+   the 3D viewport). Until then `get_addon_status` lists every generator as off and a generation is refused,
+   which costs nothing. Start the body and the open-hands model one after the other: they generate side by side.
 3. **Fit it.** `uv run tools/blender_render.py fit --model lead.glb --fit fit.json --out lead.blend --preview fit/`
    binds the model to the rig in its own A-pose: nothing is re-posed or stretched. `fit.json`
    holds what the fit can't yet see by itself: the joints (shoulder, elbow, wrist, hip, knee, ankle...), where the
    clothes end and the head starts, and the eyes, brows and mouth, all in metres read off a front view. The
-   painted eyes and brows are erased, because the rig's own are placed there and move. The face also takes
+   painted eyes and brows are erased, because the rig's own are placed there and move (unless the painted
+   face is kept, below). The face also takes
    `mouth` (where the lips meet: under a moustache, its lower edge), `mouth_width` (corner to corner; under 18%
    of the face's width fails the check as too small to read), `moustache` (true when the upper lip is under
    hair) and `chin` (the height of the chin's underside). From these the fit builds a lower lip, teeth and the
    dark of an open mouth on the model's own lip line, smile, frown and jaw shapes in the head's surface, and
    skin-coloured lids that close for a blink or a wink. A brow hidden under a fringe goes in `brows_hidden` (its
    index in `brows`, the character's right first): the rig still gives it a brow, and nothing is erased there.
+   **The painted face.** Before anything is erased the fit reads the face that came painted on the model and
+   prints it: each eye's opening, its iris and pupil, how much of the iris the upper lid covers, the lash line,
+   the lips. `check` then holds the rig's eyes against the painted ones (`face` in `checks.json`:
+   `painted_eye_m`, `painted_lid_over_iris`, `eye_tall`) and fails when the rig's are over 1.5 times as tall,
+   which is a stare. A cartoon model passes: its painted eyes are round, wide open and the size the rig makes
+   them (two came in at 0.98 and 1.26). A model painted nearer to life does not: one had eyes 32 by 15 mm with
+   the lid over 13% of the iris, and the rig put 40 by 30 mm white ovals with a bare iris over them (2.0).
+   For that kind of face put `"paint": "keep"` in the fit's `face`. Nothing is erased, so at rest the face is
+   the model's own, texel for texel, and only what has to move is cut from the paint:
+   - each eye is a thin patch 0.3 mm over the painted one, shaded with the body's own normals. It draws the
+     white with the iris painted out, the painted iris as a disc that slides inside the opening for a glance,
+     and a lid in the skin's colour that comes down from the painted lid line for a blink or a wink. The same
+     controls move it that move the rig's eyes, so no verb changes;
+   - the brows stay painted and ride the skin: two shapes in the head for each lift and tilt the forehead over
+     the eye, driven by the brow control;
+   - the lips stay painted and smile shut (the head's smile and frown shapes move them). The rig's mouth, in the
+     painted lips' colour, waits behind the face and comes forward only when the mouth opens: `happy` is a
+     closed smile on such a face, and teeth are for `grin`, `shocked` and speech.
+   What it cannot do: the eyes open no wider than they were painted (`shocked` is brows and mouth); the shut
+   lid is one flat skin colour, right for a blink and plain in a held close-up; a soft painted brow cannot be
+   lifted off its skin as a part of its own (cut out by colour it took the lid's crease with it on one face
+   and half the brow on another), so a brow moves a few millimetres with its skin, not across it. Each brow's
+   skin is its own half of the forehead: where the two reached across the middle they added up and the skin
+   between the brows moved further than either brow. `face` in `checks.json` has `brow_squeeze`, the shortest
+   the brows' furthest tilt makes an edge of the forehead against its length at rest (0.75 on one face; under
+   0.5 fails as a crease). The iris is found by the first strong step in brightness going out from its middle,
+   not the sharpest: a black liner's outer edge against skin is a sharper step than a brown iris against the
+   white, and read by the sharpest an iris came out twice its size. Keep the rig's
+   face for cartoon eyes with long painted lashes: the lid line is read between the lashes and a blink comes
+   out ragged. The fit refuses `keep` when it finds no painted eye (white beside an iris) where `eyes` says.
    **Hands with fingers** are optional: `"hands": {"model": "lead_open.glb"}` names a second model made from
    the same sheet with the hands open and the fingers apart (one more generation). Only its hands are used.
    The fit finds each by its skin colour up to the cuff, finds the fingers and thumb, uses the better formed
@@ -317,7 +578,25 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    hand's length out of the palm), so the fit presses what stands in front of the palm in towards it, until the
    thumb's root is 8% of the hand's length out: the wedge thins evenly, the cuff ring and the fingers do not
    move. The fit prints the depth before and after and how far any edge was stretched, and fails if the root
-   still stands over 20% out (a hand like that rests on its thumb).
+   still stands over 20% out (a hand like that rests on its thumb), or if an edge was stretched over 3x (two
+   bodies came in at 1.2x and 1.6x). A thumb that was made near the palm already (16% out) has a thin web and
+   no wedge to thin: moved whole, with the skin beside its root hardly moving, it stretched the edges between
+   them 5.2x and the web folded over itself, a torn patch at the thumb's root in a close shot. So when any edge
+   passes 2x the move is spread over the skin round the thumb, each vertex taking the mean of its neighbours,
+   until none does (one round took that hand to 1.5x; the fit prints the rounds). The fingers are listed thumb,
+   index, middle, ring, little on either hand.
+   **Make the open-hands picture close.** In a full-length picture a hand is about 60 pixels long, and the model
+   comes back with fingers joined (one came back with four). Crop the front view to the hips up before the edit
+   that opens the hands, and ask for the fingers pointing along the arm with the thumb beside the palm: a thumb
+   that sticks out sideways is the furthest point of the arm, and the hand is then measured from it. A model
+   made from a half figure comes back sized as if it were a whole one (1.8 times the body), so the fit scales a
+   hands model to the body's arm span before it looks for the hands, and says so. Keep only the arms of it in a
+   repository, cut well above the elbow: a cut inside the forearm is the narrowest slice of the arm, and is
+   taken for the wrist.
+   A model made from a picture of open hands has the picture's background baked into the sides of the fingers
+   and the webbing between them, grey streaks down every finger once the hand is on an arm. The fit paints
+   every texel of the hands that is nearer grey than skin's hue as skin, as light or dark as it was, and prints
+   the share (0.5% on the hands that showed it, under 0.2% on two that did not).
    A second generation of the same character comes with hands a fifth to a third too long, so the fit makes the
    donor's hand as long as the body's own, cuff to fingertip, and prints both lengths. `"scale": 0.7` in `hands`
    sets the donor's scale by hand instead (the fit then prints what would have matched). The wrist joint is put
@@ -325,16 +604,35 @@ rig, so the same verbs and shots work on it. The pattern, one step each:
    sleeve or inside the hand, and then the sleeve folds where there is no joint. A nub the generator left on a
    hand is smoothed flat with `"smooth": [[along, out_of_palm, across, radius]]`, in cm on the fitted hand from
    the middle of the knuckle row (the back of the hand is negative out of the palm).
+   **Measuring.** Read the joints off the model, not the sheet: render orthographic front and side stills of the
+   GLB in Workbench (flat light, texture colour) with a centimetre grid over them, and print horizontal slices of
+   the mesh every 2 cm (each slice's runs of x, with their y). The slices give what a still hides: the neck is the
+   narrowest slice above the shoulders, the chin is where the slice's front jumps forward, an arm is the run that
+   splits off the trunk, and its centre slice by slice draws the arm's line down to the hand. In a side still
+   seen from +x, the character's front (-y) is on the left. Legs hidden in wide trousers or a long skirt have no
+   slice of their own: put the knee on the line from hip to ankle. Slice both arms: a generated model is seldom
+   symmetrical, and the joints are written once for the left and mirrored. Where the right side differs by a
+   centimetre or more, give it in `"joints_right"`, written the same way (x positive): Nell's right arm hung 3 cm
+   nearer her body at the elbow than her left, the mirrored elbow stood outside it, and the inside of the arm
+   went to the spine (the fit fails that, below).
 4. **Name it.** A character file with `"model": "lead.blend"` beside it, and `"accessories": ["glasses"]` if they
    wear them. Keep the folder in a kit (`kits/<name>/cast/`).
 5. **Look at it** before writing beats: a `check` of any spec with the cast entry swapped, and read the contact
-   sheet. Arms up, hands on head and sitting show the skin weights at their worst.
+   sheet. Arms up, hands on head and sitting show the skin weights at their worst. The walk-in
+   (`tests/fixtures/blender-fitted/enter.json`) is the one every fitted character passes. Its cast `at` is set
+   per character: shorter arms stand nearer the door (3.46 for Conal, 3.32 for Mara), and the check says how
+   far short the hand is. A hand that reaches the handle but strains shows as the IK reach error at the door's
+   frame (`ik_worst` in `checks.json` names the frame and limb).
 
 What the fit does for you: legs that touch in the model (shoes generated as one piece) are parted, since a face
 joining one leg to the other tears across the gap on the first step; weights come from a clean stand-in body on
 the same joints, copied only between
 surfaces that face the same way (so a sleeve does not take the chest's weights), and kept inside the sleeve, whose
-thickness is measured round the upper arm and round the forearm on the side away from the body; bends
+thickness is measured round the upper arm and round the forearm on the side away from the body; the other way
+round, from half way down the upper arm to the wrist a vertex that is half arm or more and far nearer the arm than
+the middle of the body keeps none of the body's weight (a forearm hanging by the hips takes some of the hip's, and
+typing it sagged 3 cm into the desk), and the fit fails a forearm whose inside moves with the body, counted as
+edges running straight from forearm to body (none on a free arm); bends
 keep their volume; the seat is as high as the character's knees and the desk comes to its hands, so nobody is
 stretched to fit furniture.
 
@@ -343,21 +641,63 @@ sits at its desk: the desk's underside stays over the thighs and a hand resting 
 hang deep under the wrist, and a desk set by the hands alone came down into the legs); the keys' near edge comes to
 the fingertips, a hand's reach from where the wrist is comfortable; two hands on the keys lie 30% of a hand's
 breadth apart, measured on the mesh (broad hands on narrow shoulders met in the middle); a hand on a thigh stands
-off the leg's skin as it is posed on that frame. Pulling in to the desk, a hand takes the desk's edge only if it
+off the leg's skin as it is posed on that frame. A reach is measured from the shoulder joint where the fit put it,
+front to back as well as across and up: on a deep chest the joint is some centimetres behind the middle of the
+body, and measured from in front of it every reach asked for more arm than there was (a wrist 14 mm short of its
+target sitting down, and a hand that strained at the door from a start spot found that way). Pulling in to the desk, a hand takes the desk's edge only if it
 can lie flat there in front of the shoulder; otherwise the hands lift off the lap while the desk is still far off
-and wait over the keys.
+and wait over the keys, held level with the palms down and the fingers out, as they will lie on them (left to
+follow the forearm they pointed up off a low elbow, curled, like fists held at the chest; sloped as on the keys
+they drooped). Until it lifts, a hand on the lap rides the leg: the chest leans into the pull, and a hand
+held to the chest went 2 to 3 cm down into the thigh with it. A hand on its way to or from its own leg is kept
+clear of it on every frame: the two ends of the path are each clear, the straight line between them is not
+(sitting down, the thigh comes up under a hand that hung beside it, and wide trousers stand further out at the
+fingertips than at the wrist), so each fingertip is measured against the leg's skin beside it and the wrist is
+moved out by what is short. That took one body's fingertips from 1.4 cm inside the thigh to outside it.
 
-To keep a model in a repository, reduce it no further than the fit's own size (`"faces"` in the fit file, 150,000
-by default for a body): a body that passed every check at that size failed the sleeve check at 60,000 faces,
-because the measure reads the mesh's edges and coarser cloth has longer ones. A character fitted at 60,000 from
-the start (Mara) is measured at that size and is fine. Weld its UV seams before reducing it (the importer splits the vertices along
-every seam, and a split mesh decimated opens into cracks along all of them, which show as torn cloth and shards
-round the eyes). In Blender: merge by distance at 0.00001, then Decimate.
+**Reducing a model, in the fit and for a repository.** A generated model's texture is an atlas of hundreds of
+small islands. Blender's Decimate collapses edges wherever it likes, and an edge collapsed across the border of
+two islands leaves a face with corners in both, painted with whatever lies between them in the atlas: a shard
+of the wrong colour by an eye, a notch at the end of a brow, grey down the side of a finger. Welding the seams
+first (merge by distance at 0.00001) stops the mesh opening into cracks, but not this. So the vertices on a
+seam (those whose face corners do not all carry one UV) are held out of the reduction with a vertex group, and
+the faces come off the insides of the islands. The fit does this itself and prints the share of faces left
+painted from the wrong place: each face's middle is looked up in the texture where its own corners put it and
+where the nearest point of the model as it was had it. Reduced across the seams that share was 1.13% and 0.80%
+on two bodies, and seam-safe 0.02% and 0.01%; over 0.2% fails. Before it reduces, the fit also takes off the
+stray triangles a generator leaves standing on the surface (an edge shared by three faces) and closes pinholes,
+and prints both counts.
+
+To keep a model in a repository use the same reduction:
+`uv run tools/blender_render.py reduce --model lead_gen.glb --out lead.glb --faces 60000 --texture 1024`
+(`--faces 0` only shrinks the texture). Reduce it no further than the fit's own size (`"faces"` in the fit file,
+150,000 by default for a body): a body that passed every check at that size failed the sleeve check at 60,000
+faces, because the measure reads the mesh's edges and coarser cloth has longer ones. A character fitted at
+60,000 from the start (Mara, Nell) is measured at that size. A model already reduced across its seams keeps its
+shards: reduce it again from the original. The printed share reads high on a body far coarser than that: at
+20,000 faces Mara reads 0.22% with every seam vertex held in place, because a large face's nearest point on the
+model can land in the next island (a lid, a lip) without its colour changing. Held against the same reduction
+across the seams (2.48% there, 1.08% at 30,000) the method still works; the number is a guide at the sizes above.
 
 What it does not do: without a `hands` model the hands are whatever the model has (usually fists), on one
 bone; generated hands are thick and cupped, so they read as mitts with finger grooves. A typing hand slopes down
 from the wrist 20 degrees, as a typist's does, with the fingertips on the keys; a hand laid flat slopes just
-enough for the heel of the hand and the fingers to rest together (a generated hand's heel is deep). A likeness
+enough for the heel of the hand and the fingers to rest together (a generated hand's heel is deep). A hand is
+found by its skin colour up to the cuff. On a bare arm (a vest top, a sleeveless dress) the skin runs on to the
+shoulder, so the hand is cut at the wrist instead: the narrowest slice of the arm between a hand's length and a
+forearm's from the fingertips (the fit prints "a bare arm" and where it cut). With no cuff to hide the join, both
+models are cut across with a plane there, not vertex by vertex (which leaves the ragged edge of whatever
+triangles ended at the wrist, and shows as shards round it). The hand gets a ring of its own on the arm's plane,
+the arm's end is drawn onto that ring and takes the hand's weights there, so the join stays shut when the wrist
+bends, and the hand's stub is pulled inside the arm. The skin colour the hand is tinted to is read at the wrist
+on both models, not at the fingertips, which are paler. The fit prints how far the two rings stood apart (up to a
+centimetre between two generations of one character). Matched in colour, the join still showed as a line: the
+arm and the hand are two surfaces there and each shades by its own normals, so the light breaks along the ring.
+The vertices of both on the ring are given one normal between them. A forearm can be as narrow for several
+centimetres above the wrist as at it, and which slice of that stretch measures narrowest changes with the mesh
+(one body's cut moved 4 cm up the arm when its mesh was reduced another way, and its hands came out 18% bigger):
+the wrist is the narrow slice nearest the hand. `tests/fixtures/blender-bare` is a worked example with an
+invented bare-armed character whose painted face is kept. A likeness
 of a real person belongs in your own project folder, not in a repository. `tests/fixtures/blender-fitted` is a worked
 example with an invented character: both models, the `fit.json` read off gridded stills, and a README saying how
 each was made (her generated hands had the fingers joined, so the hands came from a second model).
@@ -385,15 +725,21 @@ that landed beside another, or a hand held on one spot and then put on the next.
 
 ### Refining a rig: one spec, two bodies
 
-How the fitted rig was worked up, and how to carry on with it or with your own. It has been run with Claude Fable
-5.2 in Claude Code; other models are untested.
+How the fitted rig was worked up, and how to carry on with it or with your own. It was worked up with Claude Fable
+5.2 in Claude Code. A third character, from photos to a fitted model and three fixes to the rig, was done with
+Claude Opus 5.5.
 
 1. **Two characters, one spec.** Keep a second fitted character of a different build beside the first (the repo
    has Mara) and run every spec on both. A number tuned on one body passes on that body: nearly everything found
    in the session that made Mara pass came from her failing a film the first character passed.
 2. **Look, then measure.** Render or `check`, tile every second or third frame of a shot, and look. When
    something is wrong, find the number behind it before changing anything: print it per frame, and compare it on
-   both characters.
+   both characters. Find out which mesh and which frame a fault belongs to before fixing it: a hand said to go
+   "into the chest" was going into the thigh six frames earlier (print each fingertip's nearest body part per
+   frame), and a ragged wrist blamed on the arm was the grafted hand's edge (render with one of the two
+   materials painted green). A shard beside an eye was first taken for a hole in the mesh, then for a stray
+   face, then for stretched texture; rendering the model flat as generated, welded and reduced, side by side,
+   showed in one picture that only the reduced one had it.
 3. **Turn what was seen into a check.** Each fault becomes a number in `checks.json` with a limit and a test, so
    it cannot come back unseen. Prove a new check on the code as it was (it should fail there). The checks are
    the memory of the work; a note that says "watch the hands" is not.
@@ -407,9 +753,120 @@ How the fitted rig was worked up, and how to carry on with it or with your own. 
    reads the file and the checks, not the old conversation. The same bridge carries a film between
    revisions: see [A film over several sessions](#a-film-over-several-sessions).
 
+Things that cost time in Blender itself, worth knowing before building on this:
+- An image made in memory (`bpy.data.images.new`, pixels set) is not kept by `pack()`: it comes back blank from
+  the saved file. Save it as a PNG, load that as a file, then pack.
+- `libraries.load` fills the list you give it in place: `dst.images = names` turns `names` into the loaded
+  images. Give it a copy if the names are needed afterwards.
+- A driver of type `SUM` with one transform variable needs no script, so it still runs in a file opened with
+  scripts off (a proof script opening `scene.blend` in the background). Do the arithmetic in the nodes.
+- A glossy patch on the bulge of an eye picks up the room as a grey haze over the pupil that stays put when
+  the iris moves. Make the patch matt: a painted eye's shine is its painted glint.
+- Two soft masks that meet (the eye's opening and the band over it) leave a seam where each is half: add them,
+  do not take the larger, or the paint underneath shows through as a line.
+- Read a painted feature's edge by the step in brightness along a line, not by a threshold against skin: the
+  white of an eye is shaded pink at its corners and a hazel iris is no darker than a shadow.
+
+A fourth character (Nell, bare arms, in the repo) was fitted in the same session that fixed these, and she
+failed the walk-in the other three pass. The next session found three causes, and what finding them taught:
+- **A hand on its way to the keys was aimed at the pose, not at the keys.** The midpoint of the move was half
+  way to where the pose puts the wrist, before it is raised onto the keys; a desk raised over long thighs (8 to
+  10 cm on Mara, Orla and Nell) has its keys well above that, and the fingers went into the laptop on the way.
+- **A forearm hanging by the hips takes the hip's weight**, and the fit now clears it (above). Mara's
+  desk contact halved with it; Conal's and Orla's did not move.
+- **A fault on one side only is a joint.** Nell's typing forearm sagged through the desk and a sheet of skin
+  hung from her right arm to her hip; the left was clean. Her right elbow, mirrored from the left, stood 3 cm
+  outside the arm. Compare the two sides (edges from forearm straight to body: 29 on her right, none on any
+  other arm of four bodies) before reaching for the rig.
+- **When a fix moves the number both ways, stop tuning and look.** Seven variations of a weight threshold moved
+  her stretch between 4.3x and 5.0x without fixing it; one close still of the elbow, before and after, showed
+  the arm's inside going with the hip, and slices of the mesh then showed the arm was not joined to the body
+  at all.
+- **A fix that removes geometry is measured for what it removes, on every body.** A cut of the faces between
+  arm and body helped Nell and took 114 cm² out of the inside of Conal's upper arm and 54 cm² out of Mara's
+  chest, with every check still passing: no check sees a hole. It was dropped.
+
 What could be better: the proof scripts (tiled stills, close cameras on a hand or a face, per-frame traces) live
 in a project folder and are not yet tools in the toolkit; the fit still wants its joints read off a still by hand;
 and two characters is the least that shows a tuned number, where three of different builds would show more.
+
+### Refining a character: a review sheet against the photos
+
+A fitted character that passes every check can still not read as the person, and the person often cannot say
+why. Finding what is off is a job of its own, done before any fix. It was run on one character with Claude Fable
+5.2; the method, in order:
+
+1. **Make the review sheet.** `uv run tools/blender_render.py sheet kits/acme/cast/lead.json --out sheet/` builds
+   the character in even light with no grading (a room's mood light would be compared with the photo instead of
+   the paint) and writes `sheet.jpg`: the head and the body from six angles, seven faces (rest, smile, blink,
+   glance, wink, grin, shocked), the poses that stretch a body most (arms up, hands on the head, hands behind
+   it), then sitting down, sitting and typing at a desk. It prints the model's own proportions (`sheet.json`:
+   eye line, eye spacing and head width as shares of the head's height, the glasses' size and where the eye
+   sits in them, heads tall, shoulders, arm and leg as shares of the body's height) and whatever the checks
+   say of those poses. The poses are the point: a walk-in never lifts an arm over the head, and four bodies
+   that passed theirs all failed here (a hand 10 to 12 cm inside the head, skin stretched 5 to 7 times).
+2. **Pair it with the photos.** `--photos photos.json` lays each reference photo beside the still from its
+   angle, and the two over each other, with the crown and the chin of both on the same two lines. The file
+   names the photo for a view and three things read off it in its own pixels:
+   `{"head-front": {"file": "front.jpg", "crown": 645, "chin": 1310, "eyes": [[475, 965], [625, 965]]}}`
+   (views: `head-front`, `head-threeq-left`, `head-threeq-right`, `head-profile-left`, `head-profile-right`;
+   left is the sitter's own left, the side the camera sees). Read them off a crop of the photo with a pixel
+   grid drawn over it. The stills are taken from three head heights away, about where a webcam sits.
+3. **Compare by number, then by eye.** Proportions as shares of the head's height, from the same grid on photo
+   and still: eye line, eye spacing, glasses' width and height, where the pupil sits in the lens, hair width.
+   Colours as lightness against the skin beside them, which survives a change of light: hair, beard, the grey
+   in it, the top. On the character this was worked out on, every proportion of the head was within a few
+   percent, and the colours were not: hair 0.75 of the skin's lightness where the photo has 0.22. That is why
+   nobody could say what was wrong. A caricature keeps its style's proportions (a head a quarter of the
+   height, short arms): go after what makes the person read (hair, beard, glasses, eyes), not realism.
+4. **Write each finding down** with the same five fields: Seen (what, with its tile), Wanted, Layer (model, fit,
+   face, rig or spec), Measure (the number that proves it fixed) and Status. Rank by how much each changes
+   how the character reads on screen, do the top ones, and say why for the rest. The layer says where the fix
+   goes: paint and face marks in the fit file, a part the rig builds (glasses, lids, brows) in the rig, a
+   shape only the generator can change in the model.
+5. **Fix with the loop above**: measure on every body, add the check, fix from the body's measures, prove.
+
+What the fit file takes for it:
+
+- **`recolour`** shifts parts of the model's own paint to a colour read off a photo. A generated model's hair
+  and beard come out a tone or two off, and a re-generation changes the whole body to fix a colour.
+  `{"name": "hair and beard", "sample": [x0, x1, z0, z1], "to": "#3A281C", "tolerance": 0.2, "above": 1.3,
+  "fill": 5}`: `sample` is a patch on the model's front where the part is (the model's metres, as for the
+  clothes), and every texel between `above` and `below` within `tolerance` of the patch's colour takes `to`,
+  as much lighter or darker as it was than the patch, so strands keep their shading. `keep` leaves a share of
+  the old colour in. `fill` closes gaps up to that many texels across: stubble is painted as dots of hair
+  colour on skin, and darkened as dots it reads as pepper. Rules paint in the order given and none repaints
+  what an earlier one moved, so the small part goes first (the grey of a chin before the beard round it; the
+  other way round the beard's fill swallowed the grey). Every rule's patch is read before any rule paints.
+  Pick `to` from the photo, a little lighter than it measures: the film's light and grading darken it again.
+- **`"lid": 0.3`** in `face` rests the upper lids over that share of the eye. The rig's eyes are wide open at
+  rest, which on a face with hooded eyes reads as startled; the lids go right up for `shocked` and come back.
+  `check` reports it as `lid_rest`.
+- **Glasses are placed by the eyes.** Each lens opening is centred on its eye's height and a quarter taller
+  than the eye, with the top rim the heaviest. Placed at a set height on the head, the eyes of the first
+  fitted character sat 0.78 of the way up the openings, against the top rim, and read as peering under it.
+  `face.glasses` in `checks.json` has `eye_in_opening` (fails outside 0.35 to 0.65) and `opening_over_eye`
+  (fails under 1.15).
+
+**Open: the poses over the head.** `hands_on_head` and `hands_behind_head` were written for the clay cast, a
+mitten on a ball. A fitted hand is as long as its forearm, hair stands off the skull, and a short arm cannot get
+a hand behind its own head at all: on four bodies a hand ends 10 to 12 cm inside the head, and on three the two
+hands meet behind it. Moving the wrist out of the head until the hand was clear was tried and dropped: the hand
+keeps the forearm's direction, so it came clear by hanging in the air beside the head. The pose needs the hand
+turned to lie on the skull, and the shoulder's skin (a thick top is dragged up into wings by a raised arm, 5 to
+7 times its length at the cuff and the armpit) needs its own work. Until then, film these poses from the front
+and close, or use `celebrate` and `gesture`.
+
+**A wider screen test.** `tests/fixtures/blender-fitted/screen-lecture.json` is a presenter at the board (points,
+every gesture, a dust). The author's body and Mara pass it; Orla and Nell put their hands into each other as they
+dust them (with or without the way up round the belly, which took the author's hand out of his belly: it went
+7 cm in), and Orla's arm misses its mark by 2 cm there. `dust_hands` is open on those two. `screen-stand.json` and `screen-call.json` act what the
+walk-in does not: arms over the head, a shrug, a point, a phone and a wagged finger on their feet, then a call
+over a pint (the glass taken up, drunk from, put down). Run on four bodies, none passes yet. Besides the hands
+at the head: a sip stretches the sleeve 4.7 to 7.5 times on every body that has one, two bodies sit 3 cm into the
+pub's table as the scene starts, one puts the glass 1.4 cm into the table top, and one is 2 cm short of the
+glass where it stands (the spec error says so). The checks that catch these were already there; what was
+missing was a film that asked.
 
 ## A product stage
 
@@ -617,6 +1074,75 @@ What the first viewing taught ("I seem to be carrying a candle", and "some of th
 - **Changing one beat moves the numbers of the next.** The same sip passed at one height in one shot and failed
   in another, because a `look` before it turned the chest. Run `check` after every edit, not after a batch.
 
+### A living room, a pub and a video call
+
+Two more sets, made for a short in which a wife on a sofa calls her husband in a pub. One character to a set
+still holds: each end of the call is its own spec, and the two are cut together afterwards.
+
+- `living_room`: a sofa where the chair stands, no desk, hands in the lap, a bright afternoon.
+- `pub`: the kitchen's table and chair places dressed as a snug, with a pint of stout to hold in place of the mug.
+- `phone`, `wag`, `lap`, `let_go` and `pick_up` with `"lift": false` are the verbs they needed; a `fixed` camera
+  takes `"cam": "phone"` to look back at the face from the phone. Fields are in the skill.
+
+What building them taught, each now in the code, a check or a rule:
+
+- **A cartoon arm is short and a cartoon hand is big.** A phone asked for 36 cm from the eyes was out of reach
+  of an arm 38 cm long from shoulder to wrist; the first build raised an error, the second put the phone beside
+  the ear. `phone` now holds it as far out as the arm goes along the line asked for and reports the distance. A
+  phone and a pint at their real sizes looked like a matchbox and an egg cup in a hand made for a cartoon, so
+  both are sized to the breadth of the hand that holds them, never under their real size.
+- **A camera at the phone is very close to a big head.** At 20 cm a 20 mm lens showed one eye and a nose. Hold
+  the phone out as far as the arm goes (`"dist": 0.6` is clamped to the reach), use a 17 mm lens, and set
+  `"clip"` so the fingers round the phone are not drawn across the frame.
+- **Give a spec a shot that is never used.** A beat at 0 that puts a hand on a glass leans the chest and looks
+  at the glass, then puts the head back where it was: the `look_at` before it was undone, and the first frame
+  of the film had the hand still on its way. A one second shot at the head of each spec (`P0`) takes all of
+  that; the film is cut from the shots after it.
+- **A set with no desk needs somewhere for the hands.** Every character starts with its hands where a keyboard
+  would be. A set says where its sitters' hands rest (`rest_pose = "lap"`) and the compiler lays them there on
+  the first frame. Keyed on two frames, that start overwrote the phone hand on frame 2, so it is keyed on one.
+- **A hand round a glass is on its side on purpose.** The check for a hand rolled off a table top (96 degrees)
+  fired on the hand holding the pint. A hand's stretches on a glass are recorded (`side_spans`) and left out,
+  as a hand on a mug's handle already was.
+- **Look at a generated hand before writing a beat for one finger.** The open-hands model had its fingers
+  joined by skin from knuckle to tip. Flat, and round a phone, they read as fingers. With the index raised and
+  the rest curled, the skin between them stretched into a lobe the size of the palm. Look at the hands the fit
+  made (a still of each, flat and in a `point`) before a finger wag or a count is written into a storyboard;
+  if they are joined, make the open-hands picture again with gaps between the fingers, or act the beat with
+  the whole hand (`wag` with `"shape": "open"`).
+- **Hands asked for with gaps between the fingers come back fanned.** The second open-hands picture (an A-pose,
+  hips up, "clear gaps of background between every finger") gave five separate fingers on each hand and a
+  clean raised index, with one generation. At rest the same hands lay like a starfish: the little finger 20
+  degrees off the hand's line. The rig now measures that and swings the fingers of a fanned hand back in, in
+  every shape, to 9 degrees (`FAN`); hands made with their fingers nearly side by side (14 degrees on the
+  other two bodies) are left alone, so their films render as before. A hand's breadth measured across fanned
+  fingers is wide, and a phone sized by it came out the size of a tablet: give such a hand's phone a `scale`.
+- **A `fixed` camera's lens is across the frame's width.** The shot types fit the lens to the longer side, so
+  in 9:16 a `medium` at 45 mm and a `fixed` at 45 mm are different pictures: the fixed one is 1.78 times as
+  wide. To copy a `medium`'s framing into a `fixed` shot in a vertical film, multiply the lens by 16/9.
+- **A new pair of hands is a side job.** The body, its joints and its face do not change, so a second agent
+  made the picture, the model and the fit into a new file (`fit-hands2.json`, a new `.blend`, a new cast file)
+  while the film's sets were being built, and the film changed one line to use it. Never fit over the file a
+  proven character is in.
+- **A lamp inside its own shade makes the ceiling shimmer.** The pub's wide shots failed the flicker check on
+  the ceiling, the beams, the shelves and the mantel at once. Four guesses were wrong, each a render: more
+  samples (96 changed nothing), the camera's drift, the depth of field, and screen-space ray tracing (off, the
+  picture looked the same and one test passed by chance). A metal disc for a mirror did flicker on its own (48
+  levels, nothing to reflect), and making it glow set the shelves beside it going. What found the cause was
+  the difference between two neighbouring frames, multiplied by eight: it was all on the ceiling over the
+  pendants and round the fire. A point light 6 cm under a shade, with a soft shadow, has that shadow drawn from
+  a different handful of rays on every frame. Lights that sit inside a shade or a hearth now cast no shadow
+  (`use_shadow = False`); the key and the window still do. When many still objects fail the flicker check on
+  the same frames: measure one region's mean brightness frame by frame at full size (a half-size draft hides
+  it), then look at an amplified difference of two frames before changing anything. `"look": {"raytracing":
+  false}` is there for a room that still shimmers.
+- **When a hand looks wrong, print the angles before reading more pictures.** Four rounds of stills were spent
+  on a wrist that looked bent double. The wrist was 42 degrees from the forearm, as asked: the picture was an
+  upright hand with a lobe of stretched skin over it.
+- **Frame the prop clear of the captions.** A pint that matters to the joke stood in the lower third of a 9:16
+  frame, where burned captions go. Decide the caption band first (above the Shorts interface, below the faces)
+  and aim the camera so the prop and the hands sit above it.
+
 ## A film over several sessions
 
 A film with a character in it is not finished in one sitting, and no session should try. What has worked, on two
@@ -754,9 +1280,10 @@ film from a brief to a cut its author would publish.
 `check` builds its stills in the film's own shape (the spec's `resolution`, or `--res`), because where the solver
 puts a camera depends on the shape of the frame.
 
-One character per set; the clay cast's hands are one bone; a walk goes through furniture unless it is bent
-round it; the sets are `desk_room`, `desk` (no room, for transparent renders), `lecture_hall`, `kitchen` and
-`studio` (props and no character; a logo's parts and whole props move on beats); a `lean` carries hands resting on a table down through it; a standing arm
+A lecture's presenter does not write (lettering chalks itself in while they point at it), and the close's table
+is placed by hand for each presenter (templates/lecture README). One character per set; the clay cast's hands are one bone; a walk goes through furniture unless it is bent
+round it; the sets are `desk_room`, `desk` (no room, for transparent renders), `lecture_hall`, `kitchen`,
+`living_room`, `pub` and `studio` (props and no character; a logo's parts and whole props move on beats); a `lean` carries hands resting on a table down through it; a standing arm
 does not reach a low table (sit first); a cartoon style; acting keyed from verbs, with no motion
 capture. EEVEE cannot render a shadow onto a transparent
 background, so a transparent character or prop has no cast shadow on the Remotion scene. The room's light is dim

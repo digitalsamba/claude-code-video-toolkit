@@ -1,0 +1,271 @@
+{
+ "note": "The lecture format's defaults, read by tools/lecture.py and lib/lecture alike. A lecture.json overrides any of them under the same key.",
+ "rules": {
+  "gap": 1.2,
+  "start": 1.0,
+  "tail": 2.5,
+  "lead_frames": 15,
+  "heading_at": [
+   520,
+   150
+  ],
+  "carry": "board",
+  "carry_lead": 0.6,
+  "turn": 0.5,
+  "holds": {
+   "count": 1.0,
+   "open": 1.1,
+   "both": 1.3,
+   "shrug": 1.2
+  },
+  "rest": 0.75,
+  "look_round": {
+   "from": 4.5,
+   "every": 6.5,
+   "clear": 2.2
+  },
+  "audience": [
+   [
+    -2.6,
+    -6.0,
+    1.5
+   ],
+   [
+    1.9,
+    -6.0,
+    1.55
+   ],
+   [
+    -0.9,
+    -7.0,
+    1.45
+   ]
+  ],
+  "in_window": "open",
+  "close": false,
+  "pre_roll": 1.5,
+  "close_lead": -3,
+  "close_min": 1.5,
+  "close_gap": 2.0,
+  "note_closes": "a segment's \"closes\": [{\"in\": \"words\", \"out\": \"words\", \"type\": \"closeup\"}] cuts to a second camera on the presenter from one phrase to another (`out` defaults to the segment's last word): a `closeup` or a `medium`, placed round them as tools/blender_render.py places a shot of that type (`az`, `dist`, `h`, `lens`, `push`, `dof` override it), rendered with the hall behind them and played over the board for those frames. The cut is `close_lead` frames before the word; a close is at least `close_min` seconds, `close_gap` seconds from the next, and never while the camera is in a window or the heading goes up.",
+  "note_close": "true: after the last word the chalk goes down on a hidden table in front of the presenter (staging.table), the hands are dusted, a look and a smile. Off by default: place the table for your presenter first (`tools/lecture.py check` says if a hand is short of it or the body goes into it)"
+ },
+ "staging": {
+  "stand": [
+   1600,
+   1.0
+  ],
+  "facing": -8,
+  "table": {
+   "at": [
+    1830,
+    1.42
+   ],
+   "chalk": [
+    1745,
+    1.27
+   ],
+   "size": [
+    0.35,
+    0.35
+   ],
+   "height": 0.82
+  },
+  "chalk": "left",
+  "lens": 108,
+  "window": [
+   0.64,
+   0.0,
+   1.0,
+   0.62
+  ],
+  "density": 1.25,
+  "note_table": "the table the chalk goes down on at the close: hidden, in front of the presenter on the chalk hand's side (board pixel column and metres out, size and height in metres, all in the hall's measure)",
+  "shadow": {
+   "x": 0,
+   "y": 14,
+   "blur": 30,
+   "alpha": 0.24,
+   "fade": 2.0
+  },
+  "note_shadow": "The presenter's shadow on the board (CSS drop-shadow, board pixels): straight down and soft, as the hall's ceiling lights throw it. After an opening it fades in over `fade` seconds from the cut: the room shot has no shadow on the board, and one switched on at the cut showed as a dark outline round the body."
+ },
+ "window": {
+  "zoom": 1.4,
+  "cx": 686,
+  "cy": 572,
+  "lead": -20,
+  "back": -8,
+  "in_frames": 40,
+  "out_frames": 26
+ },
+ "sounds": {
+  "put_down": {
+   "file": "audio/sfx/chalk-tap.mp3",
+   "volume": 0.25,
+   "offset": 0,
+   "frames": 12
+  },
+  "pick_up": {
+   "file": "audio/sfx/chalk-tap.mp3",
+   "volume": 0.12,
+   "offset": 1,
+   "frames": 12
+  },
+  "dust": {
+   "file": "audio/sfx/hands-dust.mp3",
+   "volume": 1.0,
+   "offset": -10,
+   "frames": 26
+  }
+ },
+ "inset": {
+  "left": 1620,
+  "top": 810,
+  "width": 270,
+  "height": 240
+ },
+ "room_tone": {
+  "file": "audio/sfx/room-tone.mp3",
+  "volume": 1.6,
+  "frames": 1500
+ },
+ "opening": {
+  "note": "lecture.json \"opening\": {} (or any of these keys) opens the lecture on the whole hall: it fades in from black onto the hall in the dark, the presenter opens the door, steps in, switches the lights on (they come on in banks from the board back, each with a stutter) and walks to their mark while the camera comes down the hall and lands on the board camera's framing as the walk ends, then cuts to the board. \"lights\": \"on\" is the hall lit from the start (the latch clicks on black, then the door and one walk): its times are \"lit\", under the lecture's own keys. Times are seconds from black; places are in the hall's measure (metres for a presenter of 1.75 m).",
+  "lights": "switch",
+  "seconds": 9.0,
+  "first_word": 0.5,
+  "voice": null,
+  "note_voice": "\"voice\": {\"id\": \"00_hook\", \"at\": 1.9} says a line over the walk in (public/audio/scenes/<id>.mp3 with its captions, starting `at` seconds from black): the presenter says it on the way to the board, and it must end before the first segment starts.",
+  "latch": null,
+  "fade": [
+   0.2,
+   1.0
+  ],
+  "door": 1.6,
+  "step_in": [
+   2.3,
+   4.0
+  ],
+  "switch_spot": "reach",
+  "switch_facing": -90,
+  "switch": 4.4,
+  "banks": 3,
+  "stutter": true,
+  "gap": 0.45,
+  "walk": [
+   5.15,
+   8.5
+  ],
+  "lit": {
+   "latch": 0.45,
+   "fade": [
+    0.95,
+    0.7
+   ],
+   "door": 2.4,
+   "walk": [
+    2.9,
+    7.35
+   ],
+   "seconds": 7.8,
+   "behind": -0.33,
+   "stride": 0.8,
+   "heading": -80
+  },
+  "behind": -0.3,
+  "stride": 0.65,
+  "heading": -50,
+  "camera": {
+   "cam": [
+    0.8,
+    16.2,
+    5.0
+   ],
+   "aim": [
+    0,
+    0,
+    1.7
+   ],
+   "lens": 26
+  },
+  "hall": {},
+  "sounds": {
+   "latch": {
+    "file": "audio/sfx/door-latch.mp3",
+    "volume": 1.0,
+    "offset": 0,
+    "frames": 20
+   },
+   "door_open": {
+    "file": "audio/sfx/door-open.mp3",
+    "volume": 0.35,
+    "offset": -10,
+    "frames": 55
+   },
+   "step": {
+    "files": [
+     "audio/sfx/step-1.mp3",
+     "audio/sfx/step-2.mp3",
+     "audio/sfx/step-3.mp3"
+    ],
+    "volume": 0.22,
+    "offset": 0,
+    "frames": 14
+   },
+   "switch": {
+    "file": "audio/sfx/light-switch.mp3",
+    "volume": 0.8,
+    "offset": 0,
+    "frames": 12
+   },
+   "lamp_stutter": {
+    "file": "audio/sfx/lamp-stutter.mp3",
+    "volume": 0.6,
+    "offset": 3,
+    "frames": 26
+   },
+   "lamp_on": {
+    "file": "audio/sfx/lamp-on.mp3",
+    "volume": 0.5,
+    "offset": -3,
+    "frames": 48
+   }
+  },
+  "note_sounds": "laid on the room shot's own events (clips.json), the presenter's clips keep \"sounds\": a step here is a footfall of the walk in, a lamp_stutter a bank of lights starting and lamp_on the frame it holds full"
+ },
+ "short": {
+  "note": "lecture.json \"shorts\": [{\"id\": \"own-character\", \"segments\": [\"08_capture\", \"09_photo_to_character\"]}] makes one 1080x1920 composition a short (Short-<id>) from the same clips and audio: the board's chalk column on top (board pixels `column` [x, y, w] scaled to the width, its top at `top`), the presenter's clip below it (`presenter_top`, full width) over one slate drawn at the vertical size (`npm run board` writes it as board/bg-short.png; its tray sits where the clip puts the board's), a pane full width (`gutter`), centred in `pane_band` (the frame's y from under the heading to above the captions), its title and source line `chrome` times their size, wherever a window would be (a pane with `takeover` fills `takeover_band` instead, from under the board's lines to the bottom, the presenter stepping out (`takeover_presenter`: `stay` keeps them), the captions over it in their place, a region wider than the band at its top, the view moving to each of its regions on its words), captions in one place for the whole short, between the panes and the presenter's head (`captions`, the shared Captions component's props). The camera does not move and there is no inset: the presenter is always in frame. Frame 0 is the cover, so the first segment's heading is already written there. `tail` is the frames kept after the last word. Any key here can be set per short.",
+  "width": 1080,
+  "height": 1920,
+  "column": [
+   10,
+   150,
+   1240
+  ],
+  "top": 110,
+  "presenter_top": 1020,
+  "gutter": 30,
+  "pane_band": [
+   235,
+   990
+  ],
+  "takeover_band": [
+   380,
+   1920
+  ],
+  "takeover_presenter": "out",
+  "chrome": 1.3,
+  "tail": 12,
+  "captions": {
+   "bottom": 790,
+   "fontSize": 46,
+   "maxWords": 7,
+   "maxChars": 38,
+   "phrases": true,
+   "maxWidth": "94%",
+   "highlightColor": "#F4D26A",
+   "background": "rgba(16, 22, 20, 0.82)"
+  }
+ }
+}
