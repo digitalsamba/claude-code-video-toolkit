@@ -78,6 +78,16 @@ frame (the chalk, the windows, the acting) is looked up from the captions, so no
 - **Windows**: the camera goes into the board (1.4x on the left part, by default) from `in` to `out`; the
   presenter is out of shot, so they are shown in an inset at the bottom right. Keep a window's content left of
   x 1150 or above y 760 so the inset covers none of it.
+- **Closer shots**: `"closes": [{"in": "and I'm made", "out": "The toolkit fitted", "type": "closeup"}]` cuts to a
+  second camera on the presenter from one phrase to another (`out` defaults to the segment's last word). `closeup`
+  is head and shoulders with the hall soft behind; `medium` is from the waist, with room for a gesture. Each is
+  the segment's own clip seen from a camera placed round the presenter (`az`, `dist`, `h`, `lens`, `push` and `dof`
+  move it, as on any shot in the blender skill), rendered with the hall and the board as it stands then, so the
+  body is in the same pose either side of the cut and they look into the new lens as it cuts in. Use one for a
+  line said to the viewer, a few seconds long; `timeline` refuses one while the camera is in a window, while the
+  heading goes up, or within two seconds of another, and says which. Lettering chalked during a close is on the
+  board when the cut comes back. After `specs`, run `uv run tools/lecture.py boards projects/my-talk` for the
+  board stills behind them. Each renders at 1920x1080 at the room shot's speed (about 4 s a frame on an Apple M4).
 - **Acting**, on the narration's words: `gesture` (`open`, `both`, `count`, `shrug`), `show` (they turn and point
   at a board pixel; in a window it becomes a gesture to the hall, so the inset keeps their face), `look` (at the
   lens, with a face: `happy`, `content`, `worried`, `neutral`), or `beat` with any verb from the blender skill.
@@ -125,7 +135,9 @@ a second, the door opens and the presenter walks in (about 7.8 s); its times are
   with the first segment's board.
 - The camera's arrival is keyed to the walk's end, not to a typed time: change `walk` and the camera follows.
 - Keys (seconds from black; defaults in `lib/lecture/defaults.json` "opening"): `lights` (`"switch"` or `"on"`),
-  `seconds` (the cut), `first_word` (after the cut), `latch` (none in the dark; a number brings the click back),
+  `seconds` (the cut), `first_word` (after the cut), `voice` (`{"id": "00_hook", "at": 0.7}`: a line said over the
+  walk in, from `public/audio/scenes/00_hook.mp3` and its captions, so the video's first words come in its first
+  second and not after the walk; it must end before the first segment starts), `latch` (none in the dark; a number brings the click back),
   `fade` ([start, length]), `door`, `step_in` ([start, end]: in at the door to the switch), `switch_spot`
   (`"reach"`: where their own arm presses it straight, or metres out from the wall), `switch_facing`, `switch`
   (the press), `banks`, `stutter`, `gap` (seconds between banks), `walk` ([start, end], to the mark), `behind`

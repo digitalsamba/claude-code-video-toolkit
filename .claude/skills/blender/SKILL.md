@@ -561,8 +561,9 @@ The order to build in when the screen shows the video's own scene: render the Re
 (`npx remotion render ... Screen out/screen.mp4`), then the Blender clips, then the video.
 
 **A lecture (a presenter at a chalkboard) is already built:** `templates/lecture`, with `lib/lecture` for the
-board and `tools/lecture.py` for the presenter (`timeline`, `specs`, `check`, `render`, `bg`). Write the script and
-`lecture.json` (headings, chalk on cue words, windows, acting as `[words, gesture|show|look|beat, ...]`) and copy no
+board and `tools/lecture.py` for the presenter (`timeline`, `specs`, `check`, `render`, `bg`, `boards`). Write the script and
+`lecture.json` (headings, chalk on cue words, windows, acting as `[words, gesture|show|look|beat, ...]`, and `closes`:
+cuts to a `closeup` or a `medium` on the presenter from one phrase to another) and copy no
 code. The generator joins the clips inside a move (the turn to the next heading starts in the old clip; the new one
 starts mid-turn from a lead-in shot it is not rendered from), and `check` compares the pose at every join, vertex
 by vertex. Its README is the walkthrough; `docs/blender.md` "A lecture" is what it learned.

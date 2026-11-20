@@ -49,6 +49,8 @@ export type Segment = {
   board?: BoardItem[];
   acting?: Acting[];
   windows?: unknown[];
+  /** Cuts to a second camera on the presenter: {in, out, type: 'closeup' | 'medium', az, dist, h, lens, push, dof}. */
+  closes?: unknown[];
   gap_after?: number;
   carry?: boolean;
 };
@@ -82,7 +84,9 @@ export type Timeline = {
   moves: Move[];
   presenter?: { head_px: number[]; box_px: number[]; share: number; scale?: number | null };
   roomFrames?: number;
-  opening?: { fadeFrom: number; fadeFrames: number };
+  opening?: { fadeFrom: number; fadeFrames: number; voice?: { id: string; at: number; startFrame: number; dur: number; frames: number } };
+  /** Closer shots, in master frames (tools/lecture.py timeline, from each segment's "closes"). */
+  closes?: { id: string; segment: string; from: number; to: number; type: string }[];
   /** Each pane video's length in frames (tools/lecture.py timeline reads it from the file). */
   videos?: Record<string, number>;
 };

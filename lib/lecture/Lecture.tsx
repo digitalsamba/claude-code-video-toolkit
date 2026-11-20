@@ -10,7 +10,7 @@ import { Board, BoardDrawn } from './Board';
 import { Camera } from './Camera';
 import { Chalk, ChalkDefs, SIZE, Seg, Stroke, Tap, WHITE, YELLOW, arrow, box, cross, line, ring, tick, under } from './chalk';
 import defaults from './defaults.json';
-import { Inset, Presenter, PropSounds, Room, presenterBox } from './Presenter';
+import { Closes, Inset, Presenter, PropSounds, Room, presenterBox } from './Presenter';
 import { makeTimeline, type BoardItem, type Lecture, type LectureTimeline, type Short, type Timeline } from './timeline';
 
 export const { fontFamily: SANS } = loadFont('normal', { weights: ['400', '600'], subsets: ['latin'] });
@@ -187,9 +187,16 @@ export const makeLecture = (lecture: Lecture, timeline: Timeline, custom: Custom
               <Presenter L={L} />
             </Camera>
             <Inset L={L} />
+            <Closes L={L} />
           </Sequence>
         </AbsoluteFill>
       </Sequence>
+      {L.tl.opening?.voice ? (
+        // the line said over the walk in (opening.voice)
+        <Sequence from={L.tl.opening.voice.startFrame} layout="none">
+          <Audio src={staticFile(`audio/scenes/${L.tl.opening.voice.id}.mp3`)} />
+        </Sequence>
+      ) : null}
       {L.tl.segments.map((s) => (
         <Sequence key={s.id} from={s.startFrame} layout="none">
           <Audio src={staticFile(`audio/scenes/${s.id}.mp3`)} />
@@ -208,10 +215,22 @@ export const makeLecture = (lecture: Lecture, timeline: Timeline, custom: Custom
       <AbsoluteFill style={{ filter: 'url(#chalkFx)' }}><Title lecture={lecture} /></AbsoluteFill>
     </AbsoluteFill>
   );
+  // The board alone on any frame of the video (its chalk and panes, no presenter, the camera at home): the still a
+  // closer shot's hall hangs on its wall (`tools/lecture.py boards`).
+  const BoardAt: React.FC = () => (
+    <AbsoluteFill style={{ background: '#222d2a' }}>
+      <ChalkDefs />
+      <Board />
+      <AbsoluteFill style={{ filter: 'url(#chalkFx)' }}>
+        {lecture.segments.map((_, n) => <SegmentBoard key={n} L={L} lecture={lecture} n={n} custom={custom} />)}
+      </AbsoluteFill>
+      {lecture.segments.map((_, n) => <SegmentPanes key={n} L={L} lecture={lecture} n={n} />)}
+    </AbsoluteFill>
+  );
   const shorts = (lecture.shorts ?? []).map((spec) => makeShort(L, lecture, spec, custom, tone));
   const sv = { ...defaults.short, ...(lecture.shorts?.[0] ?? {}) };
   const BoardShortBg: React.FC = () => <BoardDrawn w={sv.width} h={sv.height} tray={shortTray(L, sv)} />;
-  return { Video, BoardBg: BoardDrawn, BoardTitle, BoardShortBg, shorts, durationInFrames: L.tl.totalFrames, fps: L.tl.fps, L };
+  return { Video, BoardBg: BoardDrawn, BoardTitle, BoardAt, BoardShortBg, shorts, durationInFrames: L.tl.totalFrames, fps: L.tl.fps, L };
 };
 
 type ShortLayout = typeof defaults.short;

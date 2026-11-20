@@ -8,6 +8,13 @@ kitchen and the lecture hall are experimental: they have made two finished films
 wants its joints read off a picture by hand, and Windows is untested. Their checks also pass on Linux with
 Blender 4.2.
 
+**This page is written as the work is done.** When an agent or a person works out how to do something in
+Blender here (a cuff that tears, a camera that lands on a board, a hand that will not point), the method goes into
+this page or the `blender` skill in the same change as the code, with what was tried and what it measured. The
+next agent reads it and starts from there, so nothing is found twice. Your Blender work can go in the same way: a
+set, a verb, a fix to the fit, or just what you learned making a film. Run `/contribute`, or open a pull request
+with the method written here beside the code.
+
 With it installed, a JSON **shot spec** becomes a 3D scene: a rigged cartoon character acting at a desk, or a product stage with a phone, a floating card
 or an imported model. The render is a finished film, a set of clips for another build (a Remotion video, a
 moviepy timeline, a video job, an editor), or both from the same spec.
@@ -314,6 +321,48 @@ the hall as before. 9 s to the cut. In a spec it is the set's `"lights": "off"` 
   until the view layer is, and a spot taken from it put the walk at the room's middle, 1.9 m off.
 - **Orla's hand** was 2 cm short of the handle from the lit opening's start (0.33 m behind the door); the dark
   opening starts them at 0.30.
+
+### Closer shots and a line over the walk in
+
+A lecture filmed by one camera for four minutes reads as a slide deck with a figure in the corner. A segment's
+`"closes"` cut to a second camera on the presenter (`closeup` or `medium`) from one phrase to another, and
+`"opening": {"voice": ...}` says a line over the walk in. What it took on "Introducing Blender support":
+
+- **A second camera, not a bigger crop.** Zooming the flat frame 2x on the presenter (the board camera is a 108 mm
+  lens 12 m out, so a crop is geometrically right) left them at the frame's right edge against half a frame of
+  empty board, and soft. A `closeup` 15 degrees round shows the board's edge, the wall and the door's side going
+  back behind them: it reads as another shot, and it is the 30 degrees a cut wants between two sizes.
+- **The close is the clip's own spec seen by another camera.** `tools/lecture.py specs` copies the segment's
+  spec (cast, beats, clock), draws the hall, and gives it three shots: the clip's frames before the close and
+  after it as `"built_only"`, and the close between them. So the body is in the same pose either side of the cut
+  by construction, as at the opening's match cut, and only the close's own frames render (48 to 193 frames each
+  here, 3 to 4 s a frame at 1920x1080 on an Apple M4, 31 minutes for six).
+- **They are on the new lens as it cuts in.** A look into the lens is aimed at the camera of the shot the look
+  *ends* in. Started on the cut, the head whipped round in the close's first three frames with the eyes shut for
+  the blink a turn carries. The turn now starts 0.35 s before the cut, in the frames that are not rendered, and
+  ends on the close's first frame.
+- **No looks out at the hall in a close.** The clip's look round (every 6.5 s) held the face off the lens through
+  half of a five-second close-up. The close's spec leaves out a look at the hall that would be held as it cuts in
+  or would start in it; the wide clip keeps its own.
+- **The board behind them is the board then.** `tools/lecture.py boards` renders one Remotion still a close (the
+  `BoardAt` composition: chalk and panes, no presenter) for that shot's hall to hang on its wall.
+- **Where a close cannot go** is refused by `timeline`, with the reason: while the camera is in a window (the
+  presenter is the inset there), while the heading goes up (they are turned to the board), past the segment's
+  last word (the turn to the next heading), under 1.5 s, or within 2 s of another. Do not put one on a line about
+  the presenter being a transparent clip in front of a drawn board: the close is neither.
+- **Look at the hands before framing them.** A ten-second spec that holds each hand shape in turn, with stills
+  of both hands from four sides, showed this presenter's `open`, `loose` and `relaxed` holding up and `fist`,
+  `grip` and `point` rough at the knuckles (the hands are from a second model). So the closes are head and
+  shoulders, and the one `medium` is on an open-handed shrug.
+- **The first words in the first second.** The opening is nine seconds of hall, door, lights and walk before
+  anyone speaks. `"voice": {"id": "00_hook", "at": 0.7}` plays a line over it (the presenter says it on the way
+  in, mouth and all, since the room shot and the first clip share their beats), and the first segment was
+  reworded so it does not say it twice.
+- **Voice one segment again without rendering the rest.** Every clip's `clock` is its place in the film (the
+  breathing is in phase with it), so a segment that changes length moves every later clip and they all render
+  again. Give the changed segment a `"gap_after"` that puts the next segment back on its old start (old next
+  start, less this one's start and new length): `timeline` then prints the same frames for the rest, their specs
+  are unchanged, and only the changed clip, the room shot and the closes render.
 
 ### The cuff on gestures and points
 

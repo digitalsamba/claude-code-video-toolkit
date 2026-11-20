@@ -13,6 +13,7 @@ export const RemotionRoot: React.FC = () => (
     <Composition id="Lecture" component={L.Video} durationInFrames={L.durationInFrames} fps={L.fps} width={1920} height={1080} />
     <Still id="BoardBg" component={L.BoardBg} width={1920} height={1080} />
     <Still id="BoardTitle" component={L.BoardTitle} width={1920} height={1080} />
+    <Composition id="BoardAt" component={L.BoardAt} durationInFrames={L.durationInFrames} fps={L.fps} width={1920} height={1080} />
     <Still id="BoardShortBg" component={L.BoardShortBg} width={1080} height={1920} />
     {/* one vertical composition a short (lecture.json "shorts"): `npx remotion render src/index.ts Short-<id>` */}
     {L.shorts.map((s) => (

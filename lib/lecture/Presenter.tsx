@@ -69,6 +69,21 @@ export const Room: React.FC<{ L: LectureTimeline }> = ({ L }) => {
   );
 };
 
+/** Closer shots (a segment's "closes"): opaque clips from a second camera, ids starting "C", each cut to for its own
+ * frames over the board and everything on it. One that is not rendered yet draws nothing: the video stays wide. */
+export const Closes: React.FC<{ L: LectureTimeline }> = ({ L }) => {
+  const manifest = useManifest();
+  const frame = useCurrentFrame();
+  const c = (L.tl.closes ?? []).find((x) => frame >= x.from && frame < x.to);
+  const entry = c && manifest?.clips.find((x) => x.id === c.id);
+  if (!c || !manifest || !entry || !has(entry.file)) return null;
+  return (
+    <Sequence from={c.from} durationInFrames={c.to - c.from} layout="none">
+      <BlenderClip clip={blenderClip(manifest, c.id)} volume={0} style={{ left: 0, top: 0, width: 1920, height: 1080 }} />
+    </Sequence>
+  );
+};
+
 /** The presenter's shadow on the board (staging.shadow), `k` times its size: after an opening it fades in from the
  * cut, since the room shot shows none on the board and one switched on at the cut read as an outline round the body. */
 export const shadow = (L: LectureTimeline, frame: number, k = 1) => {

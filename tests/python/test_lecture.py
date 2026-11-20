@@ -233,6 +233,78 @@ class LectureTests(unittest.TestCase):
             lecture.cmd_specs(self.tmp, None)
         return said.getvalue()
 
+    def test_a_close_is_its_clip_seen_by_a_second_camera_on_its_own_frames(self):
+        """A segment's "closes" cut to a camera placed round the presenter: the clip's own spec (cast, beats, clock)
+        with the hall drawn, rendered only on the close's frames, and never joined to its neighbours."""
+        self.lec['segments'][1].pop('windows')
+        self.lec['segments'][1]['closes'] = [{'in': 'one two three', 'out': 'end', 'type': 'closeup', 'az': 12}]
+        self.write()
+        tl = lecture.cmd_timeline(self.tmp, None)
+        (c,) = tl['closes']
+        seg = tl['segments'][1]
+        self.assertEqual((c['id'], c['from'], c['to']), ('C02a', seg['startFrame'] + 117 - 3, seg['startFrame'] + seg['frames']))
+        index = lecture.cmd_specs(self.tmp, None)
+        entry = next(i for i in index if i['id'] == 'C02a')
+        self.assertTrue(entry['close'])
+        d = self.tmp / 'blender' / 'presenter'
+        clip, close = (json.loads((d / f'{n}.json').read_text()) for n in ('P02', 'C02a'))
+        self.assertEqual([s['id'] for s in close['shots']], ['pre', 'C02a', 'tail'])
+        self.assertEqual([bool(s.get('built_only')) for s in close['shots']], [True, False, True])
+        self.assertAlmostEqual(sum(s['dur'] for s in close['shots']), sum(s['dur'] for s in clip['shots']), places=3)
+        self.assertEqual(entry['pre'], round(close['shots'][0]['dur'] * 30))
+        shot = close['shots'][1]
+        self.assertEqual((shot['type'], shot['subject'], shot['az']), ('closeup', 'presenter', 12))
+        self.assertEqual((close['resolution'], close['transparent'], close['clock']), ('1920x1080', False, clip['clock']))
+        self.assertTrue(close['set']['walls'])
+        self.assertEqual(close['set']['board'], {'image': '../../public/board/C02a.png'})
+        for b in clip['beats']:  # (every beat of the clip is in the close: the body is in the same pose)
+            if not (b['do'] == 'look_at' and b['target'] != 'camera'):  # (but for looks out at the hall during it)
+                self.assertIn(b, close['beats'])
+        self.assertTrue(all(b['target'] == 'camera' for b in close['beats']
+                            if b['do'] == 'look_at' and close['shots'][0]['dur'] <= b['at'] < close['shots'][0]['dur'] + shot['dur']))
+        extra = [b for b in close['beats'] if b not in clip['beats']]
+        self.assertEqual([(b['do'], b['target']) for b in extra], [('look_at', 'camera')])  # they find the new lens
+        # taken out of lecture.json, its spec goes too
+        self.lec['segments'][1].pop('closes')
+        self.write()
+        lecture.cmd_timeline(self.tmp, None)
+        lecture.cmd_specs(self.tmp, None)
+        self.assertFalse((d / 'C02a.json').exists())
+
+    def test_a_close_that_cannot_be_there_is_refused_with_the_reason(self):
+        for close, why in (({'in': 'look closer', 'out': 'the whole board'}, 'window'),
+                           ({'in': "here's", 'out': 'short'}, 'heading'),
+                           ({'in': 'the end', 'out': 'end'}, 'under 1.5 s'),
+                           ({'in': 'the end', 'type': 'wide'}, 'closeup, medium')):
+            self.lec['segments'][1]['closes'] = [close]
+            self.write()
+            with self.assertRaises(SystemExit) as e:
+                lecture.cmd_timeline(self.tmp, None)
+            self.assertIn(why, str(e.exception))
+
+    def test_a_line_over_the_walk_in_is_said_by_the_presenter_and_ends_before_the_first_segment(self):
+        scenes = self.tmp / 'public' / 'audio' / 'scenes'
+        silence(scenes / '00_hook.mp3', 3.0)
+        (scenes / '00_hook.captions.json').write_text(json.dumps(captions('Nobody animated this.')))
+        self.lec['opening'] = {'voice': {'id': '00_hook', 'at': 2.0}}
+        self.write()
+        tl = lecture.cmd_timeline(self.tmp, None)
+        v = tl['opening']['voice']
+        self.assertEqual((v['id'], v['at'], v['startFrame']), ('00_hook', 2.0, 60))
+        self.assertAlmostEqual(v['dur'], 3.0, delta=0.1)
+        lecture.cmd_specs(self.tmp, None)
+        d = self.tmp / 'blender' / 'presenter'
+        for name in ('P01', 'E1'):  # (the room shot is the first clip's spec: they talk in both)
+            spec = json.loads((d / f'{name}.json').read_text())
+            self.assertEqual(spec['voice'][0], {'captions': '../../public/audio/scenes/00_hook.captions.json', 'at': 2.0})
+            talks = [b for b in spec['beats'] if b['do'] == 'talk']
+            self.assertEqual(talks[0]['at'], 2.0)
+            self.assertEqual(len(talks), 2)
+        self.lec['opening'] = {'voice': {'id': '00_hook', 'at': 7.5}}
+        self.write()
+        with self.assertRaises(SystemExit) as e:
+            lecture.cmd_timeline(self.tmp, None)
+        self.assertIn('first segment', str(e.exception))
 
 if __name__ == '__main__':
     unittest.main()

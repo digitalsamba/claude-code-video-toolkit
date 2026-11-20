@@ -93,7 +93,9 @@ segment, standing at a board Remotion draws, with chalk written on the narration
 into and an inset of the presenter meanwhile. A lecture is its script, `lecture.json` and the timeline
 `tools/lecture.py timeline` writes; the code is `lib/lecture` and `tools/lecture.py` (specs, check, render), so a new
 lecture copies none. The hall is sized by the presenter, clips join in the middle of a move, and `check` fails a
-presenter hiding over 10% of the board or a join that moves. `"opening": {}` starts it on the whole hall (a fade
+presenter hiding over 10% of the board or a join that moves. A segment's `"closes"` cut to a second camera on the
+presenter (a `closeup` or a `medium`, from one phrase to another), each the segment's own clip seen from that camera
+with the hall behind, and `"opening": {"voice": ...}` says a line over the walk in. `"opening": {}` starts it on the whole hall (a fade
 from black, the presenter walks in at the door, the camera comes down the dressed hall and lands on the board
 camera's framing as the walk ends, then a match cut to the board): about 8 s, its room shot written by
 `tools/lecture.py specs`. Ships as the opening of "Introducing Blender support" with Mara, opening on. README is the walkthrough; `docs/blender.md` "A lecture" is the method.

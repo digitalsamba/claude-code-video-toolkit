@@ -44,6 +44,10 @@
   "in_window": "open",
   "close": false,
   "pre_roll": 1.5,
+  "close_lead": -3,
+  "close_min": 1.5,
+  "close_gap": 2.0,
+  "note_closes": "a segment's \"closes\": [{\"in\": \"words\", \"out\": \"words\", \"type\": \"closeup\"}] cuts to a second camera on the presenter from one phrase to another (`out` defaults to the segment's last word): a `closeup` or a `medium`, placed round them as tools/blender_render.py places a shot of that type (`az`, `dist`, `h`, `lens`, `push`, `dof` override it), rendered with the hall behind them and played over the board for those frames. The cut is `close_lead` frames before the word; a close is at least `close_min` seconds, `close_gap` seconds from the next, and never while the camera is in a window or the heading goes up.",
   "note_close": "true: after the last word the chalk goes down on a hidden table in front of the presenter (staging.table), the hands are dusted, a look and a smile. Off by default: place the table for your presenter first (`tools/lecture.py check` says if a hand is short of it or the body goes into it)"
  },
  "staging": {
@@ -131,6 +135,8 @@
   "lights": "switch",
   "seconds": 9.0,
   "first_word": 0.5,
+  "voice": null,
+  "note_voice": "\"voice\": {\"id\": \"00_hook\", \"at\": 1.9} says a line over the walk in (public/audio/scenes/<id>.mp3 with its captions, starting `at` seconds from black): the presenter says it on the way to the board, and it must end before the first segment starts.",
   "latch": null,
   "fade": [
    0.2,

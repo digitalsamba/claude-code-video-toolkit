@@ -1206,7 +1206,7 @@
       "lecture": {
         "path": "tools/lecture.py",
         "description": "The Blender half of a lecture (templates/lecture): the timeline from the voiced segments and their captions (starts, words by frame, the camera's windows), one presenter clip spec a segment from lecture.json with the acting rules as options (a turn to the board as each heading is chalked, carried across the join so the next clip starts inside it; gestures, board looks and looks at the lens on the narration's words; a board look in a window turned to face the inset), then check (each clip, the share of the board the presenter hides, the pose at every join) and render (one clip at a time)",
-        "usage": "uv run tools/lecture.py timeline|specs|check|render|bg projects/NAME",
+        "usage": "uv run tools/lecture.py timeline|specs|check|render|bg|boards projects/NAME",
         "status": "experimental",
         "category": "project",
         "options": {
@@ -1214,7 +1214,8 @@
           "specs": "lecture.json + timeline.json -> blender/presenter/P<nn>.json and index.json; prints every beat it dropped and why",
           "check": "blender_render.py check on each clip, one at a time; the board share and window; every join compared vertex by vertex (fails over 4 mm)",
           "render": "the clips into public/blender with --clips --alpha, one at a time, with an estimate first; --draft WxH",
-          "bg": "the inset's backdrop cut from public/board/bg.png"
+          "bg": "the inset's backdrop cut from public/board/bg.png",
+          "boards": "the board behind each closer shot (a segment's \"closes\"), one Remotion still each"
         },
         "documentation": "docs/blender.md",
         "created": "2026-11-17"
