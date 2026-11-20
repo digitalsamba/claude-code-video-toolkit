@@ -42,7 +42,7 @@ written, QC can judge the result, and there's a cost cap. Offer a `job` when one
 
 | The user asks for | Route | Support | Read first | See it |
 |---|---|---|---|---|
-| A short explainer on a topic (Shorts, Reels, a 16:9 explainer) from a brief | `concept-explainer-short` via `video_job.py` | job | this file | `examples/sky-blue-short` |
+| A short explainer on a topic (Shorts, Reels, a 16:9 explainer) from a brief | `concept-explainer-short` via `video_job.py` (script first with `.claude/skills/explainer-script/`) | job | this file | `examples/sky-blue-short` |
 | A post or short video for someone who has a kit (a small business, a coach, a product team) | `video_job.py` with `"kit"`: their photos as `file` scenes, `text` scenes in their colours | job | `kits/README.md` | |
 | A walkthrough, feature demo or release-notes video of an app whose source you can read | synthetic UI: `templates/ds-release-notes`, components `Stage`, `Cursor`, `cues` (`Terminal` for a shell, `TerminalSession` for a Claude Code, Codex or other agent CLI session) | session | `.claude/skills/synthetic-ui-demo/SKILL.md` | `examples/ds-release-649`, `examples/ds-free-schedule-demo` |
 | A how-to or tutorial about a tool or CLI, in chapters, with Shorts cut from it | `templates/howto` (mark-and-track opening and close, ledger, figure, bars, split and `TerminalSession` scenes on narration cues, `facts.json`, chapters from the timeline) | session | `templates/howto/README.md`, `.claude/skills/video-design/SKILL.md` | `templates/howto` itself (Getting started 1) |
@@ -339,7 +339,7 @@ to use.
 | Legible text in an image (title card, thumbnail, quote card) | `ideogram4.py --json caption.json` | FLUX or LTX (both garble text) |
 | Text-free background for an overlay | `flux2.py --preset title-bg` | |
 | Motion b-roll, animate a still | `ltx2.py` (`--input` for image-to-video) | |
-| Voiceover | `voiceover.py --provider qwen3 --cloud modal --max-wpm 165` (free, self-hosted), `--provider elevenlabs`, or `--provider 60db` (`sixtydb_tts.py` standalone) | |
+| Voiceover | `voiceover.py --provider qwen3 --cloud modal --max-wpm 165` (free, self-hosted), `--provider elevenlabs`, or `--provider 60db` (`sixtydb_tts.py` standalone); Thai with PD Clone Voice: `pdclone_tts.py --scenes` (batched for a 20 call daily quota) | |
 | Talking head anyone will watch | `soulx.py` (SoulX-FlashHead Pro, Modal only) | `sadtalker.py` is drafts, or when Modal is down |
 | Music | `music_gen.py --variations 3`, then `pick_music.py` to rule takes out and `audition.py` to choose by watching | picking a take by ear alone |
 | Sound effects | `sfx.py` (ElevenLabs, generated) or `sfx_search.py` (real recordings from Freesound via Openverse, free, no key) | |

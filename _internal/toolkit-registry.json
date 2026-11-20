@@ -29,6 +29,13 @@
       "created": "2026-11-04",
       "updated": "2026-11-04"
     },
+    "explainer-script": {
+      "path": ".claude/skills/explainer-script/",
+      "description": "Storytelling script for a short knowledge video: one idea, key points pulled from a source, hook / points / payoff beats, words (or Thai characters) budgeted to seconds, written to scenes.json for concept-explainer-short; Thai and English",
+      "status": "beta",
+      "created": "2026-11-18",
+      "updated": "2026-11-18"
+    },
     "elevenlabs": {
       "path": ".claude/skills/elevenlabs/",
       "description": "ElevenLabs audio - TTS, voice cloning, music, SFX",
@@ -717,6 +724,36 @@
       "estimatedCost": "$0.00002 per character ($0.01 minimum per request)",
       "created": "2026-06-08",
       "updated": "2026-06-08"
+    },
+    "pdclone_tts": {
+      "path": "tools/pdclone_tts.py",
+      "description": "Thai narration with PD Clone Voice: scenes batched into as few calls as fit 2,000 characters, cut back per scene at the pauses, silence trimmed, English words rewritten as Thai readings, short parts flagged, stops on 402/429",
+      "usage": "uv run tools/pdclone_tts.py --scenes scenes.json --out-dir public/audio/scenes",
+      "status": "beta",
+      "category": "audio-generation",
+      "backend": "PD Clone Voice",
+      "requires": "PD Clone Voice API key",
+      "options": {
+        "scenes": "JSON list of {id, text}",
+        "scene-dir": "Directory of one .txt per scene",
+        "voice": "Voice name or reference_id (default PDCLONE_VOICE_ID, then the account default)",
+        "speed": "0.5 to 2.0",
+        "lexicon": "JSON of English word to Thai reading, added to the built-in list",
+        "dry-run": "Show calls and spoken text without calling",
+        "list-voices": "List voices via GET /voices"
+      },
+      "endpoints": {
+        "voices": "https://app.pd-voiceclone.com/api/v1/voices",
+        "tts": "https://app.pd-voiceclone.com/api/v1/tts"
+      },
+      "envVars": [
+        "PDCLONE_API_KEY",
+        "PD_VOICE_KEY",
+        "PDCLONE_VOICE_ID"
+      ],
+      "estimatedCost": "Free account: 20 calls a day",
+      "created": "2026-11-18",
+      "updated": "2026-11-18"
     },
     "sync_timing": {
       "path": "tools/sync_timing.py",

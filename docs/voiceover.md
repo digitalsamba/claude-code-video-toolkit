@@ -43,6 +43,42 @@ settings). `redub.py --tts-provider 60db` uses 60db for the new voice while
 transcription stays on ElevenLabs Scribe (60db has no STT); in `--sync` mode the
 60db output is run back through Scribe to recover word timestamps.
 
+### PD Clone Voice (Thai, standalone)
+
+`tools/pdclone_tts.py` voices Thai narration with PD Clone Voice. It is built for the free account's 20 calls a
+day, so it is not a `voiceover.py` provider (that makes one call per scene):
+
+- Scenes are joined with ` ... ` and sent in as few calls as fit 2,000 characters, then the WAV is cut back into
+  one file per scene at the pauses and trimmed of silence at both ends.
+- English words are rewritten as Thai readings before voicing (Claude to คล็อด). Built-in readings cover common
+  names; add a project's own with `--lexicon words.json`. A Latin word left without a reading stops the run
+  before a call is spent. The manifest keeps the original text as `caption` for subtitles.
+- Each part's characters per second is compared with the others; a part that is much faster is flagged as
+  likely to have skipped a word.
+- A rerun with the same text reuses the saved raw WAV and spends no call.
+- HTTP 402 or 429 means the day's quota is used up: the tool exits with code 3 and never retries.
+
+```bash
+uv run tools/pdclone_tts.py --list-voices
+uv run tools/pdclone_tts.py --scenes scenes.json --out-dir public/audio/scenes --dry-run   # plan, no call
+uv run tools/pdclone_tts.py --scenes scenes.json --out-dir public/audio/scenes --voice "พี่เมย์" --speed 1.0
+```
+
+`--scenes` takes a list of `{id, text}` (or `narration`), or `--scene-dir` one `.txt` per scene. Output is
+`<id>.mp3` per scene plus `pdclone-manifest.json` (durations, frames at 30fps, caption and spoken text).
+Config: `PDCLONE_API_KEY` in `.env` (or `PD_VOICE_KEY` in the environment), `PDCLONE_VOICE_ID` optional.
+With `--scenes` from concept-explainer-short (scenes with a `slug`), files are named `<id>_<slug>.mp3` and
+`--vo-durations vo_durations.json` writes the durations `build.py` reads.
+
+**Prefer the one take over the pieces.** The raw WAV in `<out-dir>/_raw/` is a single read of every scene, so its
+breaths and intonation run across the scene breaks. Played as one track, it sounds continuous where four trimmed
+pieces with gaps between them sound stop-start. Use the per-scene files only to find where each scene starts and
+ends, then time the picture to the take. For a quicker read with no gaps, cutting every pause over 0.1s and
+speeding the take 10% (ffmpeg `atempo`, pitch kept) was approved by ear on a Thai short, taking a 4 scene take
+from 27.2s to 22.7s. Beyond about 15%, voice again with `--speed` instead, which costs a call. Whisper's word
+timing does not work on Thai, so time Thai captions by each phrase's share of the scene's characters, snapped to
+the nearest pause in the take.
+
 ## Clone Prosody (when a cloned voice sounds flat or rushed)
 
 A clone copies its reference clip's **pace and intonation**. If the lines come out fast and flat, the clip is
