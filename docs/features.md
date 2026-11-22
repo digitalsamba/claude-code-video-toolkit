@@ -65,6 +65,8 @@ See `examples/` for finished projects you can learn from (newest first, scroll d
 | Date | Demo | Description |
 |------|------|-------------|
 | 2026-11-20 | [blender-support](https://www.youtube.com/watch?v=DnsaPJOhHT8) | 4:43 introduction to Blender support, presented by a 3D model of the author at a chalkboard: the `lecture` template, with an opening on the hall, closer shots from a second 3D camera and narration-timed chalk (Blender, optional) |
+| 2026-11-16 | [what-it-costs](https://www.youtube.com/watch?v=5Xp0GG_4qKU) | 2:35, the first Getting started episode: what the toolkit costs to run, in four chapters, each scene drawn on the words of its narration and every figure from a facts file with its source; the opening is the toolkit's own ident, made from its SVG mark in Blender, and a 9:16 Short is cut from each chapter (`templates/howto`) |
+| 2026-11-14 | [just-a-quick-one](https://www.youtube.com/watch?v=CgxzhKQ0Afg) | 1:44 trailer for the toolkit: a 3D character in a kitchen acting from a JSON shot spec (the walk, the mug, the laptop lid and the sip are verbs in a file), every camera checked before a frame was rendered (Blender, optional) |
 | 2026-11-12 | [made-with-itself](https://www.youtube.com/watch?v=3HjPatdeal4) | 93s video about the toolkit, made in the toolkit from one sentence typed into Claude Code: each stage (narrate, score, generate, compose, check) is the real command in the new `Terminal` component, every line its saved output, then what it made; narrated by Marilyn from the ElevenLabs voice library through the new `brands/video-toolkit`; the bill is measured ($0.33) and the Check scene shows what `qc.py` really found in the draft (`examples/toolkit-made-itself`) |
 | 2026-11-09 | [design-sources](https://www.youtube.com/watch?v=AQLzseZ2aAY) | 46s: one chart designed three ways (the toolkit's own palettes, taste-skill, and a house style of your own), the page turning between them on the narration with `PageTurns`, then the render checked one frame per scene with `contact_sheet.py` |
 | 2026-11-07 | [the-great-return](https://www.youtube.com/watch?v=YUqkQydQDh4) | 98s wildlife documentary about the return to the office, made with the `parody-short` skill and the same invented cast: mock-Latin lower thirds, a designed narrator voice, LTX clips lengthened with `ltx_extend.py` instead of frozen, every sound effect placed on its movement with `sync_check.py` ([vertical cut](https://youtube.com/shorts/e4HW-tvi8-8)) |
@@ -240,13 +242,15 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 
 | Type | Tools | Purpose |
 |------|-------|---------|
-| **Project** | voiceover, music, music_gen, sfx, sfx_search | Used during video creation workflow |
-| **Utility** | redub, addmusic, notebooklm_brand, locate_watermark | Quick transformations, no project needed |
+| **Project** | voiceover, music, music_gen, sfx, sfx_search, sync_timing, captions, align_captions, pick_takes, pick_music, audition, voice_prosody | Used during video creation workflow |
+| **Utility** | redub, addmusic, cutdown, highlights, data_video, notebooklm_brand, locate_watermark | Quick transformations, no project needed |
 | **Cloud GPU** | image_edit, upscale, dewatermark, sadtalker, soulx, qwen3_tts, flux2, music_gen, ltx2 | AI processing via Modal or RunPod |
-| **Checks** | qc, sync_check, contact_sheet | Before showing a render: freezes and motion that stops dead, loudness, layout, sound effects on their movement |
-| **Publishing** | youtube_upload | Upload a finished render to YouTube (or use `/publish`) |
-| **3D (optional)** | blender_render | Character acting, 3D reveals, product shots and logo idents from a shot spec; does nothing unless Blender is installed |
+| **Hosted API** | ideogram4, sixtydb_tts | Images with legible text, and a second hosted voice provider |
+| **Checks** | qc, sync_check, contact_sheet, copy_lint | Before showing a render: freezes and motion that stops dead, loudness, layout, sound effects on their movement; and public words before they leave |
+| **Publishing** | youtube_upload, publish_kit, youtube_stats | Upload a finished render to YouTube (or use `/publish`), write its title, description and chapters, and see how it did |
+| **3D (optional)** | blender_render, lecture, reference_capture | Character acting, 3D reveals, product shots and logo idents from a shot spec, a lecture's presenter clips, and reference photos for a fitted character; `blender_render` does nothing unless Blender is installed |
 | **Brand** | mark_sheet | A logo at every size, on every ground, in a circle and as a watermark, with warnings, before it is used |
+| **Agents** | video_job, video_mcp | A brief in and an MP4 out, for an agent outside Claude Code (experimental) |
 
 ### Cloud GPU (Modal + RunPod)
 

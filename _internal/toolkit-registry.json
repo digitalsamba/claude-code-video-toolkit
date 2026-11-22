@@ -283,7 +283,8 @@
       },
       "status": "stable",
       "created": "2025-12-08",
-      "updated": "2026-10-21"
+      "updated": "2026-10-21",
+      "category": "audio-generation"
     },
     "music": {
       "path": "tools/music.py",
@@ -291,7 +292,8 @@
       "usage": "uv run tools/music.py --prompt 'description' --duration 120 --output music.mp3",
       "status": "stable",
       "created": "2025-12-08",
-      "updated": "2025-12-08"
+      "updated": "2025-12-08",
+      "category": "audio-generation"
     },
     "music_gen": {
       "path": "tools/music_gen.py",
@@ -339,7 +341,8 @@
         "MODAL_MUSIC_GEN_ENDPOINT_URL"
       ],
       "created": "2026-03-22",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "category": "audio-generation"
     },
     "sfx": {
       "path": "tools/sfx.py",
@@ -347,7 +350,8 @@
       "usage": "uv run tools/sfx.py --preset whoosh --output sfx.mp3",
       "status": "stable",
       "created": "2025-12-08",
-      "updated": "2026-10-21"
+      "updated": "2026-10-21",
+      "category": "audio-generation"
     },
     "sfx_search": {
       "path": "tools/sfx_search.py",
@@ -355,7 +359,8 @@
       "usage": "uv run tools/sfx_search.py --query whoosh --output sfx.mp3",
       "status": "beta",
       "created": "2026-11-06",
-      "updated": "2026-11-06"
+      "updated": "2026-11-06",
+      "category": "utility"
     },
     "redub": {
       "path": "tools/redub.py",
@@ -367,7 +372,8 @@
         "model": "eleven_multilingual_v2 (default), eleven_flash_v2_5, eleven_v3, eleven_v4 (also on --sync, with stability+similarity). Deprecated eleven_turbo_v2_5 is accepted with a warning and sent as eleven_flash_v2_5"
       },
       "created": "2025-12-28",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "category": "utility"
     },
     "addmusic": {
       "path": "tools/addmusic.py",
@@ -384,7 +390,8 @@
         "duck-ratio": "Compression ratio, default 8",
         "duck-attack": "Milliseconds, default 20",
         "duck-release": "Milliseconds, default 400"
-      }
+      },
+      "category": "utility"
     },
     "dewatermark": {
       "path": "tools/dewatermark.py",
@@ -402,7 +409,8 @@
         "stock-center"
       ],
       "created": "2025-12-29",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "category": "video-processing"
     },
     "locate_watermark": {
       "path": "tools/locate_watermark.py",
@@ -419,7 +427,8 @@
         "stock-center"
       ],
       "created": "2025-12-29",
-      "updated": "2025-12-30"
+      "updated": "2025-12-30",
+      "category": "utility"
     },
     "verify_setup": {
       "path": "tools/verify_setup.py",
@@ -427,7 +436,8 @@
       "usage": "uv run tools/verify_setup.py [--test] [--json]",
       "status": "beta",
       "created": "2026-03-23",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "category": "setup"
     },
     "modal_setup": {
       "path": "tools/modal_setup.py",
@@ -436,7 +446,8 @@
       "status": "beta",
       "requires": "uv sync --extra modal, authenticated Modal CLI",
       "created": "2026-10-12",
-      "updated": "2026-10-12"
+      "updated": "2026-10-12",
+      "category": "setup"
     },
     "notebooklm_brand": {
       "path": "tools/notebooklm_brand.py",
@@ -444,7 +455,8 @@
       "usage": "uv run tools/notebooklm_brand.py --input video.mp4 --logo logo.png --url 'mysite.com' --output branded.mp4",
       "status": "beta",
       "created": "2025-12-29",
-      "updated": "2025-12-29"
+      "updated": "2025-12-29",
+      "category": "utility"
     },
     "cutdown": {
       "path": "tools/cutdown.py",
@@ -742,7 +754,8 @@
       "path": "tools/contact_sheet.py",
       "description": "Contact sheet of a rendered video: one settled frame before each scene cut (colour-aware detection, so same-lightness cuts are found), tiled into one PNG for the video-design critique; --at for chosen times, --count for even spacing",
       "status": "beta",
-      "created": "2026-11-04"
+      "created": "2026-11-04",
+      "category": "qc"
     },
     "align_captions": {
       "path": "tools/align_captions.py",
@@ -918,7 +931,7 @@
       "description": "Sound-to-picture sync for effects laid over generated footage: --clip says where in a clip to start a sound so its peak lands on the movement (prevention); --video/--cues measures the offset in a render and exits 1 past 0.1 s (validation). Kinds: peak (a sneeze, a jingle) and impact (where a movement stops)",
       "usage": "uv run tools/sync_check.py --clip clip.mp4 --sfx sneeze.mp3 --window 2.5:4.5  |  uv run tools/sync_check.py --video out/video.mp4 --cues sync-cues.json",
       "status": "beta",
-      "category": "quality",
+      "category": "qc",
       "created": "2026-11-07",
       "updated": "2026-11-07"
     },
@@ -1229,7 +1242,8 @@
       },
       "documentation": "docs/blender.md",
       "created": "2026-11-11",
-      "updated": "2026-11-16"
+      "updated": "2026-11-16",
+      "category": "3d"
     },
     "lecture": {
       "path": "tools/lecture.py",
@@ -1266,7 +1280,8 @@
       "documentation": ".claude/skills/video-design/idents.md",
       "status": "beta",
       "created": "2026-11-16",
-      "updated": "2026-11-16"
+      "updated": "2026-11-16",
+      "category": "brand"
     },
     "reference_capture": {
       "path": "tools/reference_capture.py",
@@ -1496,10 +1511,10 @@
   "templates": {
     "lecture": {
       "path": "templates/lecture/",
-      "description": "A lecture at a chalkboard: a fitted presenter rendered in Blender (one transparent clip a segment, joined pose to pose) in front of a board Remotion draws, with chalk written on the narration's words, windows the camera goes into, and an inset of the presenter while it is in one; optionally an opening on the whole hall (a fade from black, a walk in at the door, a camera move down the dressed hall that lands on the board camera's framing as the walk ends, a match cut to the board). The whole lecture is lecture.json, the voiced script and the timeline tools/lecture.py writes; the code is lib/lecture. Ships as the opening of \"Introducing Blender support\" with Mara, the invented fitted character. Needs Blender (optional)",
+      "description": "A lecture at a chalkboard: a fitted presenter rendered in Blender (one transparent clip a segment, joined pose to pose) in front of a board Remotion draws, with chalk written on the narration's words, windows the camera goes into, and an inset of the presenter while it is in one; optionally an opening on the whole hall (a fade from black, a walk in at the door, a camera move down the dressed hall that lands on the board camera's framing as the walk ends, a match cut to the board), cuts to a closer second camera on the presenter (a segment's \"closes\") and vertical Shorts cut from segments (\"shorts\"). The whole lecture is lecture.json, the voiced script and the timeline tools/lecture.py writes; the code is lib/lecture. Ships as the opening of \"Introducing Blender support\" with Mara, the invented fitted character. Needs Blender (optional)",
       "status": "experimental",
       "created": "2026-11-17",
-      "updated": "2026-11-17",
+      "updated": "2026-11-20",
       "skill": "blender",
       "agentSupport": "session"
     },
@@ -1873,6 +1888,14 @@
       "contributor": "Digital Samba",
       "created": "2026-11-12",
       "demo": "https://www.youtube.com/watch?v=3HjPatdeal4"
+    },
+    "terminal-session": {
+      "path": "examples/terminal-session/",
+      "description": "28s agent CLI session (setting up Modal) drawn by lib/components TerminalSession, with every line kind once: prompt, streamed prose, tool calls, a permission prompt, a question picker, todos, a spinner, a diff, a zoom and a highlight. Four compositions: the Claude Code, Codex and shell skins, and 9:16. No narration; all assets committed",
+      "template": "custom",
+      "stack": "remotion",
+      "complexity": "beginner",
+      "created": "2026-11-15"
     },
     "ds-crt-stinger": {
       "path": "examples/ds-crt-stinger/",

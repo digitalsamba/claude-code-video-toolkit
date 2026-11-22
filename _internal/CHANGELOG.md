@@ -51,6 +51,7 @@ optional throughout: nothing else depends on it.
 - **`docs/blender.md`** (#254, #257): a lecture, refining a character against photos, a painted world in front of painted plates, lit 3D that reads as paint, a parametric human, a 3D head from one picture and what its licences allow, and a cloak as simulated cloth. The page now asks for Blender contributions.
 - **`docs/series.md`** (#257): running a series across sessions with a hub, a bible and a shared library.
 - **`docs/youtube-channel-art.md`** (#257): banner, avatar and watermark, and what a real channel set taught.
+- **The catalog lists what was missing**: `docs/features.md` has the first how-to episode and the trailer in its showcase table and every tool in its categories, `examples/README.md` has `blender-kitchen`, `blender-ident` and `toolkit-made-itself`, and the registry has the `terminal-session` example and a category on every tool.
 
 ### Proven on
 
