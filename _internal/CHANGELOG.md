@@ -8,6 +8,10 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+### Docs
+
+- **The site caught up with v0.30.0**: the home page opens with the Blender support video, lists it and the first how-to episode among the videos, and has routes for a tutorial series, a lecture at a chalkboard and an ident from a logo. The 3D characters page names the ident example and the lecture template.
+
 ---
 
 ## 2026-11-22 (v0.30.0)
