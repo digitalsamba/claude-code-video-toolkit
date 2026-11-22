@@ -8,6 +8,10 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+---
+
+## 2026-11-22 (v0.30.0)
+
 Two new ways to make a video, and the Blender work behind
 [Blender support in Claude Code Video Toolkit](https://www.youtube.com/watch?v=DnsaPJOhHT8). A lecture is a
 presenter at a chalkboard written as data. A how-to is a tutorial episode told as one conversation with an agent,

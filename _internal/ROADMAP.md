@@ -12,7 +12,7 @@ templates, components, their status) in [`toolkit-registry.json`](toolkit-regist
 
 | | |
 |---|---|
-| **Release** | v0.30.0 |
+| **Release** | v0.30.0 (2026-11-22) |
 | **Phase** | 4, polish and advanced |
 | **Focus** | Lectures and how-to episodes as templates, 3D characters fitted from a generated model (Blender, optional), and the long-form and translation gaps contributors keep pointing at |
 
@@ -126,7 +126,7 @@ Detail for each release is in [`CHANGELOG.md`](CHANGELOG.md).
 
 | Release | Date | Headline |
 |---------|------|----------|
-| v0.30.0 | | `templates/lecture` and `templates/howto`, a logo in 3D and a brand's ident, `TerminalSession`, `data_video.py`, fitted characters in close shots |
+| v0.30.0 | 2026-11-22 | `templates/lecture` and `templates/howto`, a logo in 3D and a brand's ident, `TerminalSession`, `data_video.py`, fitted characters in close shots |
 | v0.29.x | 2026-11-14 | Fitted 3D characters that stand, walk, sit and carry a mug; kitchen and lecture hall sets; `reference_capture.py` |
 | v0.28.0 | 2026-11-12 | Blender shot specs and `BlenderClip`; `Terminal`; several narrators per brand; `publish_kit.py`; `youtube_upload.py --check` |
 | v0.27.0 | 2026-11-09 | `sfx_search.py`, `addmusic.py --duck`, SRT and VTT captions, face-tracked cut-downs, `highlights.py`, `youtube_stats.py`, `copy_lint.py`, the Pages site |
