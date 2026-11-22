@@ -12,13 +12,9 @@ templates, components, their status) in [`toolkit-registry.json`](toolkit-regist
 
 | | |
 |---|---|
-| **Release** | v0.29.1 (2026-11-14) |
+| **Release** | v0.30.0 |
 | **Phase** | 4, polish and advanced |
-| **Focus** | 3D characters fitted from a generated model (Blender, optional), a how-to video series with its own template, and the long-form and translation gaps contributors keep pointing at |
-
-**On main since v0.29.1:** `TerminalSession`, a synthetic agent CLI session with Claude Code, Codex and shell
-skins (#241); `qc.py` checks on the opening of a short vertical video; `cutdown.py` moving a crop through several
-focus values in one segment; `youtube_upload.py` notes on missing metadata (#236).
+| **Focus** | Lectures and how-to episodes as templates, 3D characters fitted from a generated model (Blender, optional), and the long-form and translation gaps contributors keep pointing at |
 
 ---
 
@@ -26,11 +22,9 @@ focus values in one segment; `youtube_upload.py` notes on missing metadata (#236
 
 | What | Where | State |
 |------|-------|-------|
-| Fitted characters: bare arms, a painted face kept, a living room and a pub set | #244 | Open. One rig-wide check still fails: a shoulder stretches past the limit when reaching back for a chair |
-| `howto` template for tutorial videos, built with its pilot episode | branch | Building. Uses `TerminalSession` (#241, merged) |
-| Python chart example with brand themes | #165 | Held for a frame check |
+| Tutorials for a product: a `screen` scene kind in the `howto` template, `Stage` changes, a brand's house style | branch | Built, waiting on feedback |
+| Thai explainers: a script skill and a `font` and caption language for `concept-explainer-short` | #253 | Split requested |
 | Kit design layer (fonts, layouts, motif, logo) | #188 | Parked draft |
-| Remotion group bump | #218 | Dependabot |
 | Working in other coding agents | #240 | Discussion. The name stays; first step is the same brief in Claude Code and Codex, compared |
 
 ---
@@ -43,7 +37,8 @@ Roughly in priority order within each group. Each item is sized to one session o
 
 - [ ] **Tutorial template and batch production.** One task per video, steps called out on screen, the same intro
   and outro, synthetic UI from the screen kits. A batch is one spec per tutorial and an upload queue that spreads
-  it over days (the YouTube quota is about 6 uploads a day). In progress as the `howto` template.
+  it over days (the YouTube quota is about 6 uploads a day). The `howto` template shipped in v0.30.0; the batch
+  and the upload queue are open.
 - [ ] **Chaptered long-form template.** 10 to 30 minute videos rendered chapter by chapter with a cache, one
   ducked music bed, -14 LUFS, chapters and an `.srt`. Likely on concept-explainer-short's 16:9 path. #127 had the
   right design.
@@ -77,7 +72,7 @@ Blender stays optional: nothing else in the toolkit depends on it.
 
 - [ ] **A brief and a storyboard as tools.** A guided brief (idea, lines, tone, length, what the agent may not
   decide) and a `storyboard` step that builds the board from `check` stills and the timeline, one row per beat.
-- [ ] **Rig:** shoulder skinning for a full reach back (the open check in #244), and a full sip that stretches a
+- [ ] **Rig:** shoulder skinning for a full reach back, arms over the head, and a full sip that stretches a
   fitted sleeve.
 - [ ] **Product stage:** props that move, a `text` prop, a tablet and a browser window, and its own exposure range.
 - [ ] **Contact shadows on transparent clips**, rendered as a pass and laid under the clip by `BlenderClip`.
@@ -131,6 +126,7 @@ Detail for each release is in [`CHANGELOG.md`](CHANGELOG.md).
 
 | Release | Date | Headline |
 |---------|------|----------|
+| v0.30.0 | | `templates/lecture` and `templates/howto`, a logo in 3D and a brand's ident, `TerminalSession`, `data_video.py`, fitted characters in close shots |
 | v0.29.x | 2026-11-14 | Fitted 3D characters that stand, walk, sit and carry a mug; kitchen and lecture hall sets; `reference_capture.py` |
 | v0.28.0 | 2026-11-12 | Blender shot specs and `BlenderClip`; `Terminal`; several narrators per brand; `publish_kit.py`; `youtube_upload.py --check` |
 | v0.27.0 | 2026-11-09 | `sfx_search.py`, `addmusic.py --duck`, SRT and VTT captions, face-tracked cut-downs, `highlights.py`, `youtube_stats.py`, `copy_lint.py`, the Pages site |

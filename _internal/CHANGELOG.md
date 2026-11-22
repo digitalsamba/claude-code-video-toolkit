@@ -8,6 +8,54 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+Two new ways to make a video, and the Blender work behind
+[Blender support in Claude Code Video Toolkit](https://www.youtube.com/watch?v=DnsaPJOhHT8). A lecture is a
+presenter at a chalkboard written as data. A how-to is a tutorial episode told as one conversation with an agent,
+with a Short cut from each chapter. A brand can have its mark in 3D and an ident made from it. Blender stays
+optional throughout: nothing else depends on it.
+
+### Added
+
+- **`templates/lecture`, `lib/lecture` and `tools/lecture.py`** (experimental, needs Blender, #254): a lecture is its script, `lecture.json` and a timeline. A fitted presenter is rendered as one transparent clip a segment over a board Remotion draws, with chalk written on the narration's words and windows the camera goes into. Clips join inside a move and every join is measured.
+- **A lecture's opening, closer shots and Shorts** (#254): `"opening": {}` starts on the whole hall, dark by default, with a door, a light switch that brings the lights on in banks, the walk in and a match cut to the board. A segment's `"closes"` cut to a second 3D camera on the presenter. `"shorts"` cut vertical Shorts from segments, where a pane can take the whole frame.
+- **`templates/howto`** (#247, #249): tutorial episodes in chapters with a 9:16 Short from each. Scenes are `ledger`, `figure`, `bars`, `statement`, `session`, `command` and `split`, every prop timed by `cue()` from the narration. An episode can open on a hook before the title. `scripts/chapters.py` writes YouTube chapters from the timeline, and `npm run render:shorts` stops at the first failure. Ships as Getting started 1, "What it costs".
+- **A logo in 3D and an ident from it** (needs Blender, #246): a `logo` prop builds any flat SVG in 3D with each shape its own part, moved on beats (`turn`, `shear`, `grow`, `press`, `light`, `hit`). An `ident` shot, a dark stage, bloom, and sounds placed on the frame of the hit. `examples/blender-ident` makes two idents from one SVG in 16:9 and 9:16.
+- **A brand's ident slot** (#247): `brands/<name>/ident/` holds a mark in motion with one sound and a manifest. Templates that read it play it and keep their own opening when it is empty. The toolkit's own mark and idents are in `brands/video-toolkit`.
+- **`tools/mark_sheet.py`** (#246): a logo at 512 to 16 px, on a brand's grounds, in a circle and as a watermark, with warnings for low contrast and a part lost when small.
+- **`TerminalSession`** (#241): a synthetic agent CLI session (Claude Code, Codex, a shell or your own skin) with wrapping, a zoom onto a line and a bundled mono font.
+- **`tools/data_video.py`** (#165): line and bar chart videos from a CSV or JSON spec in a brand's colours and fonts, with no Node needed.
+- **Fitted characters, further on** (experimental, #254, #257): bare arms with fingers, a painted face kept with eyes that blink and glance, faces and hands that hold up in close shots, a long skirt kept whole, and `joints_right` for a model that is not symmetrical. `blender_render.py reduce` makes a smaller copy of a generated model, and `sheet` draws a review sheet of one character beside its photos.
+- **Sets `living_room` and `pub`** (experimental, #254): a phone held up for a video call, a finger wag, a pint that is held, let go of and drunk from, and a `fixed` camera from the phone.
+- **Captions that break at phrases** (#254): `phrases` in `<Captions>` breaks after a comma instead of mid-phrase.
+- **`qc.py` reads the opening of a short vertical video** (#239): whether anything moves in the first 2 s, how long the first shot runs and when the first sound comes.
+- **`cutdown.py` moves a crop through several focus values in one segment** (#238), for a subject that crosses the frame.
+- **`youtube_upload.py` notes missing metadata before an upload** (#236): hashtags, a link, the subject in the title, a category.
+
+### Changed
+
+- **The README is one sentence, three proofs and the newest video** (#255). The full list of skills, commands, templates and tools moved to `docs/features.md`.
+- **`CLAUDE.md` went from 71k to 15k characters** (#250, #251). The tool reference moved into seven docs it points to: voiceover, timing, QC, captions, image tools, music and sound, and reusing a video.
+- **`/setup` matches what a real run showed** (#249): eight Modal apps, the real Qwen3-TTS speaker list, the free music key, and no unmeasured monthly cost.
+- **Video job estimates use what Modal billed** (#247): $0.12 a clip and $0.012 an image, from a measured batch.
+- **Remotion 4.0.544** in every template and example (#218, #256), and the official Remotion skills synced to it (#248).
+
+### Fixed
+
+- **Fitted characters, found by running one spec on four bodies** (#254): a hand sinking into the thigh, fingers going into a laptop on a raised desk, a thumb torn at its root, a bare arm meeting its hand with a line, and the inside of a sleeve drawn lit.
+- **A fitted character in brown or tan wool gets its hands right** (#257): the skin hue the fit floods by is a setting.
+- **`blender_render.py check` prints a spec that has a built-only shot** (#254).
+- **The copy lint leaves shipped licence files alone** (#247).
+
+### Docs
+
+- **`docs/blender.md`** (#254, #257): a lecture, refining a character against photos, a painted world in front of painted plates, lit 3D that reads as paint, a parametric human, a 3D head from one picture and what its licences allow, and a cloak as simulated cloth. The page now asks for Blender contributions.
+- **`docs/series.md`** (#257): running a series across sessions with a hub, a bible and a shared library.
+- **`docs/youtube-channel-art.md`** (#257): banner, avatar and watermark, and what a real channel set taught.
+
+### Proven on
+
+macOS with Blender 5.3. Linux with Blender 4.2 was last run at v0.29.0.
+
 ---
 
 ## 2026-11-14 (v0.29.1)
