@@ -1519,6 +1519,211 @@ minutes, and the same body and settings reuse the cache.
 - **Open:** no collar (the cloth cannot fold over itself at the nape under the bun), no self-collision (off: at
   5 mm between columns it reads as stretch), and the dress's neckline shows inside the cloak's.
 
+### A generated figure in a long dress: the skirt as cloth
+
+A generator's rig weights a skirt to the legs, so it walks like trousers, and weights long hair to whichever
+bone is nearest (on one model, the upper arms). What worked on a rigged, walking figure from an image-to-3D
+service:
+
+- **Read the walk as a table of poses** (every pose bone on every frame of the loop), drop the action, and set
+  the pose yourself each frame. Softening is then arithmetic: scale each bone's turn about its mean over the
+  loop (legs and arms to a half, the hips' rise and fall to a third) and the walk glides. It also sidesteps
+  the action and slot API, which differs between Blender versions.
+- **Cut the model's skirt away and hang a clean cone of cloth** from the waist to the floor. Delete every face
+  that touches a cut vertex: a face left with one vertex below the cut stretches into a spike. Keep the loose
+  vertices so a point cache still fits, and park them inside the body so they do not widen a camera fitted to
+  the mesh.
+- **Pin the top rows to one bone.** Copying mixed weights from the nearest body vertices pulled the ring out of
+  shape (edges 3 to 5 times their rest length); one bone gave 1.6.
+- **Move the figure, not the air.** Parent the rig and the cloth to an empty that travels at walking speed over
+  a still floor and record the cloth relative to the empty: air damping and the floor's friction make it
+  trail, with no wind to tune. The walk itself stays on the spot.
+- **Legs as plain cylinders** on the leg bones and an ellipsoid on the hips are enough to collide with. Fewer
+  columns of cloth (72 round the waist, not 128) give fewer, larger folds; many fine gathers draw as dashes in
+  an outline pass.
+- **A cloth loop does not repeat exactly.** Run four cycles, keep the fifth, and ease its last third toward the
+  first frame of the sixth.
+- **Hair on a shell sways; it cannot fly.** Give dark-coloured vertices above the waist to the head and chest,
+  easing back to their own weights within 3 cm of skin or cloth (a curl joined to a sleeve tears otherwise).
+  Then lay a grid of points through the hair (sectors round the head, levels down its length), each on a spring
+  to where the head carries it, stiff at the roots and slack at the ends, in the air she walks through, and
+  move each vertex by the grid's offset. Ends that trail 4 to 7% of her height hold their shape. Slacker
+  springs (ends 10 to 28% out) turn the shell into a rubber slab with the curls smeared.
+- **The hair that flies is new geometry:** about twenty short tapered curls (7 to 14% of her height, a helix
+  5% long a turn) rooted on the shell's outer surface, each a chain that keeps its length, on springs to its
+  rest shape. Long locks on slack springs (up to 24%, ends 20 to 40% from rest) stream out straight like
+  tentacles; short, curly and stiff reads as stray curls. Thirty points a chain: sixteen made a curl angular.
+  With these the hair's outline changes about 13% between drawings, against 5% for the shell alone.
+- **Longer strands work when they rest swept back.** Forty-odd finer locks of 10 to 24%, rooted on the back
+  half of the head only and resting pointed behind her, read as strands that flow, where the same lengths
+  resting straight down read as tentacles. A lock rooted nearer the face than about 100 degrees from straight
+  ahead can fly across it.
+- **A marching walk is in the arms.** Legs under a long dress are hidden, so the arms carry the walk. A
+  reviewer called arms at 45% of the generated swing "strutty ... like she's marching". Arms at 20%, their
+  swing smoothed over a few frames, the forearms a few frames behind the upper arms, the spine at 50% and the
+  hips' bob at 12% gave a relaxed walk.
+- **A feature of a generated face can be moved without a bone.** To soften a pointed nose, find the tip (the
+  foremost skin vertex on the face's centre line), measure how far it stands in front of the cheeks beside
+  it, and draw back that share of every vertex's reach, fading over the nose's width and height. Edit the
+  mesh before the rig poses it.
+- **A drawn look that redraws every frame twinkles.** When strokes are placed afresh on each drawing (random
+  picks over the picture), dark clumps jump about: on hair a reviewer saw "Christmas lights". Render one more
+  pass with the mesh's undeformed coordinates as colour (the Generated texture coordinate, scaled to scene
+  units), divide it into cells, and seed one stroke a cell at the pixel nearest a fixed point in the cell,
+  with the stroke's angle, length and pressure taken from the cell's number. Strokes then ride the surface
+  and change only as the shade under them does. Let a stroke fade in as its patch darkens, not switch on.
+- **Dark hair should not take the most graphite.** Count a dark colour as no darker than a mid one, read the
+  shade broadly where the colour is dark (the mass, not each strand of a normal map), and leave "darker than
+  its surroundings" detail for pale grounds. End shading strokes at the edge between two colours and near
+  painted features.
+- **Outlines inside a mass of hair are the worst of the twinkle.** A line renderer finds an edge on every curl,
+  in short dashes that come and go from one drawing to the next: on one figure the outline pass changed 22% a
+  drawing inside the hair after the strokes had been fixed to the surface. Leave the outline out of the inside
+  of a dark mass (keep its outer edge and its edge against skin and cloth) and draw the strands with more of
+  the surface-fixed strokes, pressed a little harder. Measure twinkle as a patch going dark and light again:
+  blur each drawing by a few pixels and take the second difference over three drawings, well inside the hair.
+  A plain difference between drawings counts real movement too. Here it fell from 8 to 10% to 2.4%.
+- **Colour on a drawn look is a wash under the graphite,** made from the colour pass already rendered, so it
+  needs no new render. Keep the model's hue and strength and move only its lightness (in Lab: lightness L
+  becomes about 44 + 0.55 L, chroma times 0.92), so the darkest cloth is still paler than graphite and the
+  strokes show on it. Taking each colour "at its lightest" (dividing by its largest channel) swings the hue
+  warm as it lightens: a maroon mantle washed brick red and deerskin orange, both far paler than the model, and
+  dark hair pink. Coloured strokes alone barely show, since colour appears only where there are strokes.
+- **Find painted detail by its share of the surroundings, not by a difference.** "Darker than its surroundings
+  by 0.05" finds an iris on pale skin and misses it on brown skin, where the same eye is a smaller difference:
+  two of three heads drew blank blue patches for eyes. Use (surroundings - pixel) / surroundings. Round what
+  is found, lay the wash with a finer blur (1.2 px against 4), or an iris is a blue smudge.
+- **Grey and fair hair speckle** for two reasons: every strand is darker than the one beside it, so it counts
+  as painted detail, and the line renderer dashes every ridge. Call a patch hair when fine dark lines (even faint
+  ones: fair hair's strands differ by a few percent) cover more than about 4% of a 14 px blur of it, and there leave both out and let the surface-fixed strokes draw
+  the strands, as for dark hair. An eye fills a patch with fine lines too: it is known by its white, a patch
+  (not a line: open it with a 5 px ellipse) much paler than what is round it. Two things that did not tell
+  hair from an eye: ridges in the light pass (the unlit side has none, and wrinkles and cast shadows count)
+  and ridges in the facing pass (modelled eyelids are as ridged as hair).
+- **The drawn look on a whole shot** needs four things beyond a lone model. Build the shot with no look of
+  its own on the materials, and read each material's colour by copying it and feeding whatever drives Base
+  Color into an emission (a fitted character's skin is a mix of nodes, not one texture). Hide everything
+  that is not drawn, remove the shot's lights and add the drawing's own sun from the upper left of the page
+  as the camera stands on the first frame. Turn the compositor off, or the shot's filter is laid over every
+  pass. Include curves: a set's rail and ropes are curves, and a hand rests on nothing without them. Flat
+  helper planes (a fitted character's eye patches) need leaving out of the outline pass, or their edges draw
+  as a box round each eye. What is left out is paper, which suits an illustration: the figure and the deck,
+  no sea. Sixty drawings at 1280x720 (four passes each, the outline pass the slowest) took under 6 minutes.
+- **Pictures for a four-view head:** a close head made from a small full figure comes out soft at an image
+  editor's fast setting (8 steps); 24 steps with blur in the negative prompt is sharp. Name the hairstyle in
+  every view and forbid the ones the editor drifts to (a bun became a plait with rings twice). When one
+  profile will not match, mirror the good one and paint what differs afterwards.
+- Force the hair with gusts at whole-number multiples of the stride and it settles into a loop by itself.
+- For a figure 1 unit tall, scale gravity by 1/1.65 so cloth falls at the pace it would on a person.
+
+### A generated head on a generated body, and a held drawing that moves
+
+A head made from four views is the face; a body made from one picture has a poor one. Joining the two and
+fitting the result gives a character that stands, blinks and holds a pose. What a cast of three taught
+(`projects/ireland-in-the-telling/characters/cast/rig/`: `prep.py`, `combine.py`, `build.sh`):
+
+- **Turn, stand and reduce first.** A model from an API may face +x and stand anywhere: turn it to face -y, put
+  its feet on the floor, centre it on its head (not its arms) and scale the body to the character's height. A
+  two-million-face bust goes through the seam-safe `reduce` to 150,000 before anything loops over its vertices.
+- **Give the head's scale and place by hand, from landmarks.** Matching the bust's face to the body's own face
+  with scale left free ran away (0.32 for a true 0.45): a long narrow face on a rounder one has a better fit
+  small. Read the eye line, the mouth and the chin off gridded front stills of both, take the scale from
+  heights (crown to eye, eye to chin), and set the move so the chin sits on the body's chin and the neck over
+  its neck. A bust's neck can stand 5 cm in front of the body's: the neck's axis is measured, not assumed.
+- **Colour alone does not tell skin from cloth.** Shaded skin under a chin is nearer a tan tunic, an orange
+  cape or dark hair than it is to a lit forehead. Sample skin on the neck itself, leave out a class that only
+  exists below the cut (a tunic), and call everything within the neck's own radius skin up to the chin.
+- **Do not cap the body's open neck.** On a body of 40,000 faces the cut neck is a short loop, and a hole
+  filler closes it with a lid painted from all over the texture, in stripes. The head's neck goes inside it.
+- **Keep the head's own colours.** Matching the head's skin to the body's changes the face that was chosen (one
+  head was lightened by 20 to 45% a channel). Grade only the head's neck toward the body's skin at the seam.
+- **Hair worn up, a ponytail and a beard need telling apart**: what hangs below the cut is kept behind the
+  neck for a ponytail, in front for a beard, and not at all for a bun, or a hood of hair's colour comes too.
+  The body's own hair below the cut is taken off behind (a bun) or in front (a beard), not both: shaded neck
+  skin and a brown hood read as hair.
+- **A low-face body's hands tear when fingers are cut into them.** A 37,000-face body has a hand of a few large
+  triangles: found by colour its edge is ragged, and at every tolerance tried the back of the hand came away in
+  shards. Its hands as modelled (open, relaxed) on one bone are right for a held pose. Ask for more faces if
+  the fingers have to act.
+- **Mantles that are part of the body fail the forearm check, and that is the truth**: such a character stands
+  and turns its head, and does not lift its arms.
+- **A bright or pale iris is not "the dark shape beside the white".** A bright blue iris read as its pupil
+  (1.7 mm for 18), and a blink came down in blue. The fit now counts what is clearly bluer than it is red as
+  iris and never as white (`facepaint.measure_eye`). A pale grey iris with almost no blue in it is still read as
+  its pupil: the blink is clean, the iris does not slide in a glance.
+- **The drawn look on a scene built by the toolkit:** reset the scene's look, exposure and gamma before the
+  passes. With them a white figure in the outline pass came out grey, and the draw step took the grey as line
+  everywhere: dark blotches across a face. And a fitted character's eye patches are read for colour only: lit
+  by their own flat normals they are a shade darker than the skin under them, and drew as a hatched box
+  between brow and eye. Hide them in the light pass and the surface-coordinate pass.
+
+**A held drawing with small loops** (`sets/first-sight/hold_shot.py`, `hold_clip.py`). A full-acting shot
+through the drawn look read as a filtered render: everything moved, so every stroke rode a body turning in true
+perspective. What reads as a drawing that moves is the opposite: one pose, and two or three small things that
+move.
+
+- **A loop that closes exactly is two shapes of the mesh,** a sine and a cosine of one wave, keyed with
+  cos(wt) and sin(wt): they add up to a wave that travels, and a whole number of cycles in the loop makes the
+  last frame lead into the first with no easing. A cloak's hem: simulate the cloth once in a light wind, keep
+  the last frame as the mesh, and run the wave along its normals over the lower part. Loose strands of hair:
+  the dark vertices that hang below the mass of the hair, swaying from their roots, the tips most.
+- **Make the cloth's wave outward only.** Move the held cloth out by the wave's own height first, so the
+  inward half of the wave comes back to where the cloth hung. A wave both ways put a cloak inside a sleeve for a
+  quarter of the loop.
+- **Hold the picture by the passes, not by eye.** Draw every frame, then keep the first drawing wherever the
+  passes (colour, light, surface coordinates) are the same as on the first frame, and use the new drawing only
+  where they differ, the patch grown by a few pixels and feathered. Outside the loops the clip does not change
+  by one grey level; 8% of the sheet was ever redrawn.
+- **The camera moves on the finished sheet,** on every frame, while the drawings change on twos: a window that
+  starts on the whole sheet and closes on the face. Draw the sheet 1.5 times the clip's width so the close end
+  is not enlarged.
+- **Compose for the paper.** What is not drawn is paper, so leave out what would only be a dark mass (a hull's
+  side from over the water) and give the gaze empty sheet to look into.
+- **A wave too small is flicker.** A 1.6 cm wave on the hem changed the picture less from drawing to drawing
+  than the strokes' own flicker did. Measure both: the mean change between drawings (the move) and the second
+  difference over three (the flicker), in each patch that moves, and the change across the loop's join.
+- A drawing at 1920x1080 with a character, a cloak and a deck took 12 s (four passes and the draw).
+
+**Terrain for a map in the same look** (`sets/map/`: `dem_fetch.py`, `terrain_prep.py`, `base_map.py`).
+Copernicus DEM tiles are free from its public bucket with no account (carry its credit line). A grid of
+heights becomes one mesh under an orthographic camera fitted to the map's window, so lines drawn in 2D (coast,
+rivers, a route, names) land on it. Raise heights about 12 times: an island 1 km high and 450 km long does not
+shade at its true height. From above, "light from the upper left of the page" is a different turn of the sun
+than for a figure seen from the front (the page's top is +y, not +z). The look shades lightly on purpose, and
+ranges 10 to 30 px across drew as a few strokes: carry the relief in the wash as well (the ground a shade
+deeper on slopes turned from the light). Take the coast from the elevation model, not from a coarser outline,
+or the two disagree along every bay.
+
+What a second session on the map found (lakes, rivers, places, and the close end of a zoom):
+
+- **Natural Earth is too thin for one island.** At 1:10m it had Ireland's six biggest lakes at 20 to 70 points
+  each, and of the rivers only the Shannon, Suir and Barrow. OpenStreetMap through the public Overpass API has
+  every named river as a waterway relation and every named lake as a polygon (credit "© OpenStreetMap
+  contributors", ODbL). Ask by name, not by area: Overpass cannot filter by size, and a whole island's water is
+  far too much. Names are not unique (two Loughs Derg, four Blackwaters, two Loughs Gill): pick by id. A lake's
+  `name` can be bilingual ("Lough Corrib - Loch Coirib"); match `name:en` too.
+- **Keep every Overpass answer on disk.** The public servers answered 502 or timed out on about half the calls
+  in one evening. Retry against a second server, check the answer is JSON before saving it (a busy server sends
+  a page), and never fetch twice.
+- **An elevation model has no lakes.** A lake's surface is above the sea, so the model's land includes it: cut
+  lakes from the land with their own outlines, flatten their light (no hatching), and keep tree marks off them.
+- **Water draws in its own pencil, after the look.** Rivers laid in the outline pass came out as a pale bleed the
+  width of a hill's hatching. Drawn after the look as strokes in a slate colour (the routes and places are
+  drawn the same way in the title colour), they read as water.
+- **Names over a drawn surface need a halo.** Dark text on hatched forest did not read; paper showing round each
+  word (the text dilated, blurred and laid as paper at about 60%) does, and is what a map engraver does.
+- **Layers by episode.** Keep the forest as a mask of its own (land, less lakes there by that episode, less
+  cleared ground) and save it beside the still, so a later episode can clear plains and burst lakes without
+  touching the land.
+- **At 30 m the model and the mapped coast agree.** Copernicus GLO-30 (same bucket, `COG_10` in the name) put
+  Bantry Bay's shore within 1 px of OpenStreetMap's coastline at the median and 2 px at the 95th percentile,
+  at 29 m a px. A hillshade worked out from the heights in numpy, under the same sun, is enough for one still;
+  Blender is for when strokes must ride the ground through a camera move.
+- **A zoom over held sheets.** A drawn sheet holds up between about 0.6 and 1.6 times its own scale, so each
+  carries a step of about 2.6 times: four sheets for a 17.6 times zoom (a whole island to one bay). Tree marks
+  and hatching must be seeded in map coordinates shared across the sheets, or the forest boils at each
+  dissolve.
+
 ## A film over several sessions
 
 A film with a character in it is not finished in one sitting, and no session should try. What has worked, on two
