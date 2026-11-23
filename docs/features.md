@@ -249,6 +249,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | **Checks** | qc, sync_check, contact_sheet, copy_lint | Before showing a render: freezes and motion that stops dead, loudness, layout, sound effects on their movement; and public words before they leave |
 | **Publishing** | youtube_upload, publish_kit, youtube_stats | Upload a finished render to YouTube (or use `/publish`), write its title, description and chapters, and see how it did |
 | **3D (optional)** | blender_render, lecture, reference_capture | Character acting, 3D reveals, product shots and logo idents from a shot spec, a lecture's presenter clips, and reference photos for a fitted character; `blender_render` does nothing unless Blender is installed |
+| **Animation (optional)** | manim_render | Diagrams, code listings, 2D idents and looping backgrounds from a Manim scene file (experimental); does nothing unless Manim is installed |
 | **Brand** | mark_sheet | A logo at every size, on every ground, in a circle and as a watermark, with warnings, before it is used |
 | **Agents** | video_job, video_mcp | A brief in and an MP4 out, for an agent outside Claude Code (experimental) |
 

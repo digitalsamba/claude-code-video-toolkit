@@ -1,0 +1,1 @@
+A request used to go from the browser, to the API, and straight to the database. Every page load paid for the same query. This sprint we put a cache in between. Now the API asks the cache first, and only a miss reaches the database. Median response time fell from four hundred milliseconds to ninety.

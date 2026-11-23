@@ -110,6 +110,26 @@ Document best practices for creating narrator PiP videos:
 
 ---
 
+## Integrations
+
+### An editable timeline out
+Today a finished video is a flat MP4. An editor who wants to move a cut or swap a shot has nothing to open.
+- Export the project as a timeline (OpenTimelineIO, which DaVinci Resolve reads, with adapters for Premiere and
+  Final Cut): one clip per scene, narration, music and sound effects on their own tracks, captions as a track
+- Scenes drawn in Remotion go out as rendered clips; generated clips and stills go out as their source files
+- Start from what `timeline.json` and the audio-anchored builds already know
+- Open question: whether it pays for itself without an editor among our users asking for it
+
+### ComfyUI as a backend
+The image and video tools run our own images on Modal or RunPod. ComfyUI is where most people already run open
+models on their own GPU, and it takes a workflow as JSON over a local API.
+- A provider beside `--cloud modal|runpod`: send a workflow to a running ComfyUI and collect the result
+- Would let a user bring any model ComfyUI supports without us building an image for it
+- Optional, like Blender: nothing depends on it, and a `doctor` says whether one is reachable
+- Open question: which workflows to ship and keep working, given how fast its nodes change
+
+---
+
 ## Infrastructure
 
 ### Cost Tracking

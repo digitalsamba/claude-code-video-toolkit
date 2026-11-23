@@ -35,6 +35,19 @@ Roughly in priority order within each group. Each item is sized to one session o
 
 ### Video types
 
+- [ ] **Maths and concept animation with Manim (optional).** Manim Community is the open-source Python library
+  behind the chalk-and-geometry explainer look: equations that rewrite themselves, graphs that draw, shapes that
+  turn into other shapes. It needs no GPU, and an agent writes its scenes well. The plan follows Blender's: a
+  spec or a scene file in, clips out (transparent when asked), every animation landing on a narration word
+  through the same cues the charts use, a `doctor` that says what is missing (formulas need LaTeX), and nothing
+  else in the toolkit depending on it. First step is a spike: one 60 second explainer from a prompt, narrated,
+  with its clips inside a Remotion video and on the lecture board. Then decide between a template and a skill.
+  A first set of tests ran on 2026-11-23 (a narrated diagram on cue, a transparent clip in Remotion, idents from
+  an SVG with sound, a vertical code listing with a mascot, looping backgrounds, 3D geometry): what worked and what
+  bit is in `docs/manim.md`. Built from it: `tools/manim_render.py` (doctor, render), `lib/manim` and two examples.
+  Still open before a release: a real use in a video (the next sprint review), Linux and Windows installs,
+  formulas (LaTeX), a real voice in the diagram example, a clip through `BlenderClip` and on the lecture board,
+  background and 3D examples, and a skill for writing scenes.
 - [ ] **Tutorial template and batch production.** One task per video, steps called out on screen, the same intro
   and outro, synthetic UI from the screen kits. A batch is one spec per tutorial and an upload queue that spreads
   it over days (the YouTube quota is about 6 uploads a day). The `howto` template shipped in v0.30.0; the batch

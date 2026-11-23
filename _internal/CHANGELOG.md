@@ -8,7 +8,13 @@ All notable changes to claude-code-video-toolkit.
 
 ## Unreleased
 
+### Added
+
+- **`tools/manim_render.py`, `lib/manim` and two examples** (optional and experimental, needs Manim): a Manim scene file rendered as a clip at 30 fps, opaque or transparent for Remotion. Scenes get narration cues from a captions file (a step that overruns its cue fails the render), a brand's colours and mark, loops that close on themselves, and notes of when each audible thing happens. `examples/manim-ident` draws two idents from a brand's SVG with sound placed from the scene; `examples/manim-diagram` builds an architecture diagram on the narration's words.
+
 ### Docs
+
+- **`docs/manim.md`**: what a first session with Manim found: installing it (and what Homebrew does to ffmpeg), timing to narration, transparent clips into Remotion, vertical frames, idents, sound, a flat mascot, looping backgrounds and 3D geometry.
 
 - **The site caught up with v0.30.0**: the home page opens with the Blender support video, lists it and the first how-to episode among the videos, and has routes for a tutorial series, a lecture at a chalkboard and an ident from a logo. The 3D characters page names the ident example and the lecture template.
 
