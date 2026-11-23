@@ -96,6 +96,15 @@ from a JSON shot spec. It needs Blender 4.2 or later and nothing else in the too
 Format, verbs and shot grammar are in the `blender` skill. Setup, timings and a summary of every use are in
 `docs/blender.md`.
 
+## Manim (optional, experimental)
+
+`tools/manim_render.py doctor|render scene.py Scene --out clip.mp4` renders a Manim scene file as a clip: a
+diagram that builds on the narration's words, a code change, a 2D ident from a brand's SVG, a looping background,
+simple 3D geometry. `--alpha` gives a transparent WebM for a Remotion scene. It needs Manim on the machine and
+nothing else depends on it; suggest it only when `doctor` exits 0 or the user asks. Scenes import `toolkit_manim`
+(`lib/manim`) for cues, brand colours, loops and sound events. Read `docs/manim.md` before writing a scene: it
+holds what the first tests found. Characters that act are Blender's job, not Manim's.
+
 ## Brand Profiles
 
 Brands live in `brands/<name>/` (`brand.json`, `voice.json`, `assets/` and an optional `ident/`). See
@@ -154,6 +163,7 @@ Read the file before using a tool in its row. Each holds the commands, the choic
 | YouTube upload, publish kit, stats | `docs/youtube-upload.md`, the `youtube-stats` skill |
 | Channel art (banner, avatar, watermark) and what a real channel set taught | `docs/youtube-channel-art.md` |
 | Running a series across sessions (a hub with state and approvals, a bible, a shared library) | `docs/series.md` |
+| Diagrams, code changes, 2D idents and looping backgrounds drawn by Manim (optional) | `docs/manim.md` |
 | Transitions | `lib/transitions/README.md` |
 
 Rules that hold across them:

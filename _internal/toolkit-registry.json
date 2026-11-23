@@ -1297,6 +1297,23 @@
       "documentation": "docs/blender.md",
       "created": "2026-11-12",
       "updated": "2026-11-14"
+    },
+    "manim_render": {
+      "path": "tools/manim_render.py",
+      "description": "Render a Manim scene as a clip (optional and experimental: needs Manim, and nothing else depends on it): shapes, text, code listings, graphs and SVGs animated from a Python scene file, at 30 fps, opaque or transparent (WebM for Remotion, or ProRes 4444). Scenes import lib/manim for narration cues from a captions file (a step that overruns its cue fails the render), a brand's colours and mark, seamless loops, and notes of when each audible thing happens, written beside the clip",
+      "usage": "uv run tools/manim_render.py doctor | render scene.py Scene --out clip.mp4 [--alpha] [--size 1080x1920] [--brand NAME] [--captions x.captions.json]",
+      "status": "experimental",
+      "category": "animation",
+      "options": {
+        "doctor": "Is Manim here, can ffmpeg write a transparent WebM, are formulas (LaTeX) available; --json",
+        "render": "One scene to one clip, with <clip>.events.json when the scene noted any",
+        "--alpha": "Transparent background: .webm for Remotion, .mov for ProRes 4444",
+        "--size": "WIDTHxHEIGHT; a portrait size gives the scene a 9 by 16 frame",
+        "--brand": "brands/NAME for Brand() in the scene",
+        "--captions": "Word timings for Voice() in the scene"
+      },
+      "documentation": "docs/manim.md",
+      "created": "2026-11-23"
     }
   },
   "optionalComponents": {
@@ -1327,6 +1344,19 @@
       "installCommand": "brew install --cask blender (macOS), winget install BlenderFoundation.Blender (Windows), snap install blender --classic (Linux)",
       "statusCommand": "uv run tools/blender_render.py doctor",
       "documentation": "docs/blender.md"
+    },
+    "manim": {
+      "name": "Manim Community",
+      "description": "Animation engine for tools/manim_render.py (diagrams, code listings, idents, looping backgrounds, simple 3D geometry from a Python scene file). Run on 0.22.1 (macOS); Linux and Windows not yet run",
+      "repository": "https://github.com/ManimCommunity/manim",
+      "diskSpace": "~60MB",
+      "hardware": {
+        "recommended": "Any machine; no GPU needed. Flat scenes render faster than real time, 3D geometry several times slower",
+        "notes": "Formulas (MathTex, Tex) also need LaTeX and dvisvgm"
+      },
+      "installCommand": "brew install manim (macOS; it upgrades ffmpeg, and Homebrew's ffmpeg 9 has drawtext only in ffmpeg-full). Other systems: https://docs.manim.community/en/stable/installation.html",
+      "statusCommand": "uv run tools/manim_render.py doctor",
+      "documentation": "docs/manim.md"
     }
   },
   "cloudProviders": {
@@ -1963,6 +1993,20 @@
       "description": "27.6s film with a fitted character (experimental): Mara, a generated 3D model seated on the rig, comes through a door with a mug, walks a bend, sits, puts the mug down by its handle, opens a laptop and drinks, with the body checked before the render; a second spec plays the toolkit's author in the same kitchen",
       "complexity": "intermediate",
       "created": "2026-11-14"
+    },
+    "manim-ident": {
+      "path": "examples/manim-ident/",
+      "description": "Two idents drawn by Manim from a brand's mark.svg (optional: needs Manim), each saying what the toolkit does and ending on the flat mark: /video typed at a caret and folded into the mark, and script to voice to picture to video as one chain of morphs. Sound (key clicks, whooshes, all CC0) is placed from the events the scene writes, each click within a millisecond of its letter",
+      "stack": "manim",
+      "complexity": "intermediate",
+      "created": "2026-11-23"
+    },
+    "manim-diagram": {
+      "path": "examples/manim-diagram/",
+      "description": "19s architecture diagram drawn by Manim on the narration's words (optional: needs Manim): a request path, a cache going in between, a number falling from 400 ms to 90, each step waiting for its cue from a captions file. Renders opaque or transparent for a Remotion scene. Ships the script and word timings, no audio",
+      "stack": "manim",
+      "complexity": "beginner",
+      "created": "2026-11-23"
     }
   },
   "config": {

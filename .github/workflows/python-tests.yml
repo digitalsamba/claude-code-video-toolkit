@@ -7,6 +7,8 @@ on:
     paths:
       - 'tools/**'
       - 'lib/blender/**'
+      - 'lib/manim/**'
+      - 'examples/manim-ident/**'
       - 'scripts/**'
       - 'tests/python/**'
       - 'templates/concept-explainer-short/**'
@@ -22,6 +24,8 @@ on:
     paths:
       - 'tools/**'
       - 'lib/blender/**'
+      - 'lib/manim/**'
+      - 'examples/manim-ident/**'
       - 'scripts/**'
       - 'tests/python/**'
       - 'templates/concept-explainer-short/**'
