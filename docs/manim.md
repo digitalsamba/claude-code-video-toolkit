@@ -29,7 +29,7 @@ Manim itself and:
 | `ToolkitScene`, `ToolkitScene3D` | `self.at(seconds)` waits for a narration cue and fails the render when the scene is already past it; `self.ev("key")` notes when something audible happens |
 | `Voice()` | Word timings from `--captions`: `V.cue("the cache", nth=2, lead=0.35)` in seconds, `V.end` |
 | `Brand()` | `--brand NAME`: `B.c("primary")` for a colour, `B.mark()` for the SVG |
-| `Loop` | `self.run(build)` plays `build(phase)` for phase 0 to 1, for a seamless background |
+| `Loop` | `self.run(build)` plays `build(phase)` for phase 0 to 1, for a background that loops without a jump |
 | `PORTRAIT` | True for a portrait size, where the frame is 9 by 16 units |
 
 Examples: `examples/manim-ident` (two idents with sound placed from the scene) and `examples/manim-diagram` (a

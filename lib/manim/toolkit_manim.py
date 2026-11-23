@@ -55,7 +55,7 @@ class ToolkitScene3D(_Toolkit, ThreeDScene):
 
 
 class Loop(ToolkitScene):
-    """A seamless loop. Give every motion a whole number of turns over the phase and the end meets the start."""
+    """A loop that closes on itself. Give every motion a whole number of turns over the phase and the end meets the start."""
     seconds = 6.0
 
     def run(self, build):
