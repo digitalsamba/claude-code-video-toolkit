@@ -53,8 +53,8 @@ export type { PointingHandProps } from './PointingHand';
 export { Stage, cameraAt, typed, urlAt, followCamera } from './Stage';
 export type { StageProps, CameraKeyframe, StageUrl } from './Stage';
 
-export { Cursor, cursorAt, press, near } from './Cursor';
-export type { CursorProps, CursorPoint } from './Cursor';
+export { Cursor, cursorAt, press, near, visitPath, boxMid } from './Cursor';
+export type { CursorProps, CursorPoint, CursorVisit } from './Cursor';
 
 export { Terminal, terminalTheme, typedUntil } from './Terminal';
 export type { TerminalProps, TerminalLine, TerminalTheme, TerminalKind } from './Terminal';

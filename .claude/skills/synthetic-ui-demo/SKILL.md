@@ -57,6 +57,8 @@ import { Stage, typed, cursorAt, near } from '../../../../lib/components';
   `overflow: hidden`), pass the box's size as `viewWidth`/`viewHeight`, and use `followCamera(path, 3)`: it keeps
   the cursor in view at one zoom and holds still for small moves.
 - `Cursor` and `cursorAt` work on their own for a non-browser scene; `near(cursor, target)` drives hover states.
+- `visitPath(start, visits)` builds the path and clicks from cues (`{ at: cue('save'), to: boxMid(SAVE), click: true }`):
+  the cursor is there four frames early and stays until it must leave, so re-voiced narration moves it too.
 - Product-specific screen kits (theme, icons, layouts) stay in the project. They are not lib material.
 
 ## Method

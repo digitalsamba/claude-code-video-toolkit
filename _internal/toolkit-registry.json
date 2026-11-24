@@ -1768,7 +1768,7 @@
     },
     "Cursor": {
       "path": "lib/components/Cursor.tsx",
-      "description": "Scripted mouse cursor: eased keyframe path, click ripples and press squash; cursorAt/near helpers for hover states",
+      "description": "Scripted mouse cursor: eased keyframe path, click ripples and press squash; cursorAt/near helpers for hover states; visitPath/boxMid build the path and clicks from narration cues",
       "status": "beta",
       "created": "2026-10-21",
       "updated": "2026-10-21"
