@@ -1,0 +1,54 @@
+{
+  "format": "16:9",
+  "backgrounds": "local",
+  "voice": {
+    "provider": "elevenlabs",
+    "voiceId": "JBFqnCBsd6RMkjVDRZzb",
+    "maxWpm": 150
+  },
+  "captions": {
+    "enabled": true,
+    "engine": "scribe"
+  },
+  "titleCard": false,
+  "music": false,
+  "title": "Why Low Gears Make Hills Easier",
+  "scenes": [
+    {
+      "slug": "hill-burn",
+      "text": "You start up a hill, and suddenly your legs burn and the pedals feel like concrete. Almost every new rider has been there.",
+      "visual": {
+        "kind": "text",
+        "headline": "The Hill Hits Hard",
+        "subline": "Legs burning, pedals stiff"
+      }
+    },
+    {
+      "slug": "shorter-distance",
+      "text": "Here is what a lower gear does. Each pedal turn moves the bike a shorter distance, so every push takes less force from your legs.",
+      "visual": {
+        "kind": "text",
+        "headline": "Lower Gear, Less Force",
+        "subline": "One turn moves you less"
+      }
+    },
+    {
+      "slug": "trade-speed",
+      "text": "The trade is speed. You turn the pedals more often to cover the same road, but it is an effort you can sustain.",
+      "visual": {
+        "kind": "text",
+        "headline": "Trade Speed for Effort",
+        "subline": "Spin more, push less"
+      }
+    },
+    {
+      "slug": "shift-early",
+      "text": "Shift before the hill starts, while you are still pedaling lightly. Changing gears under heavy pressure is rough on the chain.",
+      "visual": {
+        "kind": "text",
+        "headline": "Shift Before the Climb",
+        "subline": "Pedal lightly as you change"
+      }
+    }
+  ]
+}

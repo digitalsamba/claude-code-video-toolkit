@@ -19,6 +19,8 @@ This does two things:
 2. **Generates a Codex block in the repository root `AGENTS.md`**, derived from
    `CLAUDE.md`.
 
+To see a finished explainer made from a Codex plan, watch the [same-brief comparison](../examples/agent-video-comparison/README.md). It includes the Claude Code and Codex videos side by side, with the brief and specs to reproduce them.
+
 ## The AGENTS.md block
 
 - The script manages **only** its generated block inside `AGENTS.md`.

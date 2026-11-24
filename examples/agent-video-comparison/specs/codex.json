@@ -1,0 +1,54 @@
+{
+  "format": "16:9",
+  "backgrounds": "local",
+  "voice": {
+    "provider": "elevenlabs",
+    "voiceId": "JBFqnCBsd6RMkjVDRZzb",
+    "maxWpm": 150
+  },
+  "captions": {
+    "enabled": true,
+    "engine": "scribe"
+  },
+  "titleCard": false,
+  "music": false,
+  "title": "Why Lower Gears Help",
+  "scenes": [
+    {
+      "slug": "hill-feels-heavy",
+      "text": "You reach a hill, and suddenly every pedal stroke feels heavy. Your legs strain, but the bike barely seems to move.",
+      "visual": {
+        "kind": "text",
+        "headline": "Every push feels heavy",
+        "subline": "The hill begins"
+      }
+    },
+    {
+      "slug": "less-distance-less-force",
+      "text": "In a lower gear, one full turn of the pedals moves the bike a shorter distance. That means less force at the pedals.",
+      "visual": {
+        "kind": "text",
+        "headline": "Less distance, less force",
+        "subline": "For each pedal turn"
+      }
+    },
+    {
+      "slug": "trade-speed-for-steady",
+      "text": "You'll need more pedal turns to climb the same hill. You're trading speed for an effort you can sustain, so keep a comfortable rhythm.",
+      "visual": {
+        "kind": "text",
+        "headline": "Trade speed for steady effort",
+        "subline": "Find a comfortable rhythm"
+      }
+    },
+    {
+      "slug": "shift-before-climbing",
+      "text": "Before the hill begins, shift into a lower gear while pedaling lightly. Ease the pressure as you make the shift.",
+      "visual": {
+        "kind": "text",
+        "headline": "Shift before the hill",
+        "subline": "Keep pedaling lightly"
+      }
+    }
+  ]
+}

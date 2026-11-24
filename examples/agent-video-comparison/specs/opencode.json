@@ -1,0 +1,54 @@
+{
+  "format": "16:9",
+  "backgrounds": "local",
+  "voice": {
+    "provider": "elevenlabs",
+    "voiceId": "JBFqnCBsd6RMkjVDRZzb",
+    "maxWpm": 150
+  },
+  "captions": {
+    "enabled": true,
+    "engine": "scribe"
+  },
+  "titleCard": false,
+  "music": false,
+  "title": "Climbing in a lower gear",
+  "scenes": [
+    {
+      "slug": "halfway-up",
+      "text": "You're halfway up a hill, standing on the pedals, your legs are already burning, and the bike keeps slowing down.",
+      "visual": {
+        "kind": "text",
+        "headline": "Halfway up",
+        "subline": "Legs burning, bike slowing"
+      }
+    },
+    {
+      "slug": "less-distance-per-turn",
+      "text": "A lower gear changes the math. One pedal turn moves the bike a shorter distance, so each push asks for less force.",
+      "visual": {
+        "kind": "text",
+        "headline": "Less distance per turn",
+        "subline": "Less force each push"
+      }
+    },
+    {
+      "slug": "speed-for-effort",
+      "text": "You trade speed for effort you can sustain. The climb feels steadier, your breathing settles, and your pedals keep turning.",
+      "visual": {
+        "kind": "text",
+        "headline": "Speed for effort",
+        "subline": "Effort you can sustain"
+      }
+    },
+    {
+      "slug": "shift-before-the-hill",
+      "text": "Shift to an easier gear before the climb, while your pedals are turning lightly on the flat. Don't wait until you're straining.",
+      "visual": {
+        "kind": "text",
+        "headline": "Shift before the hill",
+        "subline": "Keep pedals turning lightly"
+      }
+    }
+  ]
+}
