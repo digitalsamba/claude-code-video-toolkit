@@ -4,6 +4,7 @@
  *     npm run render:shorts                      # all of them
  *     npm run render:shorts -- --log error       # anything after `--` goes to each `remotion render`
  *     npm run render:shorts -- --only 2,4        # just these chapters
+ *     npm run render:shorts -- --episode ep1     # a project with several episodes: out/ep1/short-1.mp4, ...
  *
  * It stops at the first render that fails and exits with its code, and it checks that every file it names was
  * written by this run: an old short-3.mp4 left by an earlier run passes every check that only looks at the file.
@@ -26,7 +27,18 @@ if (k >= 0) {
   }
 }
 
-const read = spawnSync(process.execPath, [join(root, 'scripts', 'timeline.mjs')], { cwd: root, encoding: 'utf8' });
+let episode = null;
+const e = args.indexOf('--episode');
+if (e >= 0) {
+  episode = args[e + 1];
+  args.splice(e, 2);
+  if (!episode || episode.startsWith('-')) {
+    console.error('--episode takes the id of an episode in src/episode.ts');
+    process.exit(2);
+  }
+}
+
+const read = spawnSync(process.execPath, [join(root, 'scripts', 'timeline.mjs'), ...(episode ? [episode] : [])], { cwd: root, encoding: 'utf8' });
 if (read.status !== 0) {
   console.error(read.stderr || 'scripts/timeline.mjs failed');
   process.exit(read.status ?? 1);
@@ -40,11 +52,11 @@ if (!which.length) {
 
 const done = [];
 for (const n of which) {
-  const out = join('out', `short-${n}.mp4`);
+  const out = join('out', ...(episode ? [episode] : []), `short-${n}.mp4`);
   const started = Date.now();
   console.log(`\nShort ${n} of ${chapters} -> ${out}`);
   // one command string, so it runs the same through cmd.exe on Windows
-  const run = spawnSync(['npx', 'remotion', 'render', 'src/index.ts', `Short-${n}`, out, ...args].join(' '), { cwd: root, stdio: 'inherit', shell: true });
+  const run = spawnSync(['npx', 'remotion', 'render', 'src/index.ts', episode ? `Short-${episode}-${n}` : `Short-${n}`, out, ...args].join(' '), { cwd: root, stdio: 'inherit', shell: true });
   if (run.status !== 0) {
     console.error(`\nShort ${n} failed (exit ${run.status}). Rendered before it: ${done.join(', ') || 'none'}.`);
     process.exit(run.status ?? 1);

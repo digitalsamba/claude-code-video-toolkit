@@ -24,7 +24,7 @@ export type Field = {
   mark: 'light' | 'dark' | 'mono';
 };
 
-const c = BRAND.colors as Record<string, string>;
+const c = BRAND.colors as unknown as Record<string, string>;
 
 /**
  * A brand can set any value of a field in brand.json `fields` ({ "work": { "ground": "#323E66" } }): its own dark

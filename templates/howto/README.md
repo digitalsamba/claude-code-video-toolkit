@@ -100,13 +100,20 @@ product's source, and a scripted cursor and camera perform the step (the method 
 the window is `Stage` from `lib/components`). The template supplies the scene; **the screen kit stays in your
 project** (`src/kit/`), because it is the product's, not the template's.
 
+`src/screens/example.tsx` is a whole one to copy from: a made-up settings page (the kit), a scene that types an
+address, flips a toggle and saves, and its Short. Studio shows it as `Screen-example` and `Screen-example-short`,
+timed by stand-in cues instead of narration; delete the file and those two compositions in `src/Root.tsx` once
+your own screens are in.
+
 ```tsx
 // src/screens/form.tsx: a scene is a function of cue, like every other kind
+import { boxMid, visitPath } from '../../../../lib/components';
+
 export const form = (cue: Cue): ScreenProps => {
   const T = { open: cue('schedule a call'), title: cue('give') };
-  const { path, clicks } = drive({ x: 820, y: 640 }, [            // your own helper: a visit per cue
-    { at: T.open, to: mid(SCHEDULE_BTN), click: true },
-    { at: T.title, to: mid(FORM.title), click: true },
+  const { path, clicks } = visitPath({ x: 820, y: 640 }, [        // a visit per cue: there before it, click on it
+    { at: T.open, to: boxMid(SCHEDULE_BTN), click: true },
+    { at: T.title, to: boxMid(FORM.title), click: true },
   ]);
   return {
     screen: <FormScreen T={T} path={path} />,                      // reads useCurrentFrame() itself
@@ -152,6 +159,8 @@ export const EPISODES: Episode[] = [EP1, EP2];     // each { id: 'ep1', ... }
 - Narration goes in `public/audio/scenes/<id>/`; `scripts/timing.py` writes each under `episodes.<id>` and takes
   `layout.json` per episode as `{ "<id>": { "open": { "lead": 40 } } }`.
 - Compositions are `Episode-<id>` and `Short-<id>-N`: `npx remotion render src/index.ts Episode-ep1 out/ep1.mp4`.
+  `npm run render:shorts -- --episode ep1` renders that episode's Shorts to `out/ep1/`, and
+  `scripts/chapters.py --episode ep1` writes its chapters.
 - With one episode and no `id` nothing changes: `Episode`, `Short-N`, `public/audio/scenes/`.
 
 ## Files
@@ -170,6 +179,7 @@ export const EPISODES: Episode[] = [EP1, EP2];     // each { id: 'ep1', ... }
 | `scripts/render-shorts.mjs` | Renders a Short per chapter (`npm run render:shorts`), stops on a failure | Keep |
 | `scripts/accent.py` | Screens the narration for words a British voice said with an American r | Keep |
 | `src/howto/` | Engine: timeline, scene kinds, the mark and track, theme | Keep |
+| `src/screens/example.tsx` | A `screen` scene and its kit to copy from, previewed as `Screen-example` | Delete once yours are in |
 | `src/brand.ts` | The one place the brand is chosen | Keep, or point at your brand |
 | `scripts/ident.py` | Reads the brand's mark and ident into `src/ident.json` and `public/ident/` | Run again when the brand changes |
 | `scripts/sounds.py` | Synthesises the sounds things land on, and the click, into `public/audio/sfx/` | Keep, or replace the files; `sounds: false` in the episode turns them off |
