@@ -4,6 +4,8 @@
  * a script that needs a time (scripts/chapters.py) cannot drift from the picture.
  *
  *     node scripts/timeline.mjs            # from templates/howto or a project made from it
+ *     node scripts/timeline.mjs <id>       # one episode of a project that keeps several (its id in src/episode.ts)
+ *     node scripts/timeline.mjs --short 2  # chapter 2's Short (0-based in the code, 1-based here as in Short-2)
  *
  * Needs the project's node_modules (esbuild comes with Remotion).
  */
@@ -15,11 +17,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const entry = `
-import { EPISODE } from './src/episode';
+import { EPISODES } from './src/episode';
 import { timeline } from './src/howto/timeline';
-export const read = () => {
+export const read = (id, short) => {
+  const EPISODE = EPISODES.find((e) => e.id === id) ?? (id ? undefined : EPISODES[0]);
+  if (!EPISODE) throw new Error('no episode with id ' + id + ': the ids are ' + EPISODES.map((e) => e.id).join(', '));
   let at = 0;
-  const segments = timeline(EPISODE).map((s) => {
+  const segments = timeline(EPISODE, short).map((s) => {
     const seg = { kind: s.kind, start: at, frames: s.frames, ...(s.kind === 'card' ? { chapter: s.chapter } : {}), ...(s.kind === 'scene' ? { id: s.spec.id, chapter: s.hook ? undefined : s.spec.chapter } : {}) };
     at += s.frames;
     return seg;
@@ -42,7 +46,11 @@ try {
   const result = await build({ stdin: { contents: entry, resolveDir: root, loader: 'ts' }, bundle: true, format: 'esm', platform: 'node', write: false, logLevel: 'silent' });
   writeFileSync(out, result.outputFiles[0].text);
   const { read } = await import(pathToFileURL(out).href);
-  process.stdout.write(JSON.stringify(read(), null, 1) + '\n');
+  const argv = process.argv.slice(2);
+  const k = argv.indexOf('--short');
+  const short = k >= 0 ? Number(argv.splice(k, 2)[1]) - 1 : undefined;
+  if (short !== undefined && !(short >= 0)) throw new Error('--short takes a chapter number from 1');
+  process.stdout.write(JSON.stringify(read(argv[0], short), null, 1) + '\n');
 } catch (e) {
   console.error(`timeline.mjs: ${e.message ?? e}`);
   process.exitCode = 1;

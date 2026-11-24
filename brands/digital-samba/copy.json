@@ -1,0 +1,435 @@
+{
+  "spelling": "en-GB",
+  "sources": [
+    "~/work/ds-support/kb/common/tone-guidelines.md",
+    "~/work/ds-support/kb/common/banned-words.md",
+    "~/work/ds-support/kb/ds-free/README.md",
+    "~/work/ds-support/kb/ds-free/feature-map.md",
+    "~/work/react-account-center/src/locales/en/common.json",
+    "https://www.digitalsamba.com/",
+    "https://www.digitalsamba.com/pricing"
+  ],
+  "prefer": [
+    {
+      "avoid": "color",
+      "use": "colour",
+      "why": "tone-guidelines.md, British English: -our"
+    },
+    {
+      "avoid": "colors",
+      "use": "colours",
+      "why": "tone-guidelines.md, British English: -our"
+    },
+    {
+      "avoid": "behavior",
+      "use": "behaviour",
+      "why": "tone-guidelines.md, British English: -our"
+    },
+    {
+      "avoid": "favorite",
+      "use": "favourite",
+      "why": "tone-guidelines.md, British English: -our"
+    },
+    {
+      "avoid": "organize",
+      "use": "organise",
+      "why": "tone-guidelines.md, British English: -ise"
+    },
+    {
+      "avoid": "organization",
+      "use": "organisation",
+      "why": "tone-guidelines.md, British English: -isation"
+    },
+    {
+      "avoid": "customize",
+      "use": "customise",
+      "why": "tone-guidelines.md, British English: -ise"
+    },
+    {
+      "avoid": "customized",
+      "use": "customised",
+      "why": "tone-guidelines.md, British English: -ised"
+    },
+    {
+      "avoid": "realize",
+      "use": "realise",
+      "why": "tone-guidelines.md, British English: -ise"
+    },
+    {
+      "avoid": "recognize",
+      "use": "recognise",
+      "why": "tone-guidelines.md, British English: -ise"
+    },
+    {
+      "avoid": "authorize",
+      "use": "authorise",
+      "why": "tone-guidelines.md, British English: -ise"
+    },
+    {
+      "avoid": "summarize",
+      "use": "summarise",
+      "why": "tone-guidelines.md, British English: -ise"
+    },
+    {
+      "avoid": "analyze",
+      "use": "analyse",
+      "why": "tone-guidelines.md, British English"
+    },
+    {
+      "avoid": "minimize",
+      "use": "minimise",
+      "why": "tone-guidelines.md, British English: -ise"
+    },
+    {
+      "avoid": "personalize",
+      "use": "personalise",
+      "why": "tone-guidelines.md, British English: -ise"
+    },
+    {
+      "avoid": "center",
+      "use": "centre",
+      "why": "tone-guidelines.md, British English: -re. Exception: the product name 'Account Center' keeps its spelling",
+      "except": [
+        "Account Center"
+      ]
+    },
+    {
+      "avoid": "canceled",
+      "use": "cancelled",
+      "why": "tone-guidelines.md, British English: -lled; the app says 'the call was cancelled' (common.json)"
+    },
+    {
+      "avoid": "labeled",
+      "use": "labelled",
+      "why": "tone-guidelines.md, British English: -lled"
+    },
+    {
+      "avoid": "catalog",
+      "use": "catalogue",
+      "why": "tone-guidelines.md, British English: -ogue"
+    },
+    {
+      "avoid": "dialog",
+      "use": "dialogue",
+      "why": "tone-guidelines.md, British English: -ogue (not for a UI 'dialog' named in code)"
+    },
+    {
+      "avoid": "gray",
+      "use": "grey",
+      "why": "tone-guidelines.md, British English"
+    },
+    {
+      "avoid": "enrollment",
+      "use": "enrolment",
+      "why": "tone-guidelines.md, British English"
+    },
+    {
+      "avoid": "September 3",
+      "use": "3 September",
+      "why": "tone-guidelines.md, Numbers, dates, times: day before month"
+    }
+  ],
+  "avoid": [
+    {
+      "phrase": "seamless",
+      "why": "banned-words.md; use 'smooth' or remove it"
+    },
+    {
+      "phrase": "seamlessly",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "leverage",
+      "why": "banned-words.md (as a verb); use 'use'"
+    },
+    {
+      "phrase": "delve",
+      "why": "banned-words.md; use 'look at'"
+    },
+    {
+      "phrase": "deep dive",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "elevate",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "enhance",
+      "why": "banned-words.md (as filler); use 'improve'"
+    },
+    {
+      "phrase": "streamline",
+      "why": "banned-words.md; use 'simplify'"
+    },
+    {
+      "phrase": "robust",
+      "why": "banned-words.md; use 'reliable'"
+    },
+    {
+      "phrase": "harness",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "unleash",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "foster",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "cutting-edge",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "groundbreaking",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "game-changer",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "game-changing",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "transformative",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "revolutionise",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "holistic",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "comprehensive",
+      "why": "banned-words.md (as filler)"
+    },
+    {
+      "phrase": "landscape",
+      "why": "banned-words.md (metaphorical); name the thing"
+    },
+    {
+      "phrase": "realm",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "tapestry",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "pivotal",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "synergy",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "myriad",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "plethora",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "it's worth noting",
+      "why": "banned-words.md; state the thing"
+    },
+    {
+      "phrase": "without further ado",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "moving forward",
+      "why": "banned-words.md"
+    },
+    {
+      "phrase": "great question",
+      "why": "banned-words.md, support boilerplate"
+    },
+    {
+      "phrase": "rest assured",
+      "why": "banned-words.md, support boilerplate"
+    },
+    {
+      "phrase": "don't hesitate to reach out",
+      "why": "banned-words.md, support boilerplate"
+    },
+    {
+      "phrase": "sorry for any inconvenience",
+      "why": "banned-words.md, support boilerplate"
+    },
+    {
+      "phrase": "kindly",
+      "why": "banned-words.md, support boilerplate"
+    },
+    {
+      "phrase": "as per",
+      "why": "banned-words.md, support boilerplate"
+    },
+    {
+      "phrase": "whether you're",
+      "why": "banned-words.md, banned pattern 'Whether you're X or Y'"
+    },
+    {
+      "phrase": "coming soon",
+      "why": "tone-guidelines.md, 'Unreleased products and roadmap': only what is live today"
+    },
+    {
+      "phrase": "on the roadmap",
+      "why": "tone-guidelines.md, 'Unreleased products and roadmap'"
+    },
+    {
+      "phrase": "unlimited",
+      "why": "true today (no limits on Free, Conal 2026-11-16) but a promise about the future; check at publish time and quote no numbers",
+      "level": "check"
+    },
+    {
+      "phrase": "beta",
+      "why": "no beta language in videos (Conal, 2026-11-16), even where the site still says it"
+    },
+    {
+      "phrase": "Zoom",
+      "why": "no competitor names in tutorials unless Digital Samba asks (copy.md)"
+    },
+    {
+      "phrase": "Teams",
+      "why": "no competitor names in tutorials unless Digital Samba asks (copy.md); fine in a generic sense only if unambiguous"
+    },
+    {
+      "phrase": "Google Meet",
+      "why": "no competitor names in tutorials unless Digital Samba asks (copy.md)"
+    },
+    {
+      "phrase": "Skype",
+      "why": "no competitor names in tutorials unless Digital Samba asks (copy.md)"
+    },
+    {
+      "phrase": "Whereby",
+      "why": "no competitor names in tutorials unless Digital Samba asks (copy.md)"
+    },
+    {
+      "phrase": "simply",
+      "why": "copy.md tutorial filler: hides a step and talks down to the viewer"
+    },
+    {
+      "phrase": "go ahead and",
+      "why": "copy.md tutorial filler"
+    },
+    {
+      "phrase": "let's dive in",
+      "why": "copy.md tutorial filler; 'dive' family is banned-words.md"
+    },
+    {
+      "phrase": "forever",
+      "why": "don't promise Free stays free or unchanged (copy.md, Claims)"
+    },
+    {
+      "phrase": "no catch",
+      "why": "a promise about the future (copy.md, Claims)"
+    },
+    {
+      "phrase": "early access",
+      "why": "no beta language (Conal, 2026-11-16)"
+    },
+    {
+      "phrase": "1 month",
+      "why": "a Generate Link link works for 30 days (site code); say '30 days' (copy.md, Claims)"
+    },
+    {
+      "phrase": "one month",
+      "why": "a Generate Link link works for 30 days (site code); say '30 days' (copy.md, Claims)"
+    },
+    {
+      "phrase": "mobile app",
+      "why": "Free is browser only; the store app is for Embedded (ds-support kb/ds-free/common-issues.md, Mobile / Desktop Apps)"
+    },
+    {
+      "phrase": "download the app",
+      "why": "Free is browser only (same source)"
+    },
+    {
+      "phrase": "Google Calendar integration",
+      "why": "Embedded only (common-issues.md)"
+    }
+  ],
+  "names": [
+    {
+      "avoid": "DS-Free",
+      "use": "Digital Samba Free",
+      "why": "support's internal shorthand (kb/ds-free/README.md); the site and pricing page say 'Digital Samba Free'"
+    },
+    {
+      "avoid": "DS Free",
+      "use": "Digital Samba Free",
+      "why": "appears only in the site footer menu; the product's public name is 'Digital Samba Free' (digitalsamba.com/pricing)"
+    },
+    {
+      "avoid": "DS",
+      "use": "Digital Samba",
+      "why": "abbreviation; viewers don't know it"
+    },
+    {
+      "avoid": "DigitalSamba",
+      "use": "Digital Samba",
+      "why": "company name is two words (common.json, site footer)"
+    },
+    {
+      "avoid": "Meet Now",
+      "use": "Call now",
+      "why": "Meet Now is the code's name; the button reads 'Call now' (common.json meetNow)"
+    },
+    {
+      "avoid": "Create call",
+      "use": "Schedule a call",
+      "why": "the button reads 'Schedule a call' (common.json createCall)"
+    },
+    {
+      "avoid": "Account Centre",
+      "use": "Account Center",
+      "why": "product name keeps its spelling (tone-guidelines.md, British English)"
+    },
+    {
+      "avoid": "account centre",
+      "use": "Account Center",
+      "why": "product name keeps its spelling (tone-guidelines.md); in a Free tutorial prefer the label 'Dashboard'"
+    },
+    {
+      "avoid": "app.digitalsamba.com",
+      "use": "my.digitalsamba.com",
+      "why": "app. is legacy SambaLive (kb/ds-free/README.md, Signup / Login URL)"
+    },
+    {
+      "avoid": "SambaLive",
+      "use": "Digital Samba Free",
+      "why": "legacy reseller product, not sold to new users (kb/ds-free/README.md)"
+    },
+    {
+      "avoid": "Enzo",
+      "use": "Digital Samba Free",
+      "why": "internal codename (tone-guidelines.md, 'Internal names and machinery')"
+    },
+    {
+      "avoid": "Monza",
+      "use": "Digital Samba",
+      "why": "internal codename (tone-guidelines.md, 'Internal names and machinery')"
+    },
+    {
+      "avoid": "Janus",
+      "use": "our media servers",
+      "why": "internal component name (tone-guidelines.md)"
+    },
+    {
+      "avoid": "E2EE",
+      "use": "end-to-end encryption",
+      "why": "the app's label is 'End-to-end encryption' (common.json e2eEncryption); spell it out for end users"
+    }
+  ]
+}

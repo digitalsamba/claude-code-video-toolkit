@@ -12,39 +12,39 @@
 import React from 'react';
 import { AbsoluteFill, Audio, Easing, interpolate, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Captions, voice } from '../../../../lib/components';
-import { EPISODE } from '../episode';
+import { EPISODES } from '../episode';
 import { Badge, Rise } from './parts';
 import { askBox, ChapterCard, Close, Open, Question, SCENES } from './scenes';
-import { ASK_SENT, ASK_START, OPEN_SKIP, phrasesOf, timeline } from './timeline';
-import { FIELDS, type FieldName, layoutFor, note, loadFonts, SANS, title } from './theme';
-import type { Cue } from './types';
+import { ASK_SENT, ASK_START, audioOf, OPEN_SKIP, phrasesOf, timeline } from './timeline';
+import { FIELDS, type FieldName, HEAD, layoutFor, note, loadFonts, SANS, title } from './theme';
+import type { Cue, Episode } from './types';
 
 loadFonts();
 
 const STAGE = '#05070c'; // behind an ident clip while it loads
 
-const cueFor = (id: string): Cue => {
-  const ps = phrasesOf(id);
+const cueFor = (ep: Episode, id: string): Cue => {
+  const ps = phrasesOf(ep, id);
   if (!ps.length) {
     return (phrase) => {
-      throw new Error(`Scene "${id}" has no narration, so cue('${phrase}') has nothing to find. Add public/audio/scenes/NNa_${id}.mp3 and run scripts/timing.py.`);
+      throw new Error(`Scene "${id}" has no narration, so cue('${phrase}') has nothing to find. Add public/${audioOf(ep)}NNa_${id}.mp3 and run scripts/timing.py.`);
     };
   }
   return voice(ps.map((p) => ({ file: p.file, at: p.at, captions: p.words }))).cue;
 };
 
 /** The narration of a scene, and in a Short its captions. */
-const Voice: React.FC<{ id: string; captions?: { color: string; accent: string; ground: string; bottom: number } }> = ({ id, captions }) => (
+const Voice: React.FC<{ ep: Episode; id: string; captions?: { color: string; accent: string; ground: string; bottom: number } }> = ({ ep, id, captions }) => (
   <>
-    {phrasesOf(id).map((p) => (
+    {phrasesOf(ep, id).map((p) => (
       <Sequence key={p.file} from={p.at} durationInFrames={p.frames + 6}>
-        <Audio src={staticFile(`audio/scenes/${p.file}.mp3`)} />
+        <Audio src={staticFile(`${audioOf(ep)}${p.file}.mp3`)} />
         {captions && (
           <Captions
-            src={`audio/scenes/${p.file}.captions.json`}
+            src={`${audioOf(ep)}${p.file}.captions.json`}
             fontFamily={SANS}
             fontSize={58}
-            fontWeight={700}
+            fontWeight={HEAD}
             color={captions.color}
             highlightColor={captions.accent}
             background={captions.ground}
@@ -58,10 +58,10 @@ const Voice: React.FC<{ id: string; captions?: { color: string; accent: string; 
   </>
 );
 
-type Sound = { at: number; name: 'tick' | 'land' | 'move' };
-const LEVEL = { tick: 0.5, land: 0.6, move: 0.7 };
+type Sound = { at: number; name: 'tick' | 'land' | 'move' | 'click' };
+const LEVEL = { tick: 0.5, land: 0.6, move: 0.7, click: 0.7 };
 
-/** Where a scene's things land, from its resolved props: a tick for a row or a bar, a low note under a figure or a limit. */
+/** Where a scene's things land, from its resolved props: a tick for a row or a bar, a low note under a figure or a limit, a click where the cursor clicks. */
 const soundsOf = (kind: string, p: any): Sound[] => {
   if (kind === 'ledger') return p.rows.map((r: { at: number }) => ({ at: r.at, name: 'tick' as const }));
   if (kind === 'figure') return [{ at: p.at, name: 'land' }];
@@ -71,6 +71,7 @@ const soundsOf = (kind: string, p: any): Sound[] => {
       ...s.rows.map((r) => ({ at: r.at, name: 'tick' as const })),
       ...(s.countAt !== undefined ? [{ at: s.countAt, name: 'land' as const }] : []),
     ]);
+  if (kind === 'screen') return (p.clicks ?? []).map((at: number) => ({ at, name: 'click' as const }));
   return [];
 };
 
@@ -100,13 +101,16 @@ const Opens: React.FC<{ L: ReturnType<typeof layoutFor>; ground: string; under: 
   );
 };
 
-/** The episode comes from src/episode.ts by import: composition props are JSON, and an episode holds functions. */
-export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
-  const ep = EPISODE;
+/**
+ * The episode comes from src/episode.ts by import: composition props are JSON, and an episode holds functions.
+ * `episode` picks one by its id when the project has several.
+ */
+export const EpisodeVideo: React.FC<{ short?: number; episode?: string }> = ({ short, episode }) => {
+  const ep = EPISODES.find((e) => e.id === episode) ?? EPISODES[0];
   const { width, height } = useVideoConfig();
   const L = layoutFor(width, height);
   const n = ep.chapters.length;
-  const badge = `${ep.series} ${ep.number} · toolkit ${ep.version}`;
+  const badge = ep.badge ?? `${ep.series} ${ep.number} · toolkit ${ep.version}`;
   const sounds = ep.sounds !== false;
   const segs = timeline(ep, short);
   const total = segs.reduce((n, s) => n + s.frames, 0);
@@ -177,12 +181,13 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
                 L={L}
                 f={f}
                 text={ep.title}
+                size={ep.titleSize}
                 chapters={n}
-                titleAt={Math.max(44, (phrasesOf('open')[0]?.at ?? 58) - 14)}
-                lineCues={ep.openTitle?.(cueFor('open'))}
-                stopCues={ep.openStops?.(cueFor('open'))}
+                titleAt={Math.max(44, (phrasesOf(ep, 'open')[0]?.at ?? 58) - 14)}
+                lineCues={ep.openTitle?.(cueFor(ep, 'open'))}
+                stopCues={ep.openStops?.(cueFor(ep, 'open'))}
               />
-              <Voice id="open" />
+              <Voice ep={ep} id="open" />
             </Sequence>
           );
         } else if (s.kind === 'card') {
@@ -202,7 +207,7 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
           );
         } else if (s.kind === 'scene') {
           const Scene = SCENES[s.spec.kind] as React.FC<any>;
-          const cue = cueFor(s.spec.id);
+          const cue = cueFor(ep, s.spec.id);
           const props = { ...s.spec.props(cue), ...(L.vertical && s.spec.short ? (s.spec.short as (c: Cue) => object)(cue) : {}) };
           const asked = s.hook ? ep.hook?.ask : s.first && s.spec.kind !== 'session' ? ep.chapters[s.spec.chapter].ask : undefined;
           const under = s.hook ? <Question L={L} f={FIELDS.work} text={asked ?? ''} instant /> : <ChapterCard L={L} f={FIELDS.work} index={s.spec.chapter} of={n} text={[]} ask={asked} instant />;
@@ -217,12 +222,12 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
                 scene
               )}
               {sounds && <Sounds list={soundsOf(s.spec.kind, props)} />}
-              {s.spec.kind !== 'session' && short === undefined && !s.hook && <Badge L={L} f={f} text={badge} />}
-              <Voice id={s.spec.id} captions={short !== undefined ? { color: f.ink, accent: f.accent, ground: f.ground, bottom: 330 } : undefined} />
+              {s.spec.kind !== 'session' && s.spec.kind !== 'screen' && short === undefined && !s.hook && <Badge L={L} f={f} text={badge} />}
+              <Voice ep={ep} id={s.spec.id} captions={short !== undefined ? { color: f.ink, accent: f.accent, ground: f.ground, bottom: 330 } : undefined} />
             </>
           );
         } else if (s.kind === 'close') {
-          const ends = phrasesOf('close');
+          const ends = phrasesOf(ep, 'close');
           const nextAt = ends[0]?.at ?? 20;
           const last = ends[ends.length - 1];
           body = (
@@ -239,7 +244,7 @@ export const EpisodeVideo: React.FC<{ short?: number }> = ({ short }) => {
                 runUntil={last ? last.at + last.frames : undefined}
                 hold={s.hold}
               />
-              <Voice id="close" />
+              <Voice ep={ep} id="close" />
             </>
           );
         } else {

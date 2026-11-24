@@ -107,6 +107,11 @@ TTS engines do NOT consistently produce 150 WPM output. In practice:
 narration is 140-160 wpm; flag anything over ~170. `--max-wpm` turns the check
 into an automatic fix.
 
+Words per minute is a rough measure on a short line. A sentence of six or seven words lasts about two seconds,
+so a fraction of a second of breath at either end swings its rate: a 7-word line of two seconds measures 236
+wpm. In one episode voiced a sentence at a time, `--max-wpm 165` slowed half the lines (11 of 22), never below
+0.9x. For a line under about ten words, listen, or judge it by the rate of its scene, before trusting the number.
+
 ## Fixing Mismatches
 - **Voiceover too long**: Speed up demos, trim pauses, cut content
 - **Voiceover too short**: Slow demos, add scenes, expand narration

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -83,6 +84,43 @@ class DiffTest(unittest.TestCase):
             found = {(f["file"], f["line"], f["match"]) for f in json.loads(r.stdout)["findings"]}
             self.assertEqual(found, {("README.md", 2, "seamless"), ("notes.md", 1, "—"), ("--text", 1, "seamless")})
             self.assertEqual(r.returncode, 1)
+
+
+
+
+
+class BrandRulesTest(unittest.TestCase):
+    """A brand's own rules, from brands/<name>/copy.json."""
+
+    def rules(self, data):
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "brands" / "acme").mkdir(parents=True)
+        (tmp / "brands" / "acme" / "copy.json").write_text(json.dumps(data))
+        old, copy_lint.ROOT = copy_lint.ROOT, tmp
+        try:
+            return copy_lint.brand_rules("acme")
+        finally:
+            copy_lint.ROOT = old
+
+    def test_prefer_spares_its_exceptions(self):
+        rules = self.rules({"prefer": [{"avoid": "center", "use": "centre", "except": ["Account Center"]}]})
+        self.assertEqual(copy_lint.lint_text("Open the Account Center.", rules), [])
+        self.assertEqual([m for m, _ in copy_lint.lint_text("In the center of the page.", rules)], ["center"])
+
+    def test_capitalised_phrase_matches_case_sensitively(self):
+        rules = self.rules({"avoid": [{"phrase": "Zoom"}], "names": [{"avoid": "DS", "use": "Digital Samba"}]})
+        self.assertEqual([m for m, _ in copy_lint.lint_text("You can zoom in. Hosted by DS.", rules)], ["DS"])
+        self.assertEqual([m for m, _ in copy_lint.lint_text("Better than Zoom, DS-Free.", rules)], ["Zoom"])  # DS-Free is not DS
+
+    def test_check_level_reports_without_failing(self):
+        rules = self.rules({"avoid": [{"phrase": "unlimited", "level": "check"}]})
+        hits = [{"reason": why} for _, why in copy_lint.lint_text("Unlimited calls.", rules)]
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(copy_lint.failing(hits), [])
+
+    def test_shipped_brand_rules_load(self):
+        for path in (ROOT / "brands").glob("*/copy.json"):
+            self.assertTrue(copy_lint.brand_rules(path.parent.name))
 
 
 if __name__ == "__main__":

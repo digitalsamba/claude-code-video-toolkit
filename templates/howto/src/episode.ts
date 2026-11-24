@@ -187,3 +187,9 @@ export const EPISODE: Episode = {
     },
   ],
 };
+
+/**
+ * Every episode this project renders. A series kept in one project (one kit, one brand) lists several here, each
+ * with an `id`; its narration is then in public/audio/scenes/<id>/.
+ */
+export const EPISODES: Episode[] = [EPISODE];

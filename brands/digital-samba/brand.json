@@ -1,32 +1,43 @@
 {
   "name": "Digital Samba",
-  "description": "Digital Samba brand - European video conferencing platform. Colours from the wordmark (coral #F06859, navy #323E66) and the product blue (#3771e0); orange is not a DS colour.",
-  "version": "1.0.0",
+  "description": "Digital Samba. Read from the sources on 2026-11-16: digitalsamba.com CSS (Inter, headings 600 in sentence case, ink #222326, secondary #6a6d77, blue #3771e0 for links and buttons, hairline #e3e6ec, tint #f8f9fb, radii 4/8/12), the logo (react-account-center/public/logo.svg: a coral mark, 'digital' in navy #323E66, 'samba' in coral #F06859) and the app theme (theme-provider.js: primary #3771e0). Blue is the product and the site; navy and coral are the logo's. Coral is used sparingly outside the logo. Orange is not a DS colour.",
+  "version": "2.0.0",
   "website": "https://www.digitalsamba.com",
-
   "colors": {
-    "primary": "#F06859",
-    "primaryLight": "#F58A7E",
-    "primaryDark": "#D14F3F",
-    "accent": "#3771e0",
+    "primary": "#3771e0",
+    "primaryLight": "#739CE9",
+    "primaryDark": "#2f63c9",
+    "accent": "#F06859",
     "navy": "#323E66",
     "navyDark": "#232D49",
-    "textDark": "#1B202F",
+    "textDark": "#222326",
     "textMedium": "#323E66",
-    "textLight": "#5E667A",
+    "textLight": "#6a6d77",
+    "textOnDark": "#ffffff",
+    "textOnDarkMuted": "#c9cfe0",
     "bgLight": "#ffffff",
-    "bgAlt": "#F7F6F3",
+    "bgAlt": "#f8f9fb",
+    "bgTint": "#EBF1FC",
     "bgDark": "#323E66",
     "bgOverlay": "rgba(50, 62, 102, 0.92)",
-    "divider": "#E5E7EE",
-    "shadow": "rgba(27, 32, 47, 0.18)"
+    "divider": "#e3e6ec",
+    "shadow": "rgba(27, 32, 47, 0.18)",
+    "error": "#e92323",
+    "success": "#1eaf3f"
   },
-
   "fonts": {
-    "primary": "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-    "mono": "ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, monospace"
+    "primary": "Inter, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+    "mono": "ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, monospace",
+    "weights": {
+      "heading": 600,
+      "body": 400
+    },
+    "tracking": {
+      "heading": "-0.01em"
+    },
+    "case": "sentence",
+    "note": "digitalsamba.com sets Inter at 400 and 600; headings are 600, sentence case, no tight tracking. The app (my.digitalsamba.com) uses the system UI stack, so rebuilt screens keep that."
   },
-
   "spacing": {
     "xs": 8,
     "sm": 16,
@@ -35,23 +46,57 @@
     "xl": 80,
     "xxl": 120
   },
-
   "borderRadius": {
-    "sm": 6,
-    "md": 10,
-    "lg": 16
+    "sm": 4,
+    "md": 8,
+    "lg": 12
   },
-
   "typography": {
-    "h1": { "size": 88, "weight": 700 },
-    "h2": { "size": 72, "weight": 700 },
-    "h3": { "size": 48, "weight": 600 },
-    "body": { "size": 44, "weight": 400 },
-    "label": { "size": 34, "weight": 600, "letterSpacing": 2 }
+    "h1": {
+      "size": 88,
+      "weight": 600
+    },
+    "h2": {
+      "size": 72,
+      "weight": 600
+    },
+    "h3": {
+      "size": 48,
+      "weight": 600
+    },
+    "body": {
+      "size": 44,
+      "weight": 400
+    },
+    "label": {
+      "size": 34,
+      "weight": 600
+    }
   },
-
   "assets": {
-    "logo": "assets/ds-logo.png",
-    "logoLight": "assets/ds-logo.png"
+    "logo": "assets/ds-logo.svg",
+    "logoOnDark": "assets/ds-logo-on-dark.svg",
+    "logoWhite": "assets/ds-logo-white.svg",
+    "logoPng": "assets/ds-logo.png",
+    "mark": "assets/mark.svg",
+    "markWhite": "assets/mark-white.svg",
+    "note": "ds-logo.svg is the app's own (react-account-center/public/logo.svg). On navy use logoOnDark (wordmark white, coral kept); on blue use logoWhite; the coral mark never sits on blue."
+  },
+  "fields": {
+    "note": "For templates that colour by act (howto): the dark field is the logo's navy, secondary text is the site's grey, and the grounds are flat (no rows).",
+    "explain": {
+      "ink2": "#5d606a",
+      "hair": "transparent",
+      "other": "#d5dae4"
+    },
+    "work": {
+      "ground": "#323E66",
+      "other": "#4b5884",
+      "hair": "transparent",
+      "accent": "#9db9f0"
+    },
+    "identity": {
+      "hair": "transparent"
+    }
   }
 }

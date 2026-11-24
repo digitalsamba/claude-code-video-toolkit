@@ -46,6 +46,38 @@ export const cursorAt = (frame: number, path: CursorPoint[]): CursorPoint => {
   return path[path.length - 1];
 };
 
+/** A cursor visit: arrive at `to` a few frames before `at` (a cue), click there if asked; `move` is the travel time */
+export type CursorVisit = { at: number; to: { x: number; y: number }; click?: boolean; move?: number };
+
+/**
+ * A cursor path and its clicks from a list of visits. The cursor arrives four frames before each `at`, clicks on
+ * it if asked, and stays until it has to leave for the next, so every frame comes from the cues and re-timed
+ * narration moves the path with it.
+ *
+ *   const { path, clicks } = visitPath({ x: 820, y: 640 }, [
+ *     { at: cue('save'), to: boxMid(SAVE), click: true },
+ *   ]);
+ */
+export const visitPath = (start: { x: number; y: number }, visits: CursorVisit[]): { path: CursorPoint[]; clicks: number[] } => {
+  const path: CursorPoint[] = [{ f: 0, ...start }];
+  const clicks: number[] = [];
+  let here = start;
+  let free = 0; // the first frame the cursor may leave where it is
+  for (const v of visits) {
+    const arrive = v.at - 4;
+    const leave = Math.max(free, arrive - (v.move ?? 22));
+    if (leave > path[path.length - 1].f) path.push({ f: leave, ...here });
+    path.push({ f: Math.max(arrive, leave + 6), ...v.to });
+    if (v.click) clicks.push(v.at);
+    here = v.to;
+    free = v.at + 8;
+  }
+  return { path, clicks };
+};
+
+/** The middle of a kit's box ({ x, y, w, h }; `h` defaults to a 38 px control), nudged by dx, dy */
+export const boxMid = (b: { x: number; y: number; w: number; h?: number }, dx = 0, dy = 0) => ({ x: b.x + b.w / 2 + dx, y: b.y + (b.h ?? 38) / 2 + dy });
+
 /** 0 -> 1 -> 0 over a short press starting at `at` */
 export const press = (frame: number, at: number) =>
   interpolate(frame, [at, at + 3, at + 9], [0, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });

@@ -1,6 +1,6 @@
 # Creating Brand Profiles
 
-Brand profiles let you maintain consistent visual identity across videos. Each brand defines colors, fonts, and voice settings.
+Brand profiles let you maintain consistent visual identity across videos. Each brand defines colors, fonts, voice settings, and optionally how it writes.
 
 > **Quick Start:** Run `/brand` in Claude Code to create a brand interactively. It can extract colors from a website URL, generate a palette from a single color, or let you specify colors manually.
 
@@ -17,6 +17,8 @@ brands/
 └── my-company/
     ├── brand.json
     ├── voice.json
+    ├── copy.md                # optional: how the brand writes (see "How the brand writes")
+    ├── copy.json              # optional: the rules copy_lint.py --brand enforces
     ├── assets/
     │   ├── mark.svg           # optional: the flat mark (see "Mark and ident")
     │   ├── mark-on-dark.svg
@@ -136,6 +138,31 @@ is a filled slot to look at.
 `templates/howto` does. `uv run templates/howto/scripts/ident.py` copies the brand's clips into the template and
 writes `src/ident.json`; an episode then opens and closes with the ident, a Short ends on it, and the mark heads
 the chapter track. `--none` goes back to the template's own 2D mark.
+
+## How the brand writes
+
+`voice.json` is the narrator's voice; the words are a separate thing. A brand that has its own house style
+carries it in two files:
+
+- **`copy.md`**: the tone guide a writer (or an agent) reads before a script: who is talking, its traits with a
+  real example of each, what to call the product and its screens, spelling and number style, which claims need
+  checking before they are said, and words to avoid. Cite where each rule came from (a style guide, the site,
+  the app's own strings), so it can be checked when the brand changes.
+- **`copy.json`**: the part a machine can enforce, read by `uv run tools/copy_lint.py --brand <name>`:
+
+```json
+{
+  "spelling": "en-GB",
+  "prefer": [{ "avoid": "center", "use": "centre", "except": ["Account Center"], "why": "British spelling; a product name keeps its own" }],
+  "avoid": [{ "phrase": "unlimited", "level": "check", "why": "a claim: say it only when checked at publish time" }],
+  "names": [{ "avoid": "DS-Free", "use": "Digital Samba Free", "why": "internal shorthand" }]
+}
+```
+
+A phrase with a capital letter matches case-sensitively (a competitor called "Zoom" doesn't flag "zoom in");
+the rest match whole words in any case. `"level": "check"` reports a claim without failing the lint. The
+toolkit's own rules (dashes, stock AI phrasing) always apply as well. Put a bad example in a tone guide in
+backticks, so the guide itself passes the lint. `brands/digital-samba` has both files.
 
 ## Using a Brand in a Project
 

@@ -1593,7 +1593,7 @@
     },
     "howto": {
       "path": "templates/howto/",
-      "description": "How-to and tutorial episodes about a tool: one mark (a terminal prompt whose chevron fills into play and whose caret becomes the playhead) carries the opening, the chapter cards and the close; scenes are ledgers, figures, bars, statements, agent CLI sessions, commands and a who-does-what split with counts, each landing on its narration word via cue(); colour by act, every figure from a facts file; a 9:16 Short per chapter with captions; YouTube chapters from the timeline (scripts/chapters.py). Plays a brand's own mark and ident when it has them (brands/<name>/assets/mark.svg and brands/<name>/ident/, read by scripts/ident.py) and its own 2D mark when not. Ships as Getting started 1, What it costs",
+      "description": "How-to and tutorial episodes about a tool: one mark (a terminal prompt whose chevron fills into play and whose caret becomes the playhead) carries the opening, the chapter cards and the close; scenes are ledgers, figures, bars, statements, agent CLI sessions, commands, a who-does-what split with counts and product screens (a project's own rebuilt screen kit in a Stage, cursor and camera on cues, cropped to follow the cursor in a Short), each landing on its narration word via cue(); a series can keep several episodes in one project; colour by act, every figure from a facts file; a 9:16 Short per chapter with captions; YouTube chapters from the timeline (scripts/chapters.py). Plays a brand's own mark and ident when it has them (brands/<name>/assets/mark.svg and brands/<name>/ident/, read by scripts/ident.py) and its own 2D mark when not. Ships as Getting started 1, What it costs",
       "status": "beta",
       "created": "2026-11-15",
       "skill": "video-design",
@@ -1768,7 +1768,7 @@
     },
     "Cursor": {
       "path": "lib/components/Cursor.tsx",
-      "description": "Scripted mouse cursor: eased keyframe path, click ripples and press squash; cursorAt/near helpers for hover states",
+      "description": "Scripted mouse cursor: eased keyframe path, click ripples and press squash; cursorAt/near helpers for hover states; visitPath/boxMid build the path and clicks from narration cues",
       "status": "beta",
       "created": "2026-10-21",
       "updated": "2026-10-21"

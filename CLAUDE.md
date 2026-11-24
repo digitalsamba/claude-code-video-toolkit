@@ -185,7 +185,11 @@ list is `COPY_RULES` in the tool), and says why.
 ```bash
 uv run tools/copy_lint.py site/*.html DESCRIPTION.md --text "The title"   # files and strings, exit 1 on a hit
 uv run tools/copy_lint.py --diff origin/main --commits origin/main        # a branch's new lines + commit subjects
+uv run tools/copy_lint.py --brand digital-samba public/audio/phrases/*/*.txt  # plus the brand's house style
 ```
+
+A brand's house style (spelling, product names, words it avoids, claims to check) lives in `brands/<name>/copy.md`
+and `copy.json`; `--brand` enforces the second. Read the first before writing a script for that brand.
 
 It is wired in where text leaves: video jobs refuse it before spend, `youtube_upload.py` refuses it (`--allow-copy`
 to override), `voiceover.py` warns before voicing, and the `Copy lint` CI check fails a PR on new lines or commit

@@ -78,6 +78,7 @@ of its Short as well as the episode's.
 | `session` | An agent CLI session filling the frame (`TerminalSession`, any skin): the field is the terminal | every prompt, tool call, permission prompt, zoom |
 | `command` | The one command to type, large, and what it does | typing starts on the word |
 | `split` | Who does what: two columns ("You", "Claude Code"), a running count under each | each row on its words; a column's count takes the accent and the pen when it is said (`countAt`) |
+| `screen` | A product's screen in a browser window, with a cursor and a camera (below) | every click, keystroke, page change and camera move |
 
 A `split` row can stand for more than one thing (`count: 3` for "checks Node, uv and FFmpeg"), so the rows stay
 few and the counts stay true to what was counted. The count climbs to each row's share over a few frames, and a
@@ -91,6 +92,80 @@ a still that follows a moving waveform reads as a clip that froze (QC's "motion 
 Every scene's props are a function of `cue`, so no frame number is typed by hand: `at: cue('three hundred')` is
 the frame the narrator says it. `short` on a scene gives replacement props for the 9:16 Short (titles broken by
 hand for the narrow frame).
+
+## Screens: a product on the chapter's field
+
+A `screen` scene shows an app or a website with no screen recording: the screen is static React rebuilt from the
+product's source, and a scripted cursor and camera perform the step (the method is the `synthetic-ui-demo` skill;
+the window is `Stage` from `lib/components`). The template supplies the scene; **the screen kit stays in your
+project** (`src/kit/`), because it is the product's, not the template's.
+
+`src/screens/example.tsx` is a whole one to copy from: a made-up settings page (the kit), a scene that types an
+address, flips a toggle and saves, and its Short. Studio shows it as `Screen-example` and `Screen-example-short`,
+timed by stand-in cues instead of narration; delete the file and those two compositions in `src/Root.tsx` once
+your own screens are in.
+
+```tsx
+// src/screens/form.tsx: a scene is a function of cue, like every other kind
+import { boxMid, visitPath } from '../../../../lib/components';
+
+export const form = (cue: Cue): ScreenProps => {
+  const T = { open: cue('schedule a call'), title: cue('give') };
+  const { path, clicks } = visitPath({ x: 820, y: 640 }, [        // a visit per cue: there before it, click on it
+    { at: T.open, to: boxMid(SCHEDULE_BTN), click: true },
+    { at: T.title, to: boxMid(FORM.title), click: true },
+  ]);
+  return {
+    screen: <FormScreen T={T} path={path} />,                      // reads useCurrentFrame() itself
+    url: [{ at: 0, url: 'app.example.com/dashboard' }, { at: T.open + 8, url: 'app.example.com/schedule/create' }],
+    path,
+    clicks,
+    camera: [{ f: 0, z: 1, x: 720, y: 405 }, { f: T.title, z: 1.65, x: 560, y: 300 }],
+  };
+};
+// src/episode.ts
+{ id: 'form', kind: 'screen', chapter: 0, props: form, short: (cue) => ({ camera: [...] }) },
+```
+
+- **Everything is a cue.** Clicks, typing, page changes and camera keys are frames looked up from the narration,
+  so the scene follows the voice when a line is re-voiced. Positions are the kit's canvas pixels (1440 x 810).
+- **On the field.** The window sits on the chapter's field with a hairline round it (no shadow), its edges on
+  the title edge. The episode badge is left off: the screen is the picture.
+- **The address bar** takes one address or a list by cue, so a click can lead from a website to the app
+  (`url: [{ at: 0, url: 'example.com' }, { at: T.start, url: 'app.example.com/call' }]`). A website is a screen
+  like any other: rebuild the page from its own markup and give the scene the site's address.
+- **In a Short** the whole window is too small to read, so the scene crops it to a box above the captions
+  (`screenBox`, nothing under `CAPTION_TOP`) and the camera stays on what is being talked about. With no camera
+  in `short`, it follows the cursor at `follow` (default 3, about 30 px for 16 px text), holding still for small
+  moves. When one thing is wider than the box (a long link beside its label), give `short` a camera at a lower
+  zoom: the box shows `920 / (0.64 x zoom)` canvas pixels across.
+- **A page no click leads to is a new scene.** When the narration moves on to a page the cursor did not open
+  (the call's page after saving, a dashboard after sign-up), end the scene and start another with its own id
+  and address: the cut does the move. A faked click to get there shows a step the product doesn't have.
+- **Clicks are heard.** Each frame in `clicks` plays `public/audio/sfx/click.wav` (`sounds: false` turns it off).
+- **People.** If the screen shows people who are not real, set `note: 'People shown are AI-generated'`. It sits
+  over the picture's corner; `{ text, until }` takes it away on a cue when the people leave the screen.
+
+Before rendering, look at a still at each click frame: a target is easily 20 px off.
+`uv run scripts/stills.py --at "form@schedule a call@0,form@give@0"` takes stills on cues and tiles them. Then
+`qc.py --layout` on the composition: the window is marked `data-qc="product"`, so the product's own small text is
+reported apart from the video's.
+
+## A series in one project
+
+Episodes that share a kit and a brand can live in one project. Give each an `id` and list them:
+
+```ts
+// src/episode.ts
+export const EPISODES: Episode[] = [EP1, EP2];     // each { id: 'ep1', ... }
+```
+
+- Narration goes in `public/audio/scenes/<id>/`; `scripts/timing.py` writes each under `episodes.<id>` and takes
+  `layout.json` per episode as `{ "<id>": { "open": { "lead": 40 } } }`.
+- Compositions are `Episode-<id>` and `Short-<id>-N`: `npx remotion render src/index.ts Episode-ep1 out/ep1.mp4`.
+  `npm run render:shorts -- --episode ep1` renders that episode's Shorts to `out/ep1/`, and
+  `scripts/chapters.py --episode ep1` writes its chapters.
+- With one episode and no `id` nothing changes: `Episode`, `Short-N`, `public/audio/scenes/`.
 
 ## Files
 
@@ -106,11 +181,14 @@ hand for the narrow frame).
 | `scripts/timeline.mjs` | Prints that timeline as JSON: every segment's start frame, every chapter's | Keep |
 | `scripts/chapters.py` | YouTube chapters from the timeline, to `out/publish/chapters.txt` | Keep |
 | `scripts/render-shorts.mjs` | Renders a Short per chapter (`npm run render:shorts`), stops on a failure | Keep |
+| `scripts/level.py` | Levels every narration phrase to -16 LUFS, so no line jumps out | Keep |
+| `scripts/stills.py` | Stills of every scene, or at chosen cues, tiled into one sheet before a render | Keep |
 | `scripts/accent.py` | Screens the narration for words a British voice said with an American r | Keep |
 | `src/howto/` | Engine: timeline, scene kinds, the mark and track, theme | Keep |
+| `src/screens/example.tsx` | A `screen` scene and its kit to copy from, previewed as `Screen-example` | Delete once yours are in |
 | `src/brand.ts` | The one place the brand is chosen | Keep, or point at your brand |
 | `scripts/ident.py` | Reads the brand's mark and ident into `src/ident.json` and `public/ident/` | Run again when the brand changes |
-| `scripts/sounds.py` | Synthesises the three sounds things land on into `public/audio/sfx/` | Keep, or replace the files; `sounds: false` in the episode turns them off |
+| `scripts/sounds.py` | Synthesises the sounds things land on, and the click, into `public/audio/sfx/` | Keep, or replace the files; `sounds: false` in the episode turns them off |
 | `design.md` | Acts, fields, type steps, ground, layout: the decisions the code follows | Keep |
 
 ## Making an episode
@@ -122,12 +200,14 @@ mkdir -p projects && cp -r templates/howto projects/my-episode && cd projects/my
 rm -rf node_modules out public/audio/scenes/* && npm install  # not the pilot's renders, narration or packages
 # 1. write one sentence per file in public/audio/scenes/ (00a_open.txt, 01a_free.txt, ...), then lint it
 uv run ../../tools/copy_lint.py public/audio/scenes/*.txt
-# 2. voice it, word-time it, lay it out
+# 2. voice it, level it, word-time it, lay it out
 uv run ../../tools/voiceover.py --brand video-toolkit --scene-dir public/audio/scenes --json
+uv run scripts/level.py                                        # every phrase to -16 LUFS
 uv run ../../tools/captions.py public/audio/scenes
 uv run scripts/timing.py
-# 3. edit src/episode.ts (scenes and cues) and facts.json; preview
+# 3. edit src/episode.ts (scenes and cues) and facts.json; preview, and look at every scene before a render
 npm run studio
+uv run scripts/stills.py                                       # out/stills/Episode-late.jpg
 # 4. render, check, normalise
 npm run render && npm run render:shorts
 uv run ../../tools/qc.py --render out/episode.mp4 --fix        # writes out/episode.loudnorm.mp4 at -14 LUFS
@@ -202,5 +282,8 @@ line can't put an animation on nothing.
 ## Fields and type
 
 Three fields from `design.md`: `explain` (light), `work` (navy, the terminal's own colour) and `identity`
-(brand blue, the close). A chapter names its field; colour changes only at a chapter turn. Inter and JetBrains
+(brand blue, the close). A chapter names its field; colour changes only at a chapter turn. A brand can set any
+value of a field in its `brand.json` (`"fields": { "work": { "ground": "#323E66" }, "explain": { "hair":
+"transparent" } }`): its own dark ground, or a flat ground with no rows. A title with a long line takes
+`titleSize: 'figure'` in the episode, since the opening sets it at display size. Inter and JetBrains
 Mono are bundled in `public/fonts/` (SIL Open Font License) so a render is the same on every OS.
