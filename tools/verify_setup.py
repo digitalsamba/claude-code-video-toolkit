@@ -4,8 +4,8 @@
 Run after /setup to confirm everything is working, or anytime to diagnose issues.
 
 Usage:
-    uv run tools/verify_setup.py           # Full check (no cloud calls)
-    uv run tools/verify_setup.py --test    # Full check + smoke tests (makes cloud GPU calls)
+    uv run tools/verify_setup.py           # Local prerequisites and provider configuration
+    uv run tools/verify_setup.py --test    # Also check remote services and run cloud GPU smoke tests
     uv run tools/verify_setup.py --json    # Machine-readable output
 """
 
@@ -343,7 +343,8 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Verify toolkit setup")
-    parser.add_argument("--test", action="store_true", help="Run smoke tests (makes cloud GPU calls, costs ~$0.01)")
+    parser.add_argument("--test", action="store_true",
+                        help="Check remote services and run cloud GPU smoke tests (costs ~$0.01)")
     parser.add_argument("--json", action="store_true", help="Output as JSON")
     args = parser.parse_args()
 
@@ -381,7 +382,8 @@ def main():
         results["r2_test"] = r2_test
         if verbose:
             print(f"  Connectivity: {'[x]' if r2_test['ok'] else '[ ]'} {r2_test['detail']}")
-    print()
+    if verbose:
+        print()
 
     # 3. Modal
     modal_env = check_modal_env_vars()
@@ -392,7 +394,7 @@ def main():
         for t in modal_env:
             print(f"  {'[x]' if t['ok'] else '[ ]'} {t['name']}: {t['detail']}")
 
-    if shutil.which("modal"):
+    if args.test and shutil.which("modal"):
         modal_apps = check_modal_apps()
         results["modal_apps"] = modal_apps
         if verbose:
@@ -405,7 +407,8 @@ def main():
     if verbose and modal_configured < len(modal_env):
         print("  Deploy + fill .env: uv run tools/modal_setup.py <app> | --all "
               "(--sync-env if already deployed)")
-    print()
+    if verbose:
+        print()
 
     # 4. RunPod
     runpod_env = check_runpod_env_vars()
