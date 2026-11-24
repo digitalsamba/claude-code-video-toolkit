@@ -140,7 +140,7 @@ class CastTests(unittest.TestCase):
 class PaintedFaceTests(unittest.TestCase):
     """Reading a model's painted face (lib/blender/facepaint.py): plain numpy, no Blender needed."""
 
-    def painted_eye(self, wide=0.032, tall=0.018, iris=0.0095, covered=0.15):
+    def painted_eye(self, wide=0.032, tall=0.018, iris=0.0095, covered=0.15, iris_rgb=(0.32, 0.21, 0.15)):
         """A patch of a face with an eye painted on it, 0.2 mm a sample: skin, a white almond between two lid
         lines, a lash line over it, a brown iris with a dark pupil whose top the upper lid covers."""
         import numpy as np
@@ -155,9 +155,19 @@ class PaintedFaceTests(unittest.TestCase):
         P[opening] = (0.86, 0.84, 0.83)
         centre = tall / 2 + 2 * iris * covered - iris                        # the lid over `covered` of the iris
         r = np.hypot(x, z - centre)
-        P[opening & (r < iris)] = (0.32, 0.21, 0.15)
+        P[opening & (r < iris)] = iris_rgb
         P[opening & (r < 0.45 * iris)] = (0.04, 0.03, 0.03)
         return P
+
+    def test_a_blue_iris_is_read_as_iris_not_as_pupil_or_white(self):
+        """A bright blue iris and a pale grey-blue one: neither is dark, and the pale one is as light and as grey
+        as the white. Read by darkness alone the iris came out as the pupil, and a blink came down in blue."""
+        import facepaint
+        for rgb in ((0.25, 0.45, 0.75), (0.55, 0.62, 0.72)):
+            eye = facepaint.measure_eye(self.painted_eye(iris_rgb=rgb))
+            self.assertIsNotNone(eye, rgb)
+            self.assertAlmostEqual(eye['iris_r'], 0.0095, delta=0.0015, msg=rgb)
+            self.assertLess(eye['pupil_r'], 0.7 * eye['iris_r'], rgb)
 
     def test_a_painted_eye_is_read_for_its_size_its_iris_and_its_lid(self):
         import facepaint

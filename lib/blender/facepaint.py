@@ -175,6 +175,12 @@ def measure_eye(P, step=STEP):
     skin_l, skin_s = float(skin.mean()), float(_sat(skin))
     white = (S < 0.65 * skin_s) & (L > 0.62 * skin_l)
     dark = L < 0.55 * skin_l
+    # A bright blue or a pale grey-blue iris is not dark, and the pale one is as light and as grey as the white:
+    # read by darkness alone the iris was the pupil (1.7 mm for a 10 mm iris), or nothing with white beside it,
+    # and a blink came down in the iris's blue. What is clearly bluer than it is red is iris, never white or skin.
+    cool = (P[..., 2] > 1.12 * P[..., 0]) & (P[..., 2] - P[..., 0] > 0.08)
+    white &= ~cool
+    dark |= cool
     inner = np.zeros((h, w), dtype=bool)
     inner[int(0.2 * h):int(0.8 * h), int(0.2 * w):int(0.8 * w)] = True
     near_white = _dilate(white, 3)
