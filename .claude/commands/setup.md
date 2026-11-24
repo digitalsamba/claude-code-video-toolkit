@@ -583,13 +583,16 @@ lines = Path('.env').read_text().splitlines()
 Use `tools/verify_setup.py` throughout and at the end of setup:
 
 ```bash
-# Quick check (no cloud calls) — use at start to detect current state
+# Check local prerequisites and provider configuration
 uv run tools/verify_setup.py
 
-# With smoke tests (makes cloud GPU calls, ~$0.01) — use at end to verify
+# Also check Modal apps, SoulX weights, and R2 connectivity
+uv run tools/verify_setup.py --remote
+
+# Include the remote checks and run cloud GPU smoke tests (~$0.01)
 uv run tools/verify_setup.py --test
 
-# Machine-readable — use to programmatically check what's configured
+# Request JSON output in any mode
 uv run tools/verify_setup.py --json
 ```
 
