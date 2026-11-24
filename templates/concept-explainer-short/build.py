@@ -63,7 +63,7 @@ W, H, FPS = FMT["width"], FMT["height"], FMT["fps"]
 START_PAD = TIMING.get("startPad", 0.3)
 LEAD = TIMING.get("lead", 0.4)     # visual on screen before VO starts
 TAIL = TIMING.get("tail", 0.8)     # visual hold after VO ends
-XFADE = TIMING.get("xfade", 0.45)  # fade to black per scene edge
+XFADE = TIMING.get("xfade", 0.45)  # scene overlap and opening/closing fades
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 VIDEO_EXTS = {".mp4", ".mov", ".webm"}
@@ -375,9 +375,6 @@ def build() -> None:
     print("── audio-anchored timeline ──")
     for idx, s in enumerate(scenes):
         vo_dur = durations.get(s["id"]) or estimate_duration(s["text"])
-        # Scenes crossfade: from the second one on, the visual starts XFADE early and fades
-        # in over the previous scene's fade-out, so a join never dips through black (qc.py
-        # flagged a 0.5 s black gap at a dark-on-dark join when they ran back to back).
         overlap = XFADE if idx > 0 else 0.0
         content_start = cursor                     # where this scene's own time begins
         content_dur = LEAD + vo_dur + TAIL
@@ -398,9 +395,16 @@ def build() -> None:
                 print(f"     [missing {s['asset']} — placeholder card]")
             vis = ken_burns(placeholder_png(s, idx), scene_dur, zoom_in)
             zoom_in = not zoom_in
-        # the first scene is on screen from frame 0 (that frame is the cover on Shorts/Reels)
-        fx = [vfx.FadeOut(XFADE)] if idx == 0 and START_PAD == 0 else [vfx.FadeIn(XFADE), vfx.FadeOut(XFADE)]
-        clips.append(vis.with_start(scene_start).with_effects(fx))
+        if overlap > 0:
+            # Mask only the overlap so the incoming scene blends over the outgoing picture.
+            incoming = vis.subclipped(0, overlap).with_effects([vfx.CrossFadeIn(overlap)])
+            clips.append(incoming.with_start(scene_start))
+            vis = vis.subclipped(overlap)
+        elif idx == 0 and START_PAD > 0 and XFADE > 0:
+            vis = vis.with_effects([vfx.FadeIn(XFADE)])
+        if idx == len(scenes) - 1 and XFADE > 0:
+            vis = vis.with_effects([vfx.FadeOut(XFADE)])
+        clips.append(vis.with_start(content_start))
 
         ov = s.get("overlay") or {}
         if idx == 0 and title_card and title_card.get("text"):

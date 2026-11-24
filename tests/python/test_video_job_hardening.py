@@ -528,6 +528,36 @@ class TestSmallSeams(Isolated):
         # the ceiling holds the file under the cap with the audio on top
         self.assertLess((kbps + 192) * 50 / 8 / 1000, 9.5)
 
+    def test_explainer_transition_blends_both_scenes(self):
+        spec_ = importlib.util.spec_from_file_location(
+            "ces_build", ROOT / "templates" / "concept-explainer-short" / "build.py")
+        build = importlib.util.module_from_spec(spec_)
+        spec_.loader.exec_module(build)
+        (self.tmp / "scenes.json").write_text(json.dumps({"scenes": [
+            {"id": "01", "slug": "first", "text": "First scene"},
+            {"id": "02", "slug": "second", "text": "Second scene"},
+        ]}))
+        (self.tmp / "vo_durations.json").write_text('{"01": 2, "02": 2}')
+
+        colors = iter([(200, 0, 0), (0, 0, 200)])
+
+        def scene_clip(_path, duration, _zoom_in):
+            return build.ColorClip((16, 16), color=next(colors), duration=duration)
+
+        with (
+            mock.patch.multiple(build, HERE=self.tmp, W=16, H=16, START_PAD=0, LEAD=0, TAIL=0, XFADE=0.5),
+            mock.patch.object(build, "placeholder_png", return_value="unused.png"),
+            mock.patch.object(build, "ken_burns", side_effect=scene_clip),
+            mock.patch.object(build.CompositeVideoClip, "write_videofile", autospec=True) as write,
+        ):
+            build.build()
+
+        final = write.call_args.args[0]
+        self.assertEqual(tuple(final.get_frame(1.49)[0, 0]), (200, 0, 0))
+        self.assertEqual(tuple(final.get_frame(1.75)[0, 0]), (100, 0, 100))
+        self.assertEqual(tuple(final.get_frame(2.0)[0, 0]), (0, 0, 200))
+        self.assertAlmostEqual(final.duration, 4.4)
+
     @unittest.skipIf(os.name == "nt", "process groups are POSIX")
     def test_cancel_stops_the_tool_the_worker_is_running(self):
         code = ("import subprocess,sys,time\n"
