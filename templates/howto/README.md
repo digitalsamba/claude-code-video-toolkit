@@ -139,11 +139,15 @@ export const form = (cue: Cue): ScreenProps => {
   in `short`, it follows the cursor at `follow` (default 3, about 30 px for 16 px text), holding still for small
   moves. When one thing is wider than the box (a long link beside its label), give `short` a camera at a lower
   zoom: the box shows `920 / (0.64 x zoom)` canvas pixels across.
+- **A page no click leads to is a new scene.** When the narration moves on to a page the cursor did not open
+  (the call's page after saving, a dashboard after sign-up), end the scene and start another with its own id
+  and address: the cut does the move. A faked click to get there shows a step the product doesn't have.
 - **Clicks are heard.** Each frame in `clicks` plays `public/audio/sfx/click.wav` (`sounds: false` turns it off).
 - **People.** If the screen shows people who are not real, set `note: 'People shown are AI-generated'`. It sits
   over the picture's corner; `{ text, until }` takes it away on a cue when the people leave the screen.
 
-Before rendering, render a still at each click frame and look: a target is easily 20 px off. Then
+Before rendering, look at a still at each click frame: a target is easily 20 px off.
+`uv run scripts/stills.py --at "form@schedule a call@0,form@give@0"` takes stills on cues and tiles them. Then
 `qc.py --layout` on the composition: the window is marked `data-qc="product"`, so the product's own small text is
 reported apart from the video's.
 
@@ -177,6 +181,8 @@ export const EPISODES: Episode[] = [EP1, EP2];     // each { id: 'ep1', ... }
 | `scripts/timeline.mjs` | Prints that timeline as JSON: every segment's start frame, every chapter's | Keep |
 | `scripts/chapters.py` | YouTube chapters from the timeline, to `out/publish/chapters.txt` | Keep |
 | `scripts/render-shorts.mjs` | Renders a Short per chapter (`npm run render:shorts`), stops on a failure | Keep |
+| `scripts/level.py` | Levels every narration phrase to -16 LUFS, so no line jumps out | Keep |
+| `scripts/stills.py` | Stills of every scene, or at chosen cues, tiled into one sheet before a render | Keep |
 | `scripts/accent.py` | Screens the narration for words a British voice said with an American r | Keep |
 | `src/howto/` | Engine: timeline, scene kinds, the mark and track, theme | Keep |
 | `src/screens/example.tsx` | A `screen` scene and its kit to copy from, previewed as `Screen-example` | Delete once yours are in |
@@ -194,12 +200,14 @@ mkdir -p projects && cp -r templates/howto projects/my-episode && cd projects/my
 rm -rf node_modules out public/audio/scenes/* && npm install  # not the pilot's renders, narration or packages
 # 1. write one sentence per file in public/audio/scenes/ (00a_open.txt, 01a_free.txt, ...), then lint it
 uv run ../../tools/copy_lint.py public/audio/scenes/*.txt
-# 2. voice it, word-time it, lay it out
+# 2. voice it, level it, word-time it, lay it out
 uv run ../../tools/voiceover.py --brand video-toolkit --scene-dir public/audio/scenes --json
+uv run scripts/level.py                                        # every phrase to -16 LUFS
 uv run ../../tools/captions.py public/audio/scenes
 uv run scripts/timing.py
-# 3. edit src/episode.ts (scenes and cues) and facts.json; preview
+# 3. edit src/episode.ts (scenes and cues) and facts.json; preview, and look at every scene before a render
 npm run studio
+uv run scripts/stills.py                                       # out/stills/Episode-late.jpg
 # 4. render, check, normalise
 npm run render && npm run render:shorts
 uv run ../../tools/qc.py --render out/episode.mp4 --fix        # writes out/episode.loudnorm.mp4 at -14 LUFS
