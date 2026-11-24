@@ -141,6 +141,10 @@ uv run scripts/migrate_to_kiro.py --force
 
 See [docs/kiro.md](docs/kiro.md) for what it installs, how it achieves Claude Code-parity, and how to remove it.
 
+## Using with OpenCode
+
+[OpenCode](https://opencode.ai/) can write an explainer spec and call the toolkit's video job tools over MCP. The [OpenCode setup guide](docs/opencode.md) shows how to estimate and inspect jobs using an open-weights model.
+
 ## Design sources
 
 **Plug in your own design skill, or use ours.** `/design` and `/scene-review` take their visual direction from the
