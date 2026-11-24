@@ -1,0 +1,6 @@
+Create a 35 to 45 second landscape explainer for someone who has just started cycling. Explain how a lower gear makes climbing a hill easier. Start with a moment a beginner will recognize. Explain that in a lower gear, one pedal turn moves the bike less distance, so it takes less force at the pedals, and that the rider trades speed for an effort they can sustain. End with one specific tip about shifting before the hill while pedaling lightly.
+
+Write four distinct scenes with 82 to 94 narrated words in total. Narration should sound natural when read aloud. Use a short, legible headline and an optional very short subline per scene. Avoid generic filler, em dashes, promises, and quotes that require attribution. The video uses the toolkit's text scenes, shared local backgrounds, and shared voice and caption settings supplied by the operator.
+
+Return a single valid JSON object, with no Markdown or surrounding commentary. Write the narration and screen copy yourself. Use this shape with four scenes:
+{"title":"Short title","scenes":[{"slug":"short-lowercase-slug","text":"Spoken narration for this scene.","visual":{"kind":"text","headline":"Short headline","subline":"Short supporting text"}}]}
