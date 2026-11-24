@@ -1,0 +1,161 @@
+{
+  "claude": {
+    "title": "Why Low Gears Make Hills Easier",
+    "duration_s": 39.3,
+    "audio_s": 38.15,
+    "words": 92,
+    "caption_words": 92,
+    "captions": [
+      {
+        "scene": "01",
+        "words": 23,
+        "voice_s": 8.57,
+        "caption_end_s": 8.16
+      },
+      {
+        "scene": "02",
+        "words": 25,
+        "voice_s": 9.33,
+        "caption_end_s": 8.92
+      },
+      {
+        "scene": "03",
+        "words": 23,
+        "voice_s": 7.81,
+        "caption_end_s": 7.36
+      },
+      {
+        "scene": "04",
+        "words": 21,
+        "voice_s": 8.4,
+        "caption_end_s": 8.0
+      }
+    ],
+    "plan_wall_s": 13.95,
+    "render_wall_s": 323.19,
+    "estimated_usd": 0.1019,
+    "recorded_media_usd": 0.1014,
+    "cap_usd": 0.15,
+    "qc": {
+      "passed": true,
+      "errors": 0,
+      "warnings": 2
+    },
+    "steps_s": {
+      "voiceover": 13.5,
+      "visuals": 3.1,
+      "captions": 15.4,
+      "build": 279.0,
+      "qc": 9.3,
+      "publish": 0.9
+    },
+    "bytes": 8061059,
+    "sha256": "6e035c019c520dbeaad03e0968c7bb3cb24931d9c07946cf370c4a34ef7c7716"
+  },
+  "codex": {
+    "title": "Why Lower Gears Help",
+    "duration_s": 37.9,
+    "audio_s": 36.734,
+    "words": 88,
+    "caption_words": 88,
+    "captions": [
+      {
+        "scene": "01",
+        "words": 21,
+        "voice_s": 8.13,
+        "caption_end_s": 7.7
+      },
+      {
+        "scene": "02",
+        "words": 23,
+        "voice_s": 8.3,
+        "caption_end_s": 7.86
+      },
+      {
+        "scene": "03",
+        "words": 24,
+        "voice_s": 8.74,
+        "caption_end_s": 8.32
+      },
+      {
+        "scene": "04",
+        "words": 20,
+        "voice_s": 7.53,
+        "caption_end_s": 7.12
+      }
+    ],
+    "plan_wall_s": 16.73,
+    "render_wall_s": 211.08,
+    "estimated_usd": 0.0995,
+    "recorded_media_usd": 0.099,
+    "cap_usd": 0.15,
+    "qc": {
+      "passed": true,
+      "errors": 0,
+      "warnings": 0
+    },
+    "steps_s": {
+      "voiceover": 6.5,
+      "visuals": 0.6,
+      "captions": 7.2,
+      "build": 183.4,
+      "qc": 8.2,
+      "publish": 0.9
+    },
+    "bytes": 7900130,
+    "sha256": "1ea0ea6beb8f7de344f20450e5be7ccb57720eb682006efa659b26f339892bb4"
+  },
+  "opencode": {
+    "title": "Climbing in a lower gear",
+    "duration_s": 37.133,
+    "audio_s": 35.991,
+    "words": 84,
+    "caption_words": 84,
+    "captions": [
+      {
+        "scene": "01",
+        "words": 20,
+        "voice_s": 7.03,
+        "caption_end_s": 6.66
+      },
+      {
+        "scene": "02",
+        "words": 22,
+        "voice_s": 8.68,
+        "caption_end_s": 8.24
+      },
+      {
+        "scene": "03",
+        "words": 20,
+        "voice_s": 7.99,
+        "caption_end_s": 7.6
+      },
+      {
+        "scene": "04",
+        "words": 22,
+        "voice_s": 8.24,
+        "caption_end_s": 7.82
+      }
+    ],
+    "plan_wall_s": 30.83,
+    "render_wall_s": 290.2,
+    "estimated_usd": 0.0993,
+    "recorded_media_usd": 0.0989,
+    "cap_usd": 0.15,
+    "qc": {
+      "passed": true,
+      "errors": 0,
+      "warnings": 2
+    },
+    "steps_s": {
+      "voiceover": 5.6,
+      "visuals": 1.1,
+      "captions": 8.1,
+      "build": 259.7,
+      "qc": 11.3,
+      "publish": 1.0
+    },
+    "bytes": 7178912,
+    "sha256": "1b7a7c75c9d38883505e6c9863cd0d6f229438326cf983588ad401c2d063b5d0"
+  }
+}
