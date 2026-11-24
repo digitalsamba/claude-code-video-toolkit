@@ -22,7 +22,7 @@ templates, components, their status) in [`toolkit-registry.json`](toolkit-regist
 
 | What | Where | State |
 |------|-------|-------|
-| Tutorials for a product: a `screen` scene kind in the `howto` template, `Stage` changes, a brand's house style | branch | Built, waiting on feedback |
+| Tutorials for a product: a `screen` scene kind in the `howto` template, `Stage` changes, a brand's house style | `feat/howto-screens` | Built on a sample tutorial series, with an example screen and the series' scripts brought in; waiting on review |
 | Thai explainers: a script skill and a `font` and caption language for `concept-explainer-short` | #253 | Split requested |
 | Kit design layer (fonts, layouts, motif, logo) | #188 | Parked draft |
 | Working in other coding agents | #240 | Discussion. The name stays; first step is the same brief in Claude Code and Codex, compared |
@@ -123,6 +123,11 @@ templates for two people. Not yet: motion capture clips as verbs.
 
 ### Platform and housekeeping
 
+- [ ] **`qc.py --project` reads `howto` projects.** Today it stops at once ("no Remotion config or scenes.json
+  found"): a howto episode is `src/episode.ts` with `src/timing.json`, not a scene config. It should check that
+  every phrase in `public/audio/scenes/` (or `<id>/` in a series) has its captions and a place in `timing.json`,
+  that each scene in the episode has narration, the assets the episode names, and then run `--layout` on the
+  episode's compositions. Found on a sample tutorial series, which had only layout and render QC.
 - [ ] Qwen3-TTS as the default voiceover provider instead of ElevenLabs.
 - [ ] Publish destinations beyond YouTube (LinkedIn, X, an R2 CDN).
 - [ ] Multi-format output (WebM, GIF).
