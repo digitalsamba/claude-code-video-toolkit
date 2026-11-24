@@ -328,7 +328,7 @@ in the same container are ~40% faster per chunk.
 **"SoulX weights are missing from the soulx-weights volume".**
 The app was deployed before `populate_weights` ran. Run it once (see
 [Setup](#setup)) and retry — no redeploy needed, a warm container picks the
-weights up on the next request. `uv run tools/verify_setup.py` reports this too.
+weights up on the next request. `uv run tools/verify_setup.py --remote` checks for missing weights.
 
 **CUDA OOM.**
 Lower `--size`, or redeploy the app on a larger GPU. Not seen at 768x432 or

@@ -12,7 +12,7 @@ import verify_setup
 
 
 class VerifySetupTests(unittest.TestCase):
-    def test_remote_checks_require_test_flag(self):
+    def test_local_remote_and_smoke_test_modes(self):
         config = {
             "MODAL_QWEN3_TTS_ENDPOINT_URL": "https://example.test/tts",
             "MODAL_FLUX2_ENDPOINT_URL": "https://example.test/flux",
@@ -20,11 +20,13 @@ class VerifySetupTests(unittest.TestCase):
             "R2_ACCESS_KEY_ID": "test-key",
             "R2_SECRET_ACCESS_KEY": "test-secret",
         }
-        for remote in (False, True):
-            with self.subTest(remote=remote):
-                argv = ["verify_setup.py", "--json"]
-                if remote:
-                    argv.append("--test")
+        for flags, remote, smoke in (
+            ([], False, False),
+            (["--remote"], True, False),
+            (["--test"], True, True),
+        ):
+            with self.subTest(flags=flags):
+                argv = ["verify_setup.py", "--json", *flags]
                 stdout = io.StringIO()
                 with (
                     patch.object(sys, "argv", argv),
@@ -49,15 +51,15 @@ class VerifySetupTests(unittest.TestCase):
                 self.assertEqual(remote, "modal_apps" in result)
                 self.assertEqual(remote, "soulx_weights" in result)
                 self.assertEqual(remote, "r2_test" in result)
-                self.assertEqual(remote, "test_qwen3_tts" in result)
-                self.assertEqual(remote, "test_flux2" in result)
+                self.assertEqual(smoke, "test_qwen3_tts" in result)
+                self.assertEqual(smoke, "test_flux2" in result)
                 if remote:
                     apps.assert_called_once_with()
                     weights.assert_called_once_with()
                     r2.assert_called_once_with()
-                    self.assertEqual([call("qwen3_tts", "modal"), call("flux2", "modal")], cloud.call_args_list)
                 else:
                     apps.assert_not_called()
                     weights.assert_not_called()
                     r2.assert_not_called()
-                    cloud.assert_not_called()
+                expected_smoke_calls = [call("qwen3_tts", "modal"), call("flux2", "modal")] if smoke else []
+                self.assertEqual(expected_smoke_calls, cloud.call_args_list)
