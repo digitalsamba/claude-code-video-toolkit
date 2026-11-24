@@ -12,6 +12,10 @@ All notable changes to claude-code-video-toolkit.
 
 - **`tools/manim_render.py`, `lib/manim` and two examples** (optional and experimental, needs Manim): a Manim scene file rendered as a clip at 30 fps, opaque or transparent for Remotion. Scenes get narration cues from a captions file (a step that overruns its cue fails the render), a brand's colours and mark, loops that close on themselves, and notes of when each audible thing happens. `examples/manim-ident` draws two idents from a brand's SVG with sound placed from the scene; `examples/manim-diagram` builds an architecture diagram on the narration's words.
 
+- **Tutorials about your own product with `templates/howto`**: a `screen` scene shows a product's screens rebuilt from its source in a browser window, with the cursor, clicks, typing, page changes and camera on narration cues, and a 9:16 crop that follows the cursor in a Short. `src/screens/example.tsx` is one to copy from. A series can keep several episodes in one project (`Episode-<id>`, `render:shorts -- --episode`, `chapters.py --episode`), and colours, heading weight and title size come from the brand. `scripts/level.py` levels every narration phrase, and `scripts/stills.py` shows every scene, or the frame on a cue, before a render.
+- **`Stage`** shows an address that changes inside a scene, fits a box in a narrow frame (`viewWidth`, `viewHeight`) and has `followCamera`; **`visitPath`** builds a cursor path and its clicks from cues.
+- **A brand's house style**: `brands/<name>/copy.md` to read and `copy.json` that `copy_lint.py --brand` enforces (spellings, product names, words it avoids, claims to check). The Digital Samba brand is read again from its site, logo and app: blue, not orange.
+
 ### Docs
 
 - **`docs/manim.md`**: what a first session with Manim found: installing it (and what Homebrew does to ffmpeg), timing to narration, transparent clips into Remotion, vertical frames, idents, sound, a flat mascot, looping backgrounds and 3D geometry.
