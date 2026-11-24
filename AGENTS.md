@@ -12,7 +12,8 @@ with demo links.
 
 ## Codex setup
 
-If you're using this repo from Codex, run the migration script once to install the toolkit's skills under `~/.codex/skills/`:
+Codex can use the toolkit instructions and skills directly from this checkout. If you want the skills and
+command wrappers available across workspaces, install them under `~/.codex/skills/`:
 
 ```bash
 uv run scripts/migrate_to_codex.py --force
@@ -27,3 +28,16 @@ uv run scripts/migrate_to_codex.py --reset
 ```
 
 See [README.md § Using with Codex](./README.md#using-with-codex) for details.
+
+If `uv run` fails because the Codex sandbox blocks its cache, use `uv cache dir` to find the cache and
+allow that directory in the sandbox's writable roots. If you can't change those settings, run from the
+toolkit root and use a cache under the git-ignored `scratch/` directory:
+
+```bash
+uv run --cache-dir scratch/uv-cache tools/video_job.py catalog
+```
+
+After installing the Python dependencies with `uv sync`, you can check local rendering without service
+credentials or network access. From [examples/quick-spot](./examples/quick-spot/README.md), run
+`uv run build.py` to render the silent `out.mp4`. If you use a workspace cache, point uv at the same
+cache when installing dependencies and running the example.
