@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import warnings
 from pathlib import Path
 
 ROOT = Path(os.environ.get("MANIM_TOOLKIT_ROOT") or Path(__file__).resolve().parents[2])
@@ -25,20 +26,26 @@ class Voice:
         captions = captions or os.environ.get("MANIM_TOOLKIT_CAPTIONS")
         if not captions:
             raise FileNotFoundError("Voice() needs a .captions.json: pass a path, or render with --captions")
-        words = json.loads(Path(captions).read_text())
+        words = json.loads(Path(captions).read_text(encoding="utf-8-sig"))
         self.words = [(_norm(w["text"]), w["startMs"] / 1000, w["endMs"] / 1000) for w in words if _norm(w["text"])]
         self.offset = offset
         self.end = (self.words[-1][2] if self.words else 0.0) + offset
 
-    def cue(self, phrase: str, nth: int = 1, lead: float = 0.0) -> float:
+    def cue(self, phrase: str, nth: int | None = None, lead: float = 0.0) -> float:
         want = _norm(phrase).split()
         if not want:
             raise KeyError("cue needs a phrase")
         said = [w[0] for w in self.words]
         hits = [self.words[i][1] for i in range(len(said) - len(want) + 1) if said[i:i + len(want)] == want]
-        if len(hits) < nth:
-            raise KeyError(f"cue {phrase!r} (#{nth}) is not in the narration ({len(hits)} found)")
-        return hits[nth - 1] + self.offset - lead
+        if nth is None and len(want) == 1 and len(hits) > 1:
+            warnings.warn(f"cue {phrase!r} has {len(hits)} matches. Using the first. "
+                          "Pass nth= or choose a longer phrase.", stacklevel=2)
+        occurrence = 1 if nth is None else nth
+        if type(occurrence) is not int or occurrence < 1:
+            raise ValueError("nth must be a positive integer")
+        if len(hits) < occurrence:
+            raise KeyError(f"cue {phrase!r} (#{occurrence}) is not in the narration ({len(hits)} found)")
+        return hits[occurrence - 1] + self.offset - lead
 
 
 class Brand:
@@ -61,7 +68,7 @@ class Brand:
         raise KeyError(f"brand {self.name!r} has no colour {key!r} (it has {', '.join(sorted(self.colors))})")
 
     def mark(self, variant: str = "mark") -> Path:
-        """brands/<name>/assets/mark.svg, or mark-on-dark / mark-white for the other grounds."""
+        """Return the SVG path for SVGMobject(str(brand.mark()))."""
         path = self.dir / "assets" / f"{variant}.svg"
         if not path.exists():
             raise FileNotFoundError(f"brand {self.name!r} has no {path.name}")
