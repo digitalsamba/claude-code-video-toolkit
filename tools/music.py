@@ -17,6 +17,8 @@ import os
 import sys
 from pathlib import Path
 
+from media_spend import record_spend
+
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 
@@ -166,6 +168,7 @@ def main():
     with open(output_path, "wb") as f:
         for chunk in music:
             f.write(chunk)
+    record_spend("music.py", "elevenlabs", "audio_seconds", args.duration)
 
     # Get actual duration if ffprobe available
     actual_duration = get_audio_duration(str(output_path))

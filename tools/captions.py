@@ -47,7 +47,9 @@ import tempfile
 from fractions import Fraction
 from pathlib import Path
 
+from media_spend import record_scribe
 from pacing import spoken_text
+from sync_timing import get_audio_duration
 from win_encoding import ensure_utf8_output
 
 AUDIO_EXTS = (".mp3", ".wav", ".m4a")
@@ -73,6 +75,7 @@ def transcribe_scribe(audio: Path, api_key: str, model_id: str, language: str | 
         result = client.speech_to_text.convert(
             file=f, model_id=model_id, tag_audio_events=False, **kwargs,
         )
+    record_scribe("captions.py", get_audio_duration(str(audio)), model_id)
     return [{"w": w.text.strip(), "s": w.start, "e": w.end}
             for w in result.words if w.type == "word" and w.text.strip()]
 

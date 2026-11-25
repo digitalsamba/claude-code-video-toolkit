@@ -18,6 +18,8 @@ import time
 from contextlib import contextmanager
 
 import requests
+
+from media_spend import record_spend
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -315,10 +317,11 @@ def call_cloud_endpoint(
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
-    # Print cost estimate
-    if progress and elapsed > 0 and not result.get("error"):
+    if elapsed > 0 and not result.get("error"):
         cost = _estimate_cost(provider, tool_name, elapsed, result.get("model"))
-        if cost is not None:
+        record_spend(f"{tool_name}.py", provider, "request_seconds", round(elapsed, 3),
+                     cost_usd=cost, elapsed_s=round(elapsed, 3), model=result.get("model"))
+        if progress and cost is not None:
             progress.event("cost", f"Est. cost: ${cost:.4f} ({elapsed:.0f}s on {provider})",
                            level="dim")
 

@@ -32,6 +32,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from media_spend import record_spend
+
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 
@@ -193,6 +195,7 @@ def generate_music(
         with open(output_path, "wb") as f:
             for chunk in music:
                 f.write(chunk)
+        record_spend("addmusic.py", "elevenlabs", "audio_seconds", duration_seconds)
 
         return True
     except Exception as e:

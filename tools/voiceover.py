@@ -49,6 +49,7 @@ from config import (
     get_voice_id,
     load_brand_voice_config,
 )
+from media_spend import record_tts
 from win_encoding import ensure_utf8_output
 
 # ElevenLabs model ids the CLIs accept (voiceover/redub TTS, redub/align_captions
@@ -528,6 +529,7 @@ def generate_dialogue_audio(
 
             if with_timestamps:
                 res = client.text_to_dialogue.convert_with_timestamps(**request)
+                record_tts("voiceover.py", len(chunk), model)
                 path.write_bytes(base64.b64decode(res.audio_base_64))
                 align = res.alignment or res.normalized_alignment
                 if align is None:
@@ -543,6 +545,7 @@ def generate_dialogue_audio(
                 offset += get_audio_duration(str(path)) or chunk_end
             else:
                 save(client.text_to_dialogue.convert(**request), str(path))
+                record_tts("voiceover.py", len(chunk), model)
             chunk_paths.append(path)
 
         if tmp_dir is not None:
@@ -601,6 +604,7 @@ def generate_single_audio(
             ),
         )
         save(audio, str(output_path))
+        record_tts("voiceover.py", len(script), model)
 
     duration = get_audio_duration(str(output_path))
 

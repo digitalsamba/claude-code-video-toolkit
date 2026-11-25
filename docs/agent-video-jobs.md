@@ -199,6 +199,16 @@ clips came to $0.111 each (receipts $0.083) and FLUX images to about a cent each
 now $0.12 a clip and $0.012 an image. A job's `actual_usd` is summed from receipts, so it still reads a little
 under the bill.
 
+Successful standalone provider requests also append receipts to this log. The default follows
+`MEDIA_SPEND_LOG`, then the agent workspace's `logs/`, then the toolkit's `logs/`. A narration
+receipt records the provider and character count. Transcription, image and cloud GPU receipts
+record the relevant audio seconds, image count or request seconds.
+
+Standalone receipts include `provider`, `unit`, `units` and `cost_source`. A dollar estimate uses
+the toolkit rate for that provider. An unpriced request has `cost_usd: null` so its usage is still
+visible. A worker owns the receipts for its subprocesses. Other callers that already write the
+same receipts can set `MEDIA_SPEND_MANAGED=1` for those subprocesses.
+
 ## Job state
 
 `jobs/<id>/job.json` is the source of truth (`VIDEO_JOBS_DIR` moves the directory):
