@@ -32,3 +32,22 @@ over 0.6 seconds, and `--max-words 7`. For an existing caption JSON, export offl
 transcribing again: `uv run tools/captions.py voiceover.captions.json --srt --vtt`.
 Outputs overwrite atomically. Each subtitle uses the same audio-relative timeline as its JSON;
 scene captions need offsets before use as subtitles for a complete render.
+
+## Word cues on joined audio
+
+Transcribe the sentence clips individually when animating on a spoken word. Whisper can put the
+first word of a sentence in the preceding silence when given the joined file.
+
+```bash
+uv run --extra whisper tools/captions.py audio/phrases --engine whisper \
+    --joined audio/narration.captions.json --gap-ms 250
+```
+
+Pass the same sentence clips in the same order as the audio edit. A directory is read in filename
+order, so use names such as `01-intro.wav` and `02-example.wav`. `--gap-ms` is the silence between
+consecutive clips and defaults to zero. Use the same silence when joining the decoded audio.
+
+The CLI shifts each clip's word timings using decoded sample lengths before rounding to milliseconds.
+This keeps the cues on the joined clock when the clips are placed end to end with the chosen gap.
+The timing of a word within its clip comes from the transcriber. `--srt` and `--vtt` export the joined
+timeline too. If any clip fails, the command leaves the previous joined caption file in place.

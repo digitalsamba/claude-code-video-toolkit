@@ -785,13 +785,15 @@
         "script": "Narration text to align to (default: sibling <name>.txt); --no-script burns the raw transcript",
         "srt": "Also write <name>.srt, preserving plain text",
         "vtt": "Also write <name>.vtt with WebVTT escaping",
-        "max-words": "Upper bound per cue, 1-30, default 7; split at sentence ends and gaps over 0.6s"
+        "max-words": "Upper bound per cue, 1-30, default 7; split at sentence ends and gaps over 0.6s",
+        "joined": "Output FILE.captions.json for the joined timeline, transcribing each source clip individually",
+        "gap-ms": "Silence in milliseconds between clips with --joined, default 0"
       },
       "envVars": [
         "ELEVENLABS_API_KEY"
       ],
       "created": "2026-10-12",
-      "updated": "2026-11-07"
+      "updated": "2026-11-25"
     },
     "flux2": {
       "path": "tools/flux2.py",
