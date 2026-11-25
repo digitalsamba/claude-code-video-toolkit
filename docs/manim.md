@@ -26,9 +26,9 @@ Manim itself and:
 
 | Name | What it is for |
 |------|----------------|
-| `ToolkitScene`, `ToolkitScene3D` | `self.at(seconds)` waits for a narration cue and fails the render when the scene is already past it; `self.ev("key")` notes when something audible happens |
+| `ToolkitScene`, `ToolkitScene3D`, `ToolkitMovingCameraScene` | `self.at(seconds)` waits for a narration cue and fails the render when the scene is already past it. `self.ev("key")` records an event time for sound. |
 | `Voice()` | Word timings from `--captions`: `V.cue("the cache", nth=2, lead=0.35)` in seconds, `V.end` |
-| `Brand()` | `--brand NAME`: `B.c("primary")` for a colour, `B.mark()` for the SVG |
+| `Brand()` | `--brand NAME` selects colours and marks. `B.c("primary")` gives a colour. `B.mark()` returns the SVG path for `SVGMobject(str(B.mark()))`. |
 | `Loop` | `self.run(build)` plays `build(phase)` for phase 0 to 1, for a background that loops without a jump |
 | `PORTRAIT` | True for a portrait size, where the frame is 9 by 16 units |
 
@@ -91,12 +91,30 @@ self.play(FadeIn(cache), run_time=0.8)
 `V.cue("phrase", nth=2)` finds the second time a phrase is said and raises when the phrase is not in the
 narration, the same rule as `cue()` in `lib/components/cues.ts`.
 
+- **Repeated words.** A one-word cue also matches inside longer phrases. `V.cue("out")` warns if it has several
+  hits and uses the first. Choose more words around the cue, or pass `nth=1`, `nth=2` and so on explicitly.
 - **Refuse to go back in time.** An animation that runs longer than the gap to the next cue would push everything
   after it late, silently. Raising in `at()` turns that into a failed render that names the cue.
 - **Start before the word.** A shape that begins to appear on its word lands after it. A `lead` of 0.25 to 0.5 s
   put the finished shape on the word.
 - **Free word timings.** The test narration was voiced with the operating system's voice and timed with the local
   whisper engine (`captions.py --engine whisper`), so a timing test costs nothing. It is a scratch voice only.
+
+Use `ToolkitMovingCameraScene` when the frame needs to follow a diagram on a word. It has the same `at()` and `ev()` methods.
+
+```python
+from toolkit_manim import *
+
+
+class FollowDiagram(ToolkitMovingCameraScene):
+    def construct(self):
+        voice = Voice()
+        box = RoundedRectangle().shift(RIGHT * 2)
+        self.add(box)
+        self.at(voice.cue("the cache"))
+        self.ev("camera_pan")
+        self.play(self.camera.frame.animate.move_to(box), run_time=0.4)
+```
 
 ## Into Remotion
 
@@ -119,6 +137,14 @@ narration, the same rule as `cue()` in `lib/components/cues.ts`.
 
 ## Look
 
+- **Anchor arrows on the box itself.** An empty `Text("")` may sit at the origin and pull its group's bounds there.
+  Use `box.get_right()` as the arrow's start or reserve an empty label slot with an invisible `Dot` at its intended position.
+- **Set the label's draw order.** Animating a rectangle from a group can bring it above the label. Set the label's
+  `z_index` above the box with `label.set_z_index(box.z_index + 1)` and check a frame after the animation.
+- **Keep a row of words on one baseline.** Build the row as one `Text` and style or animate its parts. Arranging separate
+  `Text` objects aligns their bounds, which shift with descenders.
+- **Older examples use names 0.22.1 lacks.** `GrowFromBottom` raises a `NameError`; write `GrowFromEdge(obj, DOWN)`
+  (and `UP`, `LEFT`, `RIGHT` for the other edges). An agent's second render failed on it.
 - **The defaults are not ours.** Manim starts on black with its own colours. Set `config.background_color` and
   pass the brand's hex values; `Text(..., font="Helvetica Neue")` takes any installed font by name. A font that
   is not installed falls back without an error, so a render on another machine can change its type silently.

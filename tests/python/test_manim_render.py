@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
@@ -38,6 +39,14 @@ class CueTests(unittest.TestCase):
 
     def test_punctuation_and_case_are_ignored(self):
         self.assertAlmostEqual(self.voice.cue('CACHE', nth=2), 1.42)
+
+    def test_a_repeated_word_warns_until_the_occurrence_is_explicit(self):
+        with self.assertWarnsRegex(UserWarning, '2 matches'):
+            self.assertAlmostEqual(self.voice.cue('cache'), 0.72)
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            self.assertAlmostEqual(self.voice.cue('cache', nth=1), 0.72)
+            self.assertAlmostEqual(self.voice.cue('cache', nth=2), 1.42)
 
     def test_lead_starts_before_the_word(self):
         self.assertAlmostEqual(self.voice.cue('again', lead=0.3), 1.42)
@@ -112,6 +121,24 @@ class DoctorTests(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which('manim') and shutil.which('ffmpeg'), 'Manim is optional and not installed')
 class RenderTests(unittest.TestCase):
+    def test_moving_camera_can_wait_for_a_narration_cue(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            scene = directory / 'follow.py'
+            scene.write_text('from toolkit_manim import *\nclass Follow(ToolkitMovingCameraScene):\n'
+                             '    def construct(self):\n'
+                             '        box = Square().shift(RIGHT * 2)\n'
+                             '        self.add(box)\n'
+                             '        self.at(Voice().cue("the cache", nth=2))\n'
+                             '        self.ev("pan")\n'
+                             '        self.play(self.camera.frame.animate.move_to(box), run_time=0.4)\n', encoding='utf-8')
+            out = directory / 'follow.mp4'
+            self.assertEqual(manim_render.main(['render', str(scene), 'Follow', '--captions', str(captions(directory)),
+                                                '--size', '480x270', '--out', str(out)]), 0)
+            event, = json.loads(out.with_suffix('.events.json').read_text(encoding='utf-8'))
+            self.assertEqual(event['what'], 'pan')
+            self.assertAlmostEqual(event['at'], 1.32, delta=1 / 30)
+
     def test_the_typed_ident_renders_with_its_events(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / 'typed.mp4'

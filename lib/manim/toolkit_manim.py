@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 
 from manim import *  # noqa: F401,F403
-from manim import Scene, ThreeDScene, ValueTracker, always_redraw, config, linear
+from manim import MovingCameraScene, Scene, ThreeDScene, ValueTracker, always_redraw, config, linear
 
 from core import Brand, Voice, frame_size  # noqa: F401
 
@@ -52,6 +52,10 @@ class ToolkitScene(_Toolkit, Scene):
 
 class ToolkitScene3D(_Toolkit, ThreeDScene):
     pass
+
+
+class ToolkitMovingCameraScene(_Toolkit, MovingCameraScene):
+    """Move the camera with access to the same narration cues and sound events."""
 
 
 class Loop(ToolkitScene):
