@@ -131,7 +131,8 @@ VERBATIM_NAMES = {"ofl.txt", "license.txt", "licence.txt", "license.md", "licenc
 
 def added_lines(ref: str, path: Path) -> set[int]:
     """Line numbers in the working copy of `path` that are new since `ref`."""
-    out = subprocess.run(["git", "diff", "-U0", ref, "--", str(path)], capture_output=True, text=True).stdout
+    out = subprocess.run(["git", "diff", "-U0", ref, "--", str(path)], capture_output=True,
+                         encoding="utf-8", errors="replace").stdout
     lines: set[int] = set()
     for m in re.finditer(r"^@@ -\S+ \+(\d+)(?:,(\d+))? @@", out, re.M):
         start, count = int(m.group(1)), int(m.group(2) or 1)
@@ -140,15 +141,15 @@ def added_lines(ref: str, path: Path) -> set[int]:
 
 
 def changed_files(ref: str, paths: list[Path]) -> list[Path]:
-    cmd = ["git", "diff", "--name-only", "--diff-filter=AM", ref, "--"] + [str(p) for p in paths]
-    names = subprocess.run(cmd, capture_output=True, text=True).stdout.split()
+    cmd = ["git", "diff", "--name-only", "-z", "--diff-filter=AM", ref, "--"] + [str(p) for p in paths]
+    names = subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace").stdout.split("\0")
     return [Path(n) for n in names if Path(n).suffix.lower() in PROSE and Path(n).exists()
             and not VERBATIM_DIRS.intersection(Path(n).parts[:-1]) and Path(n).name.lower() not in VERBATIM_NAMES]
 
 
 def commit_subjects(ref: str) -> list[str]:
     out = subprocess.run(["git", "log", "--no-merges", "--format=%s", f"{ref}..HEAD"], capture_output=True,
-                         text=True).stdout
+                         encoding="utf-8", errors="replace").stdout
     return [s for s in out.splitlines() if s.strip()]
 
 

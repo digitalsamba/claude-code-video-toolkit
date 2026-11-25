@@ -88,14 +88,14 @@ class DiffTest(unittest.TestCase):
             git("commit", "-qm", "base")
             base = subprocess.run(["git", "rev-parse", "HEAD"], cwd=d, capture_output=True, text=True).stdout.strip()
             Path(d, "README.md").write_text("Old line — with a dash.\nNew line, seamless.\n", encoding="utf-8")
-            Path(d, "notes.md").write_text("A new file — dashed.\n", encoding="utf-8")
+            Path(d, "video notes.md").write_text("A new file with “quotes” — dashed.\n", encoding="utf-8")
             git("add", ".")
             git("commit", "-qm", "FEAT: a seamless change")
             r = subprocess.run([sys.executable, str(TOOL), "--diff", base, "--commits", base, "--json"], cwd=d,
                                capture_output=True, text=True)
             import json
             found = {(f["file"], f["line"], f["match"]) for f in json.loads(r.stdout)["findings"]}
-            self.assertEqual(found, {("README.md", 2, "seamless"), ("notes.md", 1, "—"), ("--text", 1, "seamless")})
+            self.assertEqual(found, {("README.md", 2, "seamless"), ("video notes.md", 1, "—"), ("--text", 1, "seamless")})
             self.assertEqual(r.returncode, 1)
 
 
