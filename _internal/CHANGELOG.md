@@ -18,6 +18,7 @@ All notable changes to claude-code-video-toolkit.
 
 ### Docs
 
+- **`examples/agent-comparison-manim`**: the same Manim explainer brief given to Codex, Claude Code and OpenCode with Kimi K3, each making the whole video in a working session on the same commit. All three finished with no help and a clean QC. The page has the brief, the results, what each agent found wrong in the toolkit (#269 to #274) and how to run it yourself.
 - **`docs/manim.md`**: what a first session with Manim found: installing it (and what Homebrew does to ffmpeg), timing to narration, transparent clips into Remotion, vertical frames, idents, sound, a flat mascot, looping backgrounds and 3D geometry.
 
 - **The site caught up with v0.30.0**: the home page opens with the Blender support video, lists it and the first how-to episode among the videos, and has routes for a tutorial series, a lecture at a chalkboard and an ident from a logo. The 3D characters page names the ident example and the lecture template.
