@@ -4,8 +4,8 @@ import { fade } from '../Stage';
 import { RFONT } from '../room/theme';
 import { RELEASE_MONTH, RELEASE_NUMBER } from '../config';
 
-// Restyled to the DS act palette (video-design palettes.md, "brand blue + cool grey + navy"; tokens from the DS
-// design system): identity = DS blue with white type, record = cool grey with navy type and a blue accent.
+// The DS act palette (video-design palettes.md, "brand blue + cool grey + navy"): identity = the site's page navy
+// with its wave and white type (DS_FIELD below), record = cool grey with navy type and a blue accent.
 const BLUE = '#3771e0';
 const GREY = '#eef2f8';
 const NAVY = '#323e66';
@@ -25,8 +25,14 @@ const ITEMS: [string, boolean][] = [
 
 
 // Title and outro on the identity field: flat DS blue, white type, the same collage of video tiles.
-const Navy: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <AbsoluteFill style={{ background: BLUE, fontFamily: RFONT, color: ON_BLUE }}>
+// The field is digitalsamba.com's page navy (#3c486d) with its lighter wave (#444f74), not the bright UI blue,
+// which reads as a different brand on a full slide. Also the field a Blender clip sits on (rendered --alpha).
+export const DS_FIELD = '#3c486d';
+export const Navy: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <AbsoluteFill style={{ background: DS_FIELD, fontFamily: RFONT, color: ON_BLUE }}>
+    <svg width={1920} height={1080} viewBox="0 0 1920 1080" style={{ position: 'absolute', inset: 0 }}>
+      <path d="M0 760 C 220 640, 520 700, 900 900 S 1500 1080, 1700 1080 L 0 1080 Z" fill="#444f74" />
+    </svg>
     {children}
   </AbsoluteFill>
 );
@@ -66,7 +72,7 @@ export const TitleCard: React.FC = () => {
           const o = fade(frame, 30 + i * 6, 42 + i * 6);
           return (
             <div key={t} style={{ fontSize: 28, fontWeight: 600, whiteSpace: 'nowrap', opacity: o, transform: `translateY(${(1 - o) * 12}px)`, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 5, flexShrink: 0, background: fixed ? NAVY : ON_BLUE }} />
+              <span style={{ width: 10, height: 10, borderRadius: 5, flexShrink: 0, background: fixed ? BLUE : ON_BLUE }} />
               {t}
             </div>
           );

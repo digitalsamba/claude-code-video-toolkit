@@ -1,15 +1,17 @@
 import React from 'react';
 import { Img, staticFile } from 'remotion';
-import { APP_H, APP_W, PANEL, R, RFONT, TOPBAR_H } from './theme';
+import { APP_H, APP_W, PANEL, R, RFONT, TOOLBAR_PLACEMENT, TOOLBAR_W, TOPBAR_H } from './theme';
 import { RIcon, IconName } from './icons';
 import { Person, initials } from './people';
 
 // ---------------------------------------------------------------------------
 // Tiles (src/features/layout/tiles/Tile.tsx, streaming/components/*)
 // ---------------------------------------------------------------------------
-export type TileState = { person: Person; micOff?: boolean; camOff?: boolean; speaking?: boolean; zoom?: number };
+// badge: opacity of the name chip (0 = hover-only mode, hidden); menu: opacity of the mic + tile-menu buttons, which
+// show with the names when 'Always show names on video tiles' is on (StreamBadge.tsx, TileControlButtons.tsx)
+export type TileState = { person: Person; micOff?: boolean; camOff?: boolean; speaking?: boolean; zoom?: number; badge?: number; menu?: number };
 
-export const Tile: React.FC<TileState & { w: number; h: number }> = ({ person, micOff, camOff, speaking, w, h, zoom = 1 }) => {
+export const Tile: React.FC<TileState & { w: number; h: number }> = ({ person, micOff, camOff, speaking, w, h, zoom = 1, badge = 1, menu }) => {
   const showVideo = person.img && !camOff;
   const avatar = Math.min(120, Math.max(30, h * 0.42));
   return (
@@ -58,28 +60,48 @@ export const Tile: React.FC<TileState & { w: number; h: number }> = ({ person, m
           display: 'flex',
           alignItems: 'center',
           whiteSpace: 'nowrap',
+          opacity: badge,
         }}
       >
         {person.you ? 'You' : person.name}
       </div>
-      <div
-        style={{
-          position: 'absolute',
-          left: 8,
-          bottom: 8,
-          width: 32,
-          height: 32,
-          borderRadius: 16,
-          background: 'rgba(0,0,0,0.7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <RIcon name={micOff ? 'mute' : 'mic'} size={24} color={speaking && !micOff ? R.speaking : '#fff'} />
-      </div>
+      {[{ icon: (micOff ? 'mute' : 'mic') as IconName, color: speaking && !micOff ? R.speaking : '#fff', o: menu === undefined ? 1 : Math.max(menu, speaking ? 1 : 0) },
+        ...(menu === undefined ? [] : [{ icon: 'settings1' as IconName, color: '#fff', o: menu }])].map((b, i) => (
+        <div
+          key={b.icon}
+          style={{
+            position: 'absolute',
+            left: 8 + i * 40,
+            bottom: 8,
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: b.o,
+          }}
+        >
+          <RIcon name={b.icon} size={24} color={b.color} />
+        </div>
+      ))}
     </div>
   );
+};
+
+/** Where TileGrid puts each tile, for cursor targets */
+export const gridRects = (n: number, x: number, y: number, w: number, h: number, cols: number, gap = 8) => {
+  const rows = Math.ceil(n / cols);
+  const tw = (w - gap * (cols - 1)) / cols;
+  const th = Math.min((h - gap * (rows - 1)) / rows, tw * 0.75);
+  const top = y + (h - (th * rows + gap * (rows - 1))) / 2;
+  return Array.from({ length: n }, (_, i) => {
+    const r = Math.floor(i / cols);
+    const inRow = Math.min(cols, n - r * cols);
+    const left = x + (w - (tw * inRow + gap * (inRow - 1))) / 2 + (i % cols) * (tw + gap);
+    return { x: left, y: top + r * (th + gap), w: tw, h: th, cx: left + tw / 2, cy: top + r * (th + gap) + th / 2 };
+  });
 };
 
 export const TileGrid: React.FC<{ tiles: TileState[]; x: number; y: number; w: number; h: number; cols: number; gap?: number }> = ({
@@ -116,7 +138,7 @@ export const TileGrid: React.FC<{ tiles: TileState[]; x: number; y: number; w: n
 // ---------------------------------------------------------------------------
 const TOOL_GROUPS: IconName[][] = [
   ['camera', 'mic', 'share-screen'],
-  ['participants', 'chat', 'qa', 'polls', 'raise-hand', 'recording-base'],
+  ['participants', 'chat', 'qa', 'polls', 'raise-hand', 'recording-base', 'content-folder-1'],
   ['settings', 'phone-disconnect'],
 ];
 
@@ -146,7 +168,7 @@ export const RoomChrome: React.FC<{
 }> = ({ activeTool, recording, roomName, micOff, camOff, children }) => (
   <div style={{ position: 'relative', width: APP_W, height: APP_H, background: R.room, overflow: 'hidden', fontFamily: RFONT }}>
     {/* Top bar */}
-    <Img src={staticFile('logo_mono.svg')} style={{ position: 'absolute', left: 104, top: 13, height: 24, filter: 'brightness(0) invert(1)' }} />
+    <Img src={staticFile('logo_mono.svg')} style={{ position: 'absolute', left: TOOLBAR_PLACEMENT === 'bottom' ? 16 : 104, top: 13, height: 24, filter: 'brightness(0) invert(1)' }} />
     {roomName && (
       <div style={{ position: 'absolute', left: 0, right: 0, top: 13, textAlign: 'center', color: '#fff', fontSize: 16, fontWeight: 700 }}>
         {roomName}
@@ -183,24 +205,16 @@ export const RoomChrome: React.FC<{
       </div>
     )}
 
-    {/* Toolbar, left placement (the default) */}
+    {/* Toolbar: bottom (the default for new teams) or left. Bottom: 88 high, 8px inset, groups left / centre / right */}
     <div
-      style={{
-        position: 'absolute',
-        left: 8,
-        top: TOPBAR_H + 8,
-        width: 80,
-        height: APP_H - TOPBAR_H - 16,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '4px 0',
-        boxSizing: 'border-box',
-      }}
+      style={
+        TOOLBAR_PLACEMENT === 'bottom'
+          ? { position: 'absolute', left: 8, right: 8, bottom: 8, height: TOOLBAR_W - 8, display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: '0 8px', boxSizing: 'border-box' }
+          : { position: 'absolute', left: 8, top: TOPBAR_H + 8, width: 80, height: APP_H - TOPBAR_H - 16, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', boxSizing: 'border-box' }
+      }
     >
       {TOOL_GROUPS.map((g, gi) => (
-        <div key={gi} style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+        <div key={gi} style={{ display: 'flex', flexDirection: TOOLBAR_PLACEMENT === 'bottom' ? 'row' : 'column', gap: TOOLBAR_PLACEMENT === 'bottom' ? 28 : 22, flex: TOOLBAR_PLACEMENT === 'bottom' ? 1 : undefined, justifyContent: TOOLBAR_PLACEMENT === 'bottom' ? ['flex-start', 'center', 'flex-end'][gi] : undefined, padding: TOOLBAR_PLACEMENT === 'bottom' ? '0 14px' : undefined }}>
           {g.map((icon) => {
             const name: IconName = icon === 'mic' && micOff ? 'mute' : icon === 'camera' && camOff ? 'camera-off' : icon;
             return <ToolbarButton key={icon} icon={name} active={icon === activeTool} red={icon === 'phone-disconnect'} />;
@@ -214,8 +228,9 @@ export const RoomChrome: React.FC<{
 
 // Stage area: right of the toolbar, or right of an open side panel
 export const stageRect = (panelOpen: boolean) => {
-  const x = panelOpen ? PANEL.x + PANEL.w + 8 : 96;
-  return { x, y: TOPBAR_H + 4, w: APP_W - 8 - x, h: APP_H - TOPBAR_H - 12 };
+  const bottom = TOOLBAR_PLACEMENT === 'bottom';
+  const x = panelOpen ? PANEL.x + PANEL.w + 8 : bottom ? 8 : 96;
+  return { x, y: TOPBAR_H + 4, w: APP_W - 8 - x, h: APP_H - TOPBAR_H - (bottom ? TOOLBAR_W + 4 : 12) };
 };
 
 // ---------------------------------------------------------------------------

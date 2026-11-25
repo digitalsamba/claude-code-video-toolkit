@@ -73,6 +73,8 @@ Send one subagent per app or area, in parallel, and have each return a compact s
 - **Icons:** if the app uses an icon font, its icomoon/fontello `selection.json` holds each glyph's SVG paths. Extract
   the ones you need into a small JSON and render them as `<svg><path d=...>`. Otherwise copy the SVG components.
 - **Layout and behaviour:** component tree for the screens shown, toolbar order, defaults, what each control does.
+  Take a default from what a new account gets (the backend's default settings), not the frontend's fallback value:
+  a fallback the server always overrides draws a screen nobody sees, and people who use the app notice.
 
 Read the default branch from the remote (`git show origin/main:path`, or `git fetch` then read `origin/<default>`).
 **Local checkouts are often stale** and will give you last quarter's UI.
