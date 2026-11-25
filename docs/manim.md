@@ -143,6 +143,8 @@ class FollowDiagram(ToolkitMovingCameraScene):
   `z_index` above the box with `label.set_z_index(box.z_index + 1)` and check a frame after the animation.
 - **Keep a row of words on one baseline.** Build the row as one `Text` and style or animate its parts. Arranging separate
   `Text` objects aligns their bounds, which shift with descenders.
+- **Older examples use names 0.22.1 lacks.** `GrowFromBottom` raises a `NameError`; write `GrowFromEdge(obj, DOWN)`
+  (and `UP`, `LEFT`, `RIGHT` for the other edges). An agent's second render failed on it.
 - **The defaults are not ours.** Manim starts on black with its own colours. Set `config.background_color` and
   pass the brand's hex values; `Text(..., font="Helvetica Neue")` takes any installed font by name. A font that
   is not installed falls back without an error, so a render on another machine can change its type silently.
