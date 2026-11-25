@@ -49,6 +49,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from media_spend import record_scribe, record_tts
+
 from dotenv import load_dotenv
 from elevenlabs import VoiceSettings, save
 from elevenlabs.client import ElevenLabs
@@ -264,6 +266,7 @@ def transcribe_audio(client: ElevenLabs, audio_path: str, model_id: str, languag
                 language_code=language,
                 tag_audio_events=False,  # We just want the speech text
             )
+        record_scribe("redub.py", get_media_duration(audio_path), model_id)
 
         return {
             "text": result.text,
@@ -318,6 +321,7 @@ def generate_tts(
         )
 
         save(audio, output_path)
+        record_tts("redub.py", len(text), model_id)
         return True
     except Exception as e:
         print(f"TTS error: {e}", file=sys.stderr)
@@ -407,6 +411,7 @@ def transcribe_with_timestamps(
                 language_code=language,
                 tag_audio_events=False,
             )
+        record_scribe("redub.py", get_media_duration(audio_path), model_id)
 
         # Extract word-level timestamps
         words = [
@@ -470,6 +475,7 @@ def generate_tts_with_timestamps(
                 voice_id=voice_id,
                 model_id=model_id,
             )
+            record_tts("redub.py", len(text), model_id)
 
             # Save audio
             audio_bytes = base64.b64decode(result.audio_base_64)

@@ -10,6 +10,8 @@ All notable changes to claude-code-video-toolkit.
 
 ### Added
 
+- **A spend receipt from every paid call, not only video jobs**: `voiceover.py`, `redub.py`, Scribe captions, `sixtydb_tts.py`, `music.py`, `sfx.py`, `addmusic.py`, `ideogram4.py` and cloud GPU calls run on their own append a line to `logs/media-spend.log` (provider, units, an estimate where the rate is known), so a working session can report what it spent the way a job does (#273). A wrapper that writes its own receipts sets `MEDIA_SPEND_MANAGED=1` for the tools it runs. By @AsharibAli.
+
 - **`captions.py --joined` for word cues on joined narration**: transcribes each sentence clip on its own and places its words on one timeline from the decoded clip lengths and `--gap-ms`. Whisper on the joined file put a sentence's first word up to 0.9 s early, in the silence before it; a Manim or Remotion cue then missed its word (#274). By @AsharibAli.
 
 - **`tools/manim_render.py`, `lib/manim` and two examples** (optional and experimental, needs Manim): a Manim scene file rendered as a clip at 30 fps, opaque or transparent for Remotion. Scenes get narration cues from a captions file (a step that overruns its cue fails the render), a brand's colours and mark, loops that close on themselves, and notes of when each audible thing happens. `examples/manim-ident` draws two idents from a brand's SVG with sound placed from the scene; `examples/manim-diagram` builds an architecture diagram on the narration's words.

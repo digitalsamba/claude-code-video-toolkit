@@ -38,9 +38,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+from media_spend import SCRIBE_USD_PER_SECOND as SCRIBE_USD_PER_S  # noqa: E402
 from win_encoding import ensure_utf8_output  # noqa: E402
 
-SCRIBE_USD_PER_S = 0.40 / 3600
 MIN_CHAPTER_S = 10
 MIN_CHAPTERS = 3
 

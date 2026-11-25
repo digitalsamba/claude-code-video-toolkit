@@ -53,6 +53,8 @@ from pathlib import Path
 
 import requests
 
+from media_spend import record_spend
+
 sys.path.insert(0, str(Path(__file__).parent))
 from config import get_sixtydb_api_key, get_sixtydb_voice_id
 
@@ -558,6 +560,7 @@ def generate_audio(
     if not result.get("success"):
         return result
 
+    record_spend("sixtydb_tts.py", "60db", "characters", len(text))
     duration = get_audio_duration(output_path)
     out = {
         "success": True,

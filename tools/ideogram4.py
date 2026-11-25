@@ -55,6 +55,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from media_spend import record_spend
+
 try:
     import requests
     from dotenv import load_dotenv
@@ -316,6 +318,10 @@ def generate(
     if not urls:
         log(f"No image URL in response: {json.dumps(result)[:500]}", "error")
         return None
+
+    rate = QUALITY_COST_45[SPEED_TO_QUALITY_45[rendering_speed]] if model == "4.5" else SPEED_COST.get(rendering_speed)
+    record_spend("ideogram4.py", "ideogram", "images", len(urls), model=model,
+                 cost_usd=len(urls) * rate if rate is not None else None)
 
     # Download. If multiple images came back, suffix _2, _3, ...
     out = Path(output_path)

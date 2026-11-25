@@ -66,6 +66,13 @@ import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from media_spend import (  # noqa: E402
+    ELEVENLABS_TTS_USD_PER_1K_CHARS,
+    MANAGED_SPEND_ENV,
+    SCRIBE_USD_PER_SECOND,
+    append_receipt,
+    spend_log_path,
+)
 from win_encoding import ensure_utf8_output  # noqa: E402
 
 try:  # .env keys decide which caption engine is paid and whether R2 is configured
@@ -98,8 +105,8 @@ PRICES = {
     "ideogram_image": {"TURBO": 0.03, "DEFAULT": 0.06, "QUALITY": 0.10},
     "ltx_clip": 0.12,
     "flux_image": 0.012,
-    "voiceover": {"qwen3": 0.01, "elevenlabs_per_1k_chars": 0.20, "60db": 0.0},
-    "captions_per_audio_second": {"scribe": 0.40 / 3600, "whisper": 0.0},
+    "voiceover": {"qwen3": 0.01, "elevenlabs_per_1k_chars": ELEVENLABS_TTS_USD_PER_1K_CHARS, "60db": 0.0},
+    "captions_per_audio_second": {"scribe": SCRIBE_USD_PER_SECOND, "whisper": 0.0},
     "music_track": {"acemusic": 0.0, "modal": 0.03, "runpod": 0.03},
 }
 
@@ -342,16 +349,6 @@ def agent_workspace() -> Path | None:
     estimate. LONGARM_WORKSPACE is the older name, read until existing hosts set the new one."""
     v = os.environ.get("VIDEO_JOB_WORKSPACE") or os.environ.get("LONGARM_WORKSPACE")
     return Path(v) if v else None
-
-
-def spend_log_path() -> Path:
-    """MEDIA_SPEND_LOG, else the agent workspace's logs/, else the toolkit's own logs/."""
-    if os.environ.get("MEDIA_SPEND_LOG"):
-        return Path(os.environ["MEDIA_SPEND_LOG"])
-    ws = agent_workspace()
-    if ws:
-        return ws / "logs" / "media-spend.log"
-    return ROOT / "logs" / "media-spend.log"
 
 
 def reserve_at_submit() -> bool:
@@ -1357,10 +1354,7 @@ def settle_reservation(job: dict) -> float | None:
         entry = {"ts": _now(), "tool": "video_job.py", "cost_usd": delta, "elapsed_s": 0.0, "exit": 0,
                  "args": ["settle", job["id"], job["phase"]], "job_id": job["id"],
                  "reserved_usd": round(reserved, 4), "actual_usd": round(actual, 4)}
-        path = spend_log_path()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry) + "\n")
+        append_receipt(spend_log_path(), entry)
     job["settled"] = delta
     job["ledger_usd"] = round(actual, 4)
     save_job(job)
@@ -1377,9 +1371,7 @@ def write_receipt(job: dict, tool: str, cost_usd: float | None, elapsed_s: float
     if job.get("ledger") != "reserve":
         paths.append(spend_log_path())
     for path in paths:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry) + "\n")
+        append_receipt(path, entry)
     if cost_usd:
         job["actual_usd"] = round(job.get("actual_usd", 0.0) + cost_usd, 4)
         save_job(job)
@@ -1487,7 +1479,7 @@ def run_tool(job: dict, tool: str, args: list[str], cwd: Path | None = None,
     add_event(job, "tool", f"{Path(tool).name} started", tool=Path(tool).name)
     t0 = time.time()
     try:
-        r = subprocess.run(cmd, cwd=str(cwd or ROOT), capture_output=True, text=True,
+        r = subprocess.run(cmd, cwd=str(cwd or ROOT), env={**os.environ, MANAGED_SPEND_ENV: "1"}, capture_output=True, text=True,
                            timeout=timeout, encoding="utf-8", errors="replace")
         rc, out, err = r.returncode, r.stdout or "", r.stderr or ""
     except subprocess.TimeoutExpired as e:
