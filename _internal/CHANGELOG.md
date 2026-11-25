@@ -19,6 +19,8 @@ All notable changes to claude-code-video-toolkit.
 
 ### Fixed
 
+- **`copy_lint.py --brand video-toolkit` works.** The toolkit brand has its own `copy.md` and `copy.json`; a brand without one gets the general rules and a warning instead of an error; `--diff` reads UTF-8 and file names with spaces on Windows (#271). By @AsharibAli.
+
 - **`qc.py --fix` no longer clips a render.** It measured the input but not the encoded file, and AAC added true peak back: a run went to -14.6 LUFS at +0.5 dBTP and failed its own check (#269). It now normalises to -2 dBTP, measures the encoded file, retries at -3 dBTP if needed, and returns an error rather than write a file above -1 dBTP. `qc.py --project` also checks a project without a template (narration, `.captions.json`, Manim `.events.json`, cues and `timeline.json`) instead of stopping (#270), and a video job now fails when QC does. By @AsharibAli.
 
 ### Docs

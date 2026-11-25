@@ -1,0 +1,22 @@
+{
+  "prefer": [
+    {"avoid": "voice-over", "use": "voiceover", "why": "use one word for the narration track"},
+    {"avoid": "time-stamp", "use": "timestamp", "why": "use one word for a recorded time"},
+    {"avoid": "1080P", "use": "1080p", "why": "use lowercase p in resolution labels"}
+  ],
+  "names": [
+    {"avoid": "claude code", "use": "Claude Code", "except": ["Claude Code"], "why": "product name"},
+    {"avoid": "claudecode", "use": "Claude Code", "why": "the product name has two words"},
+    {"avoid": "codex", "use": "Codex", "except": ["Codex"], "why": "product name"},
+    {"avoid": "opencode", "use": "OpenCode", "except": ["OpenCode"], "why": "product name"},
+    {"avoid": "Open Code", "use": "OpenCode", "why": "the agent's name is one word"},
+    {"avoid": "github", "use": "GitHub", "except": ["GitHub"], "why": "product name"},
+    {"avoid": "elevenlabs", "use": "ElevenLabs", "except": ["ElevenLabs"], "why": "provider name"},
+    {"avoid": "eleven labs", "use": "ElevenLabs", "why": "provider name"},
+    {"avoid": "ffmpeg", "use": "FFmpeg", "except": ["FFmpeg"], "why": "tool name in prose"}
+  ],
+  "avoid": [
+    {"phrase": "free to use", "level": "check", "why": "verify the cost of the stated workflow"},
+    {"phrase": "runs entirely offline", "level": "check", "why": "verify that each provider in the workflow runs locally"}
+  ]
+}

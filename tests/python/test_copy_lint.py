@@ -62,6 +62,19 @@ class FilesTest(unittest.TestCase):
         bad = subprocess.run([sys.executable, str(TOOL), "--text", "Delve in"], capture_output=True)
         self.assertEqual((ok.returncode, bad.returncode), (0, 1))
 
+    def test_toolkit_brand_checks_product_names_and_spelling(self):
+        rules = copy_lint.brand_rules("video-toolkit")
+        self.assertEqual(copy_lint.lint_text("Make a voiceover with Claude Code, OpenCode and FFmpeg.", rules), [])
+        hits = copy_lint.lint_text("Make a voice-over with claude code and Github.", rules)
+        self.assertEqual({match for match, _reason in hits}, {"voice-over", "claude code", "Github"})
+
+    def test_brand_without_copy_rules_falls_back_with_a_warning(self):
+        result = subprocess.run([sys.executable, str(TOOL), "--brand", "default", "--text", "Delve in", "--json"],
+                                capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Applying general copy rules", result.stderr)
+        self.assertFalse(json.loads(result.stdout)["ok"])
+
 
 class DiffTest(unittest.TestCase):
     def test_only_added_lines_are_linted(self):
@@ -75,14 +88,14 @@ class DiffTest(unittest.TestCase):
             git("commit", "-qm", "base")
             base = subprocess.run(["git", "rev-parse", "HEAD"], cwd=d, capture_output=True, text=True).stdout.strip()
             Path(d, "README.md").write_text("Old line — with a dash.\nNew line, seamless.\n", encoding="utf-8")
-            Path(d, "notes.md").write_text("A new file — dashed.\n", encoding="utf-8")
+            Path(d, "video notes.md").write_text("A new file with “quotes” — dashed.\n", encoding="utf-8")
             git("add", ".")
             git("commit", "-qm", "FEAT: a seamless change")
             r = subprocess.run([sys.executable, str(TOOL), "--diff", base, "--commits", base, "--json"], cwd=d,
                                capture_output=True, text=True)
             import json
             found = {(f["file"], f["line"], f["match"]) for f in json.loads(r.stdout)["findings"]}
-            self.assertEqual(found, {("README.md", 2, "seamless"), ("notes.md", 1, "—"), ("--text", 1, "seamless")})
+            self.assertEqual(found, {("README.md", 2, "seamless"), ("video notes.md", 1, "—"), ("--text", 1, "seamless")})
             self.assertEqual(r.returncode, 1)
 
 
