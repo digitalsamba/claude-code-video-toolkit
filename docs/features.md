@@ -263,7 +263,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | `flux2` | AI image generation & editing | ~$0.02 |
 | `image_edit` | AI image editing & style transfer | ~$0.03 |
 | `upscale` | AI image upscaling (2x/4x) | ~$0.01 |
-| `music_gen` | AI music generation (8 scene presets) | Free (acemusic) / ~$0.05 (self-hosted) |
+| `music_gen` | AI music generation (8 scene presets) | ~$0.05 (self-hosted; the free hosted API was retired, 2026-11-25) |
 | `soulx` | Talking head video from portrait + audio: holds identity over long takes | ~$0.0024/sec |
 | `sadtalker` | Talking head video, warp-based: fast, cheap drafts | ~$0.10 |
 | `ltx2` | AI video generation (text-to-video, image-to-video) | ~$0.23 |

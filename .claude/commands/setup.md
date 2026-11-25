@@ -430,10 +430,10 @@ You can change the speaker per-video or set a default in your brand's voice.json
 To preview voices: uv run tools/qwen3_tts.py --list-voices
 ```
 
-### Music (free key)
+### Music
 
-Background music comes from the ACE-Step API by default (`tools/music_gen.py`), which needs a key and costs
-nothing:
+Background music (`tools/music_gen.py`) runs on the Modal `music_gen` app deployed above; nothing more to set up.
+The hosted ACE-Step API (acemusic.ai) answered HTTP 410, "retired", on 2026-11-25, so **skip the key below** unless that service is back (`--cloud acemusic` uses it):
 
 ```
 1. Go to https://acemusic.ai/api-key and sign in

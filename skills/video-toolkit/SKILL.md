@@ -45,7 +45,7 @@ written, QC can judge the result, and there's a cost cap. Offer a `job` when one
 | A short explainer on a topic (Shorts, Reels, a 16:9 explainer) from a brief | `concept-explainer-short` via `video_job.py` | job | this file | `examples/sky-blue-short` |
 | A post or short video for someone who has a kit (a small business, a coach, a product team) | `video_job.py` with `"kit"`: their photos as `file` scenes, `text` scenes in their colours | job | `kits/README.md` | |
 | A walkthrough, feature demo or release-notes video of an app whose source you can read | synthetic UI: `templates/ds-release-notes`, components `Stage`, `Cursor`, `cues` (`Terminal` for a shell, `TerminalSession` for a Claude Code, Codex or other agent CLI session) | session | `.claude/skills/synthetic-ui-demo/SKILL.md` | `examples/ds-release-649`, `examples/ds-free-schedule-demo` |
-| A how-to or tutorial about a tool or CLI, in chapters, with Shorts cut from it | `templates/howto` (mark-and-track opening and close, ledger, figure, bars, split, `TerminalSession` and `screen` scenes for a product's rebuilt UI, all on narration cues, `facts.json`, chapters from the timeline; several episodes can share one project) | session | `templates/howto/README.md`, `.claude/skills/video-design/SKILL.md` | `templates/howto` itself (Getting started 1) |
+| A how-to or tutorial about a tool or CLI, in chapters, with Shorts cut from it | `templates/howto` (mark-and-track opening and close, ledger, figure, bars, split, `watch` (a clip in step with its own sound), `TerminalSession` and `screen` scenes for a product's rebuilt UI, all on narration cues, `facts.json`, chapters from the timeline; several episodes can share one project) | session | `templates/howto/README.md`, `.claude/skills/video-design/SKILL.md` | `templates/howto` itself (Getting started 1) |
 | The same, but you can't read the source | Playwright recording into `product-demo` | session | `.claude/skills/playwright-recording/` | |
 | A marketing or product launch video | `templates/product-demo` | session | the template's README | `examples/digital-samba-skill-demo` |
 | A sprint or monthly review | `templates/sprint-review`, `templates/sprint-review-v2` | session | the template's README | `examples/hello-world` |
@@ -412,8 +412,8 @@ uv run tools/music_gen.py --prompt "lofi, warm keys, no vocals" --duration 45 --
 uv run tools/pick_music.py bg_*.mp3 --target 45 --under voice --pick bg.mp3 --json   # takes the best, says why
 ```
 
-Presets: corporate-bg, upbeat-tech, ambient, dramatic, tension, hopeful, cta, lofi. Default provider is the
-acemusic API (free key); `--cloud modal` is the self-hosted fallback. Prompting and lyrics: `.claude/skills/acestep/`.
+Presets: corporate-bg, upbeat-tech, ambient, dramatic, tension, hopeful, cta, lofi. It runs on your Modal
+`music_gen` app when its endpoint is in `.env` (the free hosted API was retired, 2026-11-25). Prompting and lyrics: `.claude/skills/acestep/`.
 
 `pick_music.py` measures and can't listen, and good takes often tie. With a person in the loop, render the video
 once without music and let them watch each take under it:

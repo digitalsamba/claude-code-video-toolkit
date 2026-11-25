@@ -261,7 +261,7 @@ uv run tools/image_edit.py --input photo.jpg --style cyberpunk --cloud modal
 # AI upscaling
 uv run tools/upscale.py --input photo.jpg --output photo_4x.png --cloud modal
 
-# AI music generation (acemusic cloud API is now default — no Modal needed)
+# AI music generation (uses the Modal app when its endpoint is in .env; the hosted API was retired, 2026-11-25)
 uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3
 # Or use Modal: uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3 --cloud modal
 
@@ -281,7 +281,7 @@ uv run tools/dewatermark.py --input video.mp4 --region 1080,660,195,40 --output 
 | `flux2` | FLUX.2 klein 4B (9B opt-in, non-commercial) | AI image generation | ~$0.01-0.03 |
 | `image_edit` | Qwen-Image-Edit-2511 (Qwen-Image-2.1 opt-in, non-commercial) | AI image editing, style transfer | ~$0.02-0.05 |
 | `upscale` | RealESRGAN | AI image upscaling (2x/4x) | ~$0.005-0.02 |
-| `music_gen` | ACE-Step 1.5 XL Turbo (4B) | AI music generation | Free (acemusic) / ~$0.02-0.10 (Modal) |
+| `music_gen` | ACE-Step 1.5 XL Turbo (4B) | AI music generation | ~$0.02-0.10 (Modal) |
 | `sadtalker` | SadTalker | Talking head video | ~$0.05-0.30 |
 | `soulx` | SoulX-FlashHead 1.3B Pro + Lite | Talking head video, aspect-preserving (`--model lite` for drafts) | Pro ~$0.0024 / Lite ~$0.0004 per second of output |
 | `dewatermark` | ProPainter | AI video inpainting | ~$0.05-0.50 |

@@ -16,12 +16,12 @@ Capabilities:
 - Brand-aware generation (--brand)
 
 Cloud providers:
-  acemusic (default) — Official ACE-Step cloud API (free key from acemusic.ai/api-key)
+  acemusic — the hosted ACE-Step API. It answered HTTP 410 'retired' on 2026-11-25; kept as the last resort
   modal              — Self-hosted via Modal (ACE-Step 1.5 XL Turbo 4B, no LM)
   runpod             — Self-hosted via RunPod (ACE-Step 2B Turbo)
 
 Examples:
-  # Basic background music (uses acemusic cloud API by default)
+  # Basic background music (on your Modal endpoint when it is set up)
   uv run tools/music_gen.py --prompt "Subtle corporate tech" --duration 60 --output bg.mp3
 
   # Generate 4 variations, pick the best
@@ -493,6 +493,9 @@ def call_acemusic_api(
 
     if response.status_code != 200:
         _emit("error", f"API returned HTTP {response.status_code}: {response.text[:500]}", level="error")
+        if response.status_code == 410:
+            _emit("error", "The hosted ACE-Step API has been retired. Use your own endpoint: "
+                  "`uv run tools/modal_setup.py music_gen`, then run this again (--cloud modal).", level="error")
         return None
 
     try:
@@ -609,6 +612,28 @@ def call_acemusic_api(
 # --- RunPod API ---
 
 # --- Generation functions (Modal/RunPod) ---
+
+def default_cloud(env=None) -> str:
+    """The cloud to use when --cloud is not given: a self-hosted endpoint that is set up, before the hosted API.
+
+    The hosted API (acemusic.ai) was the default until it began answering HTTP 410, "retired", on 2026-11-25.
+    It stays the last resort so a machine with only that key still gets its error message.
+    """
+    env = os.environ if env is None else env
+    if env.get("MODAL_MUSIC_GEN_ENDPOINT_URL"):
+        return "modal"
+    if env.get("RUNPOD_ACESTEP_ENDPOINT_ID") and env.get("RUNPOD_API_KEY"):
+        return "runpod"
+    return "acemusic"
+
+
+def take_paths(output_path: str, variations: int) -> list[str]:
+    """Where N takes are saved: <stem>_1<ext> to <stem>_N<ext>, or the path itself for one."""
+    if variations <= 1:
+        return [output_path]
+    out = Path(output_path)
+    return [str(out.parent / f"{out.stem}_{i + 1}{out.suffix}") for i in range(variations)]
+
 
 def generate_music(
     prompt: str,
@@ -1260,7 +1285,7 @@ Examples:
     adv_group.add_argument("--no-thinking", action="store_true",
                            help="Disable thinking mode (faster generation)")
     adv_group.add_argument("--variations", type=int, default=1,
-                           help="Generate N variations (1-8, acemusic only, default: 1)")
+                           help="Generate N takes (1-8, default: 1), saved as <output>_1 to <output>_N")
     adv_group.add_argument("--guidance-scale", type=float,
                            help="Prompt adherence (1.0-15.0, default: 7.0)")
     adv_group.add_argument("--infer-method", choices=["ode", "sde"],
@@ -1270,9 +1295,10 @@ Examples:
 
     # Cloud provider
     cloud_group = parser.add_argument_group("Cloud")
-    cloud_group.add_argument("--cloud", type=str, default="acemusic",
+    cloud_group.add_argument("--cloud", type=str, default=None,
                              choices=["acemusic", "modal", "runpod"],
-                             help="Cloud provider (default: acemusic)")
+                             help="Cloud provider (default: modal when its endpoint is in .env, then runpod, "
+                                  "then acemusic, the hosted API, which answered 'retired' on 2026-11-25)")
 
     # Setup
     setup_group = parser.add_argument_group("Setup")
@@ -1310,6 +1336,9 @@ Examples:
             sys.exit(1)
         sys.exit(0)
 
+    if args.cloud is None:
+        args.cloud = default_cloud()
+
     # Resolve thinking mode: default on for acemusic, off for self-hosted
     if args.no_thinking:
         thinking = False
@@ -1326,8 +1355,6 @@ Examples:
     if args.cloud != "acemusic":
         if args.repaint or args.continuation:
             parser.error("--repaint and --continuation require --cloud acemusic")
-        if args.variations > 1:
-            parser.error("--variations requires --cloud acemusic")
         if args.sample_mode:
             parser.error("--sample-mode requires --cloud acemusic")
 
@@ -1594,22 +1621,39 @@ Examples:
             progress=reporter,
         )
     else:
-        result = generate_music(
-            prompt=prompt,
-            output_path=args.output,
-            duration=args.duration,
-            bpm=bpm,
-            key_scale=key_scale,
-            time_signature=args.time_sig,
-            lyrics=args.lyrics,
-            vocal_language=args.vocal_language,
-            steps=args.steps,
-            audio_format=args.audio_format,
-            seed=args.seed,
-            json_output=args.json,
-            cloud=args.cloud,
-            progress=reporter,
-        )
+        # Takes on a self-hosted endpoint are one request each, saved as <stem>_1<ext> to <stem>_N<ext>. A given
+        # seed moves on by one per take, so the takes differ.
+        takes = []
+        paths = take_paths(args.output, args.variations)
+        for i, path in enumerate(paths):
+            if len(paths) > 1:
+                log(f"Take {i + 1}/{len(paths)}", "info")
+            take = generate_music(
+                prompt=prompt,
+                output_path=path,
+                duration=args.duration,
+                bpm=bpm,
+                key_scale=key_scale,
+                time_signature=args.time_sig,
+                lyrics=args.lyrics,
+                vocal_language=args.vocal_language,
+                steps=args.steps,
+                audio_format=args.audio_format,
+                seed=None if args.seed is None else args.seed + i,
+                json_output=args.json,
+                cloud=args.cloud,
+                progress=reporter,
+            )
+            if take:
+                takes.append(take)
+            elif len(paths) > 1:
+                log(f"Take {i + 1} failed; keeping the others", "warn")
+        result = None
+        if takes and len(paths) > 1:
+            result = {**takes[0], "outputs": [t.get("output") for t in takes], "variations": len(takes),
+                      "requested_variations": len(paths)}
+        elif takes:
+            result = takes[0]
 
     if args.json and result:
         print(json.dumps(result, indent=2))
