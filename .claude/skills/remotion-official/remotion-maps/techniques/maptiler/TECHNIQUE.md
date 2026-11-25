@@ -1,6 +1,6 @@
 # MapTiler maps in Remotion
 
-MapTiler is a good solution for map animations where geographics features should be drawn as annotations on top of the map: Country borders, rivers, labels for POIs.
+MapTiler is a good solution for map animations where geographic features should be drawn as annotations on top of the map: Country borders, rivers, labels for POIs.
 
 ## MapTiler SDK (`@maptiler/sdk`)
 
@@ -17,7 +17,8 @@ Use `preserveDrawingBuffer:true`.
 
 Render labels as positioned [`<Interactive.Div>`](https://www.remotion.dev/docs/interactive.md) elements.
 
-Env `REMOTION_MAPTILER_KEY` (unrestricted). Init the map once (ref guard); update imperatively per frame.
+Replace `YOUR_API_KEY` in `assets/MapTilerVectorElement.ts` with a MapTiler key.
+Initialize the map once using a ref guard and update it imperatively per frame.
 
 When constructing MapLibre/MapTiler layer objects, omit optional properties that are absent.  
 In particular, use `...(layer.filter ? {filter: layer.filter} : {})`; do not pass `filter: undefined`. An undefined filter can suppress the layer while separately created halo or border layers continue rendering, producing missing country fills and dark marker halos with no coloured cores.
@@ -51,7 +52,7 @@ For the implementation, read **`references/render-stability.md`** before buildin
 - Keep pitch and bearing constant for a fixed plate. This technique does not implement a genuine changing 3D camera.
 - Verify the moving preview and a short rendered MP4 before approving a beat. If any basemap detail wavers, switch to the fixed-plate pattern; do not try to solve it with tile retries or camera easing.
 
-## Keep it minmal
+## Keep it minimal
 
 Strip clutter on `load`: remove `symbol` layers (place labels) and `/other border/i` (admin-1 inner borders); hide the logo via CSS. Keep country + disputed borders.
 
