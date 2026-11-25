@@ -30,4 +30,10 @@ export const CHROME_H = 40;
 
 export const TOPBAR_H = 48;
 export const TOOLBAR_W = 88;
-export const PANEL = { x: 96, y: 48, w: 360, h: APP_H - 48 - 8 };
+// New teams get toolbar_position BOTTOM (webapp-api-laravel app/Models/Team.php DEFAULT_TOOLBAR_POSITION); 'left' is
+// only the room app's fallback, and it reads as a customised room. Panels sit at the left edge above the toolbar.
+export const TOOLBAR_PLACEMENT: 'left' | 'bottom' = 'bottom';
+const BOTTOM = TOOLBAR_PLACEMENT === 'bottom';
+export const PANEL = BOTTOM
+  ? { x: 8, y: TOPBAR_H, w: 360, h: APP_H - TOPBAR_H - TOOLBAR_W }
+  : { x: 96, y: TOPBAR_H, w: 360, h: APP_H - TOPBAR_H - 8 };

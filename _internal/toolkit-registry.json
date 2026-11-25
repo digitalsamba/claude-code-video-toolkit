@@ -1584,10 +1584,10 @@
     },
     "ds-release-notes": {
       "path": "templates/ds-release-notes/",
-      "description": "Synthetic release-notes video for Digital Samba: room and account-center screens rebuilt from source, scripted cursor and camera (Stage), sentence-level cloned narration picked by pace and pitch. Ships as the release 650 build",
+      "description": "Synthetic release-notes video for Digital Samba: room, dashboard and account-center screens rebuilt from source, scripted cursor and camera (Stage), sentence-level cloned narration picked by pace and pitch, an optional Blender card for one item. Ships as the release 650 build",
       "status": "beta",
       "created": "2026-10-28",
-      "updated": "2026-10-28",
+      "updated": "2026-11-25",
       "skill": "synthetic-ui-demo",
       "agentSupport": "session"
     },

@@ -19,11 +19,26 @@ The method is the `synthetic-ui-demo` skill; this template is its release-notes 
 | `src/scenes/Cards.tsx` | Title card (item list), outro, scene label | Edit the item list |
 | `src/scenes/*.tsx` | One file per release item: UI state, cursor path, clicks and camera as frame constants | Replace |
 | `src/Stage.tsx`, `src/Cursor.tsx` | Browser window, camera keyframes, cursor (the project-local version of `lib/components` Stage) | Keep |
-| `src/room/` | In-call room kit: chrome, left toolbar, tiles, participants panel, menus, dialogs, toasts, icomoon glyphs | Keep, extend |
+| `src/room/` | In-call room kit: chrome, bottom toolbar, tiles (names on hover or always), side panels, participants panel, menus, dialogs, switches, inputs, toasts, icomoon glyphs | Keep, extend |
+| `src/dash/` | Dashboard kit: shell, Session details and Export, Edit room settings rows | Keep, extend |
 | `src/ac/` | DS Free account-center kit: shell, nav, buttons, fields, switches, chips | Keep, extend |
 | `public/people/`, `public/*.svg`, `public/banner.jpg` | FLUX.2 portraits (labelled AI-generated on screen), logos | Keep |
 | `public/audio/scenes/` | Lugh's phrases: `.mp3`, `.txt`, and `.captions.json` word timings | Replace |
 | `public/audio/sfx/` | click, typing, pop, chime, whoosh, reveal | Keep |
+
+## A 3D shot (optional, needs Blender)
+
+Release 651 and 652 each put one item on a Blender card: the flat scene ends on a full-frame picture, the clip's
+first frame is the same picture, and the camera pulls back from it. Render the picture as a `<Still>`, point a
+`studio` set's `card` prop at it, and render the clips with `--alpha` so they sit on the slides' navy:
+
+```bash
+npx remotion still PollResult out/stills/poll.png
+cd ../.. && uv run tools/blender_render.py render projects/<name>/blender/poll.json --clips --alpha --to projects/<name>/public/blender
+```
+
+In `Release.tsx`, play the clips with `BlenderClip` inside `<Navy>` (from `Cards.tsx`) and mark the scene
+`cut: true` (a hard cut, no whoosh). Without Blender, leave the item flat; nothing else depends on it.
 
 ## Making the next release
 

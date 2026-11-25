@@ -18,7 +18,11 @@ template ships as the release 650 build so it renders as is.
 ## Layout
 - `src/Release.tsx`: scene order, lengths, VO start per phrase (`voice: [file, at][]`), SFX.
 - `src/Stage.tsx`: browser window, camera and cursor. Every UI scene sits inside one.
-- `src/room/`: room kit. Toolbar on the left (the default); active speaker shown only by a green mic.
+- `src/room/`: room kit. Toolbar at the bottom, as new teams get it (`TOOLBAR_PLACEMENT` in `room/theme.ts`; a left
+  toolbar reads as a customised room); panels and the stage follow the switch. Tiles take `badge` and `menu`
+  opacities (names on hover only, or always), `gridRects` gives each tile's rectangle for the cursor. `room/Panel.tsx`
+  has the side panel, rounded button, switch, input and dialog shells. Active speaker shown only by a green mic.
+- `src/dash/`: dashboard kit (shell, Session details and Export dialog, Edit room > General rows and switch).
 - `src/ac/`: account-center kit (shared with `examples/ds-free-schedule-demo`).
 - `src/scenes/`: one file per release item; click frames and targets are constants at the top.
 
@@ -29,6 +33,8 @@ template ships as the release 650 build so it renders as is.
 - Short closing sentences still rush (~185 wpm); if one grates, pick another take from `takes.json` by hand.
 
 ## Gotchas
+- Title and outro sit on the site's page navy `#3c486d` with its wave (`DS_FIELD`, `Navy` in `Cards.tsx`), not
+  the bright UI blue `#3771e0`, which is for UI and accents.
 - `logo_mono.svg` is black; it needs `filter: brightness(0) invert(1)` on dark backgrounds.
 - Measure click targets off rendered stills. A guessed coordinate is usually off by 20-50px once the camera zooms.
 - A changed phrase moves everything after it: re-measure, update the header comment and scene lengths, re-check stills.
