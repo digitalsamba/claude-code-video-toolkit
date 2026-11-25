@@ -62,6 +62,19 @@ class FilesTest(unittest.TestCase):
         bad = subprocess.run([sys.executable, str(TOOL), "--text", "Delve in"], capture_output=True)
         self.assertEqual((ok.returncode, bad.returncode), (0, 1))
 
+    def test_toolkit_brand_checks_product_names_and_spelling(self):
+        rules = copy_lint.brand_rules("video-toolkit")
+        self.assertEqual(copy_lint.lint_text("Make a voiceover with Claude Code, OpenCode and FFmpeg.", rules), [])
+        hits = copy_lint.lint_text("Make a voice-over with claude code and Github.", rules)
+        self.assertEqual({match for match, _reason in hits}, {"voice-over", "claude code", "Github"})
+
+    def test_brand_without_copy_rules_falls_back_with_a_warning(self):
+        result = subprocess.run([sys.executable, str(TOOL), "--brand", "default", "--text", "Delve in", "--json"],
+                                capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Applying general copy rules", result.stderr)
+        self.assertFalse(json.loads(result.stdout)["ok"])
+
 
 class DiffTest(unittest.TestCase):
     def test_only_added_lines_are_linted(self):

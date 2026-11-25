@@ -18,6 +18,7 @@ or word, and the one to use; `except` lists phrases where it stands, e.g. a prod
 doesn't use; `"level": "check"` reports a claim to verify at publish time without failing) and `names` (product
 names and what to call them instead). A phrase with a capital letter matches case-sensitively, so "Zoom" the
 product doesn't flag "zoom in"; the rest match whole words in any case.
+A brand without its own copy.json uses the general rules and prints a warning.
 
 HTML and Markdown are read as prose: code blocks, inline code, tags and comments are skipped, so a `--flag` or
 a code comment's dash isn't flagged. Exit 1 on any finding.
@@ -161,11 +162,18 @@ def main() -> int:
     p.add_argument("--brand", metavar="NAME", help="also apply brands/NAME/copy.json (spelling, words, product names)")
     p.add_argument("--json", action="store_true")
     a = p.parse_args()
-    try:
-        brand = brand_rules(a.brand) if a.brand else None
-    except FileNotFoundError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 2
+    brand = None
+    if a.brand:
+        try:
+            brand = brand_rules(a.brand)
+        except FileNotFoundError as error:
+            if not (ROOT / "brands" / a.brand / "brand.json").is_file():
+                print(f"Error: {error}", file=sys.stderr)
+                return 2
+            print(f"Warning: {a.brand} has no copy.json. Applying general copy rules.", file=sys.stderr)
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+            print(f"Error: could not load {a.brand}/copy.json: {error}", file=sys.stderr)
+            return 2
     if not a.files and not a.text and not a.diff and not a.commits:
         p.error("give files, --text, --diff or --commits")
     if a.commits:
