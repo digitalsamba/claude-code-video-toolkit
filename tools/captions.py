@@ -41,8 +41,10 @@ import json
 import math
 import os
 import re
+import subprocess
 import sys
 import tempfile
+from fractions import Fraction
 from pathlib import Path
 
 from pacing import spoken_text
@@ -135,12 +137,17 @@ def align(script_words: list[str], heard: list[dict]) -> tuple[list[dict], float
     return words, matched / max(len(script_words), 1)
 
 
-def to_remotion(words: list[dict]) -> list[dict]:
+def to_remotion(words: list[dict], *, offset_ms: Fraction | int = 0, clip_end_ms: int | None = None) -> list[dict]:
     """@remotion/captions Caption[]: one token per word, leading space after the first."""
     out = []
     for k, w in enumerate(words):
-        start = round(w["s"] * 1000)
-        end = max(round(w["e"] * 1000), start + 1)
+        start = round(w["s"] * 1000 + offset_ms)
+        if clip_end_ms is not None:
+            floor = out[-1]["startMs"] if out else round(offset_ms)
+            start = max(floor, min(start, clip_end_ms - 1))
+        end = max(round(w["e"] * 1000 + offset_ms), start + 1)
+        if clip_end_ms is not None:
+            end = min(end, clip_end_ms)
         out.append({
             "text": w["w"] if k == 0 else f" {w['w']}",
             "startMs": start,
@@ -149,6 +156,41 @@ def to_remotion(words: list[dict]) -> list[dict]:
             "confidence": None,
         })
     return out
+
+
+def decoded_audio_duration(audio: Path) -> Fraction:
+    """Duration of decoded samples, excluding codec delay where the decoder trims it."""
+    result = subprocess.run([
+        "ffprobe", "-v", "error", "-select_streams", "a:0", "-show_frames", "-show_streams",
+        "-show_entries", "frame=nb_samples:stream=sample_rate", "-of", "json", str(audio.resolve()),
+    ], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+    if result.returncode or result.stderr.strip():
+        raise ValueError(f"{audio}: could not decode audio ({result.stderr.strip()[-240:]})")
+    try:
+        data = json.loads(result.stdout)
+        rate = int(data["streams"][0]["sample_rate"])
+        samples = sum(int(frame["nb_samples"]) for frame in data["frames"])
+    except (ValueError, IndexError, KeyError, TypeError) as error:
+        raise ValueError(f"{audio}: could not read decoded audio duration") from error
+    if samples <= 0 or rate <= 0:
+        raise ValueError(f"{audio}: no audio samples found")
+    return Fraction(samples, rate)
+
+
+def join_captions(clips: list[tuple[list[dict], Fraction]], gap_ms: int) -> list[dict]:
+    """Shift the local word cues by each clip's sample duration and the gaps."""
+    merged = []
+    offset_ms = Fraction(0)
+    for words, duration in clips:
+        end_ms = offset_ms + duration * 1000
+        if round(end_ms) <= round(offset_ms):
+            raise ValueError("a narration clip is shorter than one caption millisecond")
+        captions = to_remotion(words, offset_ms=offset_ms, clip_end_ms=round(end_ms))
+        if merged and captions:
+            captions[0]["text"] = " " + captions[0]["text"]
+        merged.extend(captions)
+        offset_ms = end_ms + gap_ms
+    return merged
 
 
 def export_subtitles(words: object, *, format: str = 'srt', max_words: int = 7) -> str:
@@ -236,7 +278,7 @@ def collect_inputs(paths: list[str]) -> list[Path]:
     files: list[Path] = []
     for p in map(Path, paths):
         if p.is_dir():
-            files += sorted(f for f in p.iterdir() if f.suffix.lower() in AUDIO_EXTS)
+            files += sorted(f for f in p.iterdir() if f.is_file() and f.suffix.lower() in AUDIO_EXTS)
         elif p.is_file():
             files.append(p)
         else:
@@ -269,12 +311,30 @@ def main(argv=None) -> None:
     ap.add_argument('--srt', action='store_true', help='Also write a sibling <name>.srt subtitle file')
     ap.add_argument('--vtt', action='store_true', help='Also write a sibling <name>.vtt subtitle file')
     ap.add_argument('--max-words', type=int, default=7, help='Maximum words per subtitle cue (1-30, default 7); sentences and pauses also split cues')
+    ap.add_argument("--joined", type=Path, metavar="FILE.captions.json",
+                    help="Transcribe each audio clip and write one caption file for their joined timeline")
+    ap.add_argument("--gap-ms", type=int, help="Silence in milliseconds between clips for --joined (default: 0)")
     args = ap.parse_args(argv)
     if not 1 <= args.max_words <= 30:
         ap.error('--max-words must be between 1 and 30')
+    if args.gap_ms is not None and (not args.joined or args.gap_ms < 0):
+        ap.error("--gap-ms requires --joined and a nonnegative gap")
 
     files = collect_inputs(args.inputs)
     audio_files = [p for p in files if not p.name.endswith(SUFFIX)]
+    durations = []
+    if args.joined:
+        if not args.joined.name.endswith(SUFFIX):
+            ap.error(f"--joined output must end in {SUFFIX}")
+        if any(p.suffix.lower() not in AUDIO_EXTS for p in files):
+            ap.error("--joined needs MP3, WAV or M4A audio inputs")
+        if args.joined.resolve() in {p.with_name(p.stem + SUFFIX).resolve() for p in files}:
+            ap.error("--joined output must have a different name from the per-file captions")
+        try:
+            durations = [decoded_audio_duration(p) for p in files]
+            args.joined.parent.mkdir(parents=True, exist_ok=True)
+        except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+            ap.error(str(error))
     if len(audio_files) != len(files) and not (args.srt or args.vtt):
         ap.error('Existing caption JSON needs --srt or --vtt')
     if args.script and (len(files) != 1 or not audio_files):
@@ -302,8 +362,8 @@ def main(argv=None) -> None:
     if engine:
         print(f"engine: {engine}", file=sys.stderr)
 
-    results = []
-    for audio in files:
+    results, clips = [], []
+    for index, audio in enumerate(files):
         if audio.name.endswith(SUFFIX):
             try:
                 captions = json.loads(audio.read_text(encoding='utf-8-sig'))
@@ -336,19 +396,22 @@ def main(argv=None) -> None:
 
         match_ratio = None
         words = heard
-        if script_path:
-            script_words = spoken_text(script_path.read_text(encoding="utf-8")).split()
-            if script_words:
-                words, match_ratio = align(script_words, heard)
-
         try:
-            paths = write_caption_outputs(out, to_remotion(words), srt=args.srt, vtt=args.vtt, max_words=args.max_words)
-        except (ValueError, OSError) as error:
+            if script_path:
+                script_words = spoken_text(script_path.read_text(encoding="utf-8-sig")).split()
+                if script_words:
+                    words, match_ratio = align(script_words, heard)
+            if args.joined:
+                clips.append((words, durations[index]))
+                paths = {}
+            else:
+                paths = write_caption_outputs(out, to_remotion(words), srt=args.srt, vtt=args.vtt, max_words=args.max_words)
+        except (ValueError, OSError, TypeError, OverflowError) as error:
             print(f'  [error] {audio.name}: {error}', file=sys.stderr)
             results.append({'audio': str(audio), 'error': str(error)})
             continue
         source = f"aligned to {script_path.name}" if match_ratio is not None else "raw transcript"
-        line = f"  {out.name}: {len(words)} words, {source}"
+        line = f"  {audio.name if args.joined else out.name}: {len(words)} words, {source}"
         if match_ratio is not None:
             line += f" ({match_ratio:.0%} matched)"
             if match_ratio < MIN_MATCH_RATIO:
@@ -363,9 +426,21 @@ def main(argv=None) -> None:
             "durationSeconds": round(words[-1]["e"], 2),
         })
 
+    summary = {"engine": engine, "files": results}
+    failed = any("error" in r for r in results)
+    if args.joined and not failed:
+        try:
+            merged = join_captions(clips, args.gap_ms or 0)
+            paths = write_caption_outputs(args.joined, merged, srt=args.srt, vtt=args.vtt, max_words=args.max_words)
+            summary["joined"] = {**paths, "words": len(merged)}
+            print(f"  {args.joined}: {len(merged)} words across {len(clips)} clips", file=sys.stderr)
+        except (ValueError, OSError, TypeError, OverflowError) as error:
+            print(f"  [error] {args.joined}: {error}", file=sys.stderr)
+            summary["joined"] = {"error": str(error)}
+            failed = True
     if args.json:
-        print(json.dumps({"engine": engine, "files": results}, indent=2))
-    if any("error" in r for r in results):
+        print(json.dumps(summary, indent=2))
+    if failed:
         sys.exit(1)
 
 
