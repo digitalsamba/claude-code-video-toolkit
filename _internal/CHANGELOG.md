@@ -10,6 +10,8 @@ All notable changes to claude-code-video-toolkit.
 
 ### Added
 
+- **`captions.py --joined` for word cues on joined narration**: transcribes each sentence clip on its own and places its words on one timeline from the decoded clip lengths and `--gap-ms`. Whisper on the joined file put a sentence's first word up to 0.9 s early, in the silence before it; a Manim or Remotion cue then missed its word (#274). By @AsharibAli.
+
 - **`tools/manim_render.py`, `lib/manim` and two examples** (optional and experimental, needs Manim): a Manim scene file rendered as a clip at 30 fps, opaque or transparent for Remotion. Scenes get narration cues from a captions file (a step that overruns its cue fails the render), a brand's colours and mark, loops that close on themselves, and notes of when each audible thing happens. `examples/manim-ident` draws two idents from a brand's SVG with sound placed from the scene; `examples/manim-diagram` builds an architecture diagram on the narration's words.
 
 - **Tutorials about your own product with `templates/howto`**: a `screen` scene shows a product's screens rebuilt from its source in a browser window, with the cursor, clicks, typing, page changes and camera on narration cues, and a 9:16 crop that follows the cursor in a Short. `src/screens/example.tsx` is one to copy from. A series can keep several episodes in one project (`Episode-<id>`, `render:shorts -- --episode`, `chapters.py --episode`), and colours, heading weight and title size come from the brand. `scripts/level.py` levels every narration phrase, and `scripts/stills.py` shows every scene, or the frame on a cue, before a render.
