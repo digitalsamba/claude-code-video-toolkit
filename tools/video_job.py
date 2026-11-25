@@ -1948,12 +1948,10 @@ def _qc(job: dict, render: Path, fix: bool) -> dict:
 
 
 def step_qc(job: dict, render: Path) -> tuple[Path, dict]:
-    """Run qc --fix (normalises loudness to -14 LUFS, writing short.loudnorm.mp4 when it
-    has to), then grade the delivered file."""
-    first = _qc(job, render, fix=True)
-    fixed = first.get("fixed_render")
+    """Run QC, which verifies the encoded loudness fix before returning it."""
+    report = _qc(job, render, fix=True)
+    fixed = report.get("fixed_render")
     final = Path(fixed) if fixed and Path(fixed).exists() else render
-    report = _qc(job, final, fix=False) if final != render else first
     summary = {"passed": bool(report.get("passed")), "errors": report.get("errors", 0),
                "warnings": report.get("warnings", 0),
                "findings": [f for f in report.get("findings", []) if f.get("level") in ("error", "warn")][:30],
@@ -2071,6 +2069,10 @@ def run_pipeline(job: dict, spec: dict, steps: dict | None = None) -> dict:
         final, qc = st["qc"](job, render)
         job["steps"]["qc"] = qc
         _record_step(job, "qc", t0, None)
+        if not qc["passed"]:
+            reason = next((f["message"] for f in qc.get("findings", []) if f["level"] == "error"),
+                          "see the job's qc.json")
+            raise StepFailed(f"QC failed: {reason}")
         set_phase(job, "publish", 98)
         t0 = time.time()
         job["output"] = {**st["publish"](job, spec, final), "qc": qc}

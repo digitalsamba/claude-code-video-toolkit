@@ -17,6 +17,10 @@ All notable changes to claude-code-video-toolkit.
 - **`templates/ds-release-notes` draws the room as a new team sees it**: the toolbar along the bottom (a left one reads as a customised room), title and outro on the site's page navy with its wave, and the kit pieces two release videos added: side panels, switches, inputs and dialogs, tiles that show names on hover or always, and a dashboard kit with the room settings rows. The README shows how to put one item on a Blender card.
 - **A brand's house style**: `brands/<name>/copy.md` to read and `copy.json` that `copy_lint.py --brand` enforces (spellings, product names, words it avoids, claims to check). The Digital Samba brand is read again from its site, logo and app: blue, not orange.
 
+### Fixed
+
+- **`qc.py --fix` no longer clips a render.** It measured the input but not the encoded file, and AAC added true peak back: a run went to -14.6 LUFS at +0.5 dBTP and failed its own check (#269). It now normalises to -2 dBTP, measures the encoded file, retries at -3 dBTP if needed, and returns an error rather than write a file above -1 dBTP. `qc.py --project` also checks a project without a template (narration, `.captions.json`, Manim `.events.json`, cues and `timeline.json`) instead of stopping (#270), and a video job now fails when QC does. By @AsharibAli.
+
 ### Docs
 
 - **`examples/agent-comparison-manim`**: the same Manim explainer brief given to Codex, Claude Code and OpenCode with Kimi K3, each making the whole video in a working session on the same commit. All three finished with no help and a clean QC. The page has the brief, the results, what each agent found wrong in the toolkit (#269 to #274) and how to run it yourself.
