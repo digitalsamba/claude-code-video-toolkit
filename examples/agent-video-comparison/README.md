@@ -35,3 +35,5 @@ uv run --locked tools/video_job.py result JOB_ID --json
 ```
 
 Replace `JOB_ID` with the ID from `submit`. Wait for `status` to show `done` before reading the local MP4 path from `result`. Run one job at a time. To compare fresh plans, give each agent `brief.txt` and copy the returned `title` and `scenes` into a copy of a saved spec.
+
+For whole working sessions rather than plans, see [one Manim explainer in Codex, Claude Code and OpenCode](../agent-comparison-manim/README.md).
