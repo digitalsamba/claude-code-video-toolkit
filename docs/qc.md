@@ -19,6 +19,18 @@ music); the render targets -14 LUFS / -1 dBTP. Optional keys (`backgroundMusicFi
 `chimeFile`, `screenshotFile`, `voiceoverFile`) are warnings, not errors: the templates skip
 them with `getStaticFiles()`, so the render succeeds silently without them.
 
+`--fix` uses two-pass FFmpeg normalisation for finished renders and copies the video stream.
+It starts with a -2 dBTP limiter target to make room for peaks introduced by AAC encoding.
+QC measures the encoded audio and retries with more headroom if the true peak is above -1 dBTP.
+It returns exit 1 if it cannot verify a safe output. The JSON `render` entry describes the
+verified file and `source_render` records the input measurement.
+
+Projects without a template can run the same `--project` check. It looks for narration in the
+project root, `audio/`, `public/audio/`, `narration/` and their scene or phrase folders. A sibling
+`.txt` supplies the script for the pace check. It checks word order and ranges in `.captions.json`,
+event times in Manim `.events.json` and `sync-cues.json`, and segment times in toolkit `timeline.json`
+files. The report explains when it lacks a template, matching audio, or a timing format it understands.
+
 **`--render` also watches the picture** (a few seconds even for a 4-minute render; `--skip-frames` to
 skip):
 - **Still stretches:** more than 3s (`--max-still`) where nothing on screen changes. The comparison is per

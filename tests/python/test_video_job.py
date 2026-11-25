@@ -19,6 +19,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -311,6 +312,19 @@ class TestStateMachine(Isolated):
         self.assertEqual(on_disk["phase"], "failed")
         self.assertEqual(on_disk["error_code"], "step_failed")
         self.assertIn("visuals broke", on_disk["error"])
+        self.assertFalse(vj.result(job["id"])["ready"])
+
+    def test_qc_error_blocks_publishing(self):
+        job = vj.submit(spec(), max_usd=5, start_worker=False)
+        steps = self.fakes([])
+        steps["qc"] = lambda _job, render: (render, {
+            "passed": False, "errors": 1, "warnings": 0,
+            "findings": [{"level": "error", "message": "Encoded true peak exceeds the limit"}],
+        })
+        steps["publish"] = mock.Mock()
+        vj.run_pipeline(job, json.loads(Path(job["spec_path"]).read_text()), steps)
+        steps["publish"].assert_not_called()
+        self.assertIn("Encoded true peak", vj.status(job["id"])["error"])
         self.assertFalse(vj.result(job["id"])["ready"])
 
     def test_worker_stops_before_the_next_paid_step_at_the_cap(self):

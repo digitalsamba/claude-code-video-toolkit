@@ -39,7 +39,8 @@ written to a new `<name>.loudnorm.mp4` with the video stream copied.
 
 Understands Remotion projects (src/config/*-config.ts, audio in
 public/audio/scenes) and concept-explainer-short projects (scenes.json,
-audio in audio/scenes).
+audio in audio/scenes). For projects without a template it checks the
+narration, caption and cue files it can find.
 
 Usage:
     uv run tools/qc.py --project projects/my-video
@@ -55,12 +56,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import shutil
 import statistics
 import subprocess
 import sys
 import tempfile
+from collections import defaultdict
 from pathlib import Path
 
 from pacing import pace_label
@@ -90,6 +93,8 @@ OPTIONAL_ASSET_KEYS = {"backgroundMusicFile", "chimeFile", "screenshotFile", "vo
 DEAD_AIR_SECONDS = 3.0      # scene runs this much longer than its narration
 YOUTUBE_LUFS = -14.0
 YOUTUBE_TRUE_PEAK = -1.0
+NORMALIZE_TRUE_PEAK = -2.0   # allow for AAC overshoot
+RETRY_TRUE_PEAK = -3.0
 SCENE_LUFS = -16.0          # leaves headroom for music + sfx in the mix
 SCENE_TRUE_PEAK = 0.0       # stems are allowed near full scale; the render gets the -1 rule
 SCENE_SPREAD_LU = 1.5       # scene this far from the median sounds uneven
@@ -144,25 +149,29 @@ class Report:
 def _num(value) -> float | None:
     try:
         v = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None
-    return None if v in (float("inf"), float("-inf")) else v
+    return v if math.isfinite(v) else None
 
 
-def measure_loudness(path: Path) -> dict | None:
+def measure_loudness(path: Path, *, target: float = YOUTUBE_LUFS,
+                     true_peak: float = NORMALIZE_TRUE_PEAK) -> dict | None:
     """Integrated LUFS, true peak and LRA via ffmpeg loudnorm's first pass."""
     try:
         r = subprocess.run(
             ["ffmpeg", "-hide_banner", "-nostats", "-i", str(path), "-vn",
-             "-af", "loudnorm=print_format=json", "-f", "null", "-"],
+             "-af", f"loudnorm=I={target}:TP={true_peak}:LRA=11:print_format=json", "-f", "null", "-"],
             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600,
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
     m = re.search(r"\{[^{}]*\"input_i\"[^{}]*\}", r.stderr)
-    if not m:
+    if r.returncode or not m:
         return None
-    raw = json.loads(m.group(0))
+    try:
+        raw = json.loads(m.group(0))
+    except json.JSONDecodeError:
+        return None
     return {
         "lufs": _num(raw.get("input_i")),
         "true_peak": _num(raw.get("input_tp")),
@@ -195,7 +204,9 @@ def normalize_loudness(src: Path, dst: Path, target: float, true_peak: float,
                            timeout=1200)
     except (OSError, subprocess.TimeoutExpired) as e:
         return str(e)
-    return r.stderr.strip()[-300:] if r.returncode != 0 else None
+    if r.returncode:
+        return r.stderr.strip()[-300:] or f"FFmpeg exited {r.returncode}"
+    return None
 
 
 # ─── Project loading ─────────────────────────────────────────
@@ -350,10 +361,82 @@ def scene_audio_files(audio_dir: Path, timed: list[dict]) -> list[Path]:
         return [t["audio_path"] for t in timed]
     if not audio_dir.is_dir():
         return []
-    return sorted(p for p in audio_dir.iterdir() if p.suffix.lower() in (".mp3", ".wav", ".m4a"))
+    return sorted(p for p in audio_dir.iterdir() if p.is_file() and p.suffix.lower() in (".mp3", ".wav", ".m4a"))
 
 
-def check_pacing(files: list[Path], narration: dict[Path, str], report: Report):
+def standalone_files(project: Path) -> tuple[list[Path], list[Path]]:
+    """Look in common media locations without walking dependencies or build caches."""
+    audio_dirs = [project, project / "audio", project / "public/audio", project / "narration"]
+    audio_dirs += [p for root in audio_dirs[1:] for folder in ("scenes", "phrases", "narration")
+                   if (p := root / folder).is_dir()]
+    # Phrase packs can group audio by scene.
+    audio_dirs += [p for root in audio_dirs if root.name in ("scenes", "phrases", "narration")
+                   for p in root.glob("**/*") if p.is_dir() and not p.name.startswith(".")
+                   and not any(part.startswith(".") for part in p.relative_to(root).parts)]
+    audio = sorted({p for d in audio_dirs for p in scene_audio_files(d, []) if p.resolve().is_relative_to(project)})
+    timing_dirs = set(audio_dirs) | {project / d for d in ("captions", "events", "out")}
+    timing = sorted({p for d in timing_dirs for pattern in ("*.captions.json", "*.events.json", "sync-cues.json",
+                                                           "cues.json", "timeline.json")
+                     for p in d.glob(pattern) if p.is_file() and p.resolve().is_relative_to(project)})
+    return audio, timing
+
+
+def time_value(value) -> float:
+    seconds = _num(value) if type(value) in (int, float) else None
+    if seconds is None or seconds < 0:
+        raise ValueError("expected a finite, nonnegative time")
+    return seconds
+
+
+def check_standalone_timings(timing: list[Path], audio: list[Path], project: Path, report: Report) -> None:
+    caption_audio: dict[str, list[Path]] = defaultdict(list)
+    for clip in audio:
+        caption_audio[clip.with_suffix(".captions.json").name].append(clip)
+    checked = 0
+    for path in timing:
+        name = path.relative_to(project).as_posix()
+        try:
+            data = json.loads(path.read_text(encoding="utf-8-sig"))
+            if path.name == "timeline.json":
+                if not isinstance(data, dict) or not isinstance(data.get("segments"), list):
+                    report.add("info", "timing", f"{name}: skipped an unrecognised timeline format", file=name)
+                    continue
+                end = time_value(data["end"]) if "end" in data else None
+                for segment in data["segments"]:
+                    start, duration = time_value(segment["start"]), time_value(segment["dur"])
+                    if end is not None and start + duration > end + 0.002:
+                        raise ValueError("a segment extends past the timeline end")
+            elif path.name.endswith(".captions.json"):
+                if not isinstance(data, list):
+                    raise ValueError("expected an array of caption words")
+                matches = caption_audio[path.name]
+                matches = [clip for clip in matches if clip.parent == path.parent] or matches
+                duration = get_audio_duration(str(matches[0])) if len(matches) == 1 else None
+                previous = -1.0
+                for word in data:
+                    start, end = time_value(word["startMs"]), time_value(word["endMs"])
+                    if start < previous or end < start:
+                        raise ValueError("caption times are out of order")
+                    if duration is not None and end / 1000 > duration + 0.1:
+                        raise ValueError(f"caption ends after the {duration:.2f}s audio")
+                    previous = start
+                if duration is None:
+                    report.add("info", "timing", f"{name}: audio length check skipped (needs a readable, unambiguous audio match)", file=name)
+            else:
+                if not isinstance(data, list):
+                    raise ValueError("expected an array of cues with 'at' in seconds")
+                for cue in data:
+                    time_value(cue["at"])
+        except (OSError, ValueError, TypeError, KeyError) as error:
+            report.add("error", "timing", f"{name}: {error}", file=name)
+        else:
+            checked += 1
+    report.data["timing_files_checked"] = checked
+    if not timing:
+        report.add("info", "timing", "Caption and cue checks skipped (no recognised timing files found)")
+
+
+def check_pacing(files: list[Path], narration: dict[Path, str], report: Report, names: dict[Path, str]):
     """wpm per scene from its narration text: scenes.json, else the .txt voiceover.py read."""
     measured = 0
     for f in files:
@@ -362,36 +445,41 @@ def check_pacing(files: list[Path], narration: dict[Path, str], report: Report):
             txt = f.with_suffix(".txt")
             if not txt.exists():
                 continue
-            text = txt.read_text(encoding="utf-8")
+            try:
+                text = txt.read_text(encoding="utf-8-sig")
+            except (OSError, UnicodeError) as error:
+                report.add("warn", "pacing", f"{txt.name}: could not read the narration text: {error}", file=txt.name)
+                continue
         wpm, label = pace_label(text, get_audio_duration(str(f)))
         if wpm is None:
             continue
         measured += 1
         if label in ("fast", "slow"):
-            report.add("warn", "pacing", f"{f.name}: {wpm:.0f} wpm ({label}; comfortable is 140-160)",
-                       file=f.name, wpm=wpm)
+            report.add("warn", "pacing", f"{names[f]}: {wpm:.0f} wpm ({label}; comfortable is 140-160)",
+                       file=names[f], wpm=wpm)
     report.data["pacing_measured"] = measured
 
 
-def check_scene_loudness(files: list[Path], report: Report) -> dict[Path, dict]:
+def check_scene_loudness(files: list[Path], report: Report, names: dict[Path, str], *,
+                         target: float = SCENE_LUFS) -> dict[Path, dict]:
     levels: dict[Path, dict] = {}
     for f in files:
         dur = get_audio_duration(str(f))
         if dur is not None and dur < MIN_LOUDNESS_SECONDS:
             continue
-        m = measure_loudness(f)
+        m = measure_loudness(f, target=target)
         if m and m["lufs"] is not None:
             levels[f] = m
     report.data["scene_loudness"] = {
-        f.name: {"lufs": m["lufs"], "true_peak": m["true_peak"]} for f, m in levels.items()
+        names[f]: {"lufs": m["lufs"], "true_peak": m["true_peak"]} for f, m in levels.items()
     }
     if not levels:
         return levels
 
     for f, m in levels.items():
         if m["true_peak"] is not None and m["true_peak"] > SCENE_TRUE_PEAK:
-            report.add("warn", "loudness", f"{f.name}: true peak {m['true_peak']:+.1f} dBTP, clipped",
-                       file=f.name)
+            report.add("warn", "loudness", f"{names[f]}: true peak {m['true_peak']:+.1f} dBTP, clipped",
+                       file=names[f])
     if len(levels) >= 3:
         median = statistics.median(m["lufs"] for m in levels.values())
         report.data["scene_loudness_median"] = median
@@ -400,8 +488,8 @@ def check_scene_loudness(files: list[Path], report: Report) -> dict[Path, dict]:
             if abs(delta) > SCENE_SPREAD_LU:
                 word = "louder" if delta > 0 else "quieter"
                 report.add("warn", "loudness",
-                           f"{f.name}: {m['lufs']:.1f} LUFS, {abs(delta):.1f} LU {word} than the other scenes "
-                           f"({median:.1f})", file=f.name)
+                           f"{names[f]}: {m['lufs']:.1f} LUFS, {abs(delta):.1f} LU {word} than the other scenes "
+                           f"({median:.1f})", file=names[f])
     return levels
 
 
@@ -435,7 +523,7 @@ def check_render(render: Path, report: Report, target: float, info: dict | None,
     if info and not info["has_audio"]:
         report.add("info" if allow_silent else "error", "render", f"{render.name}: no audio track" + (' (intentional silent output)' if allow_silent else ''))
         return None
-    m = measure_loudness(render)
+    m = measure_loudness(render, target=target)
     if not m:
         report.add("error", "render", f"{render.name}: could not measure loudness")
         return None
@@ -443,7 +531,16 @@ def check_render(render: Path, report: Report, target: float, info: dict | None,
         # loudnorm reports -inf for digital silence
         report.add("info" if allow_silent else "error", "render", f"{render.name}: the audio track is silent")
         return None
-    report.data["render"] = {"file": str(render), "lufs": m["lufs"], "true_peak": m["true_peak"], "lra": m["lra"]}
+    report_render_loudness(render, m, target, report)
+    return m
+
+
+def render_levels(render: Path, m: dict) -> dict:
+    return {"file": str(render), "lufs": m["lufs"], "true_peak": m["true_peak"], "lra": m["lra"]}
+
+
+def report_render_loudness(render: Path, m: dict, target: float, report: Report) -> None:
+    report.data["render"] = render_levels(render, m)
     if m["lufs"] < target - 2:
         # Platforms turn loud content down but never turn quiet content up.
         report.add("warn", "render", f"{render.name}: {m['lufs']:.1f} LUFS, quieter than the {target:.0f} target, "
@@ -452,9 +549,8 @@ def check_render(render: Path, report: Report, target: float, info: dict | None,
         report.add("warn", "render", f"{render.name}: {m['lufs']:.1f} LUFS, YouTube will turn it down "
                    f"{m['lufs'] - target:.1f} dB")
     if m["true_peak"] is not None and m["true_peak"] > YOUTUBE_TRUE_PEAK:
-        report.add("warn", "render", f"{render.name}: true peak {m['true_peak']:+.1f} dBTP, clipping after "
-                   "lossy encoding")
-    return m
+        report.add("warn", "render", f"{render.name}: true peak {m['true_peak']:+.2f} dBTP exceeds "
+                   f"the {YOUTUBE_TRUE_PEAK:g} dBTP limit")
 
 
 def _fmt_t(seconds: float) -> str:
@@ -900,7 +996,7 @@ def check_layout(data: dict, report: Report):
 
 # ─── Fix ─────────────────────────────────────────────────────
 
-def fix_scenes(levels: dict[Path, dict], target: float, report: Report) -> list[str]:
+def fix_scenes(levels: dict[Path, dict], target: float, report: Report, names: dict[Path, str]) -> list[str]:
     fixed = []
     for f, m in levels.items():
         off_target = abs(m["lufs"] - target) > FIX_TOLERANCE_LU
@@ -913,30 +1009,50 @@ def fix_scenes(levels: dict[Path, dict], target: float, report: Report) -> list[
         if not backup.exists():  # never overwrite the true original on a re-run
             shutil.copy2(f, backup)
         tmp = f.with_name(f".qc-tmp-{f.name}")
-        err = normalize_loudness(f, tmp, target, YOUTUBE_TRUE_PEAK - 0.5, m)
+        err = normalize_loudness(f, tmp, target, NORMALIZE_TRUE_PEAK, m)
         if err:
             tmp.unlink(missing_ok=True)
-            report.add("error", "fix", f"{f.name}: normalisation failed: {err}", file=f.name)
+            report.add("error", "fix", f"{names[f]}: normalisation failed: {err}", file=names[f])
             continue
         shutil.move(str(tmp), str(f))
-        fixed.append(f.name)
+        fixed.append(names[f])
         # The file's loudness warnings no longer describe it
         report.findings = [x for x in report.findings
-                           if not (x["check"] == "loudness" and x.get("file") == f.name)]
-        report.add("info", "fix", f"{f.name}: {m['lufs']:.1f} → {target:.0f} LUFS "
-                   f"(original in {backup_dir.name}/)", file=f.name)
+                           if not (x["check"] == "loudness" and x.get("file") == names[f])]
+        report.add("info", "fix", f"{names[f]}: {m['lufs']:.1f} → {target:.0f} LUFS "
+                   f"(original in {backup_dir.name}/)", file=names[f])
     return fixed
 
 
 def fix_render(render: Path, m: dict, target: float, report: Report) -> Path | None:
     out = render.with_name(f"{render.stem}.loudnorm{render.suffix}")
-    # Margin under the ceiling: the AAC re-encode adds a little true peak back
-    err = normalize_loudness(render, out, target, YOUTUBE_TRUE_PEAK - 0.5, m, video=True)
-    if err:
-        report.add("error", "fix", f"{render.name}: normalisation failed: {err}")
+    try:
+        with tempfile.TemporaryDirectory(prefix=".qc-", dir=out.parent) as tmp_dir:
+            candidate = Path(tmp_dir) / out.name
+            for ceiling in (NORMALIZE_TRUE_PEAK, RETRY_TRUE_PEAK):
+                measured = m if ceiling == NORMALIZE_TRUE_PEAK else measure_loudness(
+                    render, target=target, true_peak=ceiling)
+                if not measured or measured["lufs"] is None:
+                    raise ValueError("could not measure the input for normalisation")
+                error = normalize_loudness(render, candidate, target, ceiling, measured, video=True)
+                if error:
+                    raise ValueError(error)
+                verified = measure_loudness(candidate, target=target)
+                if not verified or verified["lufs"] is None or verified["true_peak"] is None:
+                    raise ValueError("could not verify the encoded audio")
+                peak = verified["true_peak"]
+                if peak <= YOUTUBE_TRUE_PEAK:
+                    candidate.replace(out)
+                    break
+            else:
+                raise ValueError(f"encoded true peak {peak:+.2f} dBTP exceeds {YOUTUBE_TRUE_PEAK:g} dBTP")
+    except (OSError, ValueError) as error:
+        report.add("error", "fix", f"{render.name}: normalisation failed: {error}")
         return None
-    report.add("info", "fix", f"wrote {out.name} ({m['lufs']:.1f} → {target:.0f} LUFS); "
-               f"{render.name} is unchanged; re-run with --render {out.name} to confirm")
+    report.data["source_render"] = render_levels(render, m)
+    report.findings = [f for f in report.findings if f["check"] != "render"]
+    report_render_loudness(out, verified, target, report)
+    report.add("info", "fix", f"wrote {out.name} at {verified['lufs']:.1f} LUFS and {peak:+.2f} dBTP")
     return out
 
 
@@ -988,7 +1104,7 @@ Examples:
   uv run tools/qc.py --project projects/my-video --json           # machine-readable
 """,
     )
-    parser.add_argument("--project", default=".", help="Project directory (default: current directory)")
+    parser.add_argument("--project", help="Project directory (default: current directory)")
     parser.add_argument("--config", help="Remotion config file (auto-detected if omitted)")
     parser.add_argument("--render", help="Finished video to check against the loudness target")
     parser.add_argument("--target-lufs", type=float, default=YOUTUBE_LUFS,
@@ -1019,30 +1135,60 @@ Examples:
         print("Error: ffmpeg and ffprobe are required (see the ffmpeg skill for install).", file=sys.stderr)
         sys.exit(1)
 
-    project = Path(args.project).resolve()
+    project = Path(args.project or ".").resolve()
     report = Report()
 
     narration: dict[Path, str] = {}
-    if (project / "scenes.json").exists() and not args.config:
-        audio_dir, timed, narration = load_scenes_json(project, report)
-    else:
-        loaded = load_remotion(project, report, args.config)
-        if loaded is None and not (args.render or args.layout):
-            print(f"Error: no Remotion config or scenes.json found in {project}. "
-                  "Use --project, --config, --render or --layout.", file=sys.stderr)
-            sys.exit(1)
-        audio_dir, timed = loaded or (None, [])
+    timed, files = [], []
+    standalone = False
+    try:
+        if not project.is_dir():
+            report.add("error", "assets", f"{project}: project directory not found")
+        elif (project / "scenes.json").is_file() and not args.config:
+            audio_dir, timed, narration = load_scenes_json(project, report)
+            files = scene_audio_files(audio_dir, timed)
+        elif (loaded := load_remotion(project, report, args.config)) is not None:
+            audio_dir, timed = loaded
+            files = scene_audio_files(audio_dir, timed)
+        elif args.config:
+            report.add("error", "assets", f"{args.config}: config file not found")
+        elif args.project or not (args.render or args.layout):
+            standalone = True
+            report.data["template_type"] = "standalone"
+            report.add("info", "assets", "Template asset and scene length checks skipped (no Remotion config or scenes.json)")
+            files, timing_files = standalone_files(project)
+            check_standalone_timings(timing_files, files, project, report)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        report.add("error", "assets", f"Could not load project: {error}")
 
-    files = scene_audio_files(audio_dir, timed) if audio_dir else []
+    names = {p: p.relative_to(project).as_posix() if standalone else p.name for p in files}
     check_timing(timed, report)
-    check_pacing(files, narration, report)
+    check_pacing(files, narration, report, names)
 
-    levels = {} if args.skip_loudness else check_scene_loudness(files, report)
-    render_m = None
+    levels = {} if args.skip_loudness else check_scene_loudness(files, report, names, target=args.scene_lufs)
+    if standalone:
+        report.data["audio_files_checked"] = len(files)
+        if not files:
+            report.add("info", "pacing", "Pacing and scene loudness skipped (no narration audio found)")
+        elif report.data["pacing_measured"] < len(files):
+            report.add("info", "pacing", "Some pacing checks were skipped (need readable audio and matching .txt narration)")
+        if args.skip_loudness:
+            report.add("info", "loudness", "Scene loudness skipped (--skip-loudness)")
+        elif files and len(levels) < len(files):
+            report.add("info", "loudness", f"Some scene loudness checks were skipped (audio is under "
+                       f"{MIN_LOUDNESS_SECONDS:g}s, silent or unreadable)")
+    if args.fix:
+        report.data["fixed_scenes"] = fix_scenes(levels, args.scene_lufs, report, names)
+
     if args.render:
         render = Path(args.render)
         info = probe_video(render) if render.exists() else None
         render_m = check_render(render, report, args.target_lufs, info, allow_silent=args.allow_silent)
+        if args.fix and render_m:
+            out = fix_render(render, render_m, args.target_lufs, report)
+            report.data["fixed_render"] = str(out) if out else None
+            if out:
+                render, info = out, probe_video(out)
         if info and not args.skip_frames:
             check_frames(render, info, report, args.max_still)
             check_opening(render, info, report)
@@ -1051,12 +1197,6 @@ Examples:
         layout = run_layout_audit(project, args.composition, args.layout_every, report)
         if layout:
             check_layout(layout, report)
-
-    if args.fix:
-        report.data["fixed_scenes"] = fix_scenes(levels, args.scene_lufs, report)
-        if render_m:
-            out = fix_render(Path(args.render), render_m, args.target_lufs, report)
-            report.data["fixed_render"] = str(out) if out else None
 
     failed = report.count("error") > 0 or (args.strict and report.count("warn") > 0)
     if args.json:
