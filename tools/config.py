@@ -82,13 +82,6 @@ def get_default_output_dir(project_path: str | None = None) -> Path:
     return find_workspace_root() / "public" / "audio"
 
 
-def get_acemusic_api_key() -> str | None:
-    """Get ACE-Step Music API key from environment."""
-    from dotenv import load_dotenv
-    load_dotenv()
-    return os.getenv("ACEMUSIC_API_KEY")
-
-
 def get_ideogram_api_key() -> str | None:
     """Get the Ideogram API key from environment."""
     from dotenv import load_dotenv

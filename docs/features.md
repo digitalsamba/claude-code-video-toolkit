@@ -153,7 +153,7 @@ Audio, video, and image tools in `tools/`:
 # AI voiceover, ElevenLabs or self-hosted Qwen3-TTS (9 voices + cloning)
 uv run tools/voiceover.py --provider qwen3 --speaker Ryan --scene-dir public/audio/scenes --json
 
-# AI music (ACE-Step, free cloud API)
+# AI music (ACE-Step on your own Modal or RunPod endpoint)
 uv run tools/music_gen.py --preset corporate-bg --duration 120 --output music.mp3
 
 # AI image generation (FLUX.2) and editing (Qwen-Image)
@@ -181,7 +181,7 @@ uv run tools/qwen3_tts.py --text "Hello world" --tone warm --output hello.mp3
 # Generate background music (ElevenLabs)
 uv run tools/music.py --prompt "Upbeat corporate" --duration 120 --output music.mp3
 
-# Generate background music (ACE-Step, free cloud API, XL Turbo 4B model)
+# Generate background music (ACE-Step XL Turbo 4B on your Modal endpoint)
 uv run tools/music_gen.py --preset corporate-bg --duration 120 --output music.mp3
 uv run tools/music_gen.py --prompt "Dramatic cinematic" --duration 30 --bpm 90 --key "D Minor" --output reveal.mp3
 uv run tools/music_gen.py --prompt "Upbeat indie rock" --duration 60 --variations 4 --output intro.mp3
@@ -263,7 +263,7 @@ uv run tools/youtube_upload.py --video out/video.mp4 --title "My video" --privac
 | `flux2` | AI image generation & editing | ~$0.02 |
 | `image_edit` | AI image editing & style transfer | ~$0.03 |
 | `upscale` | AI image upscaling (2x/4x) | ~$0.01 |
-| `music_gen` | AI music generation (8 scene presets) | Free (acemusic) / ~$0.05 (self-hosted) |
+| `music_gen` | AI music generation (8 scene presets) | ~$0.05 (self-hosted; the free hosted API was retired, 2026-11-25) |
 | `soulx` | Talking head video from portrait + audio: holds identity over long takes | ~$0.0024/sec |
 | `sadtalker` | Talking head video, warp-based: fast, cheap drafts | ~$0.10 |
 | `ltx2` | AI video generation (text-to-video, image-to-video) | ~$0.23 |

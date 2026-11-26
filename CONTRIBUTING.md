@@ -116,7 +116,7 @@ An integration that needs a hosted third-party service, or software we can't bun
 your own repo. Open an issue with a link and a one-line description and we'll list it under
 **Community add-ons** in the README.
 
-The toolkit does carry a few hosted providers: ElevenLabs, 60db, Ideogram 4 and acemusic. Each is
+The toolkit does carry a few hosted providers: ElevenLabs, 60db and Ideogram 4. Each is
 there because a maintainer uses it, holds an account, and can run it against the live API when
 something breaks. That is the bar, and a PR can't meet it on a maintainer's behalf — code we
 can't run is code we can't keep working.

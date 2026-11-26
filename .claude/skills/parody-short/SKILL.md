@@ -65,7 +65,7 @@ documentary about the return to the office), each in 16:9 and vertical, plus a b
 
 - **GPU endpoints** (Modal, once): `uv sync --extra modal && uv run modal setup`, then
   `uv run tools/modal_setup.py flux2 image_edit ltx2 qwen3_tts`. LTX is gated: it needs a Modal secret with your
-  Hugging Face token (`docs/modal-setup.md`). Music: a free `ACEMUSIC_API_KEY` in `.env` (`acestep` skill).
+  Hugging Face token (`docs/modal-setup.md`). Music: the Modal `music_gen` app, about $0.03 a take (`acestep` skill).
 - **The project** is a plain Remotion project in `projects/<name>/`; no template fits, since nothing here should
   look like one. Copy `package.json` and `remotion.config.ts` from any template (the config makes `lib/` imports
   resolve), keep one composition per cut in `src/Root.tsx`, and put the cast's clips in `public/people/`. A shot
@@ -122,7 +122,7 @@ context bible carry over, and only the costumes, clips and world change.
 LTX ~$0.08 a 5 s clip, image_edit ~$0.01 an edit warm (a cold start is ~10 min; send one edit first and wait),
 FLUX ~$0.01 a background or portrait, ACE-Step song a few cents. A 90 s ad with five cast members and re-rolls is
 about $2. Two 80-100 s shorts sharing one invented cast (9 costume edits, 16 clips, 2 designed voices) came to about
-$2.50 together. The acemusic API can return 502s mid-batch; a failed take is skipped, so re-run for more.
+$2.50 together. A failed take is skipped, so re-run for more.
 
 ## Related
 

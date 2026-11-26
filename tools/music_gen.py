@@ -8,27 +8,23 @@ Capabilities:
 - Music control: BPM, key, time signature, duration
 - Cover/style transfer from reference audio (--cover)
 - Stem extraction (--extract)
-- Audio repainting — regenerate a time segment (--repaint)
-- Audio continuation — extend existing audio (--continuation)
 - Batch variations — generate multiple takes (--variations)
-- 5Hz LM thinking mode for richer output (--thinking, default on acemusic)
 - Scene presets for video production (--preset)
 - Brand-aware generation (--brand)
 
-Cloud providers:
-  acemusic (default) — Official ACE-Step cloud API (free key from acemusic.ai/api-key)
-  modal              — Self-hosted via Modal (ACE-Step 1.5 XL Turbo 4B, no LM)
-  runpod             — Self-hosted via RunPod (ACE-Step 2B Turbo)
+Cloud providers (your own endpoint; the weights are MIT, so the music is yours to use commercially):
+  modal   — Self-hosted via Modal (ACE-Step 1.5 XL Turbo 4B, no LM), about $0.02-0.03 a take
+  runpod  — Self-hosted via RunPod (ACE-Step 2B Turbo)
+  The hosted API at api.acemusic.ai, the old free default, answers HTTP 410 "retired" since 2026-11-25.
+  Repaint, continuation, thinking mode and sample mode ran only there, so they are not available.
 
 Examples:
-  # Basic background music (uses acemusic cloud API by default)
+  # Basic background music (on your Modal endpoint when it is set up)
   uv run tools/music_gen.py --prompt "Subtle corporate tech" --duration 60 --output bg.mp3
 
   # Generate 4 variations, pick the best
   uv run tools/music_gen.py --prompt "Upbeat electronic" --duration 30 --variations 4 --output intro.mp3
 
-  # Disable thinking mode for faster generation
-  uv run tools/music_gen.py --no-thinking --prompt "Quick draft" --duration 30 --output draft.mp3
 
   # With musical control
   uv run tools/music_gen.py --prompt "Upbeat electronic" --duration 30 --bpm 128 --key "G Major" --output intro.mp3
@@ -44,11 +40,7 @@ Examples:
   # Cover / style transfer
   uv run tools/music_gen.py --cover --reference theme.mp3 --prompt "Same style, longer" --duration 90 --output extended.mp3
 
-  # Repaint a weak section
-  uv run tools/music_gen.py --repaint --input track.mp3 --repaint-start 15 --repaint-end 25 --prompt "Guitar solo" --output fixed.mp3
 
-  # Continue from existing audio
-  uv run tools/music_gen.py --continuation --input track.mp3 --prompt "Continue with jazz piano" --output extended.mp3
 
   # Stem extraction
   uv run tools/music_gen.py --extract vocals --input mixed.mp3 --output vocals.mp3
@@ -85,9 +77,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 from file_transfer import delete_from_r2, download_from_url, get_r2_payload_config
 
 # --- Constants ---
-
-ACEMUSIC_API_URL = "https://api.acemusic.ai/v1/chat/completions"
-ACEMUSIC_MODELS_URL = "https://api.acemusic.ai/v1/models"
 
 RUNPOD_GRAPHQL_URL = "https://api.runpod.io/graphql"
 DOCKER_IMAGE = "ghcr.io/conalmullan/video-toolkit-acestep:latest"
@@ -289,326 +278,45 @@ def encode_audio(path: str) -> str:
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-# --- ACE-Step Cloud API (acemusic.ai) ---
-
-def call_acemusic_api(
-    prompt: str,
-    output_path: str,
-    duration: int = 30,
-    bpm: Optional[int] = None,
-    key_scale: Optional[str] = None,
-    time_signature: Optional[int] = None,
-    lyrics: Optional[str] = None,
-    vocal_language: str = "en",
-    audio_format: str = "mp3",
-    seed: Optional[int] = None,
-    thinking: bool = True,
-    variations: int = 1,
-    # Audio editing modes
-    task_type: str = "text2music",
-    src_audio_path: Optional[str] = None,
-    repaint_start: Optional[float] = None,
-    repaint_end: Optional[float] = None,
-    cover_strength: float = 0.7,
-    # Advanced
-    guidance_scale: Optional[float] = None,
-    infer_method: Optional[str] = None,
-    json_output: bool = False,
-    progress=None,
-) -> Optional[dict]:
-    """Generate music via ACE-Step official cloud API (acemusic.ai).
-
-    Uses the OpenRouter-compatible completion endpoint. Supports text2music,
-    cover, repainting, and continuation. Returns dict with results or None on error.
-    """
-    from config import get_acemusic_api_key
-
-    api_key = get_acemusic_api_key()
-    if not api_key:
-        log("ACEMUSIC_API_KEY not set.", "error")
-        log("Get a free key at https://acemusic.ai/api-key", "info")
-        log('Then: echo "ACEMUSIC_API_KEY=your_key" >> .env', "info")
-        return None
-
-    # The hosted API returns one take per request whatever batch_size (or n) says
-    # (checked 2026-11-05: batch_size=2, n=2 and audio_config.batch_size=2 each came
-    # back with one choice holding one audio entry). So variations are N requests,
-    # saved as <stem>_1<ext> ... <stem>_N<ext>. A given seed moves on by one per take,
-    # so the takes differ; without one, each request picks its own.
-    if variations > 1:
-        out = Path(output_path)
-        takes = []
-        for i in range(variations):
-            log(f"Take {i + 1}/{variations}", "info")
-            take = call_acemusic_api(
-                prompt, str(out.parent / f"{out.stem}_{i + 1}{out.suffix}"),
-                duration=duration, bpm=bpm, key_scale=key_scale,
-                time_signature=time_signature, lyrics=lyrics,
-                vocal_language=vocal_language, audio_format=audio_format,
-                seed=None if seed is None else seed + i, thinking=thinking,
-                variations=1, task_type=task_type, src_audio_path=src_audio_path,
-                repaint_start=repaint_start, repaint_end=repaint_end,
-                cover_strength=cover_strength, guidance_scale=guidance_scale,
-                infer_method=infer_method, json_output=json_output, progress=progress,
-            )
-            if take:
-                takes.append(take)
-            else:
-                log(f"Take {i + 1} failed; keeping the others", "warn")
-        if not takes:
-            return None
-        files = [t["output"] for t in takes]
-        return {
-            **takes[0],
-            "output": files,
-            "files": files,
-            "variations": len(files),
-            "requested_variations": variations,
-            "elapsed_seconds": round(sum(t["elapsed_seconds"] for t in takes), 2),
-            "takes": takes,
-        }
-
-    mode_label = {
-        "text2music": "Music Generation",
-        "repainting": "Audio Repainting",
-        "continuation": "Audio Continuation",
-        "cover": "Cover / Style Transfer",
-    }.get(task_type, task_type)
-
-    log(f"ACE-Step Cloud API — {mode_label}", "info")
-    log("=" * 40, "dim")
-    log(f"Prompt: {prompt[:80]}{'...' if len(prompt) > 80 else ''}", "info")
-    log(f"Duration: {duration}s | Thinking: {'on' if thinking else 'off'}", "dim")
-    if bpm:
-        log(f"BPM: {bpm}", "dim")
-    if key_scale:
-        log(f"Key: {key_scale}", "dim")
-    # Build message content using XML tag format
-    content_parts = []
-    content_parts.append(f"<prompt>{prompt}</prompt>")
-    if lyrics:
-        content_parts.append(f"<lyrics>{lyrics}</lyrics>")
-    content = "".join(content_parts)
-
-    # Build messages array — for audio input modes, include base64 audio
-    messages = []
-    if src_audio_path and task_type in ("cover", "repainting", "continuation"):
-        if not Path(src_audio_path).exists():
-            log(f"Source audio not found: {src_audio_path}", "error")
-            return None
-        audio_b64 = encode_audio(src_audio_path)
-        messages.append({
-            "role": "user",
-            "content": [
-                {"type": "text", "text": content},
-                {"type": "input_audio", "input_audio": {"data": audio_b64, "format": "mp3"}},
-            ],
-        })
-    else:
-        messages.append({"role": "user", "content": content})
-
-    # Build payload
-    payload = {
-        "messages": messages,
-        "stream": False,
-        "thinking": thinking,
-        "audio_config": {
-            "duration": duration,
-            "format": audio_format,
-            "vocal_language": vocal_language,
-        },
-    }
-
-    # Use XL Turbo (4B DiT) by default — best quality
-    payload["model"] = "acemusic/acestep-v1.5-xl-turbo"
-    log(f"Model: {payload['model']}", "dim")
-
-    # Musical attributes
-    if bpm:
-        payload["audio_config"]["bpm"] = bpm
-    if key_scale:
-        payload["audio_config"]["key_scale"] = key_scale
-    if time_signature:
-        payload["audio_config"]["time_signature"] = str(time_signature)
-
-    # Seed
-    if seed is not None:
-        payload["seed"] = seed
-
-    # Task type for audio editing
-    if task_type != "text2music":
-        payload["task_type"] = task_type
-    if repaint_start is not None:
-        payload["repainting_start"] = repaint_start
-    if repaint_end is not None:
-        payload["repainting_end"] = repaint_end
-    if task_type == "cover":
-        payload["audio_cover_strength"] = cover_strength
-
-    # Advanced generation params
-    if guidance_scale is not None:
-        payload["guidance_scale"] = guidance_scale
-    if infer_method:
-        payload["infer_method"] = infer_method
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}",
-    }
-
-    import time
-    from contextlib import contextmanager as _cm
-    start_time = time.time()
-
-    def _emit(stage, msg, level="dim", pct=None):
-        if progress:
-            progress.event(stage, msg, pct=pct, level=level)
-        else:
-            log(msg, level)
-
-    try:
-        model_tag = "XL Turbo 4B" if "turbo" in payload.get("model", "") else "ACE-Step"
-        _emit("submit", f"Sending to acemusic.ai ({model_tag}, thinking: {'on' if thinking else 'off'})...")
-
-        # Heartbeat emits liveness events during the blocking call
-        heartbeat_ctx = (progress.heartbeat(
-            "waiting", "Waiting for acemusic.ai response... ({elapsed:.0f}s)"
-        ) if progress else _cm(lambda: (yield))())
-
-        with heartbeat_ctx:
-            response = requests.post(
-                ACEMUSIC_API_URL,
-                json=payload,
-                headers=headers,
-                timeout=600,
-            )
-    except requests.exceptions.Timeout:
-        _emit("error", "Request timed out (600s)", level="error")
-        return None
-    except requests.exceptions.RequestException as e:
-        _emit("error", f"Request failed: {e}", level="error")
-        return None
-
-    elapsed = time.time() - start_time
-
-    if response.status_code != 200:
-        _emit("error", f"API returned HTTP {response.status_code}: {response.text[:500]}", level="error")
-        return None
-
-    try:
-        result = response.json()
-    except json.JSONDecodeError:
-        log("Invalid JSON response from API", "error")
-        return None
-
-    # Extract audio from response
-    choices = result.get("choices", [])
-    if not choices:
-        log("No choices in API response", "error")
-        return None
-
-    message = choices[0].get("message", {})
-    audio_list = message.get("audio", [])
-
-    if not audio_list:
-        log("No audio in API response", "error")
-        # Check if there's an error message in content
-        content = message.get("content", "")
-        if content:
-            log(f"Response: {content[:200]}", "dim")
-        return None
-
-    # Save audio files
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    saved_files = []
-
-    for i, audio_entry in enumerate(audio_list):
-        audio_url = audio_entry.get("audio_url", {}).get("url", "")
-        if not audio_url.startswith("data:audio"):
-            log("Unexpected audio format in response", "warn")
-            continue
-
-        # Decode base64 data URL: data:audio/mpeg;base64,...
-        try:
-            b64_data = audio_url.split(",", 1)[1]
-            audio_bytes = base64.b64decode(b64_data)
-        except (IndexError, Exception) as e:
-            log(f"Failed to decode audio: {e}", "error")
-            continue
-
-        if len(audio_list) > 1:
-            # Multiple variations: output_1.mp3, output_2.mp3, etc.
-            stem = Path(output_path).stem
-            ext = Path(output_path).suffix
-            out_file = str(Path(output_path).parent / f"{stem}_{i + 1}{ext}")
-        else:
-            out_file = output_path
-
-        Path(out_file).write_bytes(audio_bytes)
-        saved_files.append(out_file)
-
-    if not saved_files:
-        _emit("error", "No audio files could be saved", level="error")
-        return None
-
-    # Report results
-    for f in saved_files:
-        file_size_kb = os.path.getsize(f) / 1024
-        actual_dur = get_audio_duration(f)
-        dur_str = f", {actual_dur:.1f}s" if actual_dur else ""
-        _emit("complete", f"Saved: {f} ({file_size_kb:.0f} KB{dur_str})",
-              pct=100, level="success")
-
-    _emit("cost", f"Time: {elapsed:.1f}s total (acemusic)", level="dim")
-
-    # Parse metadata from response content
-    metas = {}
-    content_text = message.get("content", "")
-    if content_text:
-        for line in content_text.split("\n"):
-            if "**BPM:**" in line:
-                try:
-                    metas["bpm"] = int(line.split("**BPM:**")[1].strip().split()[0])
-                except (ValueError, IndexError):
-                    pass
-            if "**Key:**" in line or "**Key Scale:**" in line:
-                key_part = line.split(":**", 1)[1].strip() if ":**" in line else ""
-                if key_part:
-                    metas["keyscale"] = key_part.split("\n")[0].strip()
-
-    # Build output
-    output = {
-        "success": True,
-        "output": saved_files[0] if len(saved_files) == 1 else saved_files,
-        "prompt": prompt,
-        "requested_duration": duration,
-        "elapsed_seconds": round(elapsed, 2),
-        "provider": "acemusic",
-        "model": payload.get("model", "unknown"),
-        "thinking": thinking,
-    }
-
-    if len(saved_files) > 1:
-        output["variations"] = len(saved_files)
-        output["files"] = saved_files
-
-    primary = saved_files[0]
-    actual_duration = get_audio_duration(primary)
-    if actual_duration:
-        output["actual_duration_seconds"] = round(actual_duration, 2)
-    output["file_size_kb"] = round(os.path.getsize(primary) / 1024, 1)
-
-    if metas:
-        output["metas"] = metas
-    if seed is not None:
-        output["seed"] = seed
-
-    return output
-
-
 # --- RunPod API ---
 
 # --- Generation functions (Modal/RunPod) ---
+
+def default_cloud(env=None) -> Optional[str]:
+    """The cloud to use when --cloud is not given: a self-hosted endpoint that is set up, or None.
+
+    The hosted API (acemusic.ai) was the default until it began answering HTTP 410, "retired", on 2026-11-25.
+    """
+    env = os.environ if env is None else env
+    if env.get("MODAL_MUSIC_GEN_ENDPOINT_URL"):
+        return "modal"
+    if env.get("RUNPOD_ACESTEP_ENDPOINT_ID") and env.get("RUNPOD_API_KEY"):
+        return "runpod"
+    return None
+
+
+RETIRED = ("The hosted ACE-Step API (api.acemusic.ai) answers HTTP 410 'retired' since 2026-11-25. "
+           "Music runs on your own endpoint now: set one up with `uv run tools/modal_setup.py music_gen` "
+           "(about $0.02-0.03 a take), or RunPod with `uv run tools/music_gen.py --setup`.")
+
+# Options that only the hosted API had. Kept so an old command gets a reason, not "unrecognized arguments".
+HOSTED_ONLY = {"repaint": "--repaint", "continuation": "--continuation", "thinking": "--thinking",
+               "sample_mode": "--sample-mode", "guidance_scale": "--guidance-scale",
+               "infer_method": "--infer-method"}
+
+
+def hosted_only_options(args) -> list[str]:
+    """The hosted-API-only options this command line used."""
+    return [flag for attr, flag in HOSTED_ONLY.items() if getattr(args, attr, None) not in (None, False)]
+
+
+def take_paths(output_path: str, variations: int) -> list[str]:
+    """Where N takes are saved: <stem>_1<ext> to <stem>_N<ext>, or the path itself for one."""
+    if variations <= 1:
+        return [output_path]
+    out = Path(output_path)
+    return [str(out.parent / f"{out.stem}_{i + 1}{out.suffix}") for i in range(variations)]
+
 
 def generate_music(
     prompt: str,
@@ -1232,15 +940,12 @@ Examples:
                             help="Cover strength 0.0-1.0 (default: 0.7)")
     edit_group.add_argument("--extract", metavar="TRACK",
                             help="Extract stem: vocals, drums, bass, guitar, piano, other")
-    edit_group.add_argument("--input", "-i", help="Input audio for extract/cover/repaint/continuation")
-    edit_group.add_argument("--repaint", action="store_true",
-                            help="Repaint mode: regenerate a time segment (acemusic only)")
-    edit_group.add_argument("--repaint-start", type=float,
-                            help="Repaint start time in seconds")
-    edit_group.add_argument("--repaint-end", type=float,
-                            help="Repaint end time in seconds")
-    edit_group.add_argument("--continuation", action="store_true",
-                            help="Continue from existing audio (acemusic only)")
+    edit_group.add_argument("--input", "-i", help="Input audio for extract/cover")
+    # The hosted API's options: it is retired, so these only explain that (see HOSTED_ONLY)
+    edit_group.add_argument("--repaint", action="store_true", help=argparse.SUPPRESS)
+    edit_group.add_argument("--repaint-start", type=float, help=argparse.SUPPRESS)
+    edit_group.add_argument("--repaint-end", type=float, help=argparse.SUPPRESS)
+    edit_group.add_argument("--continuation", action="store_true", help=argparse.SUPPRESS)
 
     # Output
     output_group = parser.add_argument_group("Output")
@@ -1255,24 +960,20 @@ Examples:
     adv_group.add_argument("--steps", type=int, default=8,
                            help="Inference steps (default: 8 for turbo, use 32-64 for base model)")
     adv_group.add_argument("--seed", type=int, help="Random seed for reproducibility")
-    adv_group.add_argument("--thinking", action="store_true", default=None,
-                           help="Enable 5Hz LM thinking mode for richer output (default for acemusic)")
-    adv_group.add_argument("--no-thinking", action="store_true",
-                           help="Disable thinking mode (faster generation)")
+    adv_group.add_argument("--thinking", action="store_true", default=None, help=argparse.SUPPRESS)
+    adv_group.add_argument("--no-thinking", action="store_true", help=argparse.SUPPRESS)  # the old default; a no-op
     adv_group.add_argument("--variations", type=int, default=1,
-                           help="Generate N variations (1-8, acemusic only, default: 1)")
-    adv_group.add_argument("--guidance-scale", type=float,
-                           help="Prompt adherence (1.0-15.0, default: 7.0)")
-    adv_group.add_argument("--infer-method", choices=["ode", "sde"],
-                           help="Inference method: ode (deterministic) or sde (stochastic)")
-    adv_group.add_argument("--sample-mode", action="store_true",
-                           help="Let LM auto-generate caption/lyrics from prompt (acemusic only)")
+                           help="Generate N takes (1-8, default: 1), saved as <output>_1 to <output>_N")
+    adv_group.add_argument("--guidance-scale", type=float, help=argparse.SUPPRESS)
+    adv_group.add_argument("--infer-method", choices=["ode", "sde"], help=argparse.SUPPRESS)
+    adv_group.add_argument("--sample-mode", action="store_true", help=argparse.SUPPRESS)
 
     # Cloud provider
     cloud_group = parser.add_argument_group("Cloud")
-    cloud_group.add_argument("--cloud", type=str, default="acemusic",
+    cloud_group.add_argument("--cloud", type=str, default=None,
                              choices=["acemusic", "modal", "runpod"],
-                             help="Cloud provider (default: acemusic)")
+                             help="Cloud provider (default: modal when its endpoint is in .env, then runpod; "
+                                  "acemusic, the hosted API, is retired)")
 
     # Setup
     setup_group = parser.add_argument_group("Setup")
@@ -1310,120 +1011,20 @@ Examples:
             sys.exit(1)
         sys.exit(0)
 
-    # Resolve thinking mode: default on for acemusic, off for self-hosted
-    if args.no_thinking:
-        thinking = False
-    elif args.thinking is True:
-        thinking = True
-    else:
-        thinking = args.cloud == "acemusic"
+    if args.cloud == "acemusic":
+        parser.error(RETIRED)
+    used = hosted_only_options(args)
+    if used:
+        parser.error(f"{', '.join(used)} came from the hosted API, which is retired; "
+                     "your own endpoint does not offer it yet. " + RETIRED)
+    if args.cloud is None:
+        args.cloud = default_cloud()
+    if args.cloud is None and not args.dry_run:
+        parser.error("No music endpoint is set up. " + RETIRED)
 
     # Create progress reporter
     from cloud_gpu import ProgressReporter
     reporter = ProgressReporter(mode=args.progress)
-
-    # Validate acemusic-only features
-    if args.cloud != "acemusic":
-        if args.repaint or args.continuation:
-            parser.error("--repaint and --continuation require --cloud acemusic")
-        if args.variations > 1:
-            parser.error("--variations requires --cloud acemusic")
-        if args.sample_mode:
-            parser.error("--sample-mode requires --cloud acemusic")
-
-    # Handle --repaint mode (acemusic only)
-    if args.repaint:
-        if not args.input:
-            parser.error("--repaint requires --input")
-        if not args.prompt:
-            parser.error("--repaint requires --prompt")
-        if args.repaint_start is None:
-            parser.error("--repaint requires --repaint-start")
-        if not args.output:
-            stem = Path(args.input).stem
-            args.output = f"{stem}_repainted.{args.audio_format}"
-
-        if args.dry_run:
-            result = {
-                "dry_run": True,
-                "mode": "repainting",
-                "input": args.input,
-                "repaint_start": args.repaint_start,
-                "repaint_end": args.repaint_end,
-                "prompt": args.prompt,
-                "output": args.output,
-            }
-            print(json.dumps(result, indent=2) if args.json else f"Would repaint {args.input} [{args.repaint_start}s-{args.repaint_end}s]")
-            sys.exit(0)
-
-        print()
-        result = call_acemusic_api(
-            prompt=args.prompt,
-            output_path=args.output,
-            duration=args.duration,
-            bpm=args.bpm,
-            key_scale=args.key_scale,
-            lyrics=args.lyrics,
-            vocal_language=args.vocal_language,
-            audio_format=args.audio_format,
-            seed=args.seed,
-            thinking=thinking,
-            task_type="repainting",
-            src_audio_path=args.input,
-            repaint_start=args.repaint_start,
-            repaint_end=args.repaint_end,
-            guidance_scale=args.guidance_scale,
-            infer_method=args.infer_method,
-            json_output=args.json,
-            progress=reporter,
-        )
-        if args.json and result:
-            print(json.dumps(result, indent=2))
-        sys.exit(0 if result else 1)
-
-    # Handle --continuation mode (acemusic only)
-    if args.continuation:
-        if not args.input:
-            parser.error("--continuation requires --input")
-        if not args.prompt:
-            parser.error("--continuation requires --prompt")
-        if not args.output:
-            stem = Path(args.input).stem
-            args.output = f"{stem}_continued.{args.audio_format}"
-
-        if args.dry_run:
-            result = {
-                "dry_run": True,
-                "mode": "continuation",
-                "input": args.input,
-                "prompt": args.prompt,
-                "output": args.output,
-            }
-            print(json.dumps(result, indent=2) if args.json else f"Would continue {args.input}")
-            sys.exit(0)
-
-        print()
-        result = call_acemusic_api(
-            prompt=args.prompt,
-            output_path=args.output,
-            duration=args.duration,
-            bpm=args.bpm,
-            key_scale=args.key_scale,
-            lyrics=args.lyrics,
-            vocal_language=args.vocal_language,
-            audio_format=args.audio_format,
-            seed=args.seed,
-            thinking=thinking,
-            task_type="continuation",
-            src_audio_path=args.input,
-            guidance_scale=args.guidance_scale,
-            infer_method=args.infer_method,
-            json_output=args.json,
-            progress=reporter,
-        )
-        if args.json and result:
-            print(json.dumps(result, indent=2))
-        sys.exit(0 if result else 1)
 
     # Handle --extract mode
     if args.extract:
@@ -1481,35 +1082,18 @@ Examples:
             print(json.dumps(result, indent=2) if args.json else f"Would create cover of {ref}")
             sys.exit(0)
 
-        if args.cloud == "acemusic":
-            result = call_acemusic_api(
-                prompt=args.prompt,
-                output_path=args.output,
-                duration=args.duration,
-                audio_format=args.audio_format,
-                seed=args.seed,
-                thinking=thinking,
-                task_type="cover",
-                src_audio_path=ref,
-                cover_strength=args.cover_strength,
-                guidance_scale=args.guidance_scale,
-                infer_method=args.infer_method,
-                json_output=args.json,
-                progress=reporter,
-            )
-        else:
-            result = generate_cover(
-                reference_path=ref,
-                prompt=args.prompt,
-                output_path=args.output,
-                duration=args.duration,
-                cover_strength=args.cover_strength,
-                steps=args.steps,
-                audio_format=args.audio_format,
-                json_output=args.json,
-                cloud=args.cloud,
-                progress=reporter,
-            )
+        result = generate_cover(
+            reference_path=ref,
+            prompt=args.prompt,
+            output_path=args.output,
+            duration=args.duration,
+            cover_strength=args.cover_strength,
+            steps=args.steps,
+            audio_format=args.audio_format,
+            json_output=args.json,
+            cloud=args.cloud,
+            progress=reporter,
+        )
         if args.json and result:
             print(json.dumps(result, indent=2))
         sys.exit(0 if result else 1)
@@ -1574,29 +1158,16 @@ Examples:
         sys.exit(0)
 
     print()
-    if args.cloud == "acemusic":
-        result = call_acemusic_api(
+    # Takes on a self-hosted endpoint are one request each, saved as <stem>_1<ext> to <stem>_N<ext>. A given
+    # seed moves on by one per take, so the takes differ.
+    takes = []
+    paths = take_paths(args.output, args.variations)
+    for i, path in enumerate(paths):
+        if len(paths) > 1:
+            log(f"Take {i + 1}/{len(paths)}", "info")
+        take = generate_music(
             prompt=prompt,
-            output_path=args.output,
-            duration=args.duration,
-            bpm=bpm,
-            key_scale=key_scale,
-            time_signature=args.time_sig,
-            lyrics=args.lyrics,
-            vocal_language=args.vocal_language,
-            audio_format=args.audio_format,
-            seed=args.seed,
-            thinking=thinking,
-            variations=args.variations,
-            guidance_scale=args.guidance_scale,
-            infer_method=args.infer_method,
-            json_output=args.json,
-            progress=reporter,
-        )
-    else:
-        result = generate_music(
-            prompt=prompt,
-            output_path=args.output,
+            output_path=path,
             duration=args.duration,
             bpm=bpm,
             key_scale=key_scale,
@@ -1605,11 +1176,21 @@ Examples:
             vocal_language=args.vocal_language,
             steps=args.steps,
             audio_format=args.audio_format,
-            seed=args.seed,
+            seed=None if args.seed is None else args.seed + i,
             json_output=args.json,
             cloud=args.cloud,
             progress=reporter,
         )
+        if take:
+            takes.append(take)
+        elif len(paths) > 1:
+            log(f"Take {i + 1} failed; keeping the others", "warn")
+    result = None
+    if takes and len(paths) > 1:
+        result = {**takes[0], "outputs": [t.get("output") for t in takes], "variations": len(takes),
+                  "requested_variations": len(paths)}
+    elif takes:
+        result = takes[0]
 
     if args.json and result:
         print(json.dumps(result, indent=2))

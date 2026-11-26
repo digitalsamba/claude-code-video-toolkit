@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import video_job as vj  # noqa: E402
 
 KEYS = ("ELEVENLABS_API_KEY", "IDEOGRAM_API_KEY", "MODAL_LTX2_ENDPOINT_URL", "MODAL_QWEN3_TTS_ENDPOINT_URL",
-        "MODAL_FLUX2_ENDPOINT_URL", "MODAL_MUSIC_GEN_ENDPOINT_URL", "ACEMUSIC_API_KEY", "SIXTYDB_API_KEY",
+        "MODAL_FLUX2_ENDPOINT_URL", "MODAL_MUSIC_GEN_ENDPOINT_URL", "SIXTYDB_API_KEY",
         "RUNPOD_API_KEY", "RUNPOD_FLUX2_ENDPOINT_ID", "RUNPOD_QWEN3_TTS_ENDPOINT_ID", "RUNPOD_ACESTEP_ENDPOINT_ID",
         "R2_ACCOUNT_ID", "VIDEO_JOB_EXPANDER", "VIDEO_JOB_MAX_USD", "VIDEO_JOB_WORKSPACE", "LONGARM_WORKSPACE")
 
@@ -67,15 +67,17 @@ class TestEstimate(Isolated):
         words = sum(len(s["text"].split()) for s in vj.SPEC_EXAMPLE["scenes"])
         narration_s = round(words / vj.WORDS_PER_SECOND, 1)
         expected = (3 * vj.PRICES["voiceover"]["qwen3"] + 2 * vj.PRICES["ideogram_image"]["DEFAULT"]
-                    + 1 * vj.PRICES["ltx_clip"] + narration_s * vj.PRICES["captions_per_audio_second"]["scribe"])
+                    + 1 * vj.PRICES["ltx_clip"] + narration_s * vj.PRICES["captions_per_audio_second"]["scribe"]
+                    + vj.PRICES["music_track"]["modal"])
         self.assertAlmostEqual(a["estimate_usd"], round(expected, 4), places=4)
         self.assertEqual(a["scenes"], 3)
         self.assertEqual({r["step"] for r in a["breakdown"]}, {"voiceover", "visuals", "captions", "music"})
-        self.assertEqual(next(r for r in a["breakdown"] if r["step"] == "music")["usd"], 0.0)  # acemusic is free
+        # music is on by default and on your own endpoint since the free hosted API was retired (2026-11-25)
+        self.assertEqual(next(r for r in a["breakdown"] if r["step"] == "music")["usd"], vj.PRICES["music_track"]["modal"])
         self.assertEqual(a["prices_version"], vj.PRICES_VERSION)
 
     def test_prices_follow_the_spec_knobs(self):
-        cheap = vj.estimate(spec(ideogram={"speed": "TURBO"}, captions={"enabled": False}))
+        cheap = vj.estimate(spec(ideogram={"speed": "TURBO"}, captions={"enabled": False}, music=False))
         self.assertAlmostEqual(cheap["estimate_usd"], 3 * vj.PRICES["voiceover"]["qwen3"] + 2 * 0.03
                                + vj.PRICES["ltx_clip"], places=4)
         el = vj.estimate(spec(voice={"provider": "elevenlabs"}))
@@ -414,7 +416,8 @@ class TestCli(Isolated):
         self.assertEqual(s["title"], "Say hello")
         self.assertEqual(s["format"], "16:9")
         self.assertEqual(vj.estimate(s)["estimate_usd"], round(2 * vj.PRICES["voiceover"]["qwen3"]
-                                                               + vj.PRICES["flux_image"] + (4 / 2.4) * 0.40 / 3600, 4))
+                                                               + vj.PRICES["flux_image"] + (4 / 2.4) * 0.40 / 3600
+                                                               + vj.PRICES["music_track"]["modal"], 4))
 
 
 if __name__ == "__main__":
