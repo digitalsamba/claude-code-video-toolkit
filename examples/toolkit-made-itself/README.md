@@ -32,7 +32,7 @@ from it, and the Check scene shows a problem `qc.py` really found in the draft.
 
 The bill (`src/bill.json`, $0.33) came from `scripts/bill.py`: ElevenLabs history for the voice credits since the
 build started, the `Est. cost` lines the Modal tools printed, Scribe seconds at $0.40 an hour, and the music takes
-counted (acemusic is free). It needs the build session's ElevenLabs history, so it's kept as the record of how the
+counted (acemusic was free; it was retired on 2026-11-25). It needs the build session's ElevenLabs history, so it's kept as the record of how the
 bill was measured rather than something to re-run.
 
 ## Timing

@@ -153,7 +153,7 @@ Audio, video, and image tools in `tools/`:
 # AI voiceover, ElevenLabs or self-hosted Qwen3-TTS (9 voices + cloning)
 uv run tools/voiceover.py --provider qwen3 --speaker Ryan --scene-dir public/audio/scenes --json
 
-# AI music (ACE-Step, free cloud API)
+# AI music (ACE-Step on your own Modal or RunPod endpoint)
 uv run tools/music_gen.py --preset corporate-bg --duration 120 --output music.mp3
 
 # AI image generation (FLUX.2) and editing (Qwen-Image)
@@ -181,7 +181,7 @@ uv run tools/qwen3_tts.py --text "Hello world" --tone warm --output hello.mp3
 # Generate background music (ElevenLabs)
 uv run tools/music.py --prompt "Upbeat corporate" --duration 120 --output music.mp3
 
-# Generate background music (ACE-Step, free cloud API, XL Turbo 4B model)
+# Generate background music (ACE-Step XL Turbo 4B on your Modal endpoint)
 uv run tools/music_gen.py --preset corporate-bg --duration 120 --output music.mp3
 uv run tools/music_gen.py --prompt "Dramatic cinematic" --duration 30 --bpm 90 --key "D Minor" --output reveal.mp3
 uv run tools/music_gen.py --prompt "Upbeat indie rock" --duration 60 --variations 4 --output intro.mp3

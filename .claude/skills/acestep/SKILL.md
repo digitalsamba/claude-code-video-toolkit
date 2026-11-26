@@ -10,7 +10,11 @@ Open-source music generation via `tools/music_gen.py`.
 **Cloud providers:**
 - **modal** (the default when its endpoint is in `.env`): Self-hosted ACE-Step 1.5 XL Turbo (4B DiT, no LM) on Modal A10G. Requires `MODAL_MUSIC_GEN_ENDPOINT_URL`.
 - **runpod**: Self-hosted ACE-Step 2B Turbo on RunPod. Requires `RUNPOD_ACESTEP_ENDPOINT_ID`.
-- **acemusic**: the hosted ACE-Step API (XL Turbo plus the 5Hz LM). The hosted ACE-Step API (acemusic.ai) answered HTTP 410, "retired", on 2026-11-25. `--cloud acemusic` is kept in case it returns; what this file marks "acemusic only" (repaint, continuation, thinking mode) does not run until it does.
+- The hosted ACE-Step API (acemusic.ai, the old free default) answers HTTP 410, "retired", since 2026-11-25. Its
+  options (`--repaint`, `--continuation`, `--thinking`, `--sample-mode`, `--guidance-scale`, `--infer-method`) now
+  fail with that reason; the self-hosted endpoints don't offer them yet.
+- **Licence:** the ACE-Step 1.5 weights and code are MIT, so music from your own endpoint can be used commercially.
+  A take can still resemble an existing song; listen before publishing.
 
 ## Setup
 
@@ -212,17 +216,9 @@ Tracks: `vocals`, `drums`, `bass`, `guitar`, `piano`, `keyboard`, `strings`, `br
 > the self-hosted endpoints serve (XL Turbo on Modal, 2B Turbo on RunPod) don't support it, so
 > expect weak stems there.
 
-### repainting (acemusic only)
-Regenerate a specific time segment within existing audio while preserving the rest.
-```bash
-uv run tools/music_gen.py --repaint --input track.mp3 --repaint-start 15 --repaint-end 25 --prompt "Guitar solo" --output fixed.mp3
-```
-
-### continuation (acemusic only)
-Extend existing audio by continuing from where it ends.
-```bash
-uv run tools/music_gen.py --continuation --input track.mp3 --prompt "Continue with jazz piano" --output extended.mp3
-```
+### repainting and continuation (not available)
+Both ran only on the hosted API, retired 2026-11-25. Upstream ACE-Step 1.5 has them as tasks, so they can come back
+on the self-hosted endpoint; until then, regenerate the take or cut and crossfade two takes with ffmpeg.
 
 ## Prompt Engineering
 
@@ -323,16 +319,11 @@ For consistent sound across a project: fix the seed (`--seed 42`) and vary only 
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--thinking` | on (acemusic) | 5Hz LM enriches prompts and generates audio codes |
-| `--no-thinking` | - | Faster generation, skip LM reasoning |
 | `--variations N` | 1 | Generate N takes (1-8), saved as `<output>_1` to `<output>_N`; a given `--seed` moves on by one per take |
-| `--guidance-scale` | 7.0 | Prompt adherence (1.0-15.0) |
-| `--infer-method` | ode | `ode` (deterministic) or `sde` (stochastic, more variety) |
 | `--seed` | random | Lock randomness for reproducibility |
 
 ## Technical Details
 
-- **acemusic cloud**: XL Turbo 4B DiT + 4B LM, best quality, ~5-15s per generation
 - **Modal**: XL Turbo 4B DiT (ACE-Step-1.5 v0.1.8), no LM, 8 steps at shift 3.0 (upstream's turbo recommendation; override with `shift` in the request), DCW sampler on. ~4s warm for 10s of audio, ~50s cold
 - **RunPod**: Standard Turbo 2B DiT, no LM, ~2-3s per generation
 - **Output**: 48kHz MP3/WAV/FLAC

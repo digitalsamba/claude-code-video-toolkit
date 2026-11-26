@@ -11,7 +11,7 @@ Model: ACE-Step 1.5 XL Turbo (4B DiT, 8 steps, MIT) on ACE-Step-1.5 v0.1.8.
 The XL weights ship as fp32 (~20GB) and load as bf16 (~10GB VRAM), so XL turbo +
 VAE + text encoder fit an A10G (24GB) without offload. The 5Hz LM and the 2B turbo
 DiT are baked only because the handler's presence check requires them; neither is
-loaded (thinking mode is acemusic-only).
+loaded (thinking mode ran only on the hosted API, retired 2026-11-25).
 
 Note: Uses A10G (24GB VRAM). Cold start ~50s (~37s of it model load; ~30GB of
 weights baked into image). Warm: ~4s for 10s of audio.

@@ -23,6 +23,8 @@ All notable changes to claude-code-video-toolkit.
 
 ### Fixed
 
+- **Music runs on your own endpoint, since the hosted ACE-Step API was retired**: api.acemusic.ai answers HTTP 410 "retired" since 2026-11-25, and it was the free default. `music_gen.py` now uses Modal when its endpoint is set, then RunPod, and with neither stops with the setup command; `--cloud acemusic` and the options only it had (`--repaint`, `--continuation`, `--thinking`, `--sample-mode`, `--guidance-scale`, `--infer-method`) fail with that reason. Agent video jobs pick the same endpoint: before, a job quoted the bed at $0.00 and rendered without it. A spec or kit that names `acemusic` gets the host's endpoint, priced at $0.03. The docs, `/setup`, skills and the site no longer call music free.
+
 - **A first Manim scene trips on less.** `ToolkitMovingCameraScene` moves the camera on a narration cue, `Voice.cue()` warns when a one-word cue matches more than once, and `docs/manim.md` covers SVG marks, empty text anchors, label draw order, shared baselines and `GrowFromEdge` in place of `GrowFromBottom` (#272). By @AsharibAli.
 
 - **`copy_lint.py --brand video-toolkit` works.** The toolkit brand has its own `copy.md` and `copy.json`; a brand without one gets the general rules and a warning instead of an error; `--diff` reads UTF-8 and file names with spaces on Windows (#271). By @AsharibAli.

@@ -84,7 +84,7 @@ class ProgressReporter:
 
     Both modes emit the same events at the same moments. The heartbeat()
     context manager emits periodic liveness signals during blocking calls
-    (acemusic, Modal) so consumers know the process isn't stuck.
+    (Modal) so consumers know the process isn't stuck.
     """
 
     def __init__(self, mode: str = "human", heartbeat_interval: int = 15):
@@ -126,7 +126,7 @@ class ProgressReporter:
                   msg_template: str = "Waiting for response... ({elapsed:.0f}s)"):
         """Context manager that emits periodic liveness events.
 
-        Use around blocking synchronous calls (acemusic, Modal) so bots
+        Use around blocking synchronous calls (Modal) so bots
         know the process is alive. In human mode, prints elapsed time
         updates. In JSON mode, emits structured heartbeat events.
         """

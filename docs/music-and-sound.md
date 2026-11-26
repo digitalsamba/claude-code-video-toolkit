@@ -4,7 +4,12 @@ Music with ACE-Step, choosing between takes, mixing a bed under speech, and find
 
 ## AI Music Generation (ACE-Step 1.5)
 
-Music runs on your own endpoint: `music_gen.py` uses Modal when `MODAL_MUSIC_GEN_ENDPOINT_URL` is in `.env`, then RunPod. The hosted ACE-Step API (acemusic.ai) answered HTTP 410, "retired", on 2026-11-25, so the free key no longer makes music; `--cloud acemusic` is still there in case it returns, and repaint, continuation and the 5Hz LM thinking mode were its features only. Modal is (self-hosted XL Turbo 4B on ACE-Step-1.5 v0.1.8, no LM thinking) or RunPod (2B turbo).
+Music runs on your own endpoint: `music_gen.py` uses Modal when `MODAL_MUSIC_GEN_ENDPOINT_URL` is in `.env` (XL
+Turbo 4B on ACE-Step-1.5 v0.1.8, about $0.02-0.03 a take), then RunPod (2B turbo); with neither it stops and gives
+the setup command. The weights are MIT, so the music can be used commercially. The hosted ACE-Step API
+(acemusic.ai), the old free default, answers HTTP 410, "retired", since 2026-11-25; repaint, continuation and the
+5Hz LM thinking mode were its features only, and asking for them now fails with that reason. Agent video jobs pick
+the same endpoint (`video_job.py`).
 
 ```bash
 # Background music (on your Modal endpoint: `uv run tools/modal_setup.py music_gen`)
@@ -30,12 +35,6 @@ uv run tools/music_gen.py \
 
 # Cover / style transfer
 uv run tools/music_gen.py --cover --reference theme.mp3 --prompt "Jazz piano version" --output cover.mp3
-
-# Repaint a weak section (acemusic only)
-uv run tools/music_gen.py --repaint --input track.mp3 --repaint-start 15 --repaint-end 25 --prompt "Guitar solo" --output fixed.mp3
-
-# Continue from existing audio (acemusic only)
-uv run tools/music_gen.py --continuation --input track.mp3 --prompt "Continue with jazz piano" --output extended.mp3
 
 # Stem extraction
 uv run tools/music_gen.py --extract vocals --input mixed.mp3 --output vocals.mp3

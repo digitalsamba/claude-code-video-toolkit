@@ -121,8 +121,7 @@ page("christmas-team-video.html",
                   fig("img/the-great-return-short.jpg", "Four invented colleagues in headsets", "The Great Return", 270, 480)))
      + split("ask", "Ask for it",
              "<p>You need Claude Code and the toolkit, a <a class=\"link\" href=\"https://modal.com\">Modal</a> account for "
-             "the image and video models (the toolkit deploys them for you), a free "
-             "<a class=\"link\" href=\"https://acemusic.ai/api-key\">ACE-Step key</a> for the carol, three to six people "
+             "the image, video and music models (the toolkit deploys them for you), three to six people "
              "with a photo of each, and <b>each person's OK</b> to appear in it.</p>"
              "<p>Then tell Claude Code what you want, in your own words.</p>",
              "<pre><code>Make a 90-second Christmas TV ad of my team as A Christmas Carol.\n"

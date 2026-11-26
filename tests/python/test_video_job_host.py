@@ -46,7 +46,7 @@ class TestHost(Isolated):
     def test_music_is_soft(self):
         os.environ["ELEVENLABS_API_KEY"] = "k"
         os.environ["IDEOGRAM_API_KEY"] = "k"
-        sp = keys_only_spec(); sp.pop("music")             # music on by default, no ACEMUSIC_API_KEY
+        sp = keys_only_spec(); sp.pop("music")             # music on by default, no music endpoint
         n = vj.normalize_spec(sp)
         self.assertEqual(vj.missing_for(n), [])
         soft = vj.missing_for(n, include_soft=True)
@@ -54,6 +54,23 @@ class TestHost(Isolated):
         job = vj.submit(sp, max_usd=5, start_worker=False)
         self.assertEqual(job["phase"], "queued")
         vj.cancel(job["id"])
+
+    def test_music_defaults_to_the_endpoint_this_host_has(self):
+        sp = keys_only_spec(); sp.pop("music")
+        self.assertEqual(vj.normalize_spec(sp)["music"]["provider"], "modal")    # nothing set up: name Modal
+        os.environ["RUNPOD_ACESTEP_ENDPOINT_ID"] = "e"; os.environ["RUNPOD_API_KEY"] = "k"
+        self.assertEqual(vj.normalize_spec(sp)["music"]["provider"], "runpod")
+        os.environ["MODAL_MUSIC_GEN_ENDPOINT_URL"] = "https://x"
+        self.assertEqual(vj.normalize_spec(sp)["music"]["provider"], "modal")    # Modal first when both
+
+    def test_the_retired_hosted_api_in_an_old_spec_gets_this_hosts_endpoint(self):
+        sp = keys_only_spec(); sp["music"] = {"provider": "acemusic"}
+        os.environ["MODAL_MUSIC_GEN_ENDPOINT_URL"] = "https://x"
+        n = vj.normalize_spec(sp)
+        self.assertEqual(n["music"]["provider"], "modal")
+        self.assertNotIn("acemusic", vj.host_capabilities()["music"])
+        row = next(r for r in vj.estimate(n)["breakdown"] if r["step"] == "music")
+        self.assertEqual(row["usd"], vj.PRICES["music_track"]["modal"])
 
     def test_unknown_provider_is_a_spec_error(self):
         sp = keys_only_spec(); sp["music"] = {"provider": "suno"}

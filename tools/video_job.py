@@ -107,7 +107,7 @@ PRICES = {
     "flux_image": 0.012,
     "voiceover": {"qwen3": 0.01, "elevenlabs_per_1k_chars": ELEVENLABS_TTS_USD_PER_1K_CHARS, "60db": 0.0},
     "captions_per_audio_second": {"scribe": SCRIBE_USD_PER_SECOND, "whisper": 0.0},
-    "music_track": {"acemusic": 0.0, "modal": 0.03, "runpod": 0.03},
+    "music_track": {"modal": 0.03, "runpod": 0.03},     # your own endpoint; acemusic.ai retired 2026-11-25
 }
 
 # Output formats: the compositor's canvas plus the size each generator is asked for.
@@ -727,6 +727,15 @@ def _resolve_file(scene_id: str, rel: str, kit: dict | None) -> Path:
     raise SpecError(f"scene {scene_id}: no file {rel!r} in {where}the agent workspace or the toolkit")
 
 
+def default_music_provider() -> str:
+    """The music bed's provider when a spec names none: the endpoint this host has (Modal, then RunPod).
+    With neither it is "modal", so the soft check names the one variable to set and the job runs without a bed.
+    The hosted acemusic.ai API was the default until it answered 410 "retired" on 2026-11-25."""
+    if _has(_NEEDS[("music", "runpod", None)]) and not _has(_NEEDS[("music", "modal", None)]):
+        return "runpod"
+    return "modal"
+
+
 def normalize_spec(spec: dict) -> dict:
     """Fill defaults, derive ids and asset paths, and validate. Returns a new dict."""
     if not isinstance(spec, dict):
@@ -792,8 +801,10 @@ def normalize_spec(spec: dict) -> dict:
         music = {"enabled": False}
     elif isinstance(music, str):
         music = {"prompt": music}
-    music.setdefault("enabled", True)        # free on the acemusic API; the build ducks it
-    music.setdefault("provider", "acemusic")
+    music.setdefault("enabled", True)        # on your own endpoint (about $0.03 a track); the build ducks it
+    if music.get("provider") == "acemusic":  # the hosted API answers 410 "retired" since 2026-11-25
+        music.pop("provider")                # an old spec or kit gets the endpoint this host has instead
+    music.setdefault("provider", default_music_provider())
     music.setdefault("prompt", DEFAULT_MUSIC_PROMPT)
     out["music"] = music
     tc = out.get("titleCard", True)
@@ -1902,8 +1913,8 @@ def step_music(job: dict, spec: dict, total_s: float) -> dict:
     out.unlink(missing_ok=True)
     args = ["--prompt", music.get("prompt") or DEFAULT_MUSIC_PROMPT,
             "--duration", str(int(min(240, max(30, total_s + 8)))), "--output", str(out),
-            "--progress", "json", "--json", "--cloud", music.get("provider") or "acemusic"]
-    unit = PRICES["music_track"].get(music.get("provider", "acemusic"), 0.03)
+            "--progress", "json", "--json", "--cloud", music.get("provider") or default_music_provider()]
+    unit = PRICES["music_track"].get(music.get("provider") or default_music_provider(), 0.03)
     r = run_tool(job, "music_gen.py", args, fallback_cost=unit)
     if r["returncode"] != 0 or not out.exists():
         out.unlink(missing_ok=True)      # build.py mixes any music.mp3 it finds; a partial one must go
@@ -1912,7 +1923,7 @@ def step_music(job: dict, spec: dict, total_s: float) -> dict:
         add_event(job, "music", "music skipped: the video renders without a bed", reason=reason[-200:])
         return {"skipped": True, "reason": reason}
     _mark_made(job, "audio/music.mp3")
-    add_event(job, "music", f"music bed ready ({music.get('provider') or 'acemusic'})")
+    add_event(job, "music", f"music bed ready ({music.get('provider') or default_music_provider()})")
     return {"file": "audio/music.mp3"}
 
 
@@ -2654,7 +2665,6 @@ _NEEDS = {
     ("visual", "flux", "modal"): ["MODAL_FLUX2_ENDPOINT_URL"],
     ("visual", "flux", "runpod"): ["RUNPOD_FLUX2_ENDPOINT_ID", "RUNPOD_API_KEY"],
     ("visual", "ideogram", None): ["IDEOGRAM_API_KEY"],
-    ("music", "acemusic", None): ["ACEMUSIC_API_KEY"],
     ("music", "modal", None): ["MODAL_MUSIC_GEN_ENDPOINT_URL"],
     ("music", "runpod", None): ["RUNPOD_ACESTEP_ENDPOINT_ID", "RUNPOD_API_KEY"],
 }
@@ -2699,7 +2709,7 @@ def host_capabilities() -> dict:
              "ideogram": ok("visual", "ideogram"), "file": True, "none": True}
     voices = {"qwen3": {"modal": ok("voice", "qwen3", "modal"), "runpod": ok("voice", "qwen3", "runpod")},
               "elevenlabs": ok("voice", "elevenlabs"), "60db": ok("voice", "60db")}
-    music = {p: ok("music", p) for p in ("acemusic", "modal", "runpod")}
+    music = {p: ok("music", p) for p in ("modal", "runpod")}
     try:
         import importlib.util
         whisper = importlib.util.find_spec("whisper") is not None      # captions.py imports openai-whisper
@@ -2768,7 +2778,7 @@ def missing_for(spec: dict, include_soft: bool = False) -> list[dict]:
             need("visual", "ideogram", None, "ideogram cards")
     m = spec.get("music") or {}
     if m.get("enabled") and include_soft:
-        need("music", m.get("provider", "acemusic"), None, "the music bed",
+        need("music", m.get("provider") or default_music_provider(), None, "the music bed",
              'the video renders with narration only; or "music": false', soft=True)
     return out
 
@@ -2913,7 +2923,7 @@ def _main(argv: list[str]) -> int:
         p.add_argument("--voice", help="Voice preset: assets/voices/<name>.json (a clone) or a brand name")
         p.add_argument("--kit", help="A kit (kits/README.md): its brand, voice, format and own photos fill the "
                                      "spec, and 'file:' scenes look in its assets")
-        p.add_argument("--music", help="Music bed prompt (default: a subtle ambient bed; it's free on acemusic)")
+        p.add_argument("--music", help="Music bed prompt (default: a subtle ambient bed, about $0.03 on your own endpoint)")
         p.add_argument("--no-music", action="store_true", help="No music bed")
         p.add_argument("--draft", action="store_true", help="Scenes without a visual get a plain placeholder instead of a generated background")
         p.add_argument("--allow-screens", action="store_true",

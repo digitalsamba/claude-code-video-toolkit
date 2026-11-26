@@ -48,7 +48,7 @@ Prerequisites:
 Cloud GPU:      Not configured
 File transfer:  Not configured (using free fallback services)
 Voice:          Not configured
-Music:          Not configured (free key)
+Music:          Not configured (Modal music_gen app)
 ElevenLabs:     Not configured (optional, paid)
 3D (Blender):   Not installed (optional)
 
@@ -149,7 +149,7 @@ Explain what cloud GPU enables:
 - AI image generation (FLUX.2) — title backgrounds, thumbnails
 - AI image editing (Qwen-Edit) — transform photos, add effects
 - AI upscaling (RealESRGAN) — enhance image quality
-- AI music generation (ACE-Step): a self-hosted fallback; the default is the free ACE-Step API key in Phase 5
+- AI music generation (ACE-Step): the only place music runs since the hosted API was retired (2026-11-25)
 - Talking heads (SoulX-FlashHead, SadTalker) — animated presenters from a photo
 - Watermark removal (ProPainter) — clean up stock footage
 - AI video clips (LTX-2): a ninth app, deployed on its own after the rest (it needs a Hugging Face token)
@@ -432,20 +432,10 @@ To preview voices: uv run tools/qwen3_tts.py --list-voices
 
 ### Music
 
-Background music (`tools/music_gen.py`) runs on the Modal `music_gen` app deployed above; nothing more to set up.
-The hosted ACE-Step API (acemusic.ai) answered HTTP 410, "retired", on 2026-11-25, so **skip the key below** unless that service is back (`--cloud acemusic` uses it):
-
-```
-1. Go to https://acemusic.ai/api-key and sign in
-2. Copy the key
-```
-
-After the user provides it, write to .env:
-```
-ACEMUSIC_API_KEY=xxx
-```
-
-Without it, `music_gen.py --cloud modal` uses the Music app deployed in Phase 4.
+Background music (`tools/music_gen.py`) runs on the Modal `music_gen` app deployed above (about $0.02-0.03 a take);
+nothing more to set up. Without Modal, `uv run tools/music_gen.py --setup` deploys it on RunPod instead. The
+weights are MIT, so the music can be used commercially.
+The hosted ACE-Step API (acemusic.ai) answers HTTP 410, "retired", since 2026-11-25, so there is no key to ask for.
 
 ### ElevenLabs Setup (Optional)
 
@@ -513,7 +503,7 @@ File Transfer: Cloudflare R2
 Voice: Qwen3-TTS (Ryan)
   [check] Test generation successful
 
-Music: ACE-Step API key set (free)
+Music: Modal music_gen app deployed
 
 ElevenLabs: Not configured (optional)
 

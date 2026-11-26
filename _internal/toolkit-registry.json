@@ -297,7 +297,7 @@
     },
     "music_gen": {
       "path": "tools/music_gen.py",
-      "description": "AI music generation using ACE-Step 1.5 (text-to-music, cover, stem extraction, repainting, continuation). Modal: XL Turbo 4B (acestep-v15-xl-turbo, ACE-Step-1.5 v0.1.8); RunPod: 2B turbo",
+      "description": "AI music generation using ACE-Step 1.5 (text-to-music, cover, stem extraction). Modal: XL Turbo 4B (acestep-v15-xl-turbo, ACE-Step-1.5 v0.1.8); RunPod: 2B turbo",
       "usage": "uv run tools/music_gen.py --prompt 'Upbeat tech' --duration 60 --bpm 128 --output music.mp3",
       "status": "stable",
       "options": {
@@ -309,18 +309,10 @@
         "time-sig": "Time signature (2, 3, 4, 6)",
         "preset": "Scene preset (corporate-bg, upbeat-tech, ambient, dramatic, tension, hopeful, cta, lofi)",
         "brand": "Brand name for style hints",
-        "cloud": "Cloud provider: acemusic (default), modal, runpod",
-        "thinking": "Enable 5Hz LM thinking mode (default for acemusic)",
-        "no-thinking": "Disable thinking mode (faster)",
-        "variations": "Generate N variations (1-8, acemusic only)",
+        "cloud": "Cloud provider: modal (default when its endpoint is set), runpod; acemusic is retired (410 since 2026-11-25)",
+        "variations": "Generate N takes (1-8), saved as <output>_1 to <output>_N",
         "cover": "Cover/style transfer mode (requires --reference)",
-        "repaint": "Repaint mode: regenerate a time segment (acemusic only)",
-        "repaint-start": "Repaint start time in seconds",
-        "repaint-end": "Repaint end time in seconds",
-        "continuation": "Continue from existing audio (acemusic only)",
         "extract": "Stem extraction (vocals, drums, bass, guitar, piano, other)",
-        "guidance-scale": "Prompt adherence (1.0-15.0)",
-        "infer-method": "Inference method: ode (deterministic) or sde (stochastic)",
         "format": "Audio format: mp3, wav, flac",
         "steps": "Inference steps (default: 8 for turbo)"
       },
@@ -335,7 +327,6 @@
         "lofi"
       ],
       "envVars": [
-        "ACEMUSIC_API_KEY",
         "RUNPOD_API_KEY",
         "RUNPOD_ACESTEP_ENDPOINT_ID",
         "MODAL_MUSIC_GEN_ENDPOINT_URL"
