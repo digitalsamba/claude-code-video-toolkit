@@ -78,7 +78,9 @@ _FONT_CANDIDATES = {
 
 
 def _load_font(size: int):
-    for path in _FONT_CANDIDATES.get(platform.system(), []):
+    # config.json "font": a TTF/TTC path tried first (needed for Thai, CJK and other scripts the defaults lack)
+    custom = [CONFIG["font"]] if CONFIG.get("font") else []
+    for path in custom + _FONT_CANDIDATES.get(platform.system(), []):
         try:
             return ImageFont.truetype(path, size)
         except OSError:

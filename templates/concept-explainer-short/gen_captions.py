@@ -114,7 +114,7 @@ def main() -> None:
         if not mp3.exists():
             print(f"missing {mp3.name} — run gen_vo.py first; skipping")
             continue
-        r = model.transcribe(str(mp3), word_timestamps=True, language="en")
+        r = model.transcribe(str(mp3), word_timestamps=True, language=cap.get("language", "en"))
         heard = [{"w": w["word"].strip(), "s": w["start"], "e": w["end"]}
                  for seg in r["segments"] for w in seg["words"]]
         words = align(s["text"].split(), heard)
