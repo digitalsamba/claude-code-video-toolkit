@@ -5,7 +5,7 @@ grammar. The front page (site/index.html) is written by hand. Run after editing,
 from pathlib import Path
 
 SITE = Path(__file__).resolve().parent.parent / "site"
-REPO = "https://github.com/digitalsamba/claude-code-video-toolkit"
+REPO = "https://github.com/digitalsamba/agent-video-toolkit"
 PLAYLIST = "https://www.youtube.com/playlist?list=PLZt9pcZKDveo"
 
 HEAD = """<!doctype html>
@@ -17,7 +17,7 @@ HEAD = """<!doctype html>
 <meta name="description" content="{desc}">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{desc}">
-<meta property="og:image" content="https://digitalsamba.github.io/claude-code-video-toolkit/{og}">
+<meta property="og:image" content="https://digitalsamba.github.io/agent-video-toolkit/{og}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233771e0'/%3E%3Cpath d='M12 9v14l11-7z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
@@ -26,7 +26,7 @@ HEAD = """<!doctype html>
 <body>
 <header class="frame">
   <nav class="nav" aria-label="Main">
-    <a class="mark" href="./">claude-code-video-toolkit</a>
+    <a class="mark" href="./">agent-video-toolkit</a>
     <ul>
       <li class="hide-sm"><a class="link" href="./#made">Videos</a></li>
       <li class="hide-sm"><a class="link" href="./#how">How it works</a></li>
@@ -42,10 +42,10 @@ FOOT = """</main>
 
 <footer class="foot frame">
   <div class="top">
-    <div class="notes"><span>Open source, MIT licensed</span><span>Made by Conal Mullan and <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/graphs/contributors">contributors</a></span><span>For <a class="link" href="https://claude.ai/code">Claude Code</a>, not made by Anthropic</span></div>
+    <div class="notes"><span>Open source, MIT licensed</span><span>Made by Conal Mullan and <a class="link" href="https://github.com/digitalsamba/agent-video-toolkit/graphs/contributors">contributors</a></span><span>For <a class="link" href="https://claude.ai/code">Claude Code</a>, not made by Anthropic</span></div>
     <a class="link" href="#">Back to top</a>
   </div>
-  <a class="big" href="{repo}"><span>github.com/digitalsamba/</span><span>claude-code-video-toolkit</span></a>
+  <a class="big" href="{repo}"><span>github.com/digitalsamba/</span><span>agent-video-toolkit</span></a>
   <div class="meta">
     <div><a class="link" href="./">Home</a><a class="link" href="{repo}/releases">Releases</a><a class="link" href="{playlist}">Playlist</a></div>
     <div class="c">Every video and picture here was made with the toolkit</div>

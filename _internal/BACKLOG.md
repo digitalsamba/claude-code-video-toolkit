@@ -1,6 +1,6 @@
 # Toolkit Backlog
 
-Ideas and enhancements for claude-code-video-toolkit. Items here are **not yet scheduled** - they're captured for future consideration.
+Ideas and enhancements for agent-video-toolkit. Items here are **not yet scheduled** - they're captured for future consideration.
 
 > **Note:** When an item is implemented, remove it from this file and add the change to `CHANGELOG.md`.
 

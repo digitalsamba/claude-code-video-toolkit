@@ -57,7 +57,7 @@ export const Wordmark: React.FC<{ theme: Theme }> = ({ theme }) => {
               }}
               aria-hidden
             >
-              CLAUDE CODE VIDEO TOOLKIT
+              AGENT VIDEO TOOLKIT
             </div>
             <div
               style={{
@@ -70,7 +70,7 @@ export const Wordmark: React.FC<{ theme: Theme }> = ({ theme }) => {
               }}
               aria-hidden
             >
-              CLAUDE CODE VIDEO TOOLKIT
+              AGENT VIDEO TOOLKIT
             </div>
           </>
         )}
@@ -82,7 +82,7 @@ export const Wordmark: React.FC<{ theme: Theme }> = ({ theme }) => {
             textShadow: theme.wordmark.glow.join(', '),
           }}
         >
-          CLAUDE CODE VIDEO TOOLKIT
+          AGENT VIDEO TOOLKIT
         </div>
       </div>
     </AbsoluteFill>

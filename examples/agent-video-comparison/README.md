@@ -6,7 +6,7 @@
 
 ## What ran
 
-Each agent received the [same brief](brief.txt) in its own directory and wrote a title, four scenes, narration and on-screen copy. Each plan went through `tools/video_job.py` on Windows at toolkit commit [`b3437fc`](https://github.com/digitalsamba/claude-code-video-toolkit/commit/b3437fcd462c23b3c46cfd28f8cb61b71039269b). I supplied the same settings for every render. The videos use 1080p at 30 fps, local text backgrounds, the ElevenLabs George voice, Scribe captions and a $0.15 cap per job. Music and the opening title card were disabled.
+Each agent received the [same brief](brief.txt) in its own directory and wrote a title, four scenes, narration and on-screen copy. Each plan went through `tools/video_job.py` on Windows at toolkit commit [`b3437fc`](https://github.com/digitalsamba/agent-video-toolkit/commit/b3437fcd462c23b3c46cfd28f8cb61b71039269b). I supplied the same settings for every render. The videos use 1080p at 30 fps, local text backgrounds, the ElevenLabs George voice, Scribe captions and a $0.15 cap per job. Music and the opening title card were disabled.
 
 ## Results
 
@@ -16,7 +16,7 @@ Each agent received the [same brief](brief.txt) in its own directory and wrote a
 | Codex 0.166.0, `gpt-6.1-sol` with low reasoning effort | 16.7 s | [37.90 s](https://demos.digitalsamba.com/video/agent-comparison-codex.mp4) | 88 | $0.0990 | 0 |
 | OpenCode 1.19.6, `opencode/deepseek-v4.1-flash-free` | 30.8 s | [37.13 s](https://demos.digitalsamba.com/video/agent-comparison-opencode.mp4) | 84 | $0.0989 | 2 |
 
-Every MP4 decoded cleanly, passed the toolkit's QC with zero errors and had caption text that matched the narration word for word. Claude Code and OpenCode each had a fast scene and a dark transition flagged by QC. The dark transitions came from the template's scene joins rather than from either plan, and [#264](https://github.com/digitalsamba/claude-code-video-toolkit/pull/264) fixed them after this run. The [measurements and file hashes](results.json) are for this run. Media costs are the toolkit's recorded amounts for voice and captions.
+Every MP4 decoded cleanly, passed the toolkit's QC with zero errors and had caption text that matched the narration word for word. Claude Code and OpenCode each had a fast scene and a dark transition flagged by QC. The dark transitions came from the template's scene joins rather than from either plan, and [#264](https://github.com/digitalsamba/agent-video-toolkit/pull/264) fixed them after this run. The [measurements and file hashes](results.json) are for this run. Media costs are the toolkit's recorded amounts for voice and captions.
 
 Claude Code explains why shifting under load is rough on the chain. Codex gives the rider a rhythm to aim for while climbing. OpenCode starts with a rider halfway up the hill. The toolkit's copy check blocked one line in OpenCode's first draft before media generation. The hosted model reached its free usage limit during my retry, so I changed the phrase `and you keep moving forward` to `and your pedals keep turning` in scene 03. The saved spec includes that edit.
 

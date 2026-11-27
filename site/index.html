@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>claude-code-video-toolkit: type a prompt, get a video</title>
-<meta name="description" content="An open-source toolkit that turns Claude Code into a video studio: it writes the script, voices it, scores it, generates the shots and renders the MP4, on open models that cost cents.">
-<meta property="og:title" content="claude-code-video-toolkit">
+<title>Agent Video Toolkit: type a prompt, get a video</title>
+<meta name="description" content="Agent Video Toolkit (formerly Claude Code Video Toolkit) is an open-source toolkit that turns Claude Code, Codex or OpenCode into a video studio: it writes the script, voices it, scores it, generates the shots and renders the MP4, on open models that cost cents.">
+<meta property="og:title" content="Agent Video Toolkit">
 <meta property="og:description" content="Type a prompt, get a video. Open source, on models that cost cents.">
-<meta property="og:image" content="https://digitalsamba.github.io/claude-code-video-toolkit/media/band-650.jpg">
+<meta property="og:image" content="https://digitalsamba.github.io/agent-video-toolkit/media/band-650.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233771e0'/%3E%3Cpath d='M12 9v14l11-7z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
@@ -16,13 +16,13 @@
 <body>
 <header class="frame">
   <nav class="nav" aria-label="Main">
-    <a class="mark" href="./">claude-code-video-toolkit</a>
+    <a class="mark" href="./">agent-video-toolkit</a>
     <ul>
       <li class="hide-sm"><a class="link" href="#made">Videos</a></li>
       <li class="hide-sm"><a class="link" href="#how">How it works</a></li>
       <li class="hide-sm"><a class="link" href="#routes">What to make</a></li>
-      <li class="hide-sm"><a class="link" href="https://www.youtube.com/@claudecodevideotoolkit">YouTube</a></li>
-      <li><a class="button" href="https://github.com/digitalsamba/claude-code-video-toolkit">GitHub</a></li>
+      <li class="hide-sm"><a class="link" href="https://www.youtube.com/@agentvideotoolkit">YouTube</a></li>
+      <li><a class="button" href="https://github.com/digitalsamba/agent-video-toolkit">GitHub</a></li>
     </ul>
   </nav>
 </header>
@@ -33,10 +33,10 @@
       <span class="line">Type a prompt,</span>
       <span class="line">get a <span class="slot shutter"><video data-loop autoplay muted loop playsinline preload="auto" poster="media/made-with.jpg" width="768" height="296" aria-hidden="true"><source src="media/made-with.mp4" type="video/mp4"></video></span><span class="sr-only">video</span>.</span>
     </h1>
-    <p class="lede" data-rise>claude-code-video-toolkit turns Claude Code into a video studio. It writes the script, voices it,
+    <p class="lede" data-rise>Agent Video Toolkit turns Claude Code, Codex or OpenCode into a video studio. It writes the script, voices it,
       scores it, generates the shots and renders the MP4, on open models that cost cents.</p>
     <div class="act" data-rise style="--i:1">
-      <a class="button" href="https://github.com/digitalsamba/claude-code-video-toolkit">Get it on GitHub</a>
+      <a class="button" href="https://github.com/digitalsamba/agent-video-toolkit">Get it on GitHub</a>
       <a class="link" href="#start">Start in five minutes</a>
     </div>
   </div>
@@ -54,9 +54,9 @@
     <h2 id="made-h" class="names-h" data-rise>Made with it</h2>
     <p class="names" data-rise style="--i:1"><a href="https://www.youtube.com/watch?v=DnsaPJOhHT8">Blender support<span class="t"><img src="img/blender-support.jpg" alt="" width="870" height="489"></span></a>, <a href="https://www.youtube.com/watch?v=5Xp0GG_4qKU">What it costs<span class="t"><img src="img/what-it-costs.jpg" alt="" width="854" height="480"></span></a>, <a href="https://www.youtube.com/watch?v=CgxzhKQ0Afg">Just a Quick One<span class="t"><img src="img/just-a-quick-one.jpg" alt="" width="870" height="490"></span></a>, <a href="https://www.youtube.com/watch?v=3HjPatdeal4">Made with itself<span class="t"><img src="img/made-with-itself.jpg" alt="" width="854" height="480"></span></a>, <a href="https://demos.digitalsamba.com/video/ds-release-650.mp4">Release 650<span class="t"><img src="img/ds-release-650.jpg" alt="" width="854" height="480"></span></a>, <a href="https://demos.digitalsamba.com/video/ds-release-649.mp4">Release 649<span class="t"><img src="img/ds-release-649.jpg" alt="" width="854" height="480"></span></a>, <a href="https://www.youtube.com/watch?v=AQLzseZ2aAY">Design sources<span class="t"><img src="img/design-sources.jpg" alt="" width="854" height="480"></span></a>, <a href="https://demos.digitalsamba.com/video/ds-free-schedule-demo.mp4">Scheduling a call<span class="t"><img src="img/ds-free-schedule-demo.jpg" alt="" width="854" height="480"></span></a>, <a href="https://demos.digitalsamba.com/video/q2-townhall-longarm-ad.mp4">The launch ad<span class="t"><img src="img/q2-townhall-longarm-ad.jpg" alt="" width="854" height="480"></span></a>, <a href="https://youtube.com/shorts/1hyDgC5Qg_o">You're On Mute<span class="t"><img src="img/youre-on-mute-short.jpg" alt="" width="270" height="480"></span></a>, <a href="https://youtube.com/shorts/e4HW-tvi8-8">The Great Return<span class="t"><img src="img/the-great-return-short.jpg" alt="" width="270" height="480"></span></a>, <a href="https://demos.digitalsamba.com/video/short-blue-sky.mp4">Why is the sky blue?<span class="t"><img src="img/sky-blue-short.jpg" alt="" width="270" height="480"></span></a>, <a href="https://demos.digitalsamba.com/video/hallucinations_short.mp4">AI hallucinations<span class="t"><img src="img/hallucinations-short.jpg" alt="" width="270" height="480"></span></a> and <a href="https://demos.digitalsamba.com/video/data-chart-stars.mp4">A year of stars<span class="t"><img src="media/data-chart-stars.jpg" alt="" width="480" height="270"></span></a>.</p>
     <p class="names-note" data-rise style="--i:2">Fourteen of the videos made with it in 2026, every frame generated in this workspace.
-      <a class="link" href="https://www.youtube.com/@claudecodevideotoolkit?sub_confirmation=1">Subscribe on YouTube</a> ·
+      <a class="link" href="https://www.youtube.com/@agentvideotoolkit?sub_confirmation=1">Subscribe on YouTube</a> ·
       <a class="link" href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">the playlist</a> ·
-      <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit#see-what-it-makes">the full showcase</a></p>
+      <a class="link" href="https://github.com/digitalsamba/agent-video-toolkit#see-what-it-makes">the full showcase</a></p>
   </section>
 
   <section id="how" class="frame" aria-labelledby="how-h">
@@ -110,17 +110,17 @@
       <table>
         <tbody>
           <tr data-rise><td class="kind"><a href="release-notes-video.html">Release notes from source</a></td><td class="uses">UI rebuilt as React</td><td class="cost">cents</td></tr>
-          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/examples/ds-free-schedule-demo">A product demo with a narrator</a></td><td class="uses">a talking-head tile</td><td class="cost">cents</td></tr>
-          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/templates/sprint-review">A sprint review</a></td><td class="uses">a config file</td><td class="cost">free</td></tr>
-          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/templates/howto">A tutorial series</a></td><td class="uses">chapters, a Short from each</td><td class="cost">cents</td></tr>
+          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/agent-video-toolkit/tree/main/examples/ds-free-schedule-demo">A product demo with a narrator</a></td><td class="uses">a talking-head tile</td><td class="cost">cents</td></tr>
+          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/agent-video-toolkit/tree/main/templates/sprint-review">A sprint review</a></td><td class="uses">a config file</td><td class="cost">free</td></tr>
+          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/agent-video-toolkit/tree/main/templates/howto">A tutorial series</a></td><td class="uses">chapters, a Short from each</td><td class="cost">cents</td></tr>
           <tr data-rise class="group"><td class="kind"><a href="christmas-team-video.html">A Christmas video of your team</a></td><td class="uses">your photos, animated</td><td class="cost">about $2</td></tr>
           <tr data-rise><td class="kind"><a href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">A comedy short on a shared topic</a></td><td class="uses">an invented cast</td><td class="cost">about $1.25</td></tr>
           <tr data-rise><td class="kind"><a href="extending-ltx-clips.html">Clips that don't freeze</a></td><td class="uses">the lesson</td><td class="cost">$0.08 a link</td></tr>
           <tr data-rise><td class="kind"><a href="3d-characters.html">A 3D character acting on cue</a></td><td class="uses">a JSON shot spec, Blender</td><td class="cost">free</td></tr>
-          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/templates/lecture">A lecture at a chalkboard</a></td><td class="uses">a 3D presenter, Blender</td><td class="cost">cents</td></tr>
-          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/examples/blender-ident">An ident from your logo</a></td><td class="uses">an SVG built in 3D, Blender</td><td class="cost">free</td></tr>
+          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/agent-video-toolkit/tree/main/templates/lecture">A lecture at a chalkboard</a></td><td class="uses">a 3D presenter, Blender</td><td class="cost">cents</td></tr>
+          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/agent-video-toolkit/tree/main/examples/blender-ident">An ident from your logo</a></td><td class="uses">an SVG built in 3D, Blender</td><td class="cost">free</td></tr>
           <tr data-rise class="group"><td class="kind"><a href="explainer-shorts.html">A vertical explainer</a></td><td class="uses">cards, b-roll, captions</td><td class="cost">about $0.80</td></tr>
-          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/claude-code-video-toolkit/tree/main/examples/data-chart-stars">A chart drawn to the voice</a></td><td class="uses">SVG charts on cues</td><td class="cost">free</td></tr>
+          <tr data-rise><td class="kind"><a href="https://github.com/digitalsamba/agent-video-toolkit/tree/main/examples/data-chart-stars">A chart drawn to the voice</a></td><td class="uses">SVG charts on cues</td><td class="cost">free</td></tr>
         </tbody>
       </table>
     </div>
@@ -133,8 +133,8 @@
         inside it. <code>/setup</code> walks through a cloud GPU account, storage and a voice in about five minutes, and
         <code>/video</code> starts a project from a template. You need <a class="link" href="https://nodejs.org/">Node.js</a> 22 or later and
         <a class="link" href="https://claude.ai/code">Claude Code</a>. The models run on your own Modal or RunPod account, at cost.</p>
-      <pre data-rise><code>git clone https://github.com/digitalsamba/claude-code-video-toolkit.git
-cd claude-code-video-toolkit
+      <pre data-rise><code>git clone https://github.com/digitalsamba/agent-video-toolkit.git
+cd agent-video-toolkit
 uv sync
 claude</code></pre>
     </div>
@@ -143,12 +143,12 @@ claude</code></pre>
 
 <footer class="foot frame">
   <div class="top">
-    <div class="notes"><span>Open source, MIT licensed</span><span>Made by Conal Mullan and <a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/graphs/contributors">contributors</a></span><span>For <a class="link" href="https://claude.ai/code">Claude Code</a>, not made by Anthropic</span></div>
+    <div class="notes"><span>Open source, MIT licensed</span><span>Made by Conal Mullan and <a class="link" href="https://github.com/digitalsamba/agent-video-toolkit/graphs/contributors">contributors</a></span><span>For <a class="link" href="https://claude.ai/code">Claude Code</a>, not made by Anthropic</span></div>
     <a class="link" href="#">Back to top</a>
   </div>
-  <a class="big" href="https://github.com/digitalsamba/claude-code-video-toolkit"><span>github.com/digitalsamba/</span><span>claude-code-video-toolkit</span></a>
+  <a class="big" href="https://github.com/digitalsamba/agent-video-toolkit"><span>github.com/digitalsamba/</span><span>agent-video-toolkit</span></a>
   <div class="meta">
-    <div><a class="link" href="https://github.com/digitalsamba/claude-code-video-toolkit/releases">Releases</a><a class="link" href="https://www.youtube.com/@claudecodevideotoolkit">YouTube channel</a><a class="link" href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">Playlist</a><a class="link" href="release-notes-video.html">Release notes</a><a class="link" href="christmas-team-video.html">Christmas video</a></div>
+    <div><a class="link" href="https://github.com/digitalsamba/agent-video-toolkit/releases">Releases</a><a class="link" href="https://www.youtube.com/@agentvideotoolkit">YouTube channel</a><a class="link" href="https://www.youtube.com/playlist?list=PLZt9pcZKDveo">Playlist</a><a class="link" href="release-notes-video.html">Release notes</a><a class="link" href="christmas-team-video.html">Christmas video</a></div>
     <div class="c">Every video and picture here was made with the toolkit</div>
     <div class="r">2026</div>
   </div>

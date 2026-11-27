@@ -1,12 +1,14 @@
-# claude-code-video-toolkit
+# Agent Video Toolkit
 
 <p align="center">
-  <img src="assets/banner/toolkit-banner.gif" alt="claude-code-video-toolkit — NARRATE ▸ SCORE ▸ GENERATE ▸ COMPOSE ▸ RENDER" width="960" />
+  <img src="assets/banner/toolkit-banner.gif" alt="Agent Video Toolkit: NARRATE ▸ SCORE ▸ GENERATE ▸ COMPOSE ▸ RENDER" width="960" />
 </p>
 
-[![GitHub release](https://img.shields.io/github/v/release/digitalsamba/claude-code-video-toolkit)](https://github.com/digitalsamba/claude-code-video-toolkit/releases) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/digitalsamba/claude-code-video-toolkit?style=social)](https://github.com/digitalsamba/claude-code-video-toolkit/stargazers) [![YouTube: subscribe](https://img.shields.io/badge/YouTube-Subscribe-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/@claudecodevideotoolkit?sub_confirmation=1)
+[![GitHub release](https://img.shields.io/github/v/release/digitalsamba/agent-video-toolkit)](https://github.com/digitalsamba/agent-video-toolkit/releases) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/digitalsamba/agent-video-toolkit?style=social)](https://github.com/digitalsamba/agent-video-toolkit/stargazers) [![YouTube: subscribe](https://img.shields.io/badge/YouTube-Subscribe-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/@agentvideotoolkit?sub_confirmation=1)
 
-Tell [Claude Code](https://claude.ai/code) what video you want, and it makes the whole thing: the script, the voice, the pictures and the render.
+Tell your agent what video you want, and it makes the whole thing: the script, the voice, the pictures and the render. It works in [Claude Code](https://claude.ai/code), [Codex](docs/codex.md) and [OpenCode](docs/opencode.md), where the agent works in this folder with you. An agent with no terminal can call it as a tool instead: a brief goes in and a checked MP4 comes out ([video jobs](docs/agent-video-jobs.md), experimental).
+
+Formerly **Claude Code Video Toolkit** (`claude-code-video-toolkit`). Old links and clones still work. Created and maintained by [Conal Mullan](https://github.com/ConalMullan).
 
 - **It makes finished videos.** Sprint reviews, product demos, release notes, explainers and Shorts, from a template or from a sentence. The one below is presented by a 3D model of its author, and nobody animated it.
 - **It is mostly free, and it runs on your accounts.** Voice, images, music and video clips come from open models on your own cloud GPU account, for cents: the 90-second video about the toolkit cost $0.33, measured.
@@ -26,13 +28,13 @@ before Blender renders a frame. Blender is optional: nothing else in the toolkit
 | <a href="https://www.youtube.com/watch?v=3HjPatdeal4"><img src="assets/readme-thumbs/made-with-itself.jpg" width="285" alt="Made with itself: the toolkit's own video, made in the toolkit"></a> | <a href="https://demos.digitalsamba.com/video/ds-release-650.mp4"><img src="assets/readme-thumbs/ds-release-650.jpg" width="285" alt="Release-notes video with product UI rebuilt from source"></a> | <a href="https://www.youtube.com/watch?v=CgxzhKQ0Afg"><img src="assets/readme-thumbs/just-a-quick-one.jpg" width="285" alt="Just a Quick One: a 3D character in his kitchen with a mug of tea, and a small computer with a face on the counter"></a> |
 | **Made with itself**<br>the toolkit in 90 seconds,<br>with its measured bill | **Release-notes video**<br>product UI rebuilt from source,<br>no screen recording | **Just a Quick One**<br>the trailer: a 3D character<br>acting from a JSON spec |
 
-Every finished example is in the [showcase table](docs/features.md#templates), and new ones land on the [YouTube channel](https://www.youtube.com/@claudecodevideotoolkit) first ([subscribe](https://www.youtube.com/@claudecodevideotoolkit?sub_confirmation=1)).
+Every finished example is in the [showcase table](docs/features.md#templates), and new ones land on the [YouTube channel](https://www.youtube.com/@agentvideotoolkit) first ([subscribe](https://www.youtube.com/@agentvideotoolkit?sub_confirmation=1)).
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/digitalsamba/claude-code-video-toolkit.git
-cd claude-code-video-toolkit
+git clone https://github.com/digitalsamba/agent-video-toolkit.git
+cd agent-video-toolkit
 uv sync   # Optional: AI voiceover, image gen, music, moviepy examples
 claude    # Open Claude Code in the toolkit
 ```
@@ -129,7 +131,7 @@ The toolkit is built for Claude Code, but an experimental migration script insta
 uv run scripts/migrate_to_codex.py --force
 ```
 
-See [docs/codex.md](docs/codex.md) for what it installs, how the `AGENTS.md` block is managed, and how to remove it. Contributed by [@kimhoontae-gogo](https://github.com/kimhoontae-gogo) in [#16](https://github.com/digitalsamba/claude-code-video-toolkit/pull/16).
+See [docs/codex.md](docs/codex.md) for what it installs, how the `AGENTS.md` block is managed, and how to remove it. Contributed by [@kimhoontae-gogo](https://github.com/kimhoontae-gogo) in [#16](https://github.com/digitalsamba/agent-video-toolkit/pull/16).
 
 ## Using with Kiro CLI
 
@@ -183,7 +185,7 @@ hosted third-party service live here rather than in the toolkit itself — see
 The toolkit gets better by being used. If you work something out (a template, a fix, a Blender set, a way of
 prompting a model that holds up), send it in with the method written down beside it, so every user's agent knows
 it too. Run `/contribute` in Claude Code, or see [CONTRIBUTING.md](CONTRIBUTING.md). Videos you make are welcome in
-[Show and tell](https://github.com/digitalsamba/claude-code-video-toolkit/discussions/categories/show-and-tell).
+[Show and tell](https://github.com/digitalsamba/agent-video-toolkit/discussions/categories/show-and-tell).
 
 ## License
 

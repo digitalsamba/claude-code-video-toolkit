@@ -43,7 +43,7 @@ Then generate issue with `gh issue create`:
 
 ```bash
 gh issue create \
-  --repo digitalsamba/claude-code-video-toolkit \
+  --repo digitalsamba/agent-video-toolkit \
   --title "Bug: description" \
   --body "## Description
 
@@ -473,7 +473,7 @@ Large media files are gitignored. Users create their own using:
 
 ## Option 6: Share a Video You Made
 
-For "look what I made". It posts in the repo's [Show and tell](https://github.com/digitalsamba/claude-code-video-toolkit/discussions/categories/show-and-tell) Discussions category: a link and a few lines on how it was made. No project files leave the machine, and nothing is posted until the user has read the draft and said yes.
+For "look what I made". It posts in the repo's [Show and tell](https://github.com/digitalsamba/agent-video-toolkit/discussions/categories/show-and-tell) Discussions category: a link and a few lines on how it was made. No project files leave the machine, and nothing is posted until the user has read the draft and said yes.
 
 ### Step 1: Find the video and a link to it
 
@@ -515,15 +515,15 @@ Show the draft and ask: post it as is, edit it, or cancel.
 ### Step 4: Post it (only after a yes)
 
 ```bash
-REPO_ID=$(gh api graphql -f query='{repository(owner:"digitalsamba",name:"claude-code-video-toolkit"){id}}' --jq .data.repository.id)
-CAT_ID=$(gh api graphql -f query='{repository(owner:"digitalsamba",name:"claude-code-video-toolkit"){discussionCategories(first:20){nodes{id name}}}}' \
+REPO_ID=$(gh api graphql -f query='{repository(owner:"digitalsamba",name:"agent-video-toolkit"){id}}' --jq .data.repository.id)
+CAT_ID=$(gh api graphql -f query='{repository(owner:"digitalsamba",name:"agent-video-toolkit"){discussionCategories(first:20){nodes{id name}}}}' \
   --jq '.data.repository.discussionCategories.nodes[] | select(.name=="Show and tell") | .id')
 gh api graphql -F repositoryId="$REPO_ID" -F categoryId="$CAT_ID" -f title="<post title>" -F body=@.show-and-tell.md \
   -f query='mutation($repositoryId:ID!,$categoryId:ID!,$title:String!,$body:String!){createDiscussion(input:{repositoryId:$repositoryId,categoryId:$categoryId,title:$title,body:$body}){discussion{url}}}' \
   --jq .data.createDiscussion.discussion.url
 ```
 
-Report the URL, delete `.show-and-tell.md`, and record it in `project.json` as `publish.showAndTell`. Without `gh` (or not logged in), give them the draft to paste at `https://github.com/digitalsamba/claude-code-video-toolkit/discussions/new?category=show-and-tell`.
+Report the URL, delete `.show-and-tell.md`, and record it in `project.json` as `publish.showAndTell`. Without `gh` (or not logged in), give them the draft to paste at `https://github.com/digitalsamba/agent-video-toolkit/discussions/new?category=show-and-tell`.
 
 ---
 
@@ -553,5 +553,5 @@ This command evolves through use. If something's awkward or missing:
 3. Share upstream → `gh pr create`
 
 **Remote contributions:**
-- Issues: `github.com/digitalsamba/claude-code-video-toolkit/issues`
+- Issues: `github.com/digitalsamba/agent-video-toolkit/issues`
 - PRs welcome for contribution workflow improvements

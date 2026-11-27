@@ -1,8 +1,8 @@
 {
-  "name": "claude-code-video-toolkit",
+  "name": "Agent Video Toolkit",
   "description": "The toolkit's own look, the same tokens as the site (site/style.css): white and light grey grounds, DS blue #3771e0 as the one accent, navy #323e66 for the dark field, system UI type, radii 4/8/12. The terminal block is for lib/components Terminal.",
   "version": "1.0.0",
-  "website": "https://digitalsamba.github.io/claude-code-video-toolkit/",
+  "website": "https://digitalsamba.github.io/agent-video-toolkit/",
 
   "colors": {
     "primary": "#3771e0",

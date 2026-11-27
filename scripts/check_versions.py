@@ -29,7 +29,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO = "digitalsamba/claude-code-video-toolkit"
+REPO = "digitalsamba/agent-video-toolkit"
 SCAN_DIRS = ("templates", "examples", "showcase", "tests")
 REMOTION_RE = re.compile(r"^(remotion|@remotion/.+)$")
 

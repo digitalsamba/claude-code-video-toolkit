@@ -87,7 +87,7 @@ See `examples/` for finished projects you can learn from (newest first, scroll d
 | 2025-12-10 | [digital-samba-skill-demo](https://demos.digitalsamba.com/video/digital-samba-skill-demo.mp4) | Product demo showcasing Claude Code skill |
 | 2025-12-05 | [sprint-review-cho-oyu](https://demos.digitalsamba.com/sprint-review-cho-oyu.mp4) | iOS sprint review with demos |
 
-Videos other people have made with the toolkit are in [Show and tell](https://github.com/digitalsamba/claude-code-video-toolkit/discussions/categories/show-and-tell). Share yours there: a link, the template or tools you used, and what it cost.
+Videos other people have made with the toolkit are in [Show and tell](https://github.com/digitalsamba/agent-video-toolkit/discussions/categories/show-and-tell). Share yours there: a link, the template or tools you used, and what it cost.
 
 ### Scene Transitions
 
@@ -279,7 +279,7 @@ See [docs/modal-setup.md](modal-setup.md) and [docs/runpod-setup.md](runpod-setu
 ## Project Structure
 
 ```
-claude-code-video-toolkit/
+agent-video-toolkit/
 ├── .claude/
 │   ├── skills/          # Domain knowledge for Claude
 │   └── commands/        # Slash commands (/video, /brand, etc.)

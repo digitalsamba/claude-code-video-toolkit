@@ -20,7 +20,7 @@ check setup → project.json + rendered MP4 → publish kit (subtitles, chapters
 ### Step 0: Check the setup
 
 ```bash
-cd /path/to/claude-code-video-toolkit && uv run --extra youtube tools/youtube_upload.py --check --account NAME --json-out
+cd /path/to/agent-video-toolkit && uv run --extra youtube tools/youtube_upload.py --check --account NAME --json-out
 ```
 
 Read-only, about 1 quota unit. It reports the channel the login belongs to (say it to the user: `personal` and
@@ -35,7 +35,7 @@ that switches an API on. Stop until `success` is true. Analytics being off doesn
 If the user named a project, use it. Otherwise scan for candidates:
 
 ```bash
-cd /path/to/claude-code-video-toolkit && ls projects/*/project.json
+cd /path/to/agent-video-toolkit && ls projects/*/project.json
 ```
 
 Read the chosen `project.json` **defensively** — real files carry `render`, `format`,
@@ -49,7 +49,7 @@ If the project's `phase` isn't `complete`, warn the user and confirm they still 
 ### Step 1b: Publish kit (optional; on by default when the project has scene scripts)
 
 ```bash
-cd /path/to/claude-code-video-toolkit && uv run tools/publish_kit.py --project projects/NAME --video out/FILE.mp4
+cd /path/to/agent-video-toolkit && uv run tools/publish_kit.py --project projects/NAME --video out/FILE.mp4
 ```
 
 Transcribes the render once (Scribe, $0.40 an audio hour, about $0.01 for 90 s; `--engine whisper` is free) and
@@ -83,7 +83,7 @@ editable, and re-runnable. If a `publish` block already exists, use it as defaul
 ### Step 3: Dry-run first (no upload)
 
 ```bash
-cd /path/to/claude-code-video-toolkit && uv run tools/youtube_upload.py \
+cd /path/to/agent-video-toolkit && uv run tools/youtube_upload.py \
   --video "projects/NAME/out/video.mp4" \
   --title "TITLE" \
   --description-file "projects/NAME/.publish-description.txt" \
@@ -208,4 +208,4 @@ run a dry-run before the real upload.
 This command evolves through use. If something's awkward or missing:
 1. Say "improve this" → Claude captures it in `_internal/BACKLOG.md`
 2. Edit `.claude/commands/publish.md` → update `_internal/CHANGELOG.md`
-- Issues/PRs: `github.com/digitalsamba/claude-code-video-toolkit`
+- Issues/PRs: `github.com/digitalsamba/agent-video-toolkit`

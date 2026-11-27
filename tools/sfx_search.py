@@ -33,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from win_encoding import ensure_utf8_output
 
 API_URL = "https://api.openverse.org/v1/audio/"
-HEADERS = {"User-Agent": "claude-code-video-toolkit"}
+HEADERS = {"User-Agent": "agent-video-toolkit"}
 TIMEOUT = 30
 MAX_RETRY_WAIT = 60
 

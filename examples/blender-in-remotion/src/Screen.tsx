@@ -45,7 +45,7 @@ export const Screen: React.FC<{ sound?: boolean }> = ({ sound = false }) => {
         <div style={{ fontSize: 36, marginTop: 14, color: f.muted }}>tools/blender_render.py, as it ran for this video</div>
       </div>
       <Terminal
-        title="claude-code-video-toolkit"
+        title="agent-video-toolkit"
         theme={TERM}
         lines={[CHECK, ...checkOut, RENDER, ...renderOut, { at: REVEAL + 14 + renderOut.length * 22, command: '', prompt: '$' }]}
         width={1680}

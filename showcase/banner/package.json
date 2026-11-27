@@ -1,7 +1,7 @@
 {
   "name": "banner-showcase",
   "version": "1.0.0",
-  "description": "Animated synthwave banner for the claude-code-video-toolkit",
+  "description": "Animated synthwave banner for the agent-video-toolkit",
   "scripts": {
     "studio": "remotion studio",
     "render": "remotion render ToolkitBanner out/toolkit-banner.mp4",

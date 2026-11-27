@@ -1,10 +1,10 @@
 # Video Toolkit Roadmap
 
-What we're building next for claude-code-video-toolkit, and what shipped recently. Unscheduled ideas live in
+What we're building next for agent-video-toolkit, and what shipped recently. Unscheduled ideas live in
 [`BACKLOG.md`](BACKLOG.md), every change in [`CHANGELOG.md`](CHANGELOG.md), and the full inventory (skills, tools,
 templates, components, their status) in [`toolkit-registry.json`](toolkit-registry.json).
 
-**Repository:** https://github.com/digitalsamba/claude-code-video-toolkit
+**Repository:** https://github.com/digitalsamba/agent-video-toolkit
 
 ---
 

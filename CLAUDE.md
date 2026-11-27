@@ -1,10 +1,10 @@
-# claude-code-video-toolkit
+# agent-video-toolkit
 
 This file provides guidance to Claude Code (claude.ai/code) when working with this video production toolkit.
 
 ## Overview
 
-**claude-code-video-toolkit** is an AI-native video production workspace. It provides Claude Code with the skills, commands, and tools to create professional videos from concept to final render.
+**agent-video-toolkit** is an AI-native video production workspace. It provides Claude Code with the skills, commands, and tools to create professional videos from concept to final render.
 
 **Key capabilities:**
 - Programmatic video creation with Remotion (React-based)
@@ -141,7 +141,7 @@ Run every Python tool through the project environment with `uv run` — it auto-
 
 **Important: always invoke tools from the toolkit root directory.** When working inside a project (`projects/my-video/`), tool paths like `uv run tools/upscale.py` will fail because `tools/` is relative. Always use:
 ```bash
-cd /path/to/claude-code-video-toolkit && uv run tools/upscale.py ...
+cd /path/to/agent-video-toolkit && uv run tools/upscale.py ...
 ```
 This is especially critical for background commands where the working directory may not be obvious.
 

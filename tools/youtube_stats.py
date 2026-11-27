@@ -35,7 +35,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import youtube_upload as yu  # noqa: E402  (token paths, upload scopes, client secrets)
 
 ANALYTICS_SCOPE = "https://www.googleapis.com/auth/yt-analytics.readonly"
-REPO = "digitalsamba/claude-code-video-toolkit"
+REPO = "digitalsamba/agent-video-toolkit"
 CORE_METRICS = ["views", "estimatedMinutesWatched", "averageViewDuration", "averageViewPercentage", "likes",
                 "comments", "shares", "subscribersGained"]
 # Listed in the metrics reference, but older reports say the API refuses them; asked for separately.

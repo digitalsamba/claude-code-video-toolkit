@@ -301,11 +301,11 @@ Claude Desktop or Claude Code config:
 
 ```json
 {"mcpServers": {"video-toolkit": {"command": "uv",
-  "args": ["run", "--directory", "/path/to/claude-code-video-toolkit", "--extra", "mcp", "tools/video_mcp.py"]}}}
+  "args": ["run", "--directory", "/path/to/agent-video-toolkit", "--extra", "mcp", "tools/video_mcp.py"]}}}
 ```
 
 ```bash
-claude mcp add video-toolkit -- uv run --directory /path/to/claude-code-video-toolkit --extra mcp tools/video_mcp.py
+claude mcp add video-toolkit -- uv run --directory /path/to/agent-video-toolkit --extra mcp tools/video_mcp.py
 ```
 
 Any other client spawns that command and speaks MCP over stdin/stdout. Tools: `video_estimate`,

@@ -3,7 +3,7 @@
 This toolkit is built around Claude Code assets in `.claude/` and `CLAUDE.md`, but it
 also ships an experimental migration script for [Codex](https://openai.com/codex/) —
 contributed by [@kimhoontae-gogo](https://github.com/kimhoontae-gogo) in
-[#16](https://github.com/digitalsamba/claude-code-video-toolkit/pull/16).
+[#16](https://github.com/digitalsamba/agent-video-toolkit/pull/16).
 
 ```bash
 uv run scripts/migrate_to_codex.py --force

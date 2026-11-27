@@ -64,7 +64,7 @@ Parse output for:
 ```
 1. Read current version from _internal/toolkit-registry.json
 2. Fetch latest from GitHub API:
-   https://api.github.com/repos/digitalsamba/claude-code-video-toolkit/releases/latest
+   https://api.github.com/repos/digitalsamba/agent-video-toolkit/releases/latest
 3. Compare versions
 ```
 

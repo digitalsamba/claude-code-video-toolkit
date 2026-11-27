@@ -1,12 +1,16 @@
 # Toolkit Changelog
 
-All notable changes to claude-code-video-toolkit.
+All notable changes to Agent Video Toolkit (claude-code-video-toolkit before v0.31.0).
 
 > Releases are automated via GitHub Actions. See `.github/workflows/release.yml`.
 
 ---
 
 ## Unreleased
+
+### Changed
+
+- **The toolkit is now Agent Video Toolkit** (`agent-video-toolkit`), formerly Claude Code Video Toolkit. Codex, Claude Code and OpenCode each made a whole video from one brief (`examples/agent-comparison-manim`), and agents with no terminal make them through `tools/video_job.py`, so the old name said less than the toolkit does. GitHub redirects the old repository address, so existing clones, forks and links keep working; to point a clone at the new address run `git remote set-url origin https://github.com/digitalsamba/agent-video-toolkit.git`. The site moved to `digitalsamba.github.io/agent-video-toolkit` and the old pages redirect. The agent skill still finds a `claude-code-video-toolkit/` folder. Thanks to Asharib Ali for proposing the name and making the case for it in #240.
 
 ### Added
 
