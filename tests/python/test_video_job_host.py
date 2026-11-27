@@ -63,14 +63,8 @@ class TestHost(Isolated):
         os.environ["MODAL_MUSIC_GEN_ENDPOINT_URL"] = "https://x"
         self.assertEqual(vj.normalize_spec(sp)["music"]["provider"], "modal")    # Modal first when both
 
-    def test_the_retired_hosted_api_in_an_old_spec_gets_this_hosts_endpoint(self):
-        sp = keys_only_spec(); sp["music"] = {"provider": "acemusic"}
-        os.environ["MODAL_MUSIC_GEN_ENDPOINT_URL"] = "https://x"
-        n = vj.normalize_spec(sp)
-        self.assertEqual(n["music"]["provider"], "modal")
-        self.assertNotIn("acemusic", vj.host_capabilities()["music"])
-        row = next(r for r in vj.estimate(n)["breakdown"] if r["step"] == "music")
-        self.assertEqual(row["usd"], vj.PRICES["music_track"]["modal"])
+    def test_music_capabilities_are_the_self_hosted_endpoints(self):
+        self.assertEqual(set(vj.host_capabilities()["music"]), {"modal", "runpod"})
 
     def test_unknown_provider_is_a_spec_error(self):
         sp = keys_only_spec(); sp["music"] = {"provider": "suno"}

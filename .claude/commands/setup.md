@@ -149,7 +149,7 @@ Explain what cloud GPU enables:
 - AI image generation (FLUX.2) — title backgrounds, thumbnails
 - AI image editing (Qwen-Edit) — transform photos, add effects
 - AI upscaling (RealESRGAN) — enhance image quality
-- AI music generation (ACE-Step): the only place music runs since the hosted API was retired (2026-11-25)
+- AI music generation (ACE-Step): where music runs; there is no hosted alternative
 - Talking heads (SoulX-FlashHead, SadTalker) — animated presenters from a photo
 - Watermark removal (ProPainter) — clean up stock footage
 - AI video clips (LTX-2): a ninth app, deployed on its own after the rest (it needs a Hugging Face token)
@@ -432,10 +432,9 @@ To preview voices: uv run tools/qwen3_tts.py --list-voices
 
 ### Music
 
-Background music (`tools/music_gen.py`) runs on the Modal `music_gen` app deployed above (about $0.02-0.03 a take);
-nothing more to set up. Without Modal, `uv run tools/music_gen.py --setup` deploys it on RunPod instead. The
-weights are MIT, so the music can be used commercially.
-The hosted ACE-Step API (acemusic.ai) answers HTTP 410, "retired", since 2026-11-25, so there is no key to ask for.
+Background music (`tools/music_gen.py`) runs on the Modal `music_gen` app deployed above (about $0.01-0.03 a take);
+nothing more to set up, and no key to ask for. Without Modal, `uv run tools/music_gen.py --setup` deploys it on
+RunPod instead. The ACE-Step 1.5 weights and code are MIT, so commercial use of the music is free: you pay only for the GPU time.
 
 ### ElevenLabs Setup (Optional)
 

@@ -68,7 +68,8 @@ Roughly in priority order within each group. Each item is sized to one session o
 - [ ] **Music that follows the picture.** Today music only matches the video's length. Cheapest first:
   1. Snap flexible frames (act cuts, line entrances, never narration) to the chosen take's beats, within 0.3 s.
   2. Pick the BPM so act cuts land on bar lines. Measure first how well ACE-Step keeps the BPM asked for.
-  3. `music_gen.py --repaint` a short window round each act cut so the music turns when the picture does.
+  3. Repaint a short window round each act cut so the music turns when the picture does (needs the repaint task
+     on the self-hosted endpoint first; upstream ACE-Step 1.5 has it).
 
   Judge each by ear with `audition.py`. Pilot: a project with no voice and clear act turns.
 

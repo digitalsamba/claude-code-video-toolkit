@@ -5,11 +5,12 @@ Music with ACE-Step, choosing between takes, mixing a bed under speech, and find
 ## AI Music Generation (ACE-Step 1.5)
 
 Music runs on your own endpoint: `music_gen.py` uses Modal when `MODAL_MUSIC_GEN_ENDPOINT_URL` is in `.env` (XL
-Turbo 4B on ACE-Step-1.5 v0.1.8, about $0.02-0.03 a take), then RunPod (2B turbo); with neither it stops and gives
-the setup command. The weights are MIT, so the music can be used commercially. The hosted ACE-Step API
-(acemusic.ai), the old free default, answers HTTP 410, "retired", since 2026-11-25; repaint, continuation and the
-5Hz LM thinking mode were its features only, and asking for them now fails with that reason. Agent video jobs pick
-the same endpoint (`video_job.py`).
+Turbo 4B on ACE-Step-1.5 v0.1.8, about $0.01-0.03 a take), then RunPod (2B turbo); with neither it stops and gives
+the setup command. Agent video jobs pick the same endpoint (`video_job.py`). The ACE-Step 1.5 weights and code are MIT, so commercial use of the music is free: you pay only for the GPU time. A take can
+still sound like an existing song, so listen before publishing.
+
+ACE Music's own app and MCP server are not an alternative: on the Free plan its MCP offers only the ACE Music v1
+models (not ACE-Step 1.5), with no downloads and no commercial use (checked 2026-11-26).
 
 ```bash
 # Background music (on your Modal endpoint: `uv run tools/modal_setup.py music_gen`)

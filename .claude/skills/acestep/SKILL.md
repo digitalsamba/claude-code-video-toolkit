@@ -10,10 +10,9 @@ Open-source music generation via `tools/music_gen.py`.
 **Cloud providers:**
 - **modal** (the default when its endpoint is in `.env`): Self-hosted ACE-Step 1.5 XL Turbo (4B DiT, no LM) on Modal A10G. Requires `MODAL_MUSIC_GEN_ENDPOINT_URL`.
 - **runpod**: Self-hosted ACE-Step 2B Turbo on RunPod. Requires `RUNPOD_ACESTEP_ENDPOINT_ID`.
-- The hosted ACE-Step API (acemusic.ai, the old free default) answers HTTP 410, "retired", since 2026-11-25. Its
-  options (`--repaint`, `--continuation`, `--thinking`, `--sample-mode`, `--guidance-scale`, `--infer-method`) now
-  fail with that reason; the self-hosted endpoints don't offer them yet.
-- **Licence:** the ACE-Step 1.5 weights and code are MIT, so music from your own endpoint can be used commercially.
+- With neither set up, `music_gen.py` stops and gives the setup command.
+- **Licence and cost:** the ACE-Step 1.5 weights and code are MIT, so commercial use of the music is free and
+  needs no credit; you pay only GPU time, about $0.01-0.03 a take on Modal.
   A take can still resemble an existing song; listen before publishing.
 
 ## Setup
@@ -50,12 +49,6 @@ uv run tools/music_gen.py --prompt "Indie pop jingle" --lyrics "[verse]\nBuild i
 # Cover / style transfer
 uv run tools/music_gen.py --cover --reference theme.mp3 --prompt "Jazz piano version" --duration 60 --output jazz_cover.mp3
 
-# Repaint a weak section
-uv run tools/music_gen.py --repaint --input track.mp3 --repaint-start 15 --repaint-end 25 --prompt "Guitar solo" --output fixed.mp3
-
-# Continue from existing audio
-uv run tools/music_gen.py --continuation --input track.mp3 --prompt "Continue with jazz piano" --output extended.mp3
-
 # Stem extraction
 uv run tools/music_gen.py --extract vocals --input mixed.mp3 --output vocals.mp3
 
@@ -68,9 +61,8 @@ uv run tools/music_gen.py --cloud modal --prompt "Background music" --duration 6
 If generated music sounds repetitive or lacks variety, try these in order:
 
 1. **Use Modal over RunPod**: Modal runs the XL Turbo 4B DiT, RunPod is still 2B
-2. **Write a fuller prompt**: the 5Hz LM that enriched sparse prompts was the hosted API's (retired, above); name instruments, tempo and mood yourself
+2. **Write a fuller prompt**: the endpoints run without the 5Hz LM, so nothing enriches a sparse prompt; name instruments, tempo and mood yourself
 3. **Generate variations** — `--variations 4` generates 4 takes; `pick_music.py` recommends one with its reasons (it measures, it can't hear), and `audition.py` puts each take under the finished picture so the user chooses by watching
-4. **Use stochastic inference** — `--infer-method sde` adds randomness (same seed gives different results)
 5. **Vary BPM and key across scenes** — don't use the same preset for every scene
 6. **Write sparser prompts** — "Upbeat indie rock" gives the model more creative freedom than a hyper-detailed description
 7. **Vary seeds** — omit `--seed` to let each generation be unique
@@ -126,16 +118,9 @@ uv run tools/music_gen.py \
   --output my_song.mp3
 ```
 
-### 3. Repaint a weak section
-If the chorus sounds weak, regenerate just that section:
-```bash
-uv run tools/music_gen.py --repaint --input my_song.mp3 --repaint-start 20 --repaint-end 35 --prompt "Powerful anthemic chorus, big drums" --output fixed.mp3
-```
-
-### 4. Continue/extend a track
-```bash
-uv run tools/music_gen.py --continuation --input my_song.mp3 --prompt "Continue with gentle acoustic outro" --output extended.mp3
-```
+### 3. A weak section
+Repaint and continuation aren't on the endpoints yet (see "repainting and continuation" below): make a few takes
+with `--variations` and keep the best, or cut and crossfade two takes with ffmpeg.
 
 ### Key tips for good results
 - **Caption = overall style** (genre, instruments, mood, production quality)
@@ -216,9 +201,9 @@ Tracks: `vocals`, `drums`, `bass`, `guitar`, `piano`, `keyboard`, `strings`, `br
 > the self-hosted endpoints serve (XL Turbo on Modal, 2B Turbo on RunPod) don't support it, so
 > expect weak stems there.
 
-### repainting and continuation (not available)
-Both ran only on the hosted API, retired 2026-11-25. Upstream ACE-Step 1.5 has them as tasks, so they can come back
-on the self-hosted endpoint; until then, regenerate the take or cut and crossfade two takes with ffmpeg.
+### repainting and continuation (not on the endpoints yet)
+Upstream ACE-Step 1.5 has both as tasks; the Modal and RunPod endpoints don't serve them yet. Until they do,
+regenerate the take, or cut and crossfade two takes with ffmpeg.
 
 ## Prompt Engineering
 
