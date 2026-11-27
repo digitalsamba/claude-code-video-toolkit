@@ -72,7 +72,7 @@ class TestEstimate(Isolated):
         self.assertAlmostEqual(a["estimate_usd"], round(expected, 4), places=4)
         self.assertEqual(a["scenes"], 3)
         self.assertEqual({r["step"] for r in a["breakdown"]}, {"voiceover", "visuals", "captions", "music"})
-        # music is on by default and on your own endpoint since the free hosted API was retired (2026-11-25)
+        # music is on by default, on the host's own endpoint
         self.assertEqual(next(r for r in a["breakdown"] if r["step"] == "music")["usd"], vj.PRICES["music_track"]["modal"])
         self.assertEqual(a["prices_version"], vj.PRICES_VERSION)
 

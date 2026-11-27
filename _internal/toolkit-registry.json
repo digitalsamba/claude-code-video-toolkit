@@ -309,7 +309,7 @@
         "time-sig": "Time signature (2, 3, 4, 6)",
         "preset": "Scene preset (corporate-bg, upbeat-tech, ambient, dramatic, tension, hopeful, cta, lofi)",
         "brand": "Brand name for style hints",
-        "cloud": "Cloud provider: modal (default when its endpoint is set), runpod; acemusic is retired (410 since 2026-11-25)",
+        "cloud": "Cloud provider: modal (default when its endpoint is set), runpod",
         "variations": "Generate N takes (1-8), saved as <output>_1 to <output>_N",
         "cover": "Cover/style transfer mode (requires --reference)",
         "extract": "Stem extraction (vocals, drums, bass, guitar, piano, other)",

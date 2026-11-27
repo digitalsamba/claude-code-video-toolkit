@@ -413,7 +413,7 @@ uv run tools/pick_music.py bg_*.mp3 --target 45 --under voice --pick bg.mp3 --js
 ```
 
 Presets: corporate-bg, upbeat-tech, ambient, dramatic, tension, hopeful, cta, lofi. It runs on your Modal
-`music_gen` app when its endpoint is in `.env` (the free hosted API was retired, 2026-11-25). Prompting and lyrics: `.claude/skills/acestep/`.
+`music_gen` app when its endpoint is in `.env` (MIT weights: commercial use free, you pay GPU time). Prompting and lyrics: `.claude/skills/acestep/`.
 
 `pick_music.py` measures and can't listen, and good takes often tie. With a person in the loop, render the video
 once without music and let them watch each take under it:

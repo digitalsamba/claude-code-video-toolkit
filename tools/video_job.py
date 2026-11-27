@@ -107,7 +107,7 @@ PRICES = {
     "flux_image": 0.012,
     "voiceover": {"qwen3": 0.01, "elevenlabs_per_1k_chars": ELEVENLABS_TTS_USD_PER_1K_CHARS, "60db": 0.0},
     "captions_per_audio_second": {"scribe": SCRIBE_USD_PER_SECOND, "whisper": 0.0},
-    "music_track": {"modal": 0.03, "runpod": 0.03},     # your own endpoint; acemusic.ai retired 2026-11-25
+    "music_track": {"modal": 0.03, "runpod": 0.03},     # your own endpoint
 }
 
 # Output formats: the compositor's canvas plus the size each generator is asked for.
@@ -729,8 +729,7 @@ def _resolve_file(scene_id: str, rel: str, kit: dict | None) -> Path:
 
 def default_music_provider() -> str:
     """The music bed's provider when a spec names none: the endpoint this host has (Modal, then RunPod).
-    With neither it is "modal", so the soft check names the one variable to set and the job runs without a bed.
-    The hosted acemusic.ai API was the default until it answered 410 "retired" on 2026-11-25."""
+    With neither it is "modal", so the soft check names the one variable to set and the job runs without a bed."""
     if _has(_NEEDS[("music", "runpod", None)]) and not _has(_NEEDS[("music", "modal", None)]):
         return "runpod"
     return "modal"
@@ -802,8 +801,6 @@ def normalize_spec(spec: dict) -> dict:
     elif isinstance(music, str):
         music = {"prompt": music}
     music.setdefault("enabled", True)        # on your own endpoint (about $0.03 a track); the build ducks it
-    if music.get("provider") == "acemusic":  # the hosted API answers 410 "retired" since 2026-11-25
-        music.pop("provider")                # an old spec or kit gets the endpoint this host has instead
     music.setdefault("provider", default_music_provider())
     music.setdefault("prompt", DEFAULT_MUSIC_PROMPT)
     out["music"] = music

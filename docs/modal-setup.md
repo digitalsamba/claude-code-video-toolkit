@@ -261,7 +261,7 @@ uv run tools/image_edit.py --input photo.jpg --style cyberpunk --cloud modal
 # AI upscaling
 uv run tools/upscale.py --input photo.jpg --output photo_4x.png --cloud modal
 
-# AI music generation (uses the Modal app when its endpoint is in .env; the hosted API was retired, 2026-11-25)
+# AI music generation (uses the Modal app when its endpoint is in .env)
 uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3
 # Or use Modal: uv run tools/music_gen.py --preset corporate-bg --duration 60 --output bg.mp3 --cloud modal
 

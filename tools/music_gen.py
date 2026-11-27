@@ -12,11 +12,9 @@ Capabilities:
 - Scene presets for video production (--preset)
 - Brand-aware generation (--brand)
 
-Cloud providers (your own endpoint; the weights are MIT, so the music is yours to use commercially):
-  modal   — Self-hosted via Modal (ACE-Step 1.5 XL Turbo 4B, no LM), about $0.02-0.03 a take
+Cloud providers (your own endpoint; the weights are MIT, so commercial use is free and you pay only GPU time):
+  modal   — Self-hosted via Modal (ACE-Step 1.5 XL Turbo 4B, no LM), about $0.01-0.03 a take
   runpod  — Self-hosted via RunPod (ACE-Step 2B Turbo)
-  The hosted API at api.acemusic.ai, the old free default, answers HTTP 410 "retired" since 2026-11-25.
-  Repaint, continuation, thinking mode and sample mode ran only there, so they are not available.
 
 Examples:
   # Basic background music (on your Modal endpoint when it is set up)
@@ -48,10 +46,10 @@ Examples:
   # List presets
   uv run tools/music_gen.py --list-presets
 
-  # Fall back to self-hosted Modal
-  uv run tools/music_gen.py --cloud modal --prompt "Background music" --duration 60 --output bg.mp3
+  # Pick the cloud yourself
+  uv run tools/music_gen.py --cloud runpod --prompt "Background music" --duration 60 --output bg.mp3
 
-  # Setup RunPod endpoint (first-time, for self-hosted)
+  # Set up the RunPod endpoint (first time; Modal is set up with tools/modal_setup.py music_gen)
   uv run tools/music_gen.py --setup
 """
 
@@ -283,10 +281,7 @@ def encode_audio(path: str) -> str:
 # --- Generation functions (Modal/RunPod) ---
 
 def default_cloud(env=None) -> Optional[str]:
-    """The cloud to use when --cloud is not given: a self-hosted endpoint that is set up, or None.
-
-    The hosted API (acemusic.ai) was the default until it began answering HTTP 410, "retired", on 2026-11-25.
-    """
+    """The cloud to use when --cloud is not given: a self-hosted endpoint that is set up, or None."""
     env = os.environ if env is None else env
     if env.get("MODAL_MUSIC_GEN_ENDPOINT_URL"):
         return "modal"
@@ -295,19 +290,8 @@ def default_cloud(env=None) -> Optional[str]:
     return None
 
 
-RETIRED = ("The hosted ACE-Step API (api.acemusic.ai) answers HTTP 410 'retired' since 2026-11-25. "
-           "Music runs on your own endpoint now: set one up with `uv run tools/modal_setup.py music_gen` "
-           "(about $0.02-0.03 a take), or RunPod with `uv run tools/music_gen.py --setup`.")
-
-# Options that only the hosted API had. Kept so an old command gets a reason, not "unrecognized arguments".
-HOSTED_ONLY = {"repaint": "--repaint", "continuation": "--continuation", "thinking": "--thinking",
-               "sample_mode": "--sample-mode", "guidance_scale": "--guidance-scale",
-               "infer_method": "--infer-method"}
-
-
-def hosted_only_options(args) -> list[str]:
-    """The hosted-API-only options this command line used."""
-    return [flag for attr, flag in HOSTED_ONLY.items() if getattr(args, attr, None) not in (None, False)]
+NO_ENDPOINT = ("No music endpoint is set up. Deploy one on Modal with `uv run tools/modal_setup.py music_gen` "
+               "(about $0.01-0.03 a take), or on RunPod with `uv run tools/music_gen.py --setup`.")
 
 
 def take_paths(output_path: str, variations: int) -> list[str]:
@@ -919,7 +903,7 @@ Examples:
     # Musical control
     music_group = parser.add_argument_group("Musical Control")
     music_group.add_argument("--duration", "-d", type=int, default=None,
-                             help="Duration in seconds (10-600, default: 30, or the input's length for --repaint and --cover)")
+                             help="Duration in seconds (10-600, default: 30, or the input's length for --cover)")
     music_group.add_argument("--bpm", type=int, help="Tempo in BPM (30-300)")
     music_group.add_argument("--key", dest="key_scale", help="Musical key (e.g., 'C Major', 'Am', 'F# minor')")
     music_group.add_argument("--time-sig", type=int, choices=[2, 3, 4, 6],
@@ -932,7 +916,7 @@ Examples:
     preset_group.add_argument("--brand", help="Brand name (loads hints from brands/<name>/brand.json)")
     preset_group.add_argument("--list-presets", action="store_true", help="List available scene presets")
 
-    # Cover / extract / repaint / continuation modes
+    # Cover / extract modes
     edit_group = parser.add_argument_group("Cover, Extract & Edit")
     edit_group.add_argument("--cover", action="store_true", help="Cover/style transfer mode")
     edit_group.add_argument("--reference", help="Reference audio for cover mode")
@@ -941,11 +925,6 @@ Examples:
     edit_group.add_argument("--extract", metavar="TRACK",
                             help="Extract stem: vocals, drums, bass, guitar, piano, other")
     edit_group.add_argument("--input", "-i", help="Input audio for extract/cover")
-    # The hosted API's options: it is retired, so these only explain that (see HOSTED_ONLY)
-    edit_group.add_argument("--repaint", action="store_true", help=argparse.SUPPRESS)
-    edit_group.add_argument("--repaint-start", type=float, help=argparse.SUPPRESS)
-    edit_group.add_argument("--repaint-end", type=float, help=argparse.SUPPRESS)
-    edit_group.add_argument("--continuation", action="store_true", help=argparse.SUPPRESS)
 
     # Output
     output_group = parser.add_argument_group("Output")
@@ -960,20 +939,14 @@ Examples:
     adv_group.add_argument("--steps", type=int, default=8,
                            help="Inference steps (default: 8 for turbo, use 32-64 for base model)")
     adv_group.add_argument("--seed", type=int, help="Random seed for reproducibility")
-    adv_group.add_argument("--thinking", action="store_true", default=None, help=argparse.SUPPRESS)
-    adv_group.add_argument("--no-thinking", action="store_true", help=argparse.SUPPRESS)  # the old default; a no-op
     adv_group.add_argument("--variations", type=int, default=1,
                            help="Generate N takes (1-8, default: 1), saved as <output>_1 to <output>_N")
-    adv_group.add_argument("--guidance-scale", type=float, help=argparse.SUPPRESS)
-    adv_group.add_argument("--infer-method", choices=["ode", "sde"], help=argparse.SUPPRESS)
-    adv_group.add_argument("--sample-mode", action="store_true", help=argparse.SUPPRESS)
 
     # Cloud provider
     cloud_group = parser.add_argument_group("Cloud")
     cloud_group.add_argument("--cloud", type=str, default=None,
-                             choices=["acemusic", "modal", "runpod"],
-                             help="Cloud provider (default: modal when its endpoint is in .env, then runpod; "
-                                  "acemusic, the hosted API, is retired)")
+                             choices=["modal", "runpod"],
+                             help="Cloud provider (default: modal when its endpoint is in .env, then runpod)")
 
     # Setup
     setup_group = parser.add_argument_group("Setup")
@@ -990,11 +963,11 @@ Examples:
 
     args = parser.parse_args()
 
-    # Repaint and cover rework a track, so by default they keep its length; a fixed 30s default cut a
+    # A cover reworks a track, so by default it keeps its length; a fixed 30s default cut a
     # 46s bed to 30s without saying so. Generation keeps 30s.
     if args.duration is None:
         src = args.input or args.reference
-        src_len = get_audio_duration(src) if (args.repaint or args.cover) and src and Path(src).exists() else None
+        src_len = get_audio_duration(src) if args.cover and src and Path(src).exists() else None
         args.duration = int(-(-src_len // 1)) if src_len else 30
 
     # Handle --list-presets
@@ -1011,16 +984,10 @@ Examples:
             sys.exit(1)
         sys.exit(0)
 
-    if args.cloud == "acemusic":
-        parser.error(RETIRED)
-    used = hosted_only_options(args)
-    if used:
-        parser.error(f"{', '.join(used)} came from the hosted API, which is retired; "
-                     "your own endpoint does not offer it yet. " + RETIRED)
     if args.cloud is None:
         args.cloud = default_cloud()
     if args.cloud is None and not args.dry_run:
-        parser.error("No music endpoint is set up. " + RETIRED)
+        parser.error(NO_ENDPOINT)
 
     # Create progress reporter
     from cloud_gpu import ProgressReporter
