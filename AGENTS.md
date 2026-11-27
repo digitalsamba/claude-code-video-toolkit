@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This is the [claude-code-video-toolkit](https://github.com/digitalsamba/claude-code-video-toolkit) — an AI-native video production workspace. It's built around [Claude Code](https://claude.ai/code) and `CLAUDE.md`, with experimental bridges to other agent runtimes.
+This is the [agent-video-toolkit](https://github.com/digitalsamba/agent-video-toolkit), an AI-native video production workspace. It started in [Claude Code](https://claude.ai/code), was called claude-code-video-toolkit until v0.31.0, and keeps its guidance in `CLAUDE.md`. Codex and OpenCode have each made a whole video with it unaided (`examples/agent-comparison-manim`).
 
 For full toolkit guidance — workflow, conventions, timing rules, design patterns, tool catalog — read **[CLAUDE.md](./CLAUDE.md)**. Everything in there applies equally to a Codex (or other-agent) session.
 

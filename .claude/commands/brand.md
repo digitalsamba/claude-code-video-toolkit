@@ -339,7 +339,7 @@ This command evolves through use. If something's awkward or missing:
 3. Share upstream → `gh pr create`
 
 **Remote contributions:**
-- Issues: `github.com/digitalsamba/claude-code-video-toolkit/issues`
+- Issues: `github.com/digitalsamba/agent-video-toolkit/issues`
 - PRs welcome for new features, bug fixes, documentation
 
 History: `/new-brand` → `/brand` (unified with list/edit support)

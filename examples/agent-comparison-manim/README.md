@@ -9,7 +9,7 @@ Left to right: Codex, Claude Code, OpenCode. Watch them:
 
 ## Why I ran it
 
-The toolkit started life in Claude Code, and [#240](https://github.com/digitalsamba/claude-code-video-toolkit/issues/240)
+The toolkit started life in Claude Code, and [#240](https://github.com/digitalsamba/agent-video-toolkit/issues/240)
 asks whether it should work with other coding agents too. [AsharibAli's cycling test](../agent-video-comparison/README.md)
 showed that other agents can plan a video job. I wanted to know something bigger: can another agent CLI pick up
 the toolkit cold and make a whole video in a working session, using the docs, tools and skills the way Claude
@@ -21,7 +21,7 @@ touched anything outside its own project folder.
 ## What ran
 
 Each agent got [the same brief](BRIEF.md) as the first message of a fresh session at the toolkit root, on the same
-commit ([`0dbebf6`](https://github.com/digitalsamba/claude-code-video-toolkit/commit/0dbebf625f19d5b078a4f4aae71cc038ef6a4a70)),
+commit ([`0dbebf6`](https://github.com/digitalsamba/agent-video-toolkit/commit/0dbebf625f19d5b078a4f4aae71cc038ef6a4a70)),
 on my Mac. The brief asks for a 45 to 60 second explainer of how a brief becomes a video, with the diagram drawn in
 Manim and built on the narration, in the toolkit's own brand and voice, for at most $1 of paid services. I answered
 questions but gave no help, and wrote down every time I stepped in.
@@ -70,12 +70,12 @@ Each agent wrote notes on what got in its way, and the real problems became issu
 
 | Issue | Found by |
 | --- | --- |
-| [#269](https://github.com/digitalsamba/claude-code-video-toolkit/issues/269) `qc.py --fix` can write a render that clips | Claude Code, OpenCode |
-| [#270](https://github.com/digitalsamba/claude-code-video-toolkit/issues/270) `qc.py --project` has nothing to check on a project with no template | Codex |
-| [#271](https://github.com/digitalsamba/claude-code-video-toolkit/issues/271) The video-toolkit brand has no `copy.json` | Codex, Claude Code |
-| [#272](https://github.com/digitalsamba/claude-code-video-toolkit/issues/272) `docs/manim.md`: things a first scene trips on | Codex, Claude Code, OpenCode |
-| [#273](https://github.com/digitalsamba/claude-code-video-toolkit/issues/273) `voiceover.py` writes no line to the spend log on its own | Claude Code, OpenCode |
-| [#274](https://github.com/digitalsamba/claude-code-video-toolkit/issues/274) `captions.py`: exact word times from per-sentence files | Claude Code |
+| [#269](https://github.com/digitalsamba/agent-video-toolkit/issues/269) `qc.py --fix` can write a render that clips | Claude Code, OpenCode |
+| [#270](https://github.com/digitalsamba/agent-video-toolkit/issues/270) `qc.py --project` has nothing to check on a project with no template | Codex |
+| [#271](https://github.com/digitalsamba/agent-video-toolkit/issues/271) The video-toolkit brand has no `copy.json` | Codex, Claude Code |
+| [#272](https://github.com/digitalsamba/agent-video-toolkit/issues/272) `docs/manim.md`: things a first scene trips on | Codex, Claude Code, OpenCode |
+| [#273](https://github.com/digitalsamba/agent-video-toolkit/issues/273) `voiceover.py` writes no line to the spend log on its own | Claude Code, OpenCode |
+| [#274](https://github.com/digitalsamba/agent-video-toolkit/issues/274) `captions.py`: exact word times from per-sentence files | Claude Code |
 
 None of them stopped a run. Each agent worked around the problem and said so.
 
@@ -97,7 +97,7 @@ the toolkit root and give it [BRIEF.md](BRIEF.md) as the first message. It needs
 (`uv run tools/manim_render.py doctor`), an ElevenLabs key for the brand's voice, and FFmpeg. Expect about $0.15
 of paid services, plus whatever your model costs.
 
-Then share the video and the agent's `NOTES.md` on [#240](https://github.com/digitalsamba/claude-code-video-toolkit/issues/240)
-or in [Show and tell](https://github.com/digitalsamba/claude-code-video-toolkit/discussions/categories/show-and-tell),
+Then share the video and the agent's `NOTES.md` on [#240](https://github.com/digitalsamba/agent-video-toolkit/issues/240)
+or in [Show and tell](https://github.com/digitalsamba/agent-video-toolkit/discussions/categories/show-and-tell),
 with the agent, model, effort setting and roughly what it cost. I'll add it to the table, and anything it finds
 wrong in the toolkit becomes an issue like the ones above.

@@ -1,5 +1,5 @@
 /**
- * claude-code-video-toolkit shared library
+ * agent-video-toolkit shared library
  *
  * This library provides reusable components and utilities for video templates.
  *

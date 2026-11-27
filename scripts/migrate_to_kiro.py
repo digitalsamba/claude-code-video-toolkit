@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install Kiro CLI-compatible skills and steering from claude-code-video-toolkit.
+"""Install Kiro CLI-compatible skills and steering from agent-video-toolkit.
 
 Kiro CLI sibling of scripts/migrate_to_codex.py:
 
@@ -53,7 +53,7 @@ STEERING_FILE_NAME = "video-toolkit.md"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Install Kiro CLI-compatible skills from claude-code-video-toolkit."
+        description="Install Kiro CLI-compatible skills from agent-video-toolkit."
     )
     parser.add_argument(
         "--repo-root",

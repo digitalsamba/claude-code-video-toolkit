@@ -9,6 +9,70 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "agent-video-toolkit"
+version = "0.30.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "boto3" },
+    { name = "elevenlabs" },
+    { name = "matplotlib" },
+    { name = "moviepy" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pillow" },
+    { name = "python-dotenv" },
+    { name = "requests" },
+    { name = "websocket-client" },
+]
+
+[package.optional-dependencies]
+mcp = [
+    { name = "mcp" },
+]
+modal = [
+    { name = "modal" },
+]
+prosody = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "praat-parselmouth" },
+]
+vision = [
+    { name = "opencv-contrib-python-headless" },
+]
+whisper = [
+    { name = "openai-whisper" },
+]
+youtube = [
+    { name = "google-api-python-client" },
+    { name = "google-auth-httplib2" },
+    { name = "google-auth-oauthlib" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "boto3", specifier = ">=1.28.0" },
+    { name = "elevenlabs", specifier = ">=2.21.0" },
+    { name = "google-api-python-client", marker = "extra == 'youtube'", specifier = ">=2.100.0" },
+    { name = "google-auth-httplib2", marker = "extra == 'youtube'", specifier = ">=0.2.0" },
+    { name = "google-auth-oauthlib", marker = "extra == 'youtube'", specifier = ">=1.2.0" },
+    { name = "matplotlib", specifier = ">=3.7" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.2" },
+    { name = "modal", marker = "extra == 'modal'", specifier = ">=0.64" },
+    { name = "moviepy", specifier = ">=2.0" },
+    { name = "numpy", specifier = ">=1.25" },
+    { name = "numpy", marker = "extra == 'prosody'", specifier = ">=1.24" },
+    { name = "openai-whisper", marker = "extra == 'whisper'", specifier = ">=20240930" },
+    { name = "opencv-contrib-python-headless", marker = "extra == 'vision'", specifier = ">=4.10,<5" },
+    { name = "pillow", specifier = ">=10.0" },
+    { name = "praat-parselmouth", marker = "extra == 'prosody'", specifier = ">=0.4.3" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "requests", specifier = ">=2.28.0" },
+    { name = "websocket-client", specifier = ">=1.6.0" },
+]
+provides-extras = ["vision", "whisper", "prosody", "modal", "mcp", "youtube"]
+
+[[package]]
 name = "aiohappyeyeballs"
 version = "2.6.2"
 source = { registry = "https://pypi.org/simple" }
@@ -515,70 +579,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/de/32/d92444ad05c7a6e41fb2036749777c163baf7a0301a040cb672d6b2b1ae9/charset_normalizer-3.4.7-cp314-cp314t-win_arm64.whl", hash = "sha256:c35abb8bfff0185efac5878da64c45dafd2b37fb0383add1be155a763c1f083d", size = 153018, upload-time = "2026-04-02T09:27:51.116Z" },
     { url = "https://files.pythonhosted.org/packages/db/8f/61959034484a4a7c527811f4721e75d02d653a35afb0b6054474d8185d4c/charset_normalizer-3.4.7-py3-none-any.whl", hash = "sha256:3dce51d0f5e7951f8bb4900c257dad282f49190fdbebecd4ba99bcc41fef404d", size = 61958, upload-time = "2026-04-02T09:28:37.794Z" },
 ]
-
-[[package]]
-name = "claude-code-video-toolkit"
-version = "0.30.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "boto3" },
-    { name = "elevenlabs" },
-    { name = "matplotlib" },
-    { name = "moviepy" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "pillow" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-    { name = "websocket-client" },
-]
-
-[package.optional-dependencies]
-mcp = [
-    { name = "mcp" },
-]
-modal = [
-    { name = "modal" },
-]
-prosody = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "praat-parselmouth" },
-]
-vision = [
-    { name = "opencv-contrib-python-headless" },
-]
-whisper = [
-    { name = "openai-whisper" },
-]
-youtube = [
-    { name = "google-api-python-client" },
-    { name = "google-auth-httplib2" },
-    { name = "google-auth-oauthlib" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "boto3", specifier = ">=1.28.0" },
-    { name = "elevenlabs", specifier = ">=2.21.0" },
-    { name = "google-api-python-client", marker = "extra == 'youtube'", specifier = ">=2.100.0" },
-    { name = "google-auth-httplib2", marker = "extra == 'youtube'", specifier = ">=0.2.0" },
-    { name = "google-auth-oauthlib", marker = "extra == 'youtube'", specifier = ">=1.2.0" },
-    { name = "matplotlib", specifier = ">=3.7" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.2" },
-    { name = "modal", marker = "extra == 'modal'", specifier = ">=0.64" },
-    { name = "moviepy", specifier = ">=2.0" },
-    { name = "numpy", specifier = ">=1.25" },
-    { name = "numpy", marker = "extra == 'prosody'", specifier = ">=1.24" },
-    { name = "openai-whisper", marker = "extra == 'whisper'", specifier = ">=20240930" },
-    { name = "opencv-contrib-python-headless", marker = "extra == 'vision'", specifier = ">=4.10,<5" },
-    { name = "pillow", specifier = ">=10.0" },
-    { name = "praat-parselmouth", marker = "extra == 'prosody'", specifier = ">=0.4.3" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "requests", specifier = ">=2.28.0" },
-    { name = "websocket-client", specifier = ">=1.6.0" },
-]
-provides-extras = ["vision", "whisper", "prosody", "modal", "mcp", "youtube"]
 
 [[package]]
 name = "click"
@@ -3866,8 +3866,8 @@ name = "uvicorn"
 version = "0.54.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "h11" },
+    { name = "click", marker = "python_full_version < '3.12' or python_full_version >= '3.14' or sys_platform != 'emscripten'" },
+    { name = "h11", marker = "python_full_version < '3.12' or python_full_version >= '3.14' or sys_platform != 'emscripten'" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/da/34/30e9280707135d2cfc589dfff3cb796bd07a3aeb1a3e415ba09dd89d7bb4/uvicorn-0.54.0.tar.gz", hash = "sha256:a2e33cbfaa0306f8e6b0c13e0cb89d7d7a2da3e62b90c66e18c33d9807b28620", size = 112283, upload-time = "2026-09-25T06:52:37.601Z" }

@@ -188,7 +188,7 @@ const GalleryScene: React.FC<{
           letterSpacing: '2px',
         }}
       >
-        TRANSITION GALLERY • CLAUDE CODE VIDEO TOOLKIT
+        TRANSITION GALLERY • AGENT VIDEO TOOLKIT
       </div>
     </AbsoluteFill>
   );
@@ -257,7 +257,7 @@ const IntroSlide: React.FC = () => {
           fontWeight: 400,
         }}
       >
-        claude-code-video-toolkit
+        agent-video-toolkit
       </p>
     </AbsoluteFill>
   );

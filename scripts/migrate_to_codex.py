@@ -29,7 +29,7 @@ GENERATED_AGENTS_END = "<!-- END GENERATED: claude-to-codex -->"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Install Codex-compatible skills from claude-code-video-toolkit."
+        description="Install Codex-compatible skills from agent-video-toolkit."
     )
     parser.add_argument(
         "--repo-root",

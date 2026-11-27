@@ -1,6 +1,6 @@
 ---
 name: video_toolkit
-description: Make short explainer videos from a brief with claude-code-video-toolkit — submit a scene spec, poll a job, get a QC-checked MP4. Also covers the individual tools (AI voiceover, images, clips, music, talking heads) for custom work.
+description: Make short explainer videos from a brief with agent-video-toolkit: submit a scene spec, poll a job, get a QC-checked MP4. Also covers the individual tools (AI voiceover, images, clips, music, talking heads) for custom work.
 metadata:
   openclaw:
     emoji: "🎬"
@@ -12,7 +12,7 @@ metadata:
 
 # Video Toolkit
 
-Turn a brief into a finished MP4 with [claude-code-video-toolkit](https://github.com/digitalsamba/claude-code-video-toolkit).
+Turn a brief into a finished MP4 with [agent-video-toolkit](https://github.com/digitalsamba/agent-video-toolkit).
 This skill is written for **any agent runtime**: Claude Code, OpenClaw, Codex, Hermes, a bare API loop with a
 `run_tool` call, or an MCP client. Nothing here depends on how your runtime backgrounds work, because the long
 work runs in a detached job you poll.
@@ -103,10 +103,12 @@ Every command below runs **from the toolkit root**. Find it, in this order:
 
 1. `$VIDEO_TOOLKIT_ROOT` if set (also honoured by the toolkit's own scripts);
 2. `$VIDEO_TOOLKIT_DIR` (an alias some runtimes set);
-3. a `claude-code-video-toolkit/` directory under your workspace or home.
+3. an `agent-video-toolkit/` directory under your workspace or home (`claude-code-video-toolkit/` on a clone made before the rename).
 
 ```bash
-cd "${VIDEO_TOOLKIT_ROOT:-${VIDEO_TOOLKIT_DIR:-$HOME/claude-code-video-toolkit}}"
+root="${VIDEO_TOOLKIT_ROOT:-${VIDEO_TOOLKIT_DIR:-$HOME/agent-video-toolkit}}"
+[ -d "$root" ] || root="$HOME/claude-code-video-toolkit"   # a clone from before the rename
+cd "$root"
 uv run tools/verify_setup.py --json     # prerequisites, keys and endpoints; [x] means ready
 ```
 

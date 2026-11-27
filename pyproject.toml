@@ -1,4 +1,4 @@
-# claude-code-video-toolkit — Python dependencies
+# agent-video-toolkit — Python dependencies
 #
 # Managed with uv (https://docs.astral.sh/uv/). One command installs everything:
 #
@@ -17,7 +17,7 @@
 # scripts, not an installable package. `uv sync` only manages the environment.
 
 [project]
-name = "claude-code-video-toolkit"
+name = "agent-video-toolkit"
 version = "0.30.0"
 description = "AI-native video production workspace: Remotion templates, AI voiceover/music/image tools, and browser demo recording"
 readme = "README.md"

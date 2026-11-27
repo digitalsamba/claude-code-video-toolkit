@@ -17,7 +17,7 @@ export const EPISODE: Episode = {
   version: F.toolkitVersion.value,
   title: ['What it costs:', 'mostly nothing'],
   next: ['Next: the whole setup,', 'in one conversation'],
-  link: 'github.com/digitalsamba/claude-code-video-toolkit',
+  link: 'github.com/digitalsamba/agent-video-toolkit',
   music: { file: 'audio/music/bed_2.mp3', volume: 0.35 }, // under narration at -16 LUFS
   hook: {
     ask: 'will this cost me money?',
@@ -164,7 +164,7 @@ export const EPISODE: Episode = {
         ];
         return {
           lines,
-          status: ['{accent|Opus} {dim|·} {code|claude-code-video-toolkit} {dim|·} main'],
+          status: ['{accent|Opus} {dim|·} {code|agent-video-toolkit} {dim|·} main'],
           highlight: [{ id: 'deployed', from: cue('ready') + 4 }],
           focus: [
             { at: cue('add a card'), zoom: 1.35, x: 0.32, y: 0.78, over: 24 },

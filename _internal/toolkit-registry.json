@@ -1,8 +1,8 @@
 {
-  "name": "claude-code-video-toolkit",
+  "name": "agent-video-toolkit",
   "version": "0.30.0",
-  "description": "AI-native video production workspace for Claude Code",
-  "repository": "https://github.com/digitalsamba/claude-code-video-toolkit",
+  "description": "AI-native video production workspace for Claude Code, Codex, OpenCode and unattended agents",
+  "repository": "https://github.com/digitalsamba/agent-video-toolkit",
   "skills": {
     "remotion-official": {
       "path": ".claude/skills/remotion-official/",
@@ -1177,7 +1177,7 @@
             "args": [
               "run",
               "--directory",
-              "/path/to/claude-code-video-toolkit",
+              "/path/to/agent-video-toolkit",
               "--extra",
               "mcp",
               "tools/video_mcp.py"

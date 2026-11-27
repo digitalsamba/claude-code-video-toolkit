@@ -27,7 +27,7 @@ before writing the caption.
 If the user named a project, use it. Otherwise list candidates and ask:
 
 ```bash
-cd /path/to/claude-code-video-toolkit && ls projects/*/project.json
+cd /path/to/agent-video-toolkit && ls projects/*/project.json
 ```
 
 If `out/thumbnail.*` already exists, show it and ask whether to replace it or keep it.
@@ -80,7 +80,7 @@ Start from `examples.md` §2 (thumbnail) and keep these layout rules:
 ### Step 5: Generate
 
 ```bash
-cd /path/to/claude-code-video-toolkit && mkdir -p projects/NAME/out && \
+cd /path/to/agent-video-toolkit && mkdir -p projects/NAME/out && \
   uv run tools/ideogram4.py --json projects/NAME/thumbnail/caption.json \
   --resolution 1280x720 --speed QUALITY \
   --output projects/NAME/out/thumbnail.png --json-out
@@ -108,7 +108,7 @@ retry. Show the user the result and ask before spending on further retries.
 Then confirm it fits YouTube's limits (≤2MB, 1280×720):
 
 ```bash
-cd /path/to/claude-code-video-toolkit && uv run python -c "import sys,os; from PIL import Image; p=sys.argv[1]; print(Image.open(p).size, os.path.getsize(p)//1024, 'KB')" projects/NAME/out/thumbnail.png
+cd /path/to/agent-video-toolkit && uv run python -c "import sys,os; from PIL import Image; p=sys.argv[1]; print(Image.open(p).size, os.path.getsize(p)//1024, 'KB')" projects/NAME/out/thumbnail.png
 ```
 
 A flat 1280×720 graphic is usually 0.5–1MB. If it's over 2MB, convert it to JPEG and use
@@ -176,4 +176,4 @@ With a phrase, skip Step 3. Still check the generated text (Step 6) before repor
 This command evolves through use. If something's awkward or missing:
 1. Say "improve this" → Claude captures it in `_internal/BACKLOG.md`
 2. Edit `.claude/commands/thumbnail.md` → update `_internal/CHANGELOG.md`
-- Issues/PRs: `github.com/digitalsamba/claude-code-video-toolkit`
+- Issues/PRs: `github.com/digitalsamba/agent-video-toolkit`

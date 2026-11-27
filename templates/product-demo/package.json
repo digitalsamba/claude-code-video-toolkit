@@ -1,7 +1,7 @@
 {
   "name": "product-demo",
   "version": "1.0.0",
-  "description": "Product demo video template for claude-code-video-toolkit",
+  "description": "Product demo video template for agent-video-toolkit",
   "scripts": {
     "studio": "remotion studio",
     "render": "remotion render ProductDemo out/product-demo.mp4",

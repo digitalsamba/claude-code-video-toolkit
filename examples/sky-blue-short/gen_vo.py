@@ -32,7 +32,7 @@ def find_toolkit_root() -> Path:
         p = p.parent
     sys.exit("Could not find toolkit root (tools/voiceover.py) above this directory.\n"
              "Projects normally live in <toolkit>/projects/; for copies elsewhere "
-             "set VIDEO_TOOLKIT_ROOT=/path/to/claude-code-video-toolkit")
+             "set VIDEO_TOOLKIT_ROOT=/path/to/agent-video-toolkit")
 
 
 def main() -> None:

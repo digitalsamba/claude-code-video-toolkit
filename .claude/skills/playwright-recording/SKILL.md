@@ -464,6 +464,6 @@ If this skill is missing information or could be improved:
 - **Found an error?** Let me know what's wrong
 - **Want to contribute?** I can help you:
   1. Update this skill with improvements
-  2. Create a PR to github.com/digitalsamba/claude-code-video-toolkit
+  2. Create a PR to github.com/digitalsamba/agent-video-toolkit
 
 Just say "improve this skill" and I'll guide you through updating `.claude/skills/playwright-recording/SKILL.md`.

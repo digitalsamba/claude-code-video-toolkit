@@ -1,6 +1,6 @@
 # Privacy policy
 
-This covers claude-code-video-toolkit and its YouTube uploader (`tools/youtube_upload.py`, the `/publish`
+This covers agent-video-toolkit and its YouTube uploader (`tools/youtube_upload.py`, the `/publish`
 command). Last updated 2026-11-07.
 
 ## What it is
@@ -40,4 +40,4 @@ Modal, RunPod, ElevenLabs, Ideogram), under those providers' own terms. Each is 
 
 ## Contact
 
-Open an issue at https://github.com/digitalsamba/claude-code-video-toolkit/issues.
+Open an issue at https://github.com/digitalsamba/agent-video-toolkit/issues.

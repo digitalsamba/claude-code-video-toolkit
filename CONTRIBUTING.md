@@ -1,4 +1,4 @@
-# Contributing to claude-code-video-toolkit
+# Contributing to agent-video-toolkit
 
 Thank you for your interest in contributing! This toolkit is designed to help people create videos with Claude Code assistance.
 

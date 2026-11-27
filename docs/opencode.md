@@ -4,7 +4,7 @@
 
 ## Connect the toolkit
 
-Install `uv`, FFmpeg and OpenCode, then clone the toolkit. Create an `opencode.json` file in a separate working directory and replace `/path/to/claude-code-video-toolkit` with the absolute path to your checkout. Windows paths can use forward slashes.
+Install `uv`, FFmpeg and OpenCode, then clone the toolkit. Create an `opencode.json` file in a separate working directory and replace `/path/to/agent-video-toolkit` with the absolute path to your checkout. Windows paths can use forward slashes.
 
 ```json
 {
@@ -12,7 +12,7 @@ Install `uv`, FFmpeg and OpenCode, then clone the toolkit. Create an `opencode.j
     "toolkit": {
       "type": "local",
       "command": [
-        "uv", "run", "--locked", "--directory", "/path/to/claude-code-video-toolkit",
+        "uv", "run", "--locked", "--directory", "/path/to/agent-video-toolkit",
         "--extra", "mcp", "tools/video_mcp.py"
       ]
     }

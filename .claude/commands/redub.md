@@ -201,5 +201,5 @@ This command evolves through use. If something's awkward or missing:
 2. Edit `.claude/commands/redub.md` → Update `_internal/CHANGELOG.md`
 
 **Remote contributions:**
-- Issues: `github.com/digitalsamba/claude-code-video-toolkit/issues`
+- Issues: `github.com/digitalsamba/agent-video-toolkit/issues`
 - PRs welcome for multi-speaker support, timing sync, etc.

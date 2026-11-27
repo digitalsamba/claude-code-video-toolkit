@@ -10,10 +10,10 @@ holds no pipeline logic of its own, so the CLI and the MCP server can never drif
 Claude Desktop / Claude Code (one line in the client's MCP config):
 
     {"mcpServers": {"video-toolkit": {"command": "uv",
-      "args": ["run", "--directory", "/path/to/claude-code-video-toolkit", "--extra", "mcp",
+      "args": ["run", "--directory", "/path/to/agent-video-toolkit", "--extra", "mcp",
                "tools/video_mcp.py"]}}}
 
-    claude mcp add video-toolkit -- uv run --directory /path/to/claude-code-video-toolkit \\
+    claude mcp add video-toolkit -- uv run --directory /path/to/agent-video-toolkit \\
         --extra mcp tools/video_mcp.py
 
 Any other MCP client: spawn the same command and speak MCP over its stdin/stdout.
